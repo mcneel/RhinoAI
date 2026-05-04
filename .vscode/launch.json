@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rhino 9 - netcore",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "",
+      "osx": {
+        "program": "/Applications/RhinoWIP.app/Contents/MacOS/Rhinoceros",
+        "args": [],
+      },
+      "windows": {
+        "program": "C:\\Program Files\\Rhino 9 WIP\\System\\Rhino.exe",
+        "targetArchitecture": "x86_64",
+        "args": [
+          "/netcore"
+        ]
+      },
+      "env": {
+        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/bin/Debug"
+      },
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Rhino 9 Windows - netfx",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "windows": {
+        "program": "C:\\Program Files\\Rhino 9 WIP\\System\\Rhino.exe",
+        "targetArchitecture": "x86_64",
+        "args": [
+          "/netfx"
+        ]
+      },
+      "env": {
+        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/bin/Debug"
+      },
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+  ],
+  "compounds": []
+}

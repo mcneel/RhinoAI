@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Rhino 9: net8.0 -->
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <LangVersion>12</LangVersion>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <TargetExt>.rhp</TargetExt>
+    <NoWarn>NU1701</NoWarn>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>RhMcp</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Title>Rhino MCP</Title>
+    <Company>McNeel</Company>
+    <Description>MCP server plugin for Rhino</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
+    <PackageReference Include="System.Text.Json" Version="10.0.7" />
+  </ItemGroup>
+
+  <Target Name="BuildYakPackage" AfterTargets="DispatchToInnerBuilds">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)" />
+  </Target>
+
+</Project>

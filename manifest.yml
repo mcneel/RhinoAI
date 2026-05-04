@@ -1,0 +1,10 @@
+---
+name: Rhino-MCP
+version: 0.0.1
+authors:
+- Callum Sykes
+- Dan Cascaval
+- Claude
+description: A RhinoMCP Server plugin
+icon: icon.png
+url: https://github.com/mcneel/RhinoMCP
