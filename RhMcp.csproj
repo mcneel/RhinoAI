@@ -20,13 +20,58 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
-    <PackageReference Include="System.Text.Json" Version="10.0.7" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>
 
   <Target Name="BuildYakPackage" AfterTargets="DispatchToInnerBuilds">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)" />
+  </Target>
+
+  <!--
+    Rhino doesn't ship the ASP.NET Core shared framework, so we copy it from the
+    build machine's .NET install into the plugin output. Picks the highest 8.0.x
+    runtime present on the machine.
+  -->
+  <UsingTask TaskName="PickLatestAspNetCore" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SharedFxRoot ParameterType="System.String" Required="true" />
+      <MajorMinor ParameterType="System.String" Required="true" />
+      <Result ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        if (!Directory.Exists(SharedFxRoot)) { Result = ""; return true; }
+        Result = Directory.GetDirectories(SharedFxRoot, MajorMinor + ".*")
+          .Select(p => new { Path = p, Name = Path.GetFileName(p) })
+          .Where(x => Version.TryParse(x.Name, out _))
+          .OrderByDescending(x => Version.Parse(x.Name))
+          .Select(x => x.Path)
+          .FirstOrDefault() ?? "";
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="BundleAspNetCoreFramework" AfterTargets="Build">
+    <PropertyGroup>
+      <_DotnetRoot Condition="'$(DOTNET_ROOT)' != ''">$(DOTNET_ROOT)</_DotnetRoot>
+      <_DotnetRoot Condition="'$(_DotnetRoot)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">$(ProgramFiles)\dotnet</_DotnetRoot>
+      <_DotnetRoot Condition="'$(_DotnetRoot)' == ''">/usr/local/share/dotnet</_DotnetRoot>
+    </PropertyGroup>
+    <PickLatestAspNetCore SharedFxRoot="$(_DotnetRoot)/shared/Microsoft.AspNetCore.App" MajorMinor="8.0">
+      <Output TaskParameter="Result" PropertyName="_AspNetCorePath" />
+    </PickLatestAspNetCore>
+    <Error Condition="'$(_AspNetCorePath)' == ''" Text="Could not find Microsoft.AspNetCore.App 8.0.x under $(_DotnetRoot)/shared/Microsoft.AspNetCore.App. Install the ASP.NET Core 8.0 runtime." />
+    <ItemGroup>
+      <_AspNetCoreFiles Include="$(_AspNetCorePath)/*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core from $(_AspNetCorePath)" />
   </Target>
 
 </Project>

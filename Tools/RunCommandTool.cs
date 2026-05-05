@@ -1,30 +1,23 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 
 namespace RhMcp.Tools;
 
-public sealed class RunCommandTool : IMcpTool
+[McpServerToolType]
+public static class RunCommandTool
 {
-    public string Name => "run_command";
-    public string Description => "Execute any Rhino command string and return command window output. Example: \"_Box 0,0,0 10,10,10\"";
-    public object InputSchema => new
+    [McpServerTool(Name = "run_command")]
+    [Description("Execute any Rhino command string and return command window output. Example: \"_Box 0,0,0 10,10,10\"")]
+    public static string RunCommand(
+        [Description("Rhino command string to execute")] string command)
     {
-        type = "object",
-        properties = new
-        {
-            command = new { type = "string", description = "Rhino command string to execute" }
-        },
-        required = new[] { "command" }
-    };
-
-    public object Execute(JsonObject? args)
-    {
-        var command = args?["command"]?.GetValue<string>() ?? "";
         RhinoApp.CommandWindowCaptureEnabled = true;
         RhinoApp.RunScript(command, false);
         var lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
-        var output = lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";
-        return new { content = new[] { new { type = "text", text = output } } };
+        return lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";
     }
 }

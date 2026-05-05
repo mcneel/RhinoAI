@@ -1,35 +1,27 @@
 using System;
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 
 namespace RhMcp.Tools;
 
-public sealed class ZoomToLayerTool : IMcpTool
+[McpServerToolType]
+public static class ZoomToLayerTool
 {
-    public string Name => "zoom_to_layer";
-    public string Description => "Zoom the active viewport to fit all objects on a layer (full path).";
-    public object InputSchema => new
+    [McpServerTool(Name = "zoom_to_layer")]
+    [Description("Zoom the active viewport to fit all objects on a layer (full path).")]
+    public static string ZoomToLayer(
+        [Description("Layer full path")] string layer)
     {
-        type = "object",
-        properties = new
-        {
-            layer = new { type = "string", description = "Layer full path" }
-        },
-        required = new[] { "layer" }
-    };
-
-    public object Execute(JsonObject? args)
-    {
-        var layerPath = args?["layer"]?.GetValue<string>()
-            ?? throw new ArgumentException("Missing required arg: layer");
-
         var doc = RhinoDoc.ActiveDoc;
-        var idx = doc.Layers.FindByFullPath(layerPath, RhinoMath.UnsetIntIndex);
+        var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
 
         if (idx < 0)
-            return new { content = new[] { new { type = "text", text = $"Layer not found: {layerPath}" } } };
+            return $"Layer not found: {layer}";
 
         var settings = new ObjectEnumeratorSettings
         {
@@ -54,7 +46,7 @@ public sealed class ZoomToLayerTool : IMcpTool
         }
 
         if (!bb.IsValid)
-            return new { content = new[] { new { type = "text", text = $"No geometry on layer: {layerPath}" } } };
+            return $"No geometry on layer: {layer}";
 
         var vp = doc.Views.ActiveView?.ActiveViewport
             ?? throw new InvalidOperationException("No active viewport.");
@@ -62,6 +54,6 @@ public sealed class ZoomToLayerTool : IMcpTool
         vp.ZoomBoundingBox(bb);
         doc.Views.Redraw();
 
-        return new { content = new[] { new { type = "text", text = $"Zoomed to {count} object(s) on layer \"{layerPath}\"." } } };
+        return $"Zoomed to {count} object(s) on layer \"{layer}\".";
     }
 }

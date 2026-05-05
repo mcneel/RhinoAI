@@ -1,35 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 using Rhino.DocObjects;
 
 namespace RhMcp.Tools;
 
-public sealed class SetSelectionTool : IMcpTool
+[McpServerToolType]
+public static class SetSelectionTool
 {
-    public string Name => "set_selection";
-    public string Description => "Select objects by filter (IDs, names, layer, geometry type). Clears existing selection. Times out after 5s.";
-    public object InputSchema => new
+    [McpServerTool(Name = "set_selection")]
+    [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection. Times out after 5s.")]
+    public static string SetSelection(
+        [Description("Object GUIDs")] string[]? ids = null,
+        [Description("Object names")] string[]? names = null,
+        [Description("Layer full path — selects all objects on layer")] string? layer = null,
+        [Description("Filter by type: point, pointset, curve, surface, brep, mesh, annotation, light, block")] string? geometryType = null)
     {
-        type = "object",
-        properties = new
-        {
-            ids = new { type = "array", items = new { type = "string" }, description = "Object GUIDs" },
-            names = new { type = "array", items = new { type = "string" }, description = "Object names" },
-            layer = new { type = "string", description = "Layer full path — selects all objects on layer" },
-            geometryType = new { type = "string", description = "Filter by type: point, pointset, curve, surface, brep, mesh, annotation, light, block" }
-        }
-    };
-
-    public object Execute(JsonObject? args)
-    {
-        var ids = args?["ids"]?.AsArray().Select(n => n?.GetValue<string>()).OfType<string>().ToArray() ?? [];
-        var names = args?["names"]?.AsArray().Select(n => n?.GetValue<string>()).OfType<string>().ToArray() ?? [];
-        var layer = args?["layer"]?.GetValue<string>();
-        var geoType = args?["geometryType"]?.GetValue<string>();
+        ids ??= [];
+        names ??= [];
 
         var selected = 0;
         string? warning = null;
@@ -50,7 +44,7 @@ public sealed class SetSelectionTool : IMcpTool
                 if (obj != null) { obj.Select(true); selected++; }
             }
 
-            if (names.Length > 0 || !string.IsNullOrEmpty(layer) || !string.IsNullOrEmpty(geoType))
+            if (names.Length > 0 || !string.IsNullOrEmpty(layer) || !string.IsNullOrEmpty(geometryType))
             {
                 var settings = new ObjectEnumeratorSettings
                 {
@@ -62,8 +56,8 @@ public sealed class SetSelectionTool : IMcpTool
                     IncludeGrips = false,
                 };
 
-                if (!string.IsNullOrEmpty(geoType))
-                    settings.ObjectTypeFilter = ParseObjectType(geoType);
+                if (!string.IsNullOrEmpty(geometryType))
+                    settings.ObjectTypeFilter = ParseObjectType(geometryType);
 
                 if (!string.IsNullOrEmpty(layer))
                 {
@@ -89,15 +83,14 @@ public sealed class SetSelectionTool : IMcpTool
         });
 
         if (!task.Wait(TimeSpan.FromSeconds(5)))
-            return new { content = new[] { new { type = "text", text = "Timeout: selection exceeded 5 seconds." } } };
+            return "Timeout: selection exceeded 5 seconds.";
 
         if (task.IsFaulted)
-            return new { content = new[] { new { type = "text", text = $"Error: {task.Exception?.GetBaseException().Message}" } } };
+            return $"Error: {task.Exception?.GetBaseException().Message}";
 
-        var msg = warning is null
+        return warning is null
             ? $"Selected {selected} object(s)."
             : $"Selected {selected} object(s). Warning: {warning}";
-        return new { content = new[] { new { type = "text", text = msg } } };
     }
 
     private static ObjectType ParseObjectType(string s) => s.ToLowerInvariant() switch
