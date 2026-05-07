@@ -2,7 +2,7 @@
 
 <img src="art/logo.svg" alt="Rhino MCP" width="180" />
 
-# Rhino MCP
+# Rhino MCP Platform
 
 **A Rhino MCP Server for AI Agents to create and edit Rhino.**
 
@@ -28,7 +28,11 @@ https://github.com/user-attachments/assets/9b1cd938-3995-4eec-ab42-d62bf67b13f2
 
 ### Configuration
 
-RhinoMCP has one command, aptly named `RhinoMCP` which will let you change the port it is using.
+RhinoMCP has one command, aptly named `RhinoMCP` which will start the server and let you change the port it is using.
+
+# Getting Help
+
+Ask questions, post discussions and ideas to the [Rhino Discourse forums](https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162).
 
 # What can an MCP Server do?
 
