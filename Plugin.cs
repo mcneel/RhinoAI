@@ -7,18 +7,9 @@ namespace RhMcp;
 public class RhMcpPlugin : PlugIn
 {
 
+// In Debug just start the server for simplicity.
 #if DEBUG
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;
-#endif
-
-    public RhMcpPlugin()
-    {
-        Instance = this;
-    }
-
-#pragma warning disable
-    public static RhMcpPlugin Instance { get; private set; }
-#pragma warning enable
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
@@ -33,4 +24,16 @@ public class RhMcpPlugin : PlugIn
     }
 
     protected override void OnShutdown() => RhMcpHost.Stop();
+#endif
+
+    public RhMcpPlugin()
+    {
+        Instance = this;
+    }
+
+#pragma warning disable
+    public static RhMcpPlugin Instance { get; private set; }
+#pragma warning enable
+
+
 }
