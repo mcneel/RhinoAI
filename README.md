@@ -19,7 +19,7 @@ Rhino MCP Platform can be installed without building source code.
 1. Run `PackageManager` in Rhino
 2. Search Rhino-MCP-Platform
 3. Install
-4. Skip to [Using](https://github.com/mcneel/RhinoMCP/README.md#using)
+4. Skip to [Using](https://github.com/mcneel/RhinoMCP#using)
 
 ## Building & Debugging
 
