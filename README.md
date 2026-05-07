@@ -12,6 +12,15 @@
 
 # Getting Started
 
+## Installing
+
+Rhino MCP Platform can be installed without building source code.
+
+1. Run `PackageManager` in Rhino
+2. Search Rhino-MCP-Platform
+3. Install
+4. Skip to https://github.com/mcneel/RhinoMCP/edit/main/README.md#using
+
 ## Building & Debugging
 
 Use Run and Debug from within VSCode to build, launch Rhino and start the MCP Server all in one click.
