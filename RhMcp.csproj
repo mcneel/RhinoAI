@@ -10,11 +10,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>RhMcp</RootNamespace>
+    <AssemblyName>RhinoMcpPlatform</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup>
     <Version>0.1.0</Version>
-    <Title>Rhino MCP</Title>
+    <Title>Rhino MCP Platform</Title>
     <Company>McNeel</Company>
     <Description>MCP server plugin for Rhino</Description>
   </PropertyGroup>
