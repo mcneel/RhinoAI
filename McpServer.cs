@@ -22,7 +22,7 @@ internal sealed class McpServer : IDisposable
 
     public bool Start()
     {
-        if (HasStarted) return false;
+        if (HasStarted) return true;
         try
         {
             var builder = WebApplication.CreateSlimBuilder();
@@ -43,7 +43,7 @@ internal sealed class McpServer : IDisposable
             _cts = new CancellationTokenSource();
             _ = _app.RunAsync(_cts.Token);
 
-            RhinoApp.WriteLine($"[Rhino MCP] Listening on http://localhost:{RhMcpHost.Port}/");
+            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{RhMcpHost.Port}/");
             return true;
         }
         catch (Exception ex)

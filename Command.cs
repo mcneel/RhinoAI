@@ -11,8 +11,17 @@ public class RhinoMcpCommand : Command
 
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {
-        RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{RhMcpHost.Port}/");
-        if (RhMcpHost.HasStarted) return Result.Success;
+        if (!RhMcpHost.HasStarted)
+        {
+            if (RhMcpHost.Start())
+            {
+                // Start runs WriteLine
+            }
+            else
+            {
+                RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
+            }
+        }
 
         var go = new GetOption();
         go.SetCommandPrompt("RhinoMCP");
