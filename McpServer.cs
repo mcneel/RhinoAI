@@ -30,14 +30,16 @@ internal sealed class McpServer : IDisposable
 
     public bool Start()
     {
-        if (HasStarted) return false;
+        if (HasStarted) return true;
         try
         {
             Listener.Prefixes.Add($"http://localhost:{RhMcpHost.Port}/");
             Listener.Start();
             _cts = new CancellationTokenSource();
             _ = ListenAsync(_cts.Token);
-            RhinoApp.WriteLine($"[Rhino MCP] Listening on http://localhost:{RhMcpHost.Port}/ ({Tools.Count} tools)");
+            
+            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{RhMcpHost.Port}/");
+
             return true;
         }
         catch

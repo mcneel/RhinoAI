@@ -7,25 +7,6 @@ namespace RhMcp;
 public class RhMcpPlugin : PlugIn
 {
 
-// In Debug just start the server for simplicity.
-#if DEBUG
-    public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;
-
-    protected override LoadReturnCode OnLoad(ref string errorMessage)
-    {
-        RhinoApp.Initialized += StartServer;
-        return LoadReturnCode.Success;
-    }
-
-    private void StartServer(object? sender, EventArgs e)
-    {
-        RhinoApp.Initialized -= StartServer;
-        RhMcpHost.Start();
-    }
-
-    protected override void OnShutdown() => RhMcpHost.Stop();
-#endif
-
     public RhMcpPlugin()
     {
         Instance = this;
