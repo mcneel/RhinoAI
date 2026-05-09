@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 
 using ModelContextProtocol.Server;
 
@@ -15,7 +14,7 @@ namespace RhMcp.Tools;
 public static class SetSelectionTool
 {
     [McpServerTool(Name = "set_selection")]
-    [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection. Times out after 5s.")]
+    [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection.")]
     public static string SetSelection(
         [Description("Object GUIDs")] string[]? ids = null,
         [Description("Object names")] string[]? names = null,
@@ -28,7 +27,7 @@ public static class SetSelectionTool
         var selected = 0;
         string? warning = null;
 
-        var task = Task.Run(() =>
+        RhinoApp.InvokeAndWait(() =>
         {
             var doc = RhinoDoc.ActiveDoc;
             doc.Objects.UnselectAll();
@@ -81,12 +80,6 @@ public static class SetSelectionTool
 
             doc.Views.Redraw();
         });
-
-        if (!task.Wait(TimeSpan.FromSeconds(5)))
-            return "Timeout: selection exceeded 5 seconds.";
-
-        if (task.IsFaulted)
-            return $"Error: {task.Exception?.GetBaseException().Message}";
 
         return warning is null
             ? $"Selected {selected} object(s)."

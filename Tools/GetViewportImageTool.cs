@@ -36,39 +36,39 @@ public static class GetViewportImageTool
         var activeView = RhinoDoc.ActiveDoc?.Views.ActiveView
             ?? throw new InvalidOperationException("No active view.");
 
-        var vp = activeView.ActiveViewport;
-
-        if (!string.IsNullOrEmpty(view))
-        {
-            var proj = view.ToLowerInvariant() switch
-            {
-                "top" => DefinedViewportProjection.Top,
-                "bottom" => DefinedViewportProjection.Bottom,
-                "left" => DefinedViewportProjection.Left,
-                "right" => DefinedViewportProjection.Right,
-                "front" => DefinedViewportProjection.Front,
-                "back" => DefinedViewportProjection.Back,
-                "perspective" => DefinedViewportProjection.Perspective,
-                _ => DefinedViewportProjection.None
-            };
-            if (proj != DefinedViewportProjection.None)
-                vp.SetProjection(proj, null, true);
-        }
-
-        if (cameraLocation is not null)
-            vp.SetCameraLocation(new Point3d(cameraLocation.X, cameraLocation.Y, cameraLocation.Z), false);
-
-        if (target is not null)
-            vp.SetCameraTarget(new Point3d(target.X, target.Y, target.Z), false);
-
-        if (zoom.HasValue)
-            vp.Magnify(zoom.Value, true);
-
-        activeView.Redraw();
-        
         Bitmap? bitmap = null;
         RhinoApp.InvokeAndWait(() =>
         {
+            var vp = activeView.ActiveViewport;
+
+            if (!string.IsNullOrEmpty(view))
+            {
+                var proj = view.ToLowerInvariant() switch
+                {
+                    "top" => DefinedViewportProjection.Top,
+                    "bottom" => DefinedViewportProjection.Bottom,
+                    "left" => DefinedViewportProjection.Left,
+                    "right" => DefinedViewportProjection.Right,
+                    "front" => DefinedViewportProjection.Front,
+                    "back" => DefinedViewportProjection.Back,
+                    "perspective" => DefinedViewportProjection.Perspective,
+                    _ => DefinedViewportProjection.None
+                };
+                if (proj != DefinedViewportProjection.None)
+                    vp.SetProjection(proj, null, true);
+            }
+
+            if (cameraLocation is not null)
+                vp.SetCameraLocation(new Point3d(cameraLocation.X, cameraLocation.Y, cameraLocation.Z), false);
+
+            if (target is not null)
+                vp.SetCameraTarget(new Point3d(target.X, target.Y, target.Z), false);
+
+            if (zoom.HasValue)
+                vp.Magnify(zoom.Value, true);
+
+            activeView.Redraw();
+
             bitmap = activeView.CaptureToBitmap(new Size(width, height));
         });
 

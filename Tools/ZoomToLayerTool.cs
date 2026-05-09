@@ -51,8 +51,11 @@ public static class ZoomToLayerTool
         var vp = doc.Views.ActiveView?.ActiveViewport
             ?? throw new InvalidOperationException("No active viewport.");
 
-        vp.ZoomBoundingBox(bb);
-        doc.Views.Redraw();
+        RhinoApp.InvokeAndWait(() =>
+        {
+            vp.ZoomBoundingBox(bb);
+            doc.Views.Redraw();
+        });
 
         return $"Zoomed to {count} object(s) on layer \"{layer}\".";
     }
