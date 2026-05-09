@@ -16,6 +16,7 @@ public static class ListObjectsTool
     [McpServerTool(Name = "list_objects")]
     [Description("List objects in the active document. Filter by name, layer, or geometry type. Pure query — does not change selection or viewport.")]
     public static string ListObjects(
+        RhinoDoc doc,
         [Description("Object names to match")] string[]? names = null,
         [Description("Layer full path")] string? layer = null,
         [Description("Filter by type: point, pointset, curve, surface, brep, mesh, annotation, light, block")] string? geometryType = null,
@@ -23,7 +24,6 @@ public static class ListObjectsTool
         [Description("Include locked objects (default true)")] bool includeLocked = true,
         [Description("Maximum number of objects to return (default 1000)")] int limit = 1000)
     {
-        var doc = RhinoDoc.ActiveDoc;
         var settings = new ObjectEnumeratorSettings
         {
             ActiveObjects = true,

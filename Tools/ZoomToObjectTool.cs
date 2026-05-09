@@ -14,9 +14,9 @@ public static class ZoomToObjectTool
     [McpServerTool(Name = "zoom_to_object")]
     [Description("Zoom the active viewport to fit one or more objects by GUID.")]
     public static string ZoomToObject(
+        RhinoDoc doc,
         [Description("Object GUIDs to zoom to")] string[] ids)
     {
-        var doc = RhinoDoc.ActiveDoc;
         var bb = BoundingBox.Empty;
 
         foreach (var idStr in ids)

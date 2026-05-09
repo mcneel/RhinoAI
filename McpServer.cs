@@ -20,14 +20,16 @@ internal sealed class McpServer : IDisposable
 
     public bool HasStarted => _app is not null;
 
-    public bool Start()
+    public bool Start(RhinoDoc doc, int port)
     {
         if (HasStarted) return true;
         try
         {
             var builder = WebApplication.CreateSlimBuilder();
             builder.Logging.ClearProviders();
-            builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(RhMcpHost.Port));
+            builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(port));
+
+            builder.Services.AddSingleton(doc);
 
             builder.Services
                 .AddMcpServer(o =>
@@ -35,7 +37,9 @@ internal sealed class McpServer : IDisposable
                     o.ServerInfo = new() { Name = "rhino-mcp", Version = "0.1.0" };
                 })
                 .WithHttpTransport(o => o.Stateless = true)
-                .WithToolsFromAssembly(typeof(McpServer).Assembly);
+                .WithToolsFromAssembly(typeof(McpServer).Assembly)
+                .WithResourcesFromAssembly(typeof(McpServer).Assembly)
+                .WithPromptsFromAssembly(typeof(McpServer).Assembly);
 
             _app = builder.Build();
             _app.MapMcp();
@@ -43,7 +47,7 @@ internal sealed class McpServer : IDisposable
             _cts = new CancellationTokenSource();
             _ = _app.RunAsync(_cts.Token);
 
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{RhMcpHost.Port}/");
+            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{port}/");
             return true;
         }
         catch (Exception ex)

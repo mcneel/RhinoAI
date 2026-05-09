@@ -17,13 +17,12 @@ public static class ProbeIntersectionTool
     [McpServerTool(Name = "probe_intersection")]
     [Description("Compute intersection points between a line segment and a Brep. Returns hit points and overlap-curve count.")]
     public static string ProbeIntersection(
+        RhinoDoc doc,
         [Description("Line start {x,y,z}")] Vector3d start,
         [Description("Line end {x,y,z}")] Vector3d end,
         [Description("Target Brep GUID")] string brepId,
         [Description("Optional intersection tolerance (defaults to document absolute tolerance)")] double? tolerance = null)
     {
-        var doc = RhinoDoc.ActiveDoc;
-
         if (!Guid.TryParse(brepId, out var guid))
             return JsonSerializer.Serialize(new { error = "Invalid GUID." });
 

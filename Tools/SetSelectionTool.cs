@@ -16,6 +16,7 @@ public static class SetSelectionTool
     [McpServerTool(Name = "set_selection")]
     [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection.")]
     public static string SetSelection(
+        RhinoDoc doc,
         [Description("Object GUIDs")] string[]? ids = null,
         [Description("Object names")] string[]? names = null,
         [Description("Layer full path — selects all objects on layer")] string? layer = null,
@@ -29,7 +30,6 @@ public static class SetSelectionTool
 
         RhinoApp.InvokeAndWait(() =>
         {
-            var doc = RhinoDoc.ActiveDoc;
             doc.Objects.UnselectAll();
 
             var guidSet = new HashSet<Guid>();

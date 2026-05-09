@@ -7,21 +7,14 @@ namespace RhMcp;
 
 public class RhinoMcpCommand : Command
 {
+
     public override string EnglishName => "RhinoMCP";
+
+    private const int DefaultPort = 4862;
 
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {
-        if (!RhMcpHost.HasStarted)
-        {
-            if (RhMcpHost.Start())
-            {
-                // Start runs WriteLine
-            }
-            else
-            {
-                RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
-            }
-        }
+        int port = DefaultPort;
 
         var go = new GetOption();
         go.SetCommandPrompt("RhinoMCP");
@@ -35,19 +28,37 @@ public class RhinoMcpCommand : Command
         if (go.Option().Index == setPortOpt)
         {
             var gi = new GetInteger();
-            gi.SetCommandPrompt("New port");
-            gi.SetDefaultInteger(RhMcpHost.Port);
+            gi.SetCommandPrompt("Port");
+            gi.SetDefaultInteger(port);
             gi.SetLowerLimit(1, false);
             gi.SetUpperLimit(65535, false);
             if (gi.Get() != GetResult.Number) return Result.Cancel;
 
-            var port = gi.Number();
-            if (!RhMcpHost.RestartOnPort(port))
+            port = gi.Number();
+            if (!RhinoMcpHost.RestartOnPort(doc, port))
             {
                 RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
                 return Result.Failure;
             }
-            RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
+
+            // Confirms a restart
+            if (RhinoMcpHost.HasStarted(doc))
+            {
+                // TODO : Note old port down too
+                RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
+            }
+        }
+
+        if (!RhinoMcpHost.HasStarted(doc))
+        {
+            if (RhinoMcpHost.Start(doc, port))
+            {
+                // Start runs WriteLine
+            }
+            else
+            {
+                RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
+            }
         }
 
         return Result.Success;

@@ -13,9 +13,8 @@ public static class GetSelectionTool
 {
     [McpServerTool(Name = "get_selection")]
     [Description("Return all currently selected objects in Rhino.")]
-    public static string GetSelection()
+    public static string GetSelection(RhinoDoc doc)
     {
-        var doc = RhinoDoc.ActiveDoc;
         var selected = doc.Objects
             .GetSelectedObjects(includeLights: false, includeGrips: false)
             .Select(obj => new
