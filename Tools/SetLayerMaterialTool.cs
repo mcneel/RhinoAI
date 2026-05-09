@@ -16,13 +16,13 @@ public static class SetLayerMaterialTool
     [McpServerTool(Name = "set_layer_material")]
     [Description("Set the render material on a layer. Accepts diffuse color, transparency, and gloss. Optionally also sets the layer display color.")]
     public static string SetLayerMaterial(
+        RhinoDoc doc,
         [Description("Layer full path")] string layer,
         [Description("Diffuse color hex like '#FF0000' or known color name")] string? color = null,
         [Description("Transparency 0.0 (opaque) to 1.0 (fully transparent)")] double? transparency = null,
         [Description("Glossiness 0.0 (matte) to 1.0 (mirror)")] double? gloss = null,
         [Description("Also apply color as the layer display (wireframe) color")] bool applyToLayerColor = true)
     {
-        var doc = RhinoDoc.ActiveDoc;
         var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
         if (idx < 0) return $"Layer not found: {layer}";
 

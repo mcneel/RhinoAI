@@ -26,6 +26,7 @@ public static class GetViewportImageTool
     [McpServerTool(Name = "get_viewport_image")]
     [Description("Capture the active Rhino viewport as JPG. Returns the image plus a JSON metadata block describing the resulting camera, display mode, framed scene bounds, and on-screen object count — use the metadata to diagnose empty/off-screen captures without re-shooting.")]
     public static IEnumerable<AIContent> GetViewportImage(
+        RhinoDoc doc,
         [Description("Image width pixels (default 480) (max 1280) increase sparingly")] int width = 480,
         [Description("Image height pixels (default 270) (max 720) increase sparingly")] int height = 270,
         [Description("Standard view: top, bottom, left, right, front, back, perspective")] string? view = null,
@@ -34,12 +35,12 @@ public static class GetViewportImageTool
         [Description("Camera look-at point {x,y,z}")] Vector3d? target = null,
         [Description("Frame this bounding box (min corner). Pair with boxMax. Replaces zoom — agent supplies what to frame, tool computes how far back to stand.")] Vector3d? boxMin = null,
         [Description("Frame this bounding box (max corner). Pair with boxMin.")] Vector3d? boxMax = null,
-        [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null,
+        [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null)
     {
         width = Math.Min(width, 1280);
         height = Math.Min(height, 720);
 
-        var activeView = RhinoDoc.ActiveDoc?.Views.ActiveView
+        var activeView = doc.Views.ActiveView
             ?? throw new McpException("No active view.");
 
         Bitmap? bitmap = null;

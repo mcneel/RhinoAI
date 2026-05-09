@@ -14,6 +14,7 @@ public static class SetCameraTool
     [McpServerTool(Name = "set_camera")]
     [Description("Set the active viewport camera. Any subset of position, target, up vector, lens length, projection, or framing bounding-box may be supplied.")]
     public static string SetCamera(
+        RhinoDoc doc,
         [Description("Camera position {x,y,z}")] Vector3d? location = null,
         [Description("Camera look-at point {x,y,z}")] Vector3d? target = null,
         [Description("Camera up vector {x,y,z}")] Vector3d? up = null,
@@ -22,7 +23,7 @@ public static class SetCameraTool
         [Description("Frame this bounding box (min corner). Pair with boxMax. Applied last so it dominates location/target if both supplied.")] Vector3d? boxMin = null,
         [Description("Frame this bounding box (max corner). Pair with boxMin.")] Vector3d? boxMax = null)
     {
-        var view = RhinoDoc.ActiveDoc?.Views.ActiveView
+        var view = doc.Views.ActiveView
             ?? throw new InvalidOperationException("No active view.");
 
         string? error = null;

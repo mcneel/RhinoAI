@@ -1,40 +1,57 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+
 using Rhino;
 using Rhino.PlugIns;
 
 namespace RhMcp;
 
-public static class RhMcpHost
+public static class RhinoMcpHost
 {
-    public const int DefaultPort = 4862;
-    private const string PortKey = "port";
 
-    private static McpServer Server { get; } = new();
+    private static Dictionary<uint, McpServer> Servers { get; } = new();
 
-    public static bool HasStarted => Server?.HasStarted ?? false;
-
-    public static int Port
+    static RhinoMcpHost()
     {
-        get => RhMcpPlugin.Instance.Settings.GetInteger(PortKey, DefaultPort);
-        private set => RhMcpPlugin.Instance.Settings.SetInteger(PortKey, value);
+        RhinoDoc.CloseDocument += CloseServer;
     }
 
-    public static bool Start()
+    private static void CloseServer(object? sender, DocumentEventArgs e)
     {
-        if (Server.HasStarted) return true;
-        return Server.Start();
+        Servers.Remove(e.DocumentSerialNumber);
     }
 
-    public static void Stop()
+    public static bool HasStarted(RhinoDoc doc) => Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server) && (server?.HasStarted ?? false);
+
+    private const int DefaultPort = 4862;
+    public static int GetNextPort()
     {
-        Server.Stop();
+        if (Servers.Count <= 0) return DefaultPort;
+        return Servers.Max(s => s.Value.Port) + 1;
     }
 
-    public static bool RestartOnPort(int port)
+    public static bool Start(RhinoDoc doc, int port)
+    {
+        if (HasStarted(doc)) return true;
+        McpServer server = new();
+        Servers.Add(doc.RuntimeSerialNumber, server);
+
+        return server.Start(doc, port);
+    }
+
+    public static void Stop(RhinoDoc doc)
+    {
+        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)) return;
+        server?.Stop();
+    }
+
+    public static bool RestartOnPort(RhinoDoc doc, int port)
     {
         if (port < 1 || port > 65535) return false;
-        Stop();
-        Port = port;
-        Start();
+        // TODO : Check no other server is using the port and report to user
+        Stop(doc);
+        Start(doc, port);
         return true;
     }
 }
