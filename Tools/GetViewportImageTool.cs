@@ -18,16 +18,15 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class GetViewportImageTool
 {
-    public sealed record Vec3(double X, double Y, double Z);
 
     [McpServerTool(Name = "get_viewport_image")]
     [Description("Capture active Rhino viewport as PNG. Optionally set standard view, camera position, target point, and zoom.")]
     public static IEnumerable<AIContent> GetViewportImage(
-        [Description("Image width pixels (default 640) (max 1280) increase sparingly")] int width = 640,
-        [Description("Image height pixels (default 360) (max 720) increase sparingly")] int height = 360,
+        [Description("Image width pixels (default 480) (max 1280) increase sparingly")] int width = 480,
+        [Description("Image height pixels (default 270) (max 720) increase sparingly")] int height = 270,
         [Description("Standard view: top, bottom, left, right, front, back, perspective")] string? view = null,
-        [Description("Camera position {x,y,z}")] Vec3? cameraLocation = null,
-        [Description("Camera look-at point {x,y,z}")] Vec3? target = null,
+        [Description("Camera position {x,y,z}")] Vector3d? cameraLocation = null,
+        [Description("Camera look-at point {x,y,z}")] Vector3d? target = null,
         [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out")] double? zoom = null)
     {
         width = Math.Min(width, 1280);
@@ -59,10 +58,10 @@ public static class GetViewportImageTool
             }
 
             if (cameraLocation is not null)
-                vp.SetCameraLocation(new Point3d(cameraLocation.X, cameraLocation.Y, cameraLocation.Z), false);
+                vp.SetCameraLocation((Point3d)cameraLocation, false);
 
             if (target is not null)
-                vp.SetCameraTarget(new Point3d(target.X, target.Y, target.Z), false);
+                vp.SetCameraTarget((Point3d)target, false);
 
             if (zoom.HasValue)
                 vp.Magnify(zoom.Value, true);
@@ -75,7 +74,7 @@ public static class GetViewportImageTool
         if (bitmap is null) return [new DataContent("could not capture image")];
 
         using var ms = new MemoryStream();
-        bitmap.Save(ms, ImageFormat.Png);
+        bitmap.Save(ms, ImageFormat.Jpeg);
 
         return [new DataContent(ms.ToArray(), "image/png")];
     }
