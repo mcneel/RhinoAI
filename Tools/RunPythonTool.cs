@@ -15,9 +15,9 @@ namespace RhMcp.Tools;
 public static class RunPythonTool
 {
     [McpServerTool(Name = "run_python")]
-    [Description("Execute a Python 3 script in the Rhino Script Editor. Returns JSON with stdout and error fields; error is null on success.")]
+    [Description("Execute a Python 3 script. Returns JSON with stdout and error fields; error is null on success.")]
     public static string RunPython(
-        [Description("Python 3 code to execute")] string script)
+        [Description("Script")] string script)
     {
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.py");
         File.WriteAllText(tmp, script);
