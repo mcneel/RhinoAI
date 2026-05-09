@@ -1,17 +1,19 @@
+using System.ComponentModel;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 
 namespace RhMcp.Tools;
 
-public sealed class GetSelectionTool : IMcpTool
+[McpServerToolType]
+public static class GetSelectionTool
 {
-    public string Name => "get_selection";
-    public string Description => "Return all currently selected objects in Rhino.";
-    public object InputSchema => new { type = "object", properties = new { } };
-
-    public object Execute(JsonObject? args)
+    [McpServerTool(Name = "get_selection")]
+    [Description("Return all currently selected objects in Rhino.")]
+    public static string GetSelection()
     {
         var doc = RhinoDoc.ActiveDoc;
         var selected = doc.Objects
@@ -25,6 +27,6 @@ public sealed class GetSelectionTool : IMcpTool
             })
             .ToArray();
 
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(selected) } } };
+        return JsonSerializer.Serialize(selected);
     }
 }

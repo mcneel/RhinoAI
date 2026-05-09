@@ -1,36 +1,29 @@
 using System;
+using System.ComponentModel;
 using System.IO;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 
 namespace RhMcp.Tools;
 
-public sealed class RunPythonTool : IMcpTool
+[McpServerToolType]
+public static class RunPythonTool
 {
-    public string Name => "run_python";
-    public string Description => "Execute a Python 3 script in the Rhino Script Editor and return command window output.";
-    public object InputSchema => new
+    [McpServerTool(Name = "run_python")]
+    [Description("Execute a Python 3 script in the Rhino Script Editor and return command window output.")]
+    public static string RunPython(
+        [Description("Python 3 code to execute")] string script)
     {
-        type = "object",
-        properties = new
-        {
-            script = new { type = "string", description = "Python 3 code to execute" }
-        },
-        required = new[] { "script" }
-    };
-
-    public object Execute(JsonObject? args)
-    {
-        var script = args?["script"]?.GetValue<string>() ?? "";
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.py");
         File.WriteAllText(tmp, script);
         RhinoApp.CommandWindowCaptureEnabled = true;
-        RhinoApp.RunScript($"-ScriptEditor _Run \"{tmp}\"", false);
-        var lines = RhinoApp.CapturedCommandWindowStrings(true);
+        RhinoApp.InvokeAndWait(() => RhinoApp.RunScript($"-ScriptEditor _Run \"{tmp}\"", false));
+        string[] lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
         _ = Task.Delay(15_000).ContinueWith(_ => { try { File.Delete(tmp); } catch { } });
-        var output = lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";
-        return new { content = new[] { new { type = "text", text = output } } };
+        return lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";
     }
 }

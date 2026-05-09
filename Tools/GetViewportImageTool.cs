@@ -1,98 +1,82 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Text.Json.Nodes;
+
+using Microsoft.Extensions.AI;
+
+using ModelContextProtocol.Server;
+
 using Rhino;
 using Rhino.Display;
 using Rhino.Geometry;
 
 namespace RhMcp.Tools;
 
-public sealed class GetViewportImageTool : IMcpTool
+[McpServerToolType]
+public static class GetViewportImageTool
 {
-    public string Name => "get_viewport_image";
-    public string Description => "Capture active Rhino viewport as PNG. Optionally set standard view, camera position, target point, and zoom.";
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            width = new { type = "integer", description = "Image width pixels (default 640) (max 1280) increase sparingly" },
-            height = new { type = "integer", description = "Image height pixels (default 360) (max 720) increase sparingly" },
-            view = new { type = "string", description = "Standard view: top, bottom, left, right, front, back, perspective" },
-            cameraLocation = new
-            {
-                type = "object",
-                description = "Camera position {x,y,z}",
-                properties = new { x = new { type = "number" }, y = new { type = "number" }, z = new { type = "number" } }
-            },
-            target = new
-            {
-                type = "object",
-                description = "Camera look-at point {x,y,z}",
-                properties = new { x = new { type = "number" }, y = new { type = "number" }, z = new { type = "number" } }
-            },
-            zoom = new { type = "number", description = "Magnification factor: >1 zoom in, 0<x<1 zoom out" }
-        }
-    };
+    public sealed record Vec3(double X, double Y, double Z);
 
-    public object Execute(JsonObject? args)
+    [McpServerTool(Name = "get_viewport_image")]
+    [Description("Capture active Rhino viewport as PNG. Optionally set standard view, camera position, target point, and zoom.")]
+    public static IEnumerable<AIContent> GetViewportImage(
+        [Description("Image width pixels (default 640) (max 1280) increase sparingly")] int width = 640,
+        [Description("Image height pixels (default 360) (max 720) increase sparingly")] int height = 360,
+        [Description("Standard view: top, bottom, left, right, front, back, perspective")] string? view = null,
+        [Description("Camera position {x,y,z}")] Vec3? cameraLocation = null,
+        [Description("Camera look-at point {x,y,z}")] Vec3? target = null,
+        [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out")] double? zoom = null)
     {
-        var width = Math.Max(args?["width"]?.GetValue<int>() ?? 640, 1280);
-        var height = Math.Max(args?["height"]?.GetValue<int>() ?? 360, 720);
-        var viewName = args?["view"]?.GetValue<string>();
-        var camLoc = ParsePoint(args?["cameraLocation"]);
-        var target = ParsePoint(args?["target"]);
-        var zoom = args?["zoom"]?.GetValue<double>();
+        width = Math.Min(width, 1280);
+        height = Math.Min(height, 720);
 
-        var view = RhinoDoc.ActiveDoc?.Views.ActiveView
+        var activeView = RhinoDoc.ActiveDoc?.Views.ActiveView
             ?? throw new InvalidOperationException("No active view.");
 
-        var vp = view.ActiveViewport;
-
-        if (!string.IsNullOrEmpty(viewName))
+        Bitmap? bitmap = null;
+        RhinoApp.InvokeAndWait(() =>
         {
-            var proj = viewName.ToLowerInvariant() switch
+            var vp = activeView.ActiveViewport;
+
+            if (!string.IsNullOrEmpty(view))
             {
-                "top" => DefinedViewportProjection.Top,
-                "bottom" => DefinedViewportProjection.Bottom,
-                "left" => DefinedViewportProjection.Left,
-                "right" => DefinedViewportProjection.Right,
-                "front" => DefinedViewportProjection.Front,
-                "back" => DefinedViewportProjection.Back,
-                "perspective" => DefinedViewportProjection.Perspective,
-                _ => DefinedViewportProjection.None
-            };
-            if (proj != DefinedViewportProjection.None)
-                vp.SetProjection(proj, null, true);
-        }
+                var proj = view.ToLowerInvariant() switch
+                {
+                    "top" => DefinedViewportProjection.Top,
+                    "bottom" => DefinedViewportProjection.Bottom,
+                    "left" => DefinedViewportProjection.Left,
+                    "right" => DefinedViewportProjection.Right,
+                    "front" => DefinedViewportProjection.Front,
+                    "back" => DefinedViewportProjection.Back,
+                    "perspective" => DefinedViewportProjection.Perspective,
+                    _ => DefinedViewportProjection.None
+                };
+                if (proj != DefinedViewportProjection.None)
+                    vp.SetProjection(proj, null, true);
+            }
 
-        if (camLoc.HasValue)
-            vp.SetCameraLocation(camLoc.Value, false);
+            if (cameraLocation is not null)
+                vp.SetCameraLocation(new Point3d(cameraLocation.X, cameraLocation.Y, cameraLocation.Z), false);
 
-        if (target.HasValue)
-            vp.SetCameraTarget(target.Value, false);
+            if (target is not null)
+                vp.SetCameraTarget(new Point3d(target.X, target.Y, target.Z), false);
 
-        if (zoom.HasValue)
-            vp.Magnify(zoom.Value, true);
+            if (zoom.HasValue)
+                vp.Magnify(zoom.Value, true);
 
-        view.Redraw();
+            activeView.Redraw();
 
-        using var bmp = view.CaptureToBitmap(new Size(width, height));
+            bitmap = activeView.CaptureToBitmap(new Size(width, height));
+        });
+
+        if (bitmap is null) return [new DataContent("could not capture image")];
+
         using var ms = new MemoryStream();
-        bmp.Save(ms, ImageFormat.Png);
-        var base64 = Convert.ToBase64String(ms.ToArray());
+        bitmap.Save(ms, ImageFormat.Png);
 
-        return new { content = new[] { new { type = "image", data = base64, mimeType = "image/png" } } };
-    }
-
-    private static Point3d? ParsePoint(JsonNode? node)
-    {
-        if (node is null) return null;
-        return new Point3d(
-            node["x"]?.GetValue<double>() ?? 0,
-            node["y"]?.GetValue<double>() ?? 0,
-            node["z"]?.GetValue<double>() ?? 0);
+        return [new DataContent(ms.ToArray(), "image/png")];
     }
 }
