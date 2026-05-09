@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 using ModelContextProtocol.Server;
@@ -13,7 +15,7 @@ namespace RhMcp.Tools;
 public static class RunPythonTool
 {
     [McpServerTool(Name = "run_python")]
-    [Description("Execute a Python 3 script in the Rhino Script Editor and return command window output.")]
+    [Description("Execute a Python 3 script in the Rhino Script Editor. Returns JSON with stdout and error fields; error is null on success.")]
     public static string RunPython(
         [Description("Python 3 code to execute")] string script)
     {
@@ -24,6 +26,27 @@ public static class RunPythonTool
         string[] lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
         _ = Task.Delay(15_000).ContinueWith(_ => { try { File.Delete(tmp); } catch { } });
-        return lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";
+
+        // Saves a few tokens
+        var filtered = (lines ?? [])
+            .Where(l => !l.StartsWith("Command:", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        int tbIndex = Array.FindIndex(filtered, l => l.Contains("Traceback (most recent call last):"));
+        
+        string stdout;
+        string error;
+        if (tbIndex >= 0)
+        {
+            stdout = string.Join("\n", filtered.Take(tbIndex));
+            error = string.Join("\n", filtered.Skip(tbIndex));
+        }
+        else
+        {
+            stdout = string.Join("\n", filtered);
+            error = string.Empty;
+        }
+
+        return JsonSerializer.Serialize(new { stdout, error });
     }
 }
