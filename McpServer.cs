@@ -20,9 +20,12 @@ internal sealed class McpServer : IDisposable
 
     public bool HasStarted => _app is not null;
 
+    public int Port { get; private set; }
+
     public bool Start(RhinoDoc doc, int port)
     {
         if (HasStarted) return true;
+        Port = port;
         try
         {
             var builder = WebApplication.CreateSlimBuilder();

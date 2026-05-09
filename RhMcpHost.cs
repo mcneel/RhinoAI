@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 using Rhino;
@@ -22,6 +23,13 @@ public static class RhinoMcpHost
     }
 
     public static bool HasStarted(RhinoDoc doc) => Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server) && (server?.HasStarted ?? false);
+
+    private const int DefaultPort = 4862;
+    public static int GetNextPort()
+    {
+        if (Servers.Count <= 0) return DefaultPort;
+        return Servers.Max(s => s.Value.Port) + 1;
+    }
 
     public static bool Start(RhinoDoc doc, int port)
     {
