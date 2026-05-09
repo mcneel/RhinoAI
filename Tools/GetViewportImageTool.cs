@@ -35,7 +35,7 @@ public static class GetViewportImageTool
         [Description("Camera look-at point {x,y,z}")] Vector3d? target = null,
         [Description("Frame this bounding box (min corner). Pair with boxMax. Replaces zoom — agent supplies what to frame, tool computes how far back to stand.")] Vector3d? boxMin = null,
         [Description("Frame this bounding box (max corner). Pair with boxMin.")] Vector3d? boxMax = null,
-        [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null,
+        [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null)
     {
         width = Math.Min(width, 1280);
         height = Math.Min(height, 720);
