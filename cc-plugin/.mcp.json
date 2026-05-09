@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rhino": {
+      "type": "http",
+      "url": "http://localhost:4862"
+    }
+  }
+}

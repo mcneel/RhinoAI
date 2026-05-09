@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Applications/ | grep -i rhino)",
+      "Read(//Applications/**)"
+    ]
+  }
+}
