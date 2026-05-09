@@ -65,10 +65,17 @@ public static class GetViewportImageTool
             vp.Magnify(zoom.Value, true);
 
         activeView.Redraw();
+        
+        Bitmap? bitmap = null;
+        RhinoApp.InvokeAndWait(() =>
+        {
+            bitmap = activeView.CaptureToBitmap(new Size(width, height));
+        });
 
-        using var bmp = activeView.CaptureToBitmap(new Size(width, height));
+        if (bitmap is null) return [new DataContent("could not capture image")];
+
         using var ms = new MemoryStream();
-        bmp.Save(ms, ImageFormat.Png);
+        bitmap.Save(ms, ImageFormat.Png);
 
         return [new DataContent(ms.ToArray(), "image/png")];
     }
