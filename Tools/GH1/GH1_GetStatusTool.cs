@@ -15,7 +15,7 @@ public static class GH1_GetStatusTool
     [Description("Returns all of the errors of the current GH Canvas")]
     public static string GetStatus(RhinoDoc _)
     {
-        if (!GH1_Utils.TryGetDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
+        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
         List<ComponentStatus> statuses = GetCanvasStatus(ghDoc);
         return JsonSerializer.Serialize(statuses);
     }

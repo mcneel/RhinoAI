@@ -11,7 +11,7 @@ public static class GH1_SolveTool
     [Description("Solves the active GH canvas")]
     public static string GetComponent(RhinoDoc _)
     {
-        if (!GH1_Utils.TryGetDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
+        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
 
         int activeCount = ghDoc.ActiveObjects().Count;
         if (activeCount <= 0)
