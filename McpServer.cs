@@ -33,7 +33,7 @@ internal sealed class McpServer : IDisposable
 
             builder.Services.AddSingleton(doc);
 
-            builder.Services
+            var mcp = builder.Services
                 .AddMcpServer(o =>
                 {
                     o.ServerInfo = new() { Name = "rhino-mcp", Version = "0.1.0" };
@@ -42,6 +42,10 @@ internal sealed class McpServer : IDisposable
                 .WithToolsFromAssembly(typeof(McpServer).Assembly)
                 .WithResourcesFromAssembly(typeof(McpServer).Assembly)
                 .WithPromptsFromAssembly(typeof(McpServer).Assembly);
+
+#if DEBUG
+            mcp.WithRequestFilters(f => f.AddCallToolFilter(DebugErrorFilter.Filter));
+#endif
 
             _app = builder.Build();
             _app.MapMcp();
