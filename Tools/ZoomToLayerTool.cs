@@ -1,9 +1,3 @@
-using System;
-using System.ComponentModel;
-
-using ModelContextProtocol.Server;
-
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 

@@ -1,11 +1,3 @@
-using System;
-using System.ComponentModel;
-using System.Linq;
-using System.Text.Json;
-
-using ModelContextProtocol.Server;
-
-using Rhino;
 using Rhino.Geometry;
 using Rhino.Geometry.Intersect;
 

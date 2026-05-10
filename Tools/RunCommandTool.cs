@@ -1,9 +1,3 @@
-using System.ComponentModel;
-
-using ModelContextProtocol.Server;
-
-using Rhino;
-
 namespace RhMcp.Tools;
 
 [McpServerToolType]

@@ -1,11 +1,6 @@
-using System;
-using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
 
-using ModelContextProtocol.Server;
-
-using Rhino;
 using Rhino.DocObjects;
 
 namespace RhMcp.Tools;
