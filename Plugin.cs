@@ -1,5 +1,3 @@
-using System;
-using Rhino;
 using Rhino.PlugIns;
 
 namespace RhMcp;
