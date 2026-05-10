@@ -1,10 +1,3 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
-
-using Rhino;
-using Rhino.PlugIns;
-
 namespace RhMcp;
 
 public static class RhinoMcpHost

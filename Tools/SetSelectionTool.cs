@@ -1,11 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-
-using ModelContextProtocol.Server;
-
-using Rhino;
 using Rhino.DocObjects;
 
 namespace RhMcp.Tools;
