@@ -13,7 +13,7 @@ public static class GH2_Utils
     Editor editor = Editor.Instance;
     if (editor is null)
     {
-      RhinoApp.RunScript("_G2", true);
+      RhinoApp.InvokeAndWait(() => RhinoApp.RunScript("_G2", true));
       if (editor is null) return false;
     }
 

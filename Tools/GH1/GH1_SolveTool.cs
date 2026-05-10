@@ -9,7 +9,7 @@ public static class GH1_SolveTool
 {
     [McpServerTool(Name = "solve_graph")]
     [Description("Solves the active GH canvas")]
-    public static string GetComponent(RhinoDoc _)
+    public static string Solve(RhinoDoc _)
     {
         if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
 
@@ -21,15 +21,18 @@ public static class GH1_SolveTool
 
         try
         {
-            ghDoc.NewSolution(true);
+            RhinoApp.InvokeAndWait(() =>
+            {
+                ghDoc.NewSolution(true);
+            });
         }
         catch (Exception ex)
         {
             return ex.Message;
         }
 
-        var statuses = GH1_GetStatusTool.GetCanvasStatus(ghDoc);
-        if (statuses.Count <= 0)
+        var statuses = GH1_Utils.GetCanvasStatus(ghDoc);
+        if (statuses.Count == 0)
         {
             return "Success";
         }
