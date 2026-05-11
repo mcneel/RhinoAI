@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
+    <PackageReference Include="Grasshopper2" Version="2.0.9225-wip.14825" />
     <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>

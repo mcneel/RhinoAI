@@ -1,9 +1,3 @@
-using System;
-using System.ComponentModel;
-using System.Linq;
-
-using ModelContextProtocol.Server;
-
 using Rhino.Commands;
 
 namespace RhMcp.Tools;
