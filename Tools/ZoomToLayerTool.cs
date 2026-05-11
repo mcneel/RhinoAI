@@ -1,9 +1,3 @@
-using System;
-using System.ComponentModel;
-
-using ModelContextProtocol.Server;
-
-using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 
@@ -15,9 +9,9 @@ public static class ZoomToLayerTool
     [McpServerTool(Name = "zoom_to_layer")]
     [Description("Zoom the active viewport to fit all objects on a layer (full path).")]
     public static string ZoomToLayer(
+        RhinoDoc doc,
         [Description("Layer full path")] string layer)
     {
-        var doc = RhinoDoc.ActiveDoc;
         var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
 
         if (idx < 0)
