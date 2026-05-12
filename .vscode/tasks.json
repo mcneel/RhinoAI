@@ -87,7 +87,7 @@
     {
       "label": "uninstall yak (WIP)",
       "type": "shell",
-      "args": ["remove", "Rhino-MCP-Platform"],
+      "args": ["uninstall", "Rhino-MCP-Platform"],
       "windows": {
         "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
       },
