@@ -24,8 +24,17 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore
+      - name: Restore router
+        run: dotnet restore router/Router.csproj
+
+      - name: Restore plugin
         run: dotnet restore rhino/RhMcp.csproj
 
-      - name: Build
+      - name: Build router
+        run: dotnet build router/Router.csproj --configuration ${{ matrix.configuration }} --no-restore
+
+      - name: Build plugin (bundles router into yak output)
         run: dotnet build rhino/RhMcp.csproj --configuration ${{ matrix.configuration }} --no-restore
+
+      - name: Test router
+        run: dotnet test router.tests/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal

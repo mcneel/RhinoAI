@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "rhino": {
-      "type": "http",
-      "url": "http://localhost:4862"
+      "type": "stdio",
+      "command": "${CLAUDE_PLUGIN_ROOT}/router-launcher.cmd"
     }
   }
 }
