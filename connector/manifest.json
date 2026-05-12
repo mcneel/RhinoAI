@@ -1,0 +1,60 @@
+{
+  "manifest_version": "0.2",
+  "name": "rhino-mcp-platform",
+  "display_name": "Rhino MCP Platform",
+  "version": "0.2.0",
+  "description": "Desktop Connector for Rhino3d and Grasshopper",
+  "long_description": "Bridges Claude to the Rhino MCP Platform plugin running inside Rhino. Requires the Rhino-MCP-Platform Rhino plugin to be installed, and the `RhinoMCP` command to have been run in Rhino to start the HTTP server.",
+  "author": {
+    "name": "McNeel",
+    "email": "callum@mcneel.com",
+    "url": "https://github.com/mcneel/"
+  },
+  "homepage": "http://www.mcneel.com",
+  "documentation": "https://github.com/mcneel/RhinoMCP#readme",
+  "support": "https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162",
+  "icon": "icon.png",
+  "screenshots": [
+    "screenshots/twisty-gh.png"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js",
+        "${user_config.instances}"
+      ],
+      "env": {}
+    }
+  },
+  "prompts": [
+    {
+      "name": "getting-started",
+      "description": "Useful for your first time trying the Rhino3D claude desktop connector",
+      "text": "TODO: Claude fill this in would ya?"
+    }
+  ],
+  "user_config": {
+    "instances": {
+      "type": "string",
+      "title": "Rhino instances",
+      "description": "Comma-separated list of name=url pairs, e.g. A=http://localhost:4862,B=http://localhost:4863. Tool names get prefixed with the instance name. A bare URL is allowed when there's only one instance.",
+      "default": "A=http://localhost:4862",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "keywords": ["rhino", "rhino3d", "mcneel", "cad", "3d", "mcp"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcneel/RhinoMCP"
+  }
+}
