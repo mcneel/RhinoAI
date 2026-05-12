@@ -10,6 +10,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from
+       the router's default **/*.cs glob so they only compile in that project. -->
+  <ItemGroup>
+    <Compile Remove="codegen/**" />
+    <None Remove="codegen/**" />
+    <EmbeddedResource Remove="codegen/**" />
+  </ItemGroup>
+
   <PropertyGroup>
     <Version>0.1.0</Version>
     <Title>Rhino MCP Router</Title>
@@ -32,7 +40,7 @@
     its assembly doesn't ship with the router.
   -->
   <ItemGroup>
-    <ProjectReference Include="../router.codegen/Router.Codegen.csproj"
+    <ProjectReference Include="codegen/Router.Codegen.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
   </ItemGroup>

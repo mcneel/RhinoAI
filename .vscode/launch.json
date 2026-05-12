@@ -20,7 +20,7 @@
         ]
       },
       "env": {
-        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/bin/Debug"
+        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/src/rhino/bin/Debug"
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
@@ -39,7 +39,7 @@
         ]
       },
       "env": {
-        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/bin/Debug"
+        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/src/rhino/bin/Debug"
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
