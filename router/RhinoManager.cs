@@ -11,21 +11,54 @@ public class RhinoManager(RhinoLocator locator, RouterConfig config, ILogger<Rhi
 {
     private readonly Dictionary<string, ChildRhino> _children = new();
     private readonly object _lock = new();
+    // Serialises GetOrCreateDefault so two slot-less tool calls arriving at once
+    // don't both spawn their own default Rhino.
+    private readonly SemaphoreSlim _defaultGate = new(1, 1);
+
+    // Reserved slot id for the auto-spawned default Rhino used by tool calls that
+    // don't pass an explicit slot.
+    public const string DefaultSlotId = "default";
 
     // Children get random high ports (above the conventional 10500-10507 user-visible range).
     // Each spawn walks forward from the base to find a free one.
     private const int ChildPortBase = 47100;
     private const int SpawnTimeoutSeconds = 60;
 
-    public ChildRhino Spawn(string? version = null)
+    public ChildRhino Spawn(string? version = null) =>
+        SpawnInternal(version ?? config.DefaultVersion, AnimalNames.Next());
+
+    // Lazily return the default slot, spawning a Rhino for it if one doesn't already exist.
+    // Called by ProxyDispatcher when a tool is invoked without an explicit slot.
+    public async Task<ChildRhino> GetOrCreateDefaultAsync(CancellationToken ct = default)
     {
-        version ??= config.DefaultVersion;
+        lock (_lock)
+        {
+            if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+        }
+
+        await _defaultGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            // Re-check under the gate — another caller may have spawned while we waited.
+            lock (_lock)
+            {
+                if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+            }
+            return SpawnInternal(config.DefaultVersion, DefaultSlotId);
+        }
+        finally
+        {
+            _defaultGate.Release();
+        }
+    }
+
+    private ChildRhino SpawnInternal(string version, string slotId)
+    {
         var rhinoExe = locator.ResolveRhinoExe(version);
         var port = PickFreePort();
-        var slot = AnimalNames.Next();
 
         log.LogInformation("Spawning Rhino {Version} as slot '{Slot}' on port {Port} (exe: {Exe})",
-            version, slot, port, rhinoExe);
+            version, slotId, port, rhinoExe);
 
         Process proc;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -52,9 +85,9 @@ public class RhinoManager(RhinoLocator locator, RouterConfig config, ILogger<Rhi
                 $"Possible causes: plugin missing, plugin failed to init, license dialog, slow disk.");
         }
 
-        var child = new ChildRhino(slot, port, proc.Id, version);
-        lock (_lock) _children[slot] = child;
-        log.LogInformation("Slot '{Slot}' ready: pid {Pid}, port {Port}", slot, proc.Id, port);
+        var child = new ChildRhino(slotId, port, proc.Id, version);
+        lock (_lock) _children[slotId] = child;
+        log.LogInformation("Slot '{Slot}' ready: pid {Pid}, port {Port}", slotId, proc.Id, port);
         return child;
     }
 

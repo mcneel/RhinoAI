@@ -11,13 +11,16 @@ namespace RhMcp.Router;
 public class ProxyDispatcher(RhinoManager manager, IHttpClientFactory httpFactory, ILogger<ProxyDispatcher> log)
 {
     public async Task<string> CallToolAsync(
-        string slotId,
+        string? slotId,
         string toolName,
         object args,
         CancellationToken ct = default)
     {
-        var child = manager.Get(slotId)
-            ?? throw new InvalidOperationException(
+        // Null slot → use (or lazily create) the default Rhino. Lets agents
+        // call `run_python(script=...)` etc. without a prior spawn_slot.
+        var child = slotId is null
+            ? await manager.GetOrCreateDefaultAsync(ct).ConfigureAwait(false)
+            : manager.Get(slotId) ?? throw new InvalidOperationException(
                 $"No slot named '{slotId}'. Call spawn_slot to create one, or list_slots to see what's running.");
 
         var requestId = Guid.NewGuid().ToString("N");
@@ -57,7 +60,7 @@ public class ProxyDispatcher(RhinoManager manager, IHttpClientFactory httpFactor
                 $"Child Rhino at {child.Endpoint} returned HTTP {(int)response.StatusCode}: {responseBody}");
         }
 
-        return ExtractResult(responseBody, slotId, toolName);
+        return ExtractResult(responseBody, child.SlotId, toolName);
     }
 
     private static string ExtractResult(string responseBody, string slotId, string toolName)

@@ -141,14 +141,18 @@ public class RouterToolGenerator : IIncrementalGenerator
         sb.AppendLine($"    [global::System.ComponentModel.Description(\"{EscapeString(tool.Description)}\")]");
         sb.AppendLine($"    public global::System.Threading.Tasks.Task<string> InvokeAsync(");
 
-        sb.AppendLine("        [global::System.ComponentModel.Description(\"Slot ID returned by spawn_slot\")] string slot,");
-
+        // Emit original plugin parameters first (required ones may have no default,
+        // optional ones carry their plugin-side default through). `slot` follows as
+        // an optional trailing arg — must come after any required param per C# rules.
         foreach (var p in tool.Parameters)
         {
             sb.Append($"        [global::System.ComponentModel.Description(\"{EscapeString(p.Description)}\")] {p.Type} {p.Name}");
             if (p.Default is not null) sb.Append($" = {p.Default}");
             sb.AppendLine(",");
         }
+
+        sb.AppendLine("        [global::System.ComponentModel.Description(\"Slot ID returned by spawn_slot. Omit to use the router's default Rhino (auto-spawned on first slot-less call).\")] string? slot = null,");
+
         sb.AppendLine("        global::System.Threading.CancellationToken ct = default)");
         sb.AppendLine("    {");
 
