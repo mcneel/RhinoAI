@@ -117,10 +117,24 @@
     </PickLatestAspNetCore>
     <Error Condition="'$(_AspNetCorePath)' == ''" Text="Could not find Microsoft.AspNetCore.App 8.0.x under $(_DotnetRoot)/shared/Microsoft.AspNetCore.App. Install the ASP.NET Core 8.0 runtime." />
     <ItemGroup>
-      <_AspNetCoreFiles Include="$(_AspNetCorePath)/*.dll" />
+      <_AspNetCoreFiles Include="$(_AspNetCorePath)/*.dll"
+        Exclude="
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Authentication.BearerToken.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Authentication.Cookies.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Authentication.OAuth.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Components*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Identity*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Mvc*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Razor*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Server.HttpSys.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.Server.IIS*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.SignalR*.dll;
+          $(_AspNetCorePath)/Microsoft.AspNetCore.StaticFiles.dll;
+          $(_AspNetCorePath)/Microsoft.Extensions.Identity*.dll
+        " />
     </ItemGroup>
     <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core from $(_AspNetCorePath)" />
+    <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core from $(_AspNetCorePath) (subset filter applied)" />
   </Target>
 
 </Project>
