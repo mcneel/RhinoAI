@@ -1,0 +1,14 @@
+{
+  "name": "McNeel",
+  "owner": {
+    "name": "McNeel",
+    "email": "callum@mcneel.com"
+  },
+  "plugins": [
+    {
+      "name": "rhino-mcp",
+      "source": "./cc-plugin",
+      "description": "Drive Rhino 3D from Claude Code via the Rhino MCP server."
+    }
+  ]
+}

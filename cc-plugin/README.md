@@ -12,13 +12,15 @@ A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.co
 From a Claude Code session:
 
 ```
-/plugin install ./cc-plugin
+/plugin marketplace add mcneel/RhinoMCP
+/plugin install rhino-mcp@rhino-mcp
 ```
 
-Or point Claude Code at this directory directly:
+For local development against a clone, point the marketplace at your working tree instead of the GitHub repo:
 
 ```
-claude --plugin-dir ./cc-plugin
+/plugin marketplace add /path/to/RhinoMCP
+/plugin install rhino-mcp@rhino-mcp
 ```
 
 ## What's in it
