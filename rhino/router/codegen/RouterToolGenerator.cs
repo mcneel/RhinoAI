@@ -77,7 +77,7 @@ public class RouterToolGenerator : IIncrementalGenerator
     {
         var normalised = path.Replace('\\', '/');
         return normalised.EndsWith(".cs", System.StringComparison.Ordinal)
-            && normalised.Contains("/rhino/Tools/");
+            && normalised.Contains("/plugin/Tools/");
     }
 
     private static IEnumerable<ToolInfo> ExtractTools(SyntaxTree tree)

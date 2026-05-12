@@ -48,4 +48,16 @@ public static class RhinoMcpHost
         Start(doc, port);
         return true;
     }
+
+    // Stop the listener bound to the given port, regardless of doc. Used by the
+    // router's control channel on Mac to tear down a single slot without
+    // affecting other slots sharing the same Rhino process.
+    public static bool StopByPort(int port)
+    {
+        var entry = Servers.FirstOrDefault(kv => kv.Value.Port == port);
+        if (entry.Value is null) return false;
+        Servers.Remove(entry.Key);
+        entry.Value.Stop();
+        return true;
+    }
 }

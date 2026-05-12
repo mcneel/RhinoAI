@@ -9,13 +9,14 @@ public class SpawnSlotTool(RhinoManager manager)
 {
     [McpServerTool(Name = "spawn_slot")]
     [Description("Launch a new Rhino instance and return its slot ID. Pass that ID as the `slot` arg on subsequent tool calls to target this Rhino.")]
-    public string Spawn(
+    public async Task<string> SpawnAsync(
         [Description("Rhino version: '8', '9', or 'WIP'. Omit to use the router's configured default.")]
-        string? version = null)
+        string? version = null,
+        CancellationToken ct = default)
     {
         try
         {
-            var child = manager.Spawn(version);
+            var child = await manager.SpawnAsync(version, ct).ConfigureAwait(false);
             return JsonSerializer.Serialize(child);
         }
         catch (Exception ex)
@@ -33,9 +34,10 @@ public class SpawnSlotTool(RhinoManager manager)
 
     [McpServerTool(Name = "close_slot")]
     [Description("Close a Rhino slot gracefully. Saves nothing.")]
-    public bool Close(
+    public Task<bool> CloseAsync(
         [Description("Slot ID returned by spawn_slot")]
-        string slot) => manager.Close(slot);
+        string slot,
+        CancellationToken ct = default) => manager.CloseAsync(slot, ct);
 
     [McpServerTool(Name = "list_slots")]
     [Description("List all currently-running Rhino slots managed by this router.")]
