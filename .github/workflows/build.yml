@@ -14,8 +14,10 @@ jobs:
         os: [windows-latest, macos-latest]
         configuration: [Debug, Release]
         include:
+          # router_rids uses %3B to escape ; — MSBuild's -p: switch otherwise
+          # treats ; as a property separator and rejects the second value.
           - os: windows-latest
-            router_rids: win-x64;win-arm64
+            router_rids: win-x64%3Bwin-arm64
             yak_platform: win
             # Windows runs yak.exe natively; bash run-command is empty.
             yak_run: ""
