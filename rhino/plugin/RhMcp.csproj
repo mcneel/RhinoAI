@@ -34,37 +34,39 @@
   </Target>
 
   <!--
-    Bundle the rhino-mcp-router console app into the plugin output so it ships
-    inside the same .yak. The router builds independently in /router; this
-    target depends on it so a `dotnet build` of the plugin also builds the router.
+    The router ships as a self-contained single-file binary inside the .yak.
+    Yak tags packages by OS but not by CPU architecture, so a Windows .yak has to
+    carry both x64 and arm64 router binaries; the launcher picks at runtime.
+    RouterRids is a semicolon-separated list — default infers from host OS.
   -->
-  <ItemGroup>
-    <ProjectReference Include="../router/Router.csproj">
-      <Private>false</Private>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
-      <UndefineProperties>TargetFramework</UndefineProperties>
-    </ProjectReference>
-  </ItemGroup>
+  <PropertyGroup>
+    <RouterRids Condition="'$(RouterRids)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win-x64;win-arm64</RouterRids>
+    <RouterRids Condition="'$(RouterRids)' == ''">osx-arm64</RouterRids>
+  </PropertyGroup>
 
   <!--
-    Bundle the router into a `router/` subdirectory of the plugin output, NOT the root.
-    The plugin's BundleAspNetCoreFramework target above dumps .NET 8 versions of
-    Microsoft.Extensions.* into the root; if the router lived there too its v10 copies
-    of those dlls would get clobbered and the runtime would fail to load them.
-    Keeping the router's deps in their own folder isolates the two dependency sets.
+    Bundle one published router per RID under `router/<rid>/`. The router lives in
+    a subdirectory (not the plugin root) to keep its single-file extraction and
+    deps isolated from the plugin's bundled ASP.NET Core dlls.
   -->
   <Target Name="BundleRouter" AfterTargets="Build">
-    <PropertyGroup>
-      <_RouterOutput>$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0</_RouterOutput>
-      <_RouterDest>$(OutputPath)router</_RouterDest>
-    </PropertyGroup>
     <ItemGroup>
-      <_RouterFiles Include="$(_RouterOutput)/**/*" />
+      <_RouterRid Include="$(RouterRids)" />
     </ItemGroup>
-    <Copy SourceFiles="@(_RouterFiles)" DestinationFiles="@(_RouterFiles->'$(_RouterDest)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_RouterFiles)' != ''" />
-    <Message Importance="high" Text="[Rhino MCP] Bundled router from $(_RouterOutput) to $(_RouterDest)" Condition="'@(_RouterFiles)' != ''" />
-    <Warning Text="[Rhino MCP] Router output not found at $(_RouterOutput) — yak will not include rhino-mcp-router." Condition="'@(_RouterFiles)' == ''" />
+    <MSBuild Projects="../router/Router.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=%(_RouterRid.Identity);PublishDir=$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/" />
+    <ItemGroup>
+      <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/**/*">
+        <Rid>%(_RouterRid.Identity)</Rid>
+      </_RouterPublishedFile>
+    </ItemGroup>
+    <Copy SourceFiles="@(_RouterPublishedFile)"
+          DestinationFiles="@(_RouterPublishedFile->'$(OutputPath)router/%(Rid)/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'@(_RouterPublishedFile)' != ''" />
+    <Message Importance="high" Text="[Rhino MCP] Bundled router RIDs: $(RouterRids)" />
+    <Warning Text="[Rhino MCP] No router publish output found for RIDs: $(RouterRids)" Condition="'@(_RouterPublishedFile)' == ''" />
   </Target>
 
   <!--

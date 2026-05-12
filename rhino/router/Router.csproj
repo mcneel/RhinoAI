@@ -8,6 +8,19 @@
     <AssemblyName>rhino-mcp-router</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <!--
+    Publish-time settings: produce a single self-contained binary per RID so the
+    router runs without a separate .NET install. Gated on RuntimeIdentifier so
+    plain `dotnet build` (used by tests and dev loops) stays framework-dependent.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from

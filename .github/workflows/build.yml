@@ -11,7 +11,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: windows-latest
+            router_rids: win-x64;win-arm64
+            yak_platform: win
+            yak_tool_url: https://files.mcneel.com/yak/tools/latest/yak.exe
+            yak_tool_name: yak.exe
+          - os: macos-latest
+            router_rids: osx-arm64
+            yak_platform: mac
+            yak_tool_url: https://files.mcneel.com/yak/tools/latest/yak
+            yak_tool_name: yak
         configuration: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
@@ -24,17 +34,40 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore router
+      - name: Restore router (framework-dependent, for tests)
         run: dotnet restore rhino/router/Router.csproj
 
       - name: Restore plugin
         run: dotnet restore rhino/plugin/RhMcp.csproj
 
-      - name: Build router
+      - name: Build router (framework-dependent, for tests)
         run: dotnet build rhino/router/Router.csproj --configuration ${{ matrix.configuration }} --no-restore
-
-      - name: Build plugin (bundles router into yak output)
-        run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} --no-restore
 
       - name: Test router
         run: dotnet test tests/router/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal
+
+      - name: Build plugin (publishes router self-contained for RIDs ${{ matrix.router_rids }} into yak output)
+        shell: bash
+        run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} '-p:RouterRids=${{ matrix.router_rids }}'
+
+      - name: Download yak CLI
+        if: matrix.configuration == 'Release'
+        shell: bash
+        run: |
+          curl -fsSL -o "${{ matrix.yak_tool_name }}" "${{ matrix.yak_tool_url }}"
+          chmod +x "${{ matrix.yak_tool_name }}"
+
+      - name: Build yak package (${{ matrix.yak_platform }})
+        if: matrix.configuration == 'Release'
+        shell: bash
+        run: |
+          "$GITHUB_WORKSPACE/${{ matrix.yak_tool_name }}" build --platform ${{ matrix.yak_platform }}
+        working-directory: rhino/plugin/bin/Release/net8.0
+
+      - name: Upload yak artifact
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhino-mcp-platform-${{ matrix.yak_platform }}
+          path: rhino/plugin/bin/Release/net8.0/*.yak
+          if-no-files-found: error
