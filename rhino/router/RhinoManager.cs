@@ -38,9 +38,10 @@ public class RhinoManager(
     // don't pass an explicit slot.
     public const string DefaultSlotId = "default";
 
-    // Children get random high ports (above the conventional 10500-10507 user-visible range).
-    // Each spawn walks forward from the base to find a free one.
-    private const int ChildPortBase = 47100;
+    // Children walk forward from the conventional RhinoMCP port (10500) to find a free one.
+    // A user who started a Rhino manually via `_RhinoMCP` will already be on 10500, so the
+    // router-spawned children land on 10501, 10502, ... without colliding.
+    private const int ChildPortBase = 10500;
     private const int SpawnTimeoutSeconds = 60;
 
     public Task<ChildRhino> SpawnAsync(string? version = null, CancellationToken ct = default) =>

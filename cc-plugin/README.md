@@ -5,7 +5,7 @@ A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.co
 ## Prerequisites
 
 1. Rhino is running.
-2. The `RhinoMCP` command has been run inside Rhino, and the server is listening on the default port `4862`. (If you changed the port, edit `.mcp.json`.)
+2. The `RhinoMCP` command has been run inside Rhino, and the server is listening on the default port `10500`. (If you changed the port, edit `.mcp.json`.)
 
 ## Install
 
@@ -25,7 +25,7 @@ For local development against a clone, point the marketplace at your working tre
 
 ## What's in it
 
-- **MCP server** — connects to `http://localhost:4862` as `rhino`.
+- **MCP server** — connects to `http://localhost:10500` as `rhino`.
 - **`/rhino-mcp:snapshot`** — capture the active viewport and describe what's on screen.
 - **`/rhino-mcp:scene`** — summarize the contents of the current Rhino document.
 - **`rhino-modeler` agent** — drives Rhino for create/edit/inspect tasks; auto-delegated when the request involves geometry work.

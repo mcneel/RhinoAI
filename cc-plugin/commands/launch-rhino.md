@@ -29,7 +29,7 @@ Tell the user the slot ID and let them know subsequent tool calls should pass `s
 
 Example:
 
-> Spawned Rhino 8 as slot **`armadillo`** (port 47100). Pass `slot="armadillo"` on any subsequent rhino-mcp tool call to target it.
+> Spawned Rhino 8 as slot **`armadillo`** (port 10500). Pass `slot="armadillo"` on any subsequent rhino-mcp tool call to target it.
 
 ## Closing the Rhino
 

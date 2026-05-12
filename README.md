@@ -29,8 +29,9 @@ Use Run and Debug from within VSCode to build, launch Rhino and start the MCP Se
 
 1. Open up your AI Agent, in this case we'll use Claude.
 2. Run the RhinoMCPConnect command and copy that into your AI Agent
-3. You may need to restart your AI session
-4. Confirm by asking your agent to create a box in Rhino.
+3. You may need to restart your AI chat session
+4. Close Rhino, or run the RhinoMCP command
+5. Confirm by asking your agent to create a box in Rhino.
 
 https://github.com/user-attachments/assets/9b1cd938-3995-4eec-ab42-d62bf67b13f2
 

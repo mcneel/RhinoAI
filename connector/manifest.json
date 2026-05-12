@@ -40,8 +40,8 @@
     "instances": {
       "type": "string",
       "title": "Rhino instances",
-      "description": "Comma-separated list of name=url pairs, e.g. A=http://localhost:4862,B=http://localhost:4863. Tool names get prefixed with the instance name. A bare URL is allowed when there's only one instance.",
-      "default": "A=http://localhost:4862",
+      "description": "Comma-separated list of name=url pairs, e.g. A=http://localhost:10500,B=http://localhost:10501. Tool names get prefixed with the instance name. A bare URL is allowed when there's only one instance.",
+      "default": "A=http://localhost:10500",
       "required": false
     }
   },

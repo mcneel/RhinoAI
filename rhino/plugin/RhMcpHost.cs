@@ -17,7 +17,7 @@ public static class RhinoMcpHost
 
     public static bool HasStarted(RhinoDoc doc) => Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server) && (server?.HasStarted ?? false);
 
-    private const int DefaultPort = 4862;
+    private const int DefaultPort = 10500;
     public static int GetNextPort()
     {
         if (Servers.Count <= 0) return DefaultPort;
