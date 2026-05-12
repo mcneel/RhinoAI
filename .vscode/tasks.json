@@ -125,13 +125,13 @@
       "label": "register router with claude",
       "type": "shell",
       "osx": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router'"
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
       },
       "linux": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router'"
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
       },
       "windows": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.exe\""
+        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version WIP"
       },
       "problemMatcher": [],
       "presentation": {
