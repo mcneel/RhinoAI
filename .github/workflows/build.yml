@@ -11,6 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [windows-latest, macos-latest]
+        configuration: [Debug, Release]
         include:
           - os: windows-latest
             router_rids: win-x64;win-arm64
@@ -23,7 +25,6 @@ jobs:
             # McNeel only publishes yak.exe (a .NET Framework exe). On Mac we run it
             # under Mono, which is preinstalled on macos-latest GitHub runners.
             yak_run: "mono"
-        configuration: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
 
