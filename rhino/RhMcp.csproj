@@ -34,6 +34,32 @@
   </Target>
 
   <!--
+    Bundle the rhino-mcp-router console app into the plugin output so it ships
+    inside the same .yak. The router builds independently in /router; this
+    target depends on it so a `dotnet build` of the plugin also builds the router.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../router/Router.csproj">
+      <Private>false</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <UndefineProperties>TargetFramework</UndefineProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="BundleRouter" AfterTargets="Build">
+    <PropertyGroup>
+      <_RouterOutput>$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0</_RouterOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <_RouterFiles Include="$(_RouterOutput)/rhino-mcp-router*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_RouterFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_RouterFiles)' != ''" />
+    <Message Importance="high" Text="[Rhino MCP] Bundled router from $(_RouterOutput)" Condition="'@(_RouterFiles)' != ''" />
+    <Warning Text="[Rhino MCP] Router output not found at $(_RouterOutput) — yak will not include rhino-mcp-router.exe." Condition="'@(_RouterFiles)' == ''" />
+  </Target>
+
+  <!--
     Rhino doesn't ship the ASP.NET Core shared framework, so we copy it from the
     build machine's .NET install into the plugin output. Picks the highest 8.0.x
     runtime present on the machine.
