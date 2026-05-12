@@ -88,3 +88,4 @@ jobs:
           name: rhino-mcp-platform-${{ matrix.yak_platform }}
           path: rhino/plugin/bin/Release/net8.0/*.yak
           if-no-files-found: error
+          retention-days: 7
