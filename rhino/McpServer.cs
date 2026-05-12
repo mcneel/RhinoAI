@@ -67,7 +67,7 @@ internal sealed class McpServer : IDisposable
     public void Stop()
     {
         try { _cts?.Cancel(); } catch { }
-        try { _app?.StopAsync().GetAwaiter().GetResult(); } catch { }
+        try { _app?.StopAsync(); } catch { }
         _app = null;
     }
 
