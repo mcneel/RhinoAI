@@ -58,6 +58,52 @@
         "clear": true
       },
       "group": "build"
+    },
+    {
+      "label": "install yak (WIP)",
+      "type": "shell",
+      "dependsOn": "pack yak",
+      "args": ["install", "*.yak"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak install on Linux is unsupported."]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release/net8.0"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "uninstall yak (WIP)",
+      "type": "shell",
+      "args": ["remove", "Rhino-MCP-Platform"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak uninstall on Linux is unsupported."]
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
     }
   ]
 }
