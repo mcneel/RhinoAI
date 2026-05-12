@@ -37,4 +37,4 @@ jobs:
         run: dotnet build rhino/RhMcp.csproj --configuration ${{ matrix.configuration }} --no-restore
 
       - name: Test router
-        run: dotnet test router.tests/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal
+        run: dotnet test tests/router/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal
