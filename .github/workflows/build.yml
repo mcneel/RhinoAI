@@ -25,7 +25,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore
-        run: dotnet restore RhMcp.csproj
+        run: dotnet restore rhino/RhMcp.csproj
 
       - name: Build
-        run: dotnet build RhMcp.csproj --configuration ${{ matrix.configuration }} --no-restore
+        run: dotnet build rhino/RhMcp.csproj --configuration ${{ matrix.configuration }} --no-restore

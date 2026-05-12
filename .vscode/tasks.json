@@ -8,7 +8,7 @@
       "args": [
         "build",
         "-clp:NoSummary",
-        "${workspaceFolder}/RhMcp.csproj"
+        "${workspaceFolder}/rhino/RhMcp.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -25,7 +25,7 @@
         "build",
         "-c:Release",
         "-clp:NoSummary",
-        "${workspaceFolder}/RhMcp.csproj"
+        "${workspaceFolder}/rhino/RhMcp.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
