@@ -24,7 +24,7 @@
       "command": "node",
       "args": [
         "${__dirname}/server/index.js",
-        "http://localhost:${user_config.port}"
+        "${user_config.instances}"
       ],
       "env": {}
     }
@@ -37,12 +37,12 @@
     }
   ],
   "user_config": {
-    "port": {
-      "type": "number",
-      "title": "Port",
-      "description": "Port the Rhino MCP server is listening on. Set this in Rhino via the RhinoMCP command.",
-      "default": 4862,
-      "required": true
+    "instances": {
+      "type": "string",
+      "title": "Rhino instances",
+      "description": "Comma-separated list of name=url pairs, e.g. A=http://localhost:4862,B=http://localhost:4863. Tool names get prefixed with the instance name. A bare URL is allowed when there's only one instance.",
+      "default": "A=http://localhost:4862",
+      "required": false
     }
   },
   "compatibility": {
