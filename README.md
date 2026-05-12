@@ -28,22 +28,21 @@ Use Run and Debug from within VSCode to build, launch Rhino and start the MCP Se
 ## Using
 
 1. Open up your AI Agent, in this case we'll use Claude.
-2. Run `mcp add --transport http rhino http://localhost:4862` (Or whichever Port you are running on, confirm with the command RhinoMCP)
-3. Claude will add the MCP Server
-4. You may need to restart Claude
-5. Confirm everything is working by asking Claude to create a box in Rhino
+2. Run the RhinoMCPConnect command and copy that into your AI Agent
+3. You may need to restart your AI session
+4. Confirm by asking your agent to create a box in Rhino.
 
 https://github.com/user-attachments/assets/9b1cd938-3995-4eec-ab42-d62bf67b13f2
 
+### Options
+
+The router accepts `--default-version <ver>` (or `-v <ver>`) to pick which installed Rhino to launch. Defaults to `8`; pass `9` for Rhino 9 WIP.
+
 ## Issues?
 
-Q: Claude cannot find the MCP Server
+Q: My MCP client can't find the router.
 
-A: Ensure you've run the `RhinoMCP` command, if that still fails, try a different port.
-
-### Configuration
-
-RhinoMCP has one command, aptly named `RhinoMCP` which will start the server and let you change the port it is using.
+A: Make sure Rhino-MCP-Platform is installed via Rhino's PackageManager, and double-check the path to `rhino-mcp-router` in your MCP client config.
 
 # Getting Help
 

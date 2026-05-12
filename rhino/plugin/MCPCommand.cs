@@ -4,7 +4,7 @@ using Rhino.Input.Custom;
 
 namespace RhMcp;
 
-public class RhinoMcpCommand : Command
+public class MCPCommand : Command
 {
 
     public override string EnglishName => "RhinoMCP";
