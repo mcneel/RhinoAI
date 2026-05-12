@@ -20,7 +20,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-    <PackageReference Include="ModelContextProtocol" Version="0.4.1-preview.1" />
+    <!-- Match the version family the plugin uses (ModelContextProtocol.AspNetCore 1.2.0)
+         so router and plugin agree at runtime. The 0.4.x preview line targets .NET 10
+         packages and won't load under a net8.0 runtime. -->
+    <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
   </ItemGroup>
 
 </Project>

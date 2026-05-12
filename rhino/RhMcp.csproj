@@ -28,9 +28,9 @@
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>
 
-  <Target Name="BuildYakPackage" AfterTargets="DispatchToInnerBuilds">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)" />
+  <Target Name="BuildYakPackage" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
   </Target>
 
   <!--
@@ -47,16 +47,24 @@
     </ProjectReference>
   </ItemGroup>
 
+  <!--
+    Bundle the router into a `router/` subdirectory of the plugin output, NOT the root.
+    The plugin's BundleAspNetCoreFramework target above dumps .NET 8 versions of
+    Microsoft.Extensions.* into the root; if the router lived there too its v10 copies
+    of those dlls would get clobbered and the runtime would fail to load them.
+    Keeping the router's deps in their own folder isolates the two dependency sets.
+  -->
   <Target Name="BundleRouter" AfterTargets="Build">
     <PropertyGroup>
       <_RouterOutput>$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0</_RouterOutput>
+      <_RouterDest>$(OutputPath)router</_RouterDest>
     </PropertyGroup>
     <ItemGroup>
-      <_RouterFiles Include="$(_RouterOutput)/rhino-mcp-router*" />
+      <_RouterFiles Include="$(_RouterOutput)/**/*" />
     </ItemGroup>
-    <Copy SourceFiles="@(_RouterFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_RouterFiles)' != ''" />
-    <Message Importance="high" Text="[Rhino MCP] Bundled router from $(_RouterOutput)" Condition="'@(_RouterFiles)' != ''" />
-    <Warning Text="[Rhino MCP] Router output not found at $(_RouterOutput) — yak will not include rhino-mcp-router.exe." Condition="'@(_RouterFiles)' == ''" />
+    <Copy SourceFiles="@(_RouterFiles)" DestinationFiles="@(_RouterFiles->'$(_RouterDest)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_RouterFiles)' != ''" />
+    <Message Importance="high" Text="[Rhino MCP] Bundled router from $(_RouterOutput) to $(_RouterDest)" Condition="'@(_RouterFiles)' != ''" />
+    <Warning Text="[Rhino MCP] Router output not found at $(_RouterOutput) — yak will not include rhino-mcp-router." Condition="'@(_RouterFiles)' == ''" />
   </Target>
 
   <!--
