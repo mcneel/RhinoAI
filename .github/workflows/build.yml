@@ -15,13 +15,14 @@ jobs:
           - os: windows-latest
             router_rids: win-x64;win-arm64
             yak_platform: win
-            yak_tool_url: https://files.mcneel.com/yak/tools/latest/yak.exe
-            yak_tool_name: yak.exe
+            # Windows runs yak.exe natively; bash run-command is empty.
+            yak_run: ""
           - os: macos-latest
             router_rids: osx-arm64
             yak_platform: mac
-            yak_tool_url: https://files.mcneel.com/yak/tools/latest/yak
-            yak_tool_name: yak
+            # McNeel only publishes yak.exe (a .NET Framework exe). On Mac we run it
+            # under Mono, which is preinstalled on macos-latest GitHub runners.
+            yak_run: "mono"
         configuration: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
@@ -50,18 +51,26 @@ jobs:
         shell: bash
         run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} '-p:RouterRids=${{ matrix.router_rids }}'
 
+      - name: Ensure Mono is installed (mac only)
+        if: matrix.configuration == 'Release' && matrix.yak_platform == 'mac'
+        shell: bash
+        run: |
+          if ! command -v mono >/dev/null 2>&1; then
+            brew install mono
+          fi
+          mono --version | head -1
+
       - name: Download yak CLI
         if: matrix.configuration == 'Release'
         shell: bash
         run: |
-          curl -fsSL -o "${{ matrix.yak_tool_name }}" "${{ matrix.yak_tool_url }}"
-          chmod +x "${{ matrix.yak_tool_name }}"
+          curl -fsSL -o yak.exe https://files.mcneel.com/yak/tools/latest/yak.exe
+          chmod +x yak.exe
 
       - name: Build yak package (${{ matrix.yak_platform }})
         if: matrix.configuration == 'Release'
         shell: bash
-        run: |
-          "$GITHUB_WORKSPACE/${{ matrix.yak_tool_name }}" build --platform ${{ matrix.yak_platform }}
+        run: ${{ matrix.yak_run }} "$GITHUB_WORKSPACE/yak.exe" build --platform ${{ matrix.yak_platform }}
         working-directory: rhino/plugin/bin/Release/net8.0
 
       - name: Upload yak artifact
