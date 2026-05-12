@@ -18,6 +18,22 @@
       "group": "build"
     },
     {
+      "label": "build router",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "-clp:NoSummary",
+        "${workspaceFolder}/rhino/router/Router.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
       "label": "build release",
       "command": "dotnet",
       "type": "shell",
@@ -58,6 +74,92 @@
         "clear": true
       },
       "group": "build"
+    },
+    {
+      "label": "install yak (WIP)",
+      "type": "shell",
+      "dependsOn": "pack yak",
+      "args": ["install", "*.yak"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak install on Linux is unsupported."]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release/net8.0"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "uninstall yak (WIP)",
+      "type": "shell",
+      "args": ["uninstall", "Rhino-MCP-Platform"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak uninstall on Linux is unsupported."]
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "register router with claude",
+      "type": "shell",
+      "osx": {
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
+      },
+      "linux": {
+        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router' -- --default-version WIP"
+      },
+      "windows": {
+        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version WIP"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      }
+    },
+    {
+      "label": "open claude tab",
+      "type": "shell",
+      "command": "echo",
+      "args": ["${command:claude-vscode.newConversation}"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "echo": false,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "router: build + register + open claude",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "build router",
+        "register router with claude",
+        "open claude tab"
+      ],
+      "problemMatcher": []
     }
   ]
 }

@@ -27,6 +27,17 @@
       "console": "internalConsole"
     },
     {
+      "name": "Router - launch",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "router: build + register + open claude",
+      "program": "${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/rhino/router",
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Rhino 9 Windows - netfx",
       "type": "clr",
       "request": "launch",

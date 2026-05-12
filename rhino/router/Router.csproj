@@ -8,6 +8,32 @@
     <AssemblyName>rhino-mcp-router</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <!--
+    Publish settings split by RID. Gated on RuntimeIdentifier so plain
+    `dotnet build` (used by tests and dev loops) stays framework-dependent.
+
+    Windows: framework-dependent + RollForward. Rhino installs .NET 8 globally
+    on Windows, so the host can resolve the runtime; the resulting .exe is
+    ~5MB. RollForward=Major lets future Rhinos with newer runtimes still load
+    the router.
+
+    macOS: NativeAOT. ~18MB single native binary, no .NET install needed, and
+    starts in ~120ms (vs ~430ms for framework-dependent). Requires the
+    source-generated RouterJsonContext + typed WithTools<T> registration that
+    Program.cs uses — anonymous types or reflection-based MCP tool discovery
+    would break here.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND $(RuntimeIdentifier.StartsWith('win-'))">
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND !$(RuntimeIdentifier.StartsWith('win-'))">
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from
@@ -47,7 +73,7 @@
 
   <!-- Plugin tool sources, made visible to the generator as raw text. -->
   <ItemGroup>
-    <AdditionalFiles Include="../rhino/Tools/**/*.cs" />
+    <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
   </ItemGroup>
 
 </Project>

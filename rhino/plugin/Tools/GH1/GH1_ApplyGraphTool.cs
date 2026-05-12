@@ -144,6 +144,7 @@ public static class GH1_ApplyGraphTool
             if (obj is null) { error = $"Failed to instantiate '{c.Selector}'"; return false; }
         }
         if (obj.Attributes is null) obj.CreateAttributes();
+        if (obj.Attributes is null) { error = $"Failed to create attributes for '{c.Selector}'"; return false; }
         obj.Attributes.Pivot = new PointF(c.X, c.Y);
         doc.AddObject(obj, false);
         error = "";

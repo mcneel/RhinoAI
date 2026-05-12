@@ -67,6 +67,10 @@ public class RouterToolGenerator : IIncrementalGenerator
                 sb.AppendLine();
             }
 
+            // Emit a static registration helper Program.cs can call instead of
+            // WithToolsFromAssembly() (which uses reflection and is AOT-hostile).
+            EmitRegistrar(sb, all);
+
             spc.AddSource("RouterToolProxies.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
         });
     }
@@ -77,7 +81,7 @@ public class RouterToolGenerator : IIncrementalGenerator
     {
         var normalised = path.Replace('\\', '/');
         return normalised.EndsWith(".cs", System.StringComparison.Ordinal)
-            && normalised.Contains("/rhino/Tools/");
+            && normalised.Contains("/plugin/Tools/");
     }
 
     private static IEnumerable<ToolInfo> ExtractTools(SyntaxTree tree)
@@ -156,9 +160,70 @@ public class RouterToolGenerator : IIncrementalGenerator
         sb.AppendLine("        global::System.Threading.CancellationToken ct = default)");
         sb.AppendLine("    {");
 
-        var argsList = string.Join(", ", tool.Parameters.Select(p => p.Name));
-        sb.AppendLine($"        return proxy.CallToolAsync(slot, \"{tool.Name}\", new {{ {argsList} }}, ct);");
+        // Build args as a JsonObject so we never need reflection over an anonymous
+        // type — AOT-safe. JsonElement? params parse-through. Array types build a
+        // JsonArray element-by-element (JsonValue.Create<T[]> is reflection-based
+        // and AOT-hostile). Scalar primitives use JsonValue.Create which has
+        // type-specific overloads for string/int/bool/double/float/long.
+        sb.AppendLine("        var args = new global::System.Text.Json.Nodes.JsonObject();");
+        foreach (var p in tool.Parameters)
+        {
+            if (p.Type == "global::System.Text.Json.JsonElement?")
+            {
+                sb.AppendLine($"        if ({p.Name}.HasValue) args[\"{p.Name}\"] = global::System.Text.Json.Nodes.JsonNode.Parse({p.Name}.Value.GetRawText());");
+            }
+            else if (p.Type.Contains("[]"))
+            {
+                // Array → JsonArray. Works for string[], int[], string[]? etc. The
+                // `JsonArray` ctor accepts `params JsonNode?[]`, but we want a loop
+                // so per-element implicit conversions kick in.
+                var indent = "        ";
+                var nullable = p.Type.EndsWith("?");
+                if (nullable)
+                {
+                    sb.AppendLine($"{indent}if ({p.Name} is not null)");
+                    sb.AppendLine($"{indent}{{");
+                    indent = "            ";
+                }
+                sb.AppendLine($"{indent}var __arr_{p.Name} = new global::System.Text.Json.Nodes.JsonArray();");
+                // Wrap each element with the type-specific JsonValue.Create overload
+                // so the resulting JsonNode? selects JsonArray.Add(JsonNode?) — the
+                // non-generic, AOT-safe overload. Bare Add(item) routes through
+                // generic Add<T>(T) which has RequiresUnreferencedCode.
+                sb.AppendLine($"{indent}foreach (var __item in {p.Name}) __arr_{p.Name}.Add((global::System.Text.Json.Nodes.JsonNode?)global::System.Text.Json.Nodes.JsonValue.Create(__item));");
+                sb.AppendLine($"{indent}args[\"{p.Name}\"] = __arr_{p.Name};");
+                if (nullable)
+                {
+                    sb.AppendLine("        }");
+                }
+            }
+            else
+            {
+                sb.AppendLine($"        args[\"{p.Name}\"] = global::System.Text.Json.Nodes.JsonValue.Create({p.Name});");
+            }
+        }
+        sb.AppendLine($"        return proxy.CallToolAsync(slot, \"{tool.Name}\", args, ct);");
 
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+    }
+
+    // Static helper Program.cs calls instead of WithToolsFromAssembly().
+    // Emits one WithTools<T>() per proxy plus the hand-written SpawnSlotTool.
+    // Keeps Program.cs from having to track each new proxy by hand.
+    private static void EmitRegistrar(StringBuilder sb, ImmutableArray<ToolInfo> tools)
+    {
+        sb.AppendLine();
+        sb.AppendLine("public static class RouterToolRegistrar");
+        sb.AppendLine("{");
+        sb.AppendLine("    public static global::Microsoft.Extensions.DependencyInjection.IMcpServerBuilder RegisterAll(global::Microsoft.Extensions.DependencyInjection.IMcpServerBuilder builder, global::System.Text.Json.JsonSerializerOptions? options = null)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        builder = global::Microsoft.Extensions.DependencyInjection.McpServerBuilderExtensions.WithTools<global::RhMcp.Router.Tools.SpawnSlotTool>(builder, options);");
+        foreach (var tool in tools)
+        {
+            sb.AppendLine($"        builder = global::Microsoft.Extensions.DependencyInjection.McpServerBuilderExtensions.WithTools<global::RhMcp.Router.Tools.Generated.{tool.ClassName}Proxy>(builder, options);");
+        }
+        sb.AppendLine("        return builder;");
         sb.AppendLine("    }");
         sb.AppendLine("}");
     }
