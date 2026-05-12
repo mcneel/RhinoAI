@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <RootNamespace>RhMcp.Router</RootNamespace>
+    <AssemblyName>rhino-mcp-router</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Title>Rhino MCP Router</Title>
+    <Company>McNeel</Company>
+    <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <!-- Match the version family the plugin uses (ModelContextProtocol.AspNetCore 1.2.0)
+         so router and plugin agree at runtime. The 0.4.x preview line targets .NET 10
+         packages and won't load under a net8.0 runtime. -->
+    <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
+  </ItemGroup>
+
+  <!--
+    Source generator: scans plugin tool source files and emits one router-side
+    proxy per [McpServerTool]. Referenced as an Analyzer (not a runtime ref) so
+    its assembly doesn't ship with the router.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../router.codegen/Router.Codegen.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Plugin tool sources, made visible to the generator as raw text. -->
+  <ItemGroup>
+    <AdditionalFiles Include="../rhino/Tools/**/*.cs" />
+  </ItemGroup>
+
+</Project>

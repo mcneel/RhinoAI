@@ -33,6 +33,31 @@
         "clear": true
       },
       "group": "build"
+    },
+    {
+      "label": "pack yak",
+      "type": "shell",
+      "dependsOn": "build release",
+      "args": ["build"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak build on Linux is unsupported."]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/rhino/bin/Release/net8.0"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
     }
   ]
 }

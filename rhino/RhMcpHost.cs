@@ -36,6 +36,7 @@ public static class RhinoMcpHost
     public static void Stop(RhinoDoc doc)
     {
         if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)) return;
+        Servers.Remove(doc.RuntimeSerialNumber);
         server?.Stop();
     }
 

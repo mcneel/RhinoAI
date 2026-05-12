@@ -1,0 +1,11 @@
+{
+  "name": "rhino-mcp",
+  "description": "Drive Rhino 3D from Claude Code via the Rhino MCP server.",
+  "version": "0.1.0",
+  "author": {
+    "name": "McNeel",
+    "email": "callum@mcneel.com"
+  },
+  "homepage": "https://github.com/mcneel/RhinoMCP",
+  "license": "MIT"
+}

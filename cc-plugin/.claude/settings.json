@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Applications/ | grep -i rhino)",
+      "Read(//Applications/**)",
+      "Bash(lsof -nP -iTCP -sTCP:LISTEN)",
+      "Bash(awk 'NR==1 || $9 ~ /:[0-9]+$/')"
+    ]
+  }
+}
