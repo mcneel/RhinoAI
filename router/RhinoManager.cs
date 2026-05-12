@@ -104,11 +104,10 @@ public class RhinoManager(RhinoLocator locator, RouterConfig config, ILogger<Rhi
         var psi = new ProcessStartInfo
         {
             FileName = rhinoExe,
-            UseShellExecute = false,
-            CreateNoWindow = false,
+            Arguments = $"/nosplash /runscript=\"_-RhinoMCP {port} _Enter\"",
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Normal,
         };
-        psi.ArgumentList.Add("/nosplash");
-        psi.ArgumentList.Add($"/runscript=_-RhinoMCP {port} _Enter");
 
         return Process.Start(psi)
             ?? throw new InvalidOperationException($"Process.Start returned null for {rhinoExe}");
