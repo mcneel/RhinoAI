@@ -13,14 +13,14 @@ From a Claude Code session:
 
 ```
 /plugin marketplace add mcneel/RhinoMCP
-/plugin install rhino-mcp@rhino-mcp
+/plugin install mcneel@rhino-mcp
 ```
 
 For local development against a clone, point the marketplace at your working tree instead of the GitHub repo:
 
 ```
 /plugin marketplace add /path/to/RhinoMCP
-/plugin install rhino-mcp@rhino-mcp
+/plugin install mcneel@rhino-mcp
 ```
 
 ## What's in it

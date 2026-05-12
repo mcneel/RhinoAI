@@ -48,16 +48,17 @@ Rhino runs as a single process and the MCP server is tied to the active document
 
 Always launch a new process — multiple Rhinos can coexist.
 
-From a bash-like shell (Git Bash, MSYS):
-```bash
-"/c/Program Files/${install_dir}/System/Rhino.exe" /nosplash /runscript="_-RhinoMCP _Enter" &
-```
-
-Or from PowerShell:
+PowerShell:
 ```powershell
 Start-Process "C:\Program Files\${install_dir}\System\Rhino.exe" `
   -ArgumentList '/nosplash', "/runscript=_-RhinoMCP _Enter"
 ```
+
+Or from bash
+```bash
+"/c/Program Files/${install_dir}/System/Rhino.exe" /nosplash /runscript="_-RhinoMCP _Enter" &
+```
+
 
 ## Step 3 — wait for the listener
 
