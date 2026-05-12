@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace RhMcp.Router.Tools;
 
 [McpServerToolType]
-public class SpawnSlotTool(RhinoManager manager)
+public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFinder)
 {
     [McpServerTool(Name = "spawn_slot")]
     [Description("Launch a new Rhino instance and return its slot ID. Pass that ID as the `slot` arg on subsequent tool calls to target this Rhino.")]
@@ -21,9 +21,12 @@ public class SpawnSlotTool(RhinoManager manager)
         }
         catch (Exception ex)
         {
-            // Surface the full failure as a string so the MCP client sees it. The SDK
-            // otherwise swallows exception details into a generic "An error occurred…".
-            var payload = new SpawnErrorPayload(ex.GetType().Name, ex.Message, ex.StackTrace);
+            // The MCP SDK swallows raw exception messages into a generic "An error
+            // occurred…", so we translate the exception into a stable, agent-readable
+            // payload (kebab-case error code + actionable message + crash report when
+            // we can find one). Stack traces are deliberately omitted — they belong
+            // in the router log, not in the agent's tool result.
+            var payload = Diagnose(ex);
             return JsonSerializer.Serialize(payload, RouterJsonContext.Default.SpawnErrorPayload);
         }
     }
@@ -36,6 +39,55 @@ public class SpawnSlotTool(RhinoManager manager)
         CancellationToken ct = default) => manager.CloseAsync(slot, ct);
 
     [McpServerTool(Name = "list_slots")]
-    [Description("List all currently-running Rhino slots managed by this router.")]
-    public IReadOnlyCollection<ChildRhino> List() => manager.List();
+    [Description("List all currently-running Rhino slots managed by this router. Slots whose Rhino has crashed are pruned before returning.")]
+    public IReadOnlyCollection<ChildRhino> List()
+    {
+        // Probe each slot before reporting; a crashed Rhino otherwise looks alive
+        // until something tries to call into it.
+        manager.ReapAllDead();
+        return manager.List();
+    }
+
+    // Map a raw exception from the spawn pipeline to an agent-readable diagnosis.
+    // Every branch ends in a message that tells the agent what to do next (retry,
+    // change args, check Rhino UI, give up). The `existing_rhino_unreachable`
+    // branch is enriched with the latest crash report when one exists.
+    private SpawnErrorPayload Diagnose(Exception ex) => ex switch
+    {
+        FileNotFoundException fnf => new(
+            "rhino_not_installed",
+            fnf.Message + " Pass an installed version as the `version` arg, or install the requested Rhino."),
+
+        TimeoutException te => new(
+            "startup_timeout",
+            te.Message + " The Rhino window may be showing a license, EULA, or update dialog — check it. " +
+            "If the rh-mcp plugin isn't loaded, install it and retry."),
+
+        PlatformNotSupportedException pne => new(
+            "unsupported_platform",
+            pne.Message),
+
+        OperationCanceledException => new(
+            "cancelled",
+            "Spawn was cancelled before Rhino finished starting."),
+
+        // HttpRequestException from the spawn chain only originates inside
+        // RhinoControlClient when fanning out a new listener on Mac. That means
+        // we tried to reuse an existing Rhino and its control endpoint didn't
+        // answer — the Rhino likely crashed between probe and call.
+        HttpRequestException hre => new(
+            "existing_rhino_unreachable",
+            "Tried to add a listener to a previously-spawned Rhino but its control endpoint didn't respond " +
+            $"({hre.Message}). The Rhino likely crashed between the liveness probe and this call. " +
+            "The stale slot has been pruned — call spawn_slot again to launch a fresh Rhino.",
+            crashFinder.TryFindMostRecent()),
+
+        InvalidOperationException ioe => new(
+            "spawn_failed",
+            ioe.Message),
+
+        _ => new(
+            "unexpected",
+            $"{ex.GetType().Name}: {ex.Message}"),
+    };
 }

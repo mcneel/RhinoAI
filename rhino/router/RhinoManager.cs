@@ -74,6 +74,13 @@ public class RhinoManager(
 
     private async Task<ChildRhino> SpawnInternalAsync(string version, string slotId, CancellationToken ct)
     {
+        // Prune stale slot entries before deciding what to do. Without this, a Mac
+        // slot whose Rhino crashed earlier in the session stays in the registry,
+        // and SpawnMacAsync would try to reuse its dead control endpoint —
+        // surfacing as a confusing "Connection refused (localhost:10500)" deep
+        // inside RhinoControlClient.SpawnListenerAsync.
+        ReapAllDead();
+
         var rhinoExe = locator.ResolveRhinoExe(version);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -243,6 +250,76 @@ public class RhinoManager(
     public ChildRhino? Get(string slotId)
     {
         lock (_lock) return _children.GetValueOrDefault(slotId);
+    }
+
+    // Cheap liveness probe. Considers a slot alive iff its pid still exists AND
+    // the listener is accepting connections. Pid-alive alone isn't enough on Mac
+    // (multiple slots share a pid; a single listener can die while the app keeps
+    // running), and port-listening alone isn't enough on Windows (a zombie or
+    // stuck process could leave the socket bound).
+    public bool IsAlive(ChildRhino c)
+    {
+        if (!IsProcessAlive(c.Pid)) return false;
+        if (!IsPortListening(c.Port)) return false;
+        return true;
+    }
+
+    // Probe one slot; if dead, drop it from the registry. Returns true if reaped.
+    // Used by ProxyDispatcher when an HTTP call to a slot fails with a connection
+    // error, so the next tool call doesn't keep hitting the same dead slot.
+    public bool TryReapDead(string slotId)
+    {
+        ChildRhino? c;
+        lock (_lock)
+        {
+            if (!_children.TryGetValue(slotId, out c)) return false;
+        }
+        if (IsAlive(c)) return false;
+        lock (_lock) _children.Remove(slotId);
+        log.LogWarning("Reaped dead slot '{Slot}' (pid {Pid}, port {Port}, Rhino {Version})",
+            c.SlotId, c.Pid, c.Port, c.Version);
+        return true;
+    }
+
+    // Probe every slot, drop the dead ones, return what was reaped. Called by
+    // list_slots so a silently-crashed Rhino doesn't appear healthy until the
+    // next tool call.
+    public IReadOnlyCollection<ChildRhino> ReapAllDead()
+    {
+        ChildRhino[] snapshot;
+        lock (_lock) snapshot = _children.Values.ToArray();
+
+        var reaped = new List<ChildRhino>();
+        foreach (var c in snapshot)
+        {
+            if (IsAlive(c)) continue;
+            lock (_lock)
+            {
+                // Recheck under lock — could have been removed by a concurrent close.
+                if (_children.TryGetValue(c.SlotId, out var current) && ReferenceEquals(current, c))
+                {
+                    _children.Remove(c.SlotId);
+                    reaped.Add(c);
+                }
+            }
+        }
+        if (reaped.Count > 0)
+        {
+            log.LogWarning("Reaped {Count} dead slot(s): {Slots}",
+                reaped.Count, string.Join(", ", reaped.Select(r => $"'{r.SlotId}' (pid {r.Pid})")));
+        }
+        return reaped;
+    }
+
+    private static bool IsProcessAlive(int pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById(pid);
+            return !p.HasExited;
+        }
+        catch (ArgumentException) { return false; }
+        catch (InvalidOperationException) { return false; }
     }
 
     private static Process LaunchWindows(string rhinoExe, int port)

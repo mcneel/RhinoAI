@@ -16,6 +16,7 @@ namespace RhMcp.Router;
 [JsonSerializable(typeof(ChildRhino))]
 [JsonSerializable(typeof(IReadOnlyCollection<ChildRhino>))]
 [JsonSerializable(typeof(SpawnErrorPayload))]
+[JsonSerializable(typeof(RhinoCrashReport))]
 [JsonSerializable(typeof(JsonRpcRequest))]
 [JsonSerializable(typeof(JsonRpcRequestParams))]
 [JsonSerializable(typeof(SpawnListenerArgs))]
@@ -53,11 +54,36 @@ public sealed record JsonRpcRequestParams(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("arguments")] JsonNode Arguments);
 
-// SpawnSlotTool's catch-block payload. Was an anonymous type pre-AOT.
+// SpawnSlotTool's catch-block payload. `error` is a stable kebab-case code the
+// agent can branch on; `message` is human-readable detail ending in what the
+// agent should do next. `crashReport` is populated when the failure can be
+// traced to a known Rhino crash (Mac only — see RhinoCrashReportFinder).
 public sealed record SpawnErrorPayload(
     [property: JsonPropertyName("error")] string Error,
     [property: JsonPropertyName("message")] string Message,
-    [property: JsonPropertyName("stackTrace")] string? StackTrace);
+    [property: JsonPropertyName("crashReport")] RhinoCrashReport? CrashReport = null);
+
+// Compact summary of a macOS .ips crash report. Just the agent-actionable bits
+// — not the full 100KB body. `path` points at the report on disk for human
+// follow-up.
+//
+// Two stacks are surfaced because Mac Rhino crashes have two distinct layers:
+//   - `topFrames`: the native faulting thread (libsystem, xamarin glue, RhCore).
+//     Almost always platform plumbing — useful for confirming "this was a managed
+//     abort, not a segfault", but no information about the actual cause.
+//   - `managedException` + `managedFrames`: the CLR exception type, message, and
+//     managed stack frames, parsed out of the `asiBacktraces` field. THIS is
+//     the agent-actionable part — it identifies the bug.
+public sealed record RhinoCrashReport(
+    [property: JsonPropertyName("path")] string Path,
+    [property: JsonPropertyName("captureTime")] string? CaptureTime,
+    [property: JsonPropertyName("buildVersion")] string? BuildVersion,
+    [property: JsonPropertyName("signal")] string? Signal,
+    [property: JsonPropertyName("termination")] string? Termination,
+    [property: JsonPropertyName("asi")] string? Asi,
+    [property: JsonPropertyName("managedException")] string? ManagedException,
+    [property: JsonPropertyName("managedFrames")] string[] ManagedFrames,
+    [property: JsonPropertyName("topFrames")] string[] TopFrames);
 
 // RhinoControlClient args. _router_spawn_listener takes no args; the empty
 // record models that while still being a named, source-gen-friendly type.

@@ -18,6 +18,7 @@ builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 builder.Services.AddSingleton(config);
 builder.Services.AddSingleton<RhinoLocator>();
 builder.Services.AddSingleton<RhinoControlClient>();
+builder.Services.AddSingleton<RhinoCrashReportFinder>();
 builder.Services.AddSingleton<RhinoManager>();
 builder.Services.AddSingleton<ProxyDispatcher>();
 builder.Services.AddHttpClient();
