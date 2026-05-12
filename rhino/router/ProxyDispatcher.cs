@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
 namespace RhMcp.Router;
@@ -13,7 +14,7 @@ public class ProxyDispatcher(RhinoManager manager, IHttpClientFactory httpFactor
     public async Task<string> CallToolAsync(
         string? slotId,
         string toolName,
-        object args,
+        JsonNode args,
         CancellationToken ct = default)
     {
         // Null slot → use (or lazily create) the default Rhino. Lets agents
@@ -24,19 +25,13 @@ public class ProxyDispatcher(RhinoManager manager, IHttpClientFactory httpFactor
                 $"No slot named '{slotId}'. Call spawn_slot to create one, or list_slots to see what's running.");
 
         var requestId = Guid.NewGuid().ToString("N");
-        var payload = new
-        {
-            jsonrpc = "2.0",
-            id = requestId,
-            method = "tools/call",
-            @params = new
-            {
-                name = toolName,
-                arguments = args
-            }
-        };
+        var payload = new JsonRpcRequest(
+            Jsonrpc: "2.0",
+            Id: requestId,
+            Method: "tools/call",
+            Params: new JsonRpcRequestParams(Name: toolName, Arguments: args));
 
-        var json = JsonSerializer.Serialize(payload);
+        var json = JsonSerializer.Serialize(payload, RouterJsonContext.Default.JsonRpcRequest);
         log.LogDebug("Proxying tool '{Tool}' to slot '{Slot}' at {Endpoint}: {Body}",
             toolName, slotId, child.Endpoint, json);
 

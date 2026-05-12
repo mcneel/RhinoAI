@@ -17,18 +17,14 @@ public class SpawnSlotTool(RhinoManager manager)
         try
         {
             var child = await manager.SpawnAsync(version, ct).ConfigureAwait(false);
-            return JsonSerializer.Serialize(child);
+            return JsonSerializer.Serialize(child, RouterJsonContext.Default.ChildRhino);
         }
         catch (Exception ex)
         {
             // Surface the full failure as a string so the MCP client sees it. The SDK
             // otherwise swallows exception details into a generic "An error occurred…".
-            return JsonSerializer.Serialize(new
-            {
-                error = ex.GetType().Name,
-                message = ex.Message,
-                stackTrace = ex.StackTrace,
-            });
+            var payload = new SpawnErrorPayload(ex.GetType().Name, ex.Message, ex.StackTrace);
+            return JsonSerializer.Serialize(payload, RouterJsonContext.Default.SpawnErrorPayload);
         }
     }
 

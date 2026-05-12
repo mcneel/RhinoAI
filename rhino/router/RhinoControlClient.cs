@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
 namespace RhMcp.Router;
@@ -15,25 +16,27 @@ public class RhinoControlClient(IHttpClientFactory httpFactory, ILogger<RhinoCon
 {
     public async Task<int> SpawnListenerAsync(string endpoint, CancellationToken ct)
     {
-        var resultJson = await PostAsync(endpoint, "_router_spawn_listener", new { }, ct).ConfigureAwait(false);
+        var argsJson = JsonSerializer.SerializeToNode(new SpawnListenerArgs(), RouterJsonContext.Default.SpawnListenerArgs)!;
+        var resultJson = await PostAsync(endpoint, "_router_spawn_listener", argsJson, ct).ConfigureAwait(false);
         using var doc = JsonDocument.Parse(resultJson);
         return doc.RootElement.GetProperty("port").GetInt32();
     }
 
-    public Task CloseListenerAsync(string endpoint, int port, CancellationToken ct) =>
-        PostAsync(endpoint, "_router_close_listener", new { port }, ct);
-
-    private async Task<string> PostAsync(string endpoint, string toolName, object args, CancellationToken ct)
+    public Task CloseListenerAsync(string endpoint, int port, CancellationToken ct)
     {
-        var payload = new
-        {
-            jsonrpc = "2.0",
-            id = Guid.NewGuid().ToString("N"),
-            method = "tools/call",
-            @params = new { name = toolName, arguments = args }
-        };
+        var argsJson = JsonSerializer.SerializeToNode(new CloseListenerArgs(port), RouterJsonContext.Default.CloseListenerArgs)!;
+        return PostAsync(endpoint, "_router_close_listener", argsJson, ct);
+    }
 
-        var json = JsonSerializer.Serialize(payload);
+    private async Task<string> PostAsync(string endpoint, string toolName, JsonNode args, CancellationToken ct)
+    {
+        var payload = new JsonRpcRequest(
+            Jsonrpc: "2.0",
+            Id: Guid.NewGuid().ToString("N"),
+            Method: "tools/call",
+            Params: new JsonRpcRequestParams(Name: toolName, Arguments: args));
+
+        var json = JsonSerializer.Serialize(payload, RouterJsonContext.Default.JsonRpcRequest);
         log.LogDebug("Control: calling {Tool} at {Endpoint}", toolName, endpoint);
 
         var http = httpFactory.CreateClient();

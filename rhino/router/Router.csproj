@@ -17,17 +17,14 @@
 
     Windows: framework-dependent + RollForward. Rhino installs .NET 8 globally
     on Windows, so the host can resolve the runtime; the resulting .exe is
-    ~1-2MB. RollForward=Major lets future Rhinos with newer runtimes still load
+    ~5MB. RollForward=Major lets future Rhinos with newer runtimes still load
     the router.
 
-    macOS: self-contained single-file (~34MB). Rhino on Mac doesn't reliably
-    drop .NET into a host-discoverable location, so we ship the runtime
-    alongside.
-
-    Tried PublishTrimmed once: cut self-contained from ~34MB to ~13MB but
-    MCP's reflection-based JSON schema generation blew up at startup. Would
-    need source-generated JsonSerializerContexts + typed WithTools<T> across
-    every tool DTO to re-enable.
+    macOS: NativeAOT. ~18MB single native binary, no .NET install needed, and
+    starts in ~120ms (vs ~430ms for framework-dependent). Requires the
+    source-generated RouterJsonContext + typed WithTools<T> registration that
+    Program.cs uses — anonymous types or reflection-based MCP tool discovery
+    would break here.
   -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND $(RuntimeIdentifier.StartsWith('win-'))">
     <SelfContained>false</SelfContained>
@@ -35,10 +32,8 @@
     <RollForward>Major</RollForward>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND !$(RuntimeIdentifier.StartsWith('win-'))">
+    <PublishAot>true</PublishAot>
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from
