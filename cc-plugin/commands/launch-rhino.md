@@ -9,12 +9,16 @@ Bring up a `RhinoMCP` listener on a free port and report the port back to the us
 | Argument      | macOS app name | Windows install dir |
 |---------------|----------------|---------------------|
 | `8` (default) | `Rhino 8`      | `Rhino 8`           |
-| `WIP`         | `RhinoWIP`     | `Rhino WIP`         |
+| `WIP`         | `RhinoWIP`     | `Rhino 9 WIP`       |
 | `9`           | `Rhino 9`      | `Rhino 9`           |
 
 If the argument is missing or empty, default to `8`. If it doesn't match the table, ask the user to clarify rather than guess.
 
 ## Step 1 — pick a free port
+
+Start at `4862` and walk upward until you find a TCP port nothing is listening on. `ping` is not an option — it tests host reachability, not specific ports.
+
+### macOS (`Darwin`)
 
 ```bash
 port=4862
@@ -22,6 +26,22 @@ while nc -z localhost "$port" 2>/dev/null; do port=$((port+1)); done
 ```
 
 Fall back to `lsof -i :"$port" >/dev/null 2>&1` if `nc` is missing.
+
+### Windows
+
+PowerShell:
+```powershell
+$port = 4862
+while (Test-NetConnection -ComputerName localhost -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue) {
+  $port++
+}
+```
+
+Or from bash (`netstat` ships with Windows; `findstr` is the cmd equivalent of `grep`):
+```bash
+port=4862
+while netstat -ano -p tcp | grep -q "LISTENING.*:$port "; do port=$((port+1)); done
+```
 
 ## Step 2 — start the listener
 
@@ -48,15 +68,10 @@ Rhino runs as a single process and the MCP server is tied to the active document
 
 Always launch a new process — multiple Rhinos can coexist.
 
-PowerShell:
-```powershell
-Start-Process "C:\Program Files\${install_dir}\System\Rhino.exe" `
-  -ArgumentList '/nosplash', "/runscript=_-RhinoMCP _Enter"
-```
+Use PowerShell.
 
-Or from bash
-```bash
-"/c/Program Files/${install_dir}/System/Rhino.exe" /nosplash /runscript="_-RhinoMCP _Enter" &
+```powershell
+Start-Process "C:/Program Files/Rhino 9 WIP/System/Rhino.exe" -Args '/nosplash','/runscript="_RhinoMCP _Enter"'
 ```
 
 
