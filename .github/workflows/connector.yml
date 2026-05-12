@@ -1,0 +1,50 @@
+name: Connector
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'connector/**'
+      - '.github/workflows/connector.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'connector/**'
+      - '.github/workflows/connector.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: connector/server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: connector/server
+        run: npm ci
+
+      - name: Validate manifest
+        working-directory: connector
+        run: npx --yes @anthropic-ai/mcpb validate manifest.json
+
+      - name: Pack .mcpb bundle
+        working-directory: connector
+        run: npx --yes @anthropic-ai/mcpb pack
+
+      - name: Inspect bundle
+        working-directory: connector
+        run: npx --yes @anthropic-ai/mcpb info *.mcpb
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhino-mcp-platform-connector
+          path: connector/*.mcpb
+          if-no-files-found: error
