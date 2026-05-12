@@ -38,6 +38,10 @@
     Yak tags packages by OS but not by CPU architecture, so a Windows .yak has to
     carry both x64 and arm64 router binaries; the launcher picks at runtime.
     RouterRids is a semicolon-separated list — default infers from host OS.
+    NOTE: when passed via the command line (-p:RouterRids=...), the value must
+    use %3B in place of ; (MSBuild's -p: switch otherwise splits on ;).
+    The ItemGroup below uses [MSBuild]::Unescape so the escaped form decodes
+    back into a real semicolon string that the Include splitter sees.
   -->
   <PropertyGroup>
     <RouterRids Condition="'$(RouterRids)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win-x64;win-arm64</RouterRids>
@@ -51,11 +55,17 @@
   -->
   <Target Name="BundleRouter" AfterTargets="Build">
     <ItemGroup>
-      <_RouterRid Include="$(RouterRids)" />
+      <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
-    <MSBuild Projects="../router/Router.csproj"
-             Targets="Restore;Publish"
-             Properties="Configuration=$(Configuration);RuntimeIdentifier=%(_RouterRid.Identity);PublishDir=$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/" />
+    <!--
+      Publish one RID at a time via Exec. We use Exec rather than the <MSBuild>
+      task because <MSBuild> doesn't reliably batch on %() in its Properties
+      attribute when no item-collection is referenced in Projects — it ends up
+      joining all RIDs and passing them as a single RuntimeIdentifier value,
+      which NETSDK1083 then rejects. Exec batches per item on %() in Command.
+    -->
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router"
+          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) --output &quot;bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish&quot; --nologo" />
     <ItemGroup>
       <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/**/*">
         <Rid>%(_RouterRid.Identity)</Rid>

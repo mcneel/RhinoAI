@@ -15,7 +15,9 @@ jobs:
         configuration: [Debug, Release]
         include:
           # router_rids uses %3B to escape ; — MSBuild's -p: switch otherwise
-          # treats ; as a property separator and rejects the second value.
+          # splits the value on ; and treats the second half as a new property.
+          # The plugin csproj uses [MSBuild]::Unescape so the escaped form
+          # decodes back into a real list when populating the item group.
           - os: windows-latest
             router_rids: win-x64%3Bwin-arm64
             yak_platform: win
