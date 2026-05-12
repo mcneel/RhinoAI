@@ -1,12 +1,8 @@
 {
   "mcpServers": {
-    "rhino":   { "type": "http", "url": "http://localhost:10500" },
-    "rhino-2": { "type": "http", "url": "http://localhost:10501" },
-    "rhino-3": { "type": "http", "url": "http://localhost:10502" },
-    "rhino-4": { "type": "http", "url": "http://localhost:10503" },
-    "rhino-5": { "type": "http", "url": "http://localhost:10504" },
-    "rhino-6": { "type": "http", "url": "http://localhost:10505" },
-    "rhino-7": { "type": "http", "url": "http://localhost:10506" },
-    "rhino-8": { "type": "http", "url": "http://localhost:10507" }
+    "rhino": {
+      "type": "stdio",
+      "command": "${CLAUDE_PLUGIN_ROOT}/router-launcher.cmd"
+    }
   }
 }

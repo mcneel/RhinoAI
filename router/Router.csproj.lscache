@@ -64,7 +64,11 @@ RhinoLocator.cs
 RhinoManager.cs
 RouterConfig.cs
 Tools/
+ GetSelectionTool.cs
+ GetViewportImageTool.cs
  ListObjectsTool.cs
+ RunCommandTool.cs
+ RunPythonTool.cs
  SpawnSlotTool.cs
 
 [metadataReferences]
