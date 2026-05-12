@@ -33,10 +33,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload yak artifact
         if: matrix.configuration == 'Release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rhino-mcp-platform-${{ matrix.yak_platform }}
           path: rhino/plugin/bin/Release/net8.0/*.yak

@@ -57,6 +57,7 @@ public static class GH1_PlaceComponentTool
         }
 
         if (obj.Attributes is null) obj.CreateAttributes();
+        if (obj.Attributes is null) return $"Failed to create attributes for '{selector}'";
         obj.Attributes.Pivot = new PointF(x, y);
 
         RhinoApp.InvokeAndWait(() =>
