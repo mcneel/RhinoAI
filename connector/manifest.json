@@ -22,8 +22,21 @@
     "entry_point": "router-launcher.mjs",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/router-launcher.mjs"],
+      "args": [
+        "${__dirname}/router-launcher.mjs",
+        "--default-version",
+        "${user_config.rhino_version}"
+      ],
       "env": {}
+    }
+  },
+  "user_config": {
+    "rhino_version": {
+      "type": "string",
+      "title": "Rhino Version",
+      "description": "Which Rhino to launch when a tool needs one. Accepted values: 8, 9, WIP.",
+      "required": true,
+      "default": "8"
     }
   },
   "prompts": [
