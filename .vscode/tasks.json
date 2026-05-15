@@ -66,7 +66,7 @@
         "args": ["Yak build on Linux is unsupported."]
       },
       "options": {
-        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release/net8.0"
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release"
       },
       "problemMatcher": [],
       "presentation": {
@@ -91,7 +91,7 @@
         "args": ["Yak install on Linux is unsupported."]
       },
       "options": {
-        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release/net8.0"
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release"
       },
       "problemMatcher": [],
       "presentation": {
