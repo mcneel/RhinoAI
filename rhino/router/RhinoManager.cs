@@ -53,9 +53,10 @@ public class RhinoManager(
     // Lazily return the default slot for `version`, spawning a Rhino if one doesn't already exist.
     // Called by ProxyDispatcher when a tool is invoked without an explicit slot. A null version
     // resolves to the router's configured default. GH2 tool proxies pass "WIP" so they get a
-    // separate default slot from non-GH2 tools. Adopted Rhinos are deliberately not promoted to
-    // the default slot — slot-less calls still spawn a fresh router-owned Rhino so the user's
-    // manually-started session isn't hijacked.
+    // separate default slot from non-GH2 tools. If the user started a Rhino manually and ran
+    // `_RhinoMCP`, the drop-file scan adopts it and we reuse that session (when its version
+    // matches) instead of spawning a parallel one — the user's manual launch is the strongest
+    // possible signal that they want this Rhino used.
     public async Task<ChildRhino> GetOrCreateDefaultAsync(string? version = null, CancellationToken ct = default)
     {
         ScanAnnouncements();
@@ -64,16 +65,17 @@ public class RhinoManager(
 
         lock (_lock)
         {
-            if (_children.TryGetValue(slotId, out var existing)) return existing;
+            if (TryPickDefault(slotId, resolved, out var existing)) return existing;
         }
 
         await _defaultGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            // Re-check under the gate — another caller may have spawned while we waited.
+            // Re-check under the gate — another caller may have spawned (or an
+            // announcement may have been adopted) while we waited.
             lock (_lock)
             {
-                if (_children.TryGetValue(slotId, out var existing)) return existing;
+                if (TryPickDefault(slotId, resolved, out var existing)) return existing;
             }
             return await SpawnInternalAsync(resolved, slotId, ct).ConfigureAwait(false);
         }
@@ -81,6 +83,27 @@ public class RhinoManager(
         {
             _defaultGate.Release();
         }
+    }
+
+    // Caller must hold _lock. Picks the slot a slot-less tool call should route
+    // to: the reserved per-version default slot first, otherwise any adopted
+    // user-started Rhino on the matching version.
+    private bool TryPickDefault(string slotId, string version, out ChildRhino slot)
+    {
+        if (_children.TryGetValue(slotId, out var def))
+        {
+            slot = def;
+            return true;
+        }
+        var adopted = _children.Values.FirstOrDefault(
+            c => c.Adopted && c.Version == version);
+        if (adopted is not null)
+        {
+            slot = adopted;
+            return true;
+        }
+        slot = default!;
+        return false;
     }
 
     private async Task<ChildRhino> SpawnInternalAsync(string version, string slotId, CancellationToken ct)
