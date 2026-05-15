@@ -149,12 +149,18 @@ test("documents current cross-major policy (Rhino 9 before 8)", { skip: !isSuppo
   assert.match(r.stderr, /9\.0\/0\.1\.0\*/);
 });
 
+// These tests simulate Rhino-being-installed by pointing RHINO_MCP_FAKE_YAK_PATH
+// at any existing file. The launcher only checks existence, not contents, so
+// process.execPath (a guaranteed-real file) is convenient.
+const FAKE_YAK_INSTALLED = { RHINO_MCP_FAKE_YAK_PATH: process.execPath };
+const FAKE_YAK_MISSING = { RHINO_MCP_FAKE_YAK_PATH: join(tmpdir(), "definitely-does-not-exist-rhino-yak") };
+
 test("no yak installed → enters install-fallback (exit 0 on stdin EOF)", { skip: !isSupported }, () => {
   // `runLauncher` passes input: "" — readline sees EOF immediately and the
   // fallback exits cleanly with 0. The detailed JSON-RPC behaviour lives
   // further down in the install-fallback test block.
   const fake = makeFakeRoot({});
-  const r = runLauncher(fake.env);
+  const r = runLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   assert.equal(r.status, 0);
   assert.match(r.stderr, /no Rhino-MCP-Platform yak installed/);
   assert.match(r.stderr, /entering install-fallback mode/);
@@ -164,10 +170,17 @@ test("yak exists but no router binary for this rid → enters install-fallback",
   const fake = makeFakeRoot({
     "9.0": { "0.2.0": { binary: null } },
   });
-  const r = runLauncher(fake.env);
+  const r = runLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   assert.equal(r.status, 0);
   assert.match(r.stderr, new RegExp(`no ${EXE.replace(/\./g, "\\.")} found for ${RID}`));
   assert.match(r.stderr, /entering install-fallback mode/);
+});
+
+test("no yak AND Rhino not installed → enters rhino-missing-fallback", { skip: !isSupported }, () => {
+  const fake = makeFakeRoot({});
+  const r = runLauncher({ ...fake.env, ...FAKE_YAK_MISSING });
+  assert.equal(r.status, 0);
+  assert.match(r.stderr, /entering rhino-missing-fallback mode/);
 });
 
 // --- spawn lifecycle --------------------------------------------------------
@@ -313,7 +326,7 @@ function startFallbackLauncher(env, args = []) {
 
 test("fallback: no yak → initialize advertises rhino-mcp-installer", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
     assert.equal(r.result?.serverInfo?.name, "rhino-mcp-installer");
@@ -327,7 +340,7 @@ test("fallback: no yak → initialize advertises rhino-mcp-installer", { skip: !
 
 test("fallback: yak-but-no-binary path also enters fallback (different reason)", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({ "9.0": { "0.2.0": { binary: null } } });
-  const l = startFallbackLauncher(fake.env);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
     assert.equal(r.result?.serverInfo?.name, "rhino-mcp-installer");
@@ -339,7 +352,7 @@ test("fallback: yak-but-no-binary path also enters fallback (different reason)",
 
 test("fallback: tools/list returns install_rhino_mcp_platform", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
     const r = await l.request("tools/list", {}, 1);
@@ -355,7 +368,7 @@ test("fallback: tools/list returns install_rhino_mcp_platform", { skip: !isSuppo
 
 test("fallback: --default-version 9 propagates into the tool description", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env, ["--default-version", "9"]);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED }, ["--default-version", "9"]);
   try {
     await l.request("initialize", {}, 0);
     const r = await l.request("tools/list", {}, 1);
@@ -368,7 +381,7 @@ test("fallback: --default-version 9 propagates into the tool description", { ski
 
 test("fallback: -v WIP propagates into the tool description", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env, ["-v", "WIP"]);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED }, ["-v", "WIP"]);
   try {
     await l.request("initialize", {}, 0);
     const r = await l.request("tools/list", {}, 1);
@@ -378,26 +391,15 @@ test("fallback: -v WIP propagates into the tool description", { skip: !isSupport
   }
 });
 
-test("fallback: tools/call install_rhino_mcp_platform when yak isn't resolvable → isError + helpful text", { skip: !isSupported }, async () => {
-  // Pass an unknown --default-version: resolveYak's table only knows 8/9/WIP,
-  // so this short-circuits to null before touching the filesystem. Keeps the
-  // test deterministic across CI runners (no Rhino) AND dev boxes that *do*
-  // have Rhino 8 installed at /Applications/Rhino 8.app.
-  const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env, ["--default-version", "nonesuch"]);
-  try {
-    await l.request("initialize", {}, 0);
-    const r = await l.request("tools/call", { name: "install_rhino_mcp_platform", arguments: {} }, 1);
-    assert.equal(r.result?.isError, true);
-    assert.match(r.result.content[0].text, /Cannot find yak for Rhino nonesuch/);
-  } finally {
-    await l.close();
-  }
-});
+// The old "tools/call install_rhino_mcp_platform with unresolvable yak" test is
+// gone: with the upfront probe in place, an unresolvable yak now routes to
+// rhino-missing-fallback before install_rhino_mcp_platform is ever exposed. The
+// defensive null-yak branch inside doInstall still exists for the race where
+// Rhino is uninstalled mid-flight, but isn't reachable through stdio alone.
 
 test("fallback: tools/call for an unknown tool → JSON-RPC -32601", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     await l.request("initialize", {}, 0);
     const r = await l.request("tools/call", { name: "not_a_tool", arguments: {} }, 1);
@@ -410,12 +412,71 @@ test("fallback: tools/call for an unknown tool → JSON-RPC -32601", { skip: !is
 
 test("fallback: unsupported method on a request id → JSON-RPC -32601", { skip: !isSupported }, async () => {
   const fake = makeFakeRoot({});
-  const l = startFallbackLauncher(fake.env);
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     await l.request("initialize", {}, 0);
     const r = await l.request("resources/list", {}, 1);
     assert.equal(r.error?.code, -32601);
     assert.match(r.error.message, /method not supported in install-fallback mode/);
+  } finally {
+    await l.close();
+  }
+});
+
+// --- rhino-missing-fallback (pseudo-MCP, no Rhino installed) ----------------
+
+test("rhino-missing: no Rhino → initialize advertises rhino-mcp-no-rhino", { skip: !isSupported }, async () => {
+  const fake = makeFakeRoot({});
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_MISSING });
+  try {
+    const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
+    assert.equal(r.result?.serverInfo?.name, "rhino-mcp-no-rhino");
+    assert.match(l.getStderr(), /entering rhino-missing-fallback mode/);
+  } finally {
+    const { code } = await l.close();
+    assert.equal(code, 0);
+  }
+});
+
+test("rhino-missing: tools/list returns rhino_not_installed pointing at rhino3d.com", { skip: !isSupported }, async () => {
+  const fake = makeFakeRoot({});
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_MISSING });
+  try {
+    await l.request("initialize", {}, 0);
+    const r = await l.request("tools/list", {}, 1);
+    const tools = r.result?.tools ?? [];
+    assert.equal(tools.length, 1);
+    assert.equal(tools[0].name, "rhino_not_installed");
+    assert.match(tools[0].description, /rhino3d\.com\/download/);
+    assert.match(tools[0].description, /Rhino 8/);
+  } finally {
+    await l.close();
+  }
+});
+
+test("rhino-missing: --default-version 9 propagates into the description", { skip: !isSupported }, async () => {
+  const fake = makeFakeRoot({});
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_MISSING }, ["--default-version", "9"]);
+  try {
+    await l.request("initialize", {}, 0);
+    const r = await l.request("tools/list", {}, 1);
+    assert.match(r.result.tools[0].description, /Rhino 9/);
+    assert.doesNotMatch(r.result.tools[0].description, /Rhino 8/);
+  } finally {
+    await l.close();
+  }
+});
+
+test("rhino-missing: tools/call rhino_not_installed returns download instructions", { skip: !isSupported }, async () => {
+  const fake = makeFakeRoot({});
+  const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_MISSING });
+  try {
+    await l.request("initialize", {}, 0);
+    const r = await l.request("tools/call", { name: "rhino_not_installed", arguments: {} }, 1);
+    // Not an error result — just informational text. The model uses this to
+    // remind the user what to do next.
+    assert.notEqual(r.result?.isError, true);
+    assert.match(r.result.content[0].text, /rhino3d\.com\/download/);
   } finally {
     await l.close();
   }
