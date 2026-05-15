@@ -26,12 +26,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: connector/server/package-lock.json
-
-      - name: Install server dependencies
-        working-directory: connector/server
-        run: npm ci
 
       - name: Validate manifest
         working-directory: connector

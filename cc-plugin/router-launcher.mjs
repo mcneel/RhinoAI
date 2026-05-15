@@ -82,7 +82,22 @@ if (!r.picked) {
 
 process.stderr.write(`rhino-mcp-launcher: exec ${r.picked.path}\n`);
 
-const child = spawn(r.picked.path, process.argv.slice(2), { stdio: "inherit" });
+// spawn() can fail two different ways depending on platform:
+//   POSIX  — returns a ChildProcess; ENOENT/EACCES surface as an async `error` event.
+//   Win32  — throws *synchronously* (e.g. `spawn UNKNOWN` on a file with bad PE format).
+// Handle both so the launcher always exits cleanly with code 1 + "spawn failed"
+// rather than dumping an unhandled stack trace.
+function spawnFailed(err) {
+  process.stderr.write(`rhino-mcp-launcher: spawn failed: ${err.message}\n`);
+  process.exit(1);
+}
+
+let child;
+try {
+  child = spawn(r.picked.path, process.argv.slice(2), { stdio: "inherit" });
+} catch (err) {
+  spawnFailed(err);
+}
 
 // `error` and `close` can both fire for the same failure (ENOENT,
 // non-executable on POSIX). Gate so we don't mask a spawn failure as exit 0.
@@ -91,8 +106,7 @@ let terminating = false;
 child.on("error", err => {
   if (terminating) return;
   terminating = true;
-  process.stderr.write(`rhino-mcp-launcher: spawn failed: ${err.message}\n`);
-  process.exit(1);
+  spawnFailed(err);
 });
 
 // `close` (not `exit`) so stdio fully drains — `exit` can truncate the
