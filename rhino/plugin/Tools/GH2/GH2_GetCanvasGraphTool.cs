@@ -1,9 +1,10 @@
 using RhMcp.Resources;
 
-using Grasshopper2.Components;
 using Grasshopper2.Doc;
 using Grasshopper2.Parameters;
 using Grasshopper2.Parameters.Special;
+
+using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhMcp.Tools;
 
@@ -53,7 +54,7 @@ public static class GH2_GetCanvasGraphTool
             InputInfo[] inputs;
             OutputInfo[] outputs;
 
-            if (obj is Component comp)
+            if (obj is GH2Component comp)
             {
                 inputs = comp.Parameters.Inputs.Select(p => MakeInput(doc, p, include_data, sample_size, wires, obj.InstanceId)).ToArray();
                 outputs = comp.Parameters.Outputs.Select(p => MakeOutput(p, include_data, sample_size, displaySource: null)).ToArray();

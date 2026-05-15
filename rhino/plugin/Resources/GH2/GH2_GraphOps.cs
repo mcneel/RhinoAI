@@ -1,6 +1,7 @@
-using Grasshopper2.Components;
 using Grasshopper2.Doc;
 using Grasshopper2.Parameters;
+
+using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhMcp.Resources;
 
@@ -10,7 +11,7 @@ public static class GH2_GraphOps
     {
         param = null;
         error = "";
-        if (obj is Component comp)
+        if (obj is GH2Component comp)
             return TryPickParam(comp.Parameters.Outputs.ToList(), selector, "output", out param, out error);
         if (obj is IParameter p)
         {
@@ -26,7 +27,7 @@ public static class GH2_GraphOps
     {
         param = null;
         error = "";
-        if (obj is Component comp)
+        if (obj is GH2Component comp)
             return TryPickParam(comp.Parameters.Inputs.ToList(), selector, "input", out param, out error);
         if (obj is IParameter p)
         {

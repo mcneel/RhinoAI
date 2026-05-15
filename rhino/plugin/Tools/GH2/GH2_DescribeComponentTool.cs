@@ -1,9 +1,10 @@
 using RhMcp.Resources;
 
-using Grasshopper2.Components;
 using Grasshopper2.Doc;
 using Grasshopper2.Framework;
 using Grasshopper2.Parameters;
+
+using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhMcp.Tools;
 
@@ -48,7 +49,7 @@ public static class GH2_DescribeComponentTool
 
         switch (obj)
         {
-            case Component comp:
+            case GH2Component comp:
                 kind = "Component";
                 inputs = comp.Parameters.Inputs.Select(ToInfo).ToArray();
                 outputs = comp.Parameters.Outputs.Select(ToInfo).ToArray();

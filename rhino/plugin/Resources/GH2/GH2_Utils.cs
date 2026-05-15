@@ -1,11 +1,12 @@
 using Grasshopper2;
-using Grasshopper2.Components;
 using Grasshopper2.Doc;
 using Grasshopper2.Framework;
 using Grasshopper2.Parameters;
 using Grasshopper2.Parameters.Special;
 using Grasshopper2.UI;
 using Grasshopper2.UI.Canvas;
+
+using GH2Component = Grasshopper2.Components.Component;
 
 namespace RhMcp.Resources;
 
@@ -46,7 +47,7 @@ public static class GH2_Utils
   {
     if (t is null) return "Other";
     if (typeof(NumberSliderObject).IsAssignableFrom(t)) return "Slider";
-    if (typeof(Component).IsAssignableFrom(t)) return "Component";
+    if (typeof(GH2Component).IsAssignableFrom(t)) return "Component";
     if (typeof(IParameter).IsAssignableFrom(t)) return "Param";
     return "Other";
   }
