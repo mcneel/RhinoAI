@@ -1,0 +1,68 @@
+name: Launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cc-plugin/router-launcher.mjs'
+      - 'connector/router-launcher.mjs'
+      - 'tests/launcher/**'
+      - 'rhino/router/**'
+      - '.github/workflows/launcher.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cc-plugin/router-launcher.mjs'
+      - 'connector/router-launcher.mjs'
+      - 'tests/launcher/**'
+      - 'rhino/router/**'
+      - '.github/workflows/launcher.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            rid: osx-arm64
+          - os: windows-latest
+            rid: win-x64
+          # Ubuntu runs only the "unsupported platform" test — the launcher
+          # doesn't ship for linux and Rhino isn't published there, so we
+          # don't build the router. Just keeps that platform-gate path honest.
+          - os: ubuntu-latest
+            rid: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Setup .NET
+        if: matrix.rid != ''
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish router (${{ matrix.rid }})
+        if: matrix.rid != ''
+        shell: bash
+        run: dotnet publish rhino/router/Router.csproj -c Release -r ${{ matrix.rid }} -o "$GITHUB_WORKSPACE/published-router"
+
+      - name: Run launcher tests
+        working-directory: tests/launcher
+        shell: bash
+        env:
+          # When set, the integration test stages this directory into a fake
+          # yak tree and exercises a real MCP initialize handshake. Unset on
+          # ubuntu (no router build there) so the integration test is skipped.
+          RHINO_MCP_TEST_ROUTER_DIR: ${{ matrix.rid != '' && format('{0}/published-router', github.workspace) || '' }}
+        run: node --test
