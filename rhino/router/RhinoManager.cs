@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace RhMcp.Router;
@@ -49,8 +50,13 @@ public class RhinoManager(
 
     // Lazily return the default slot, spawning a Rhino for it if one doesn't already exist.
     // Called by ProxyDispatcher when a tool is invoked without an explicit slot.
+    // Adopted Rhinos are deliberately not promoted to the default slot — slot-less
+    // calls still spawn a fresh router-owned Rhino so the user's manually-started
+    // session isn't hijacked.
     public async Task<ChildRhino> GetOrCreateDefaultAsync(CancellationToken ct = default)
     {
+        ScanAnnouncements();
+
         lock (_lock)
         {
             if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
@@ -169,6 +175,14 @@ public class RhinoManager(
             if (!_children.TryGetValue(slotId, out child)) return false;
         }
 
+        if (child.Adopted)
+        {
+            // The router didn't start this Rhino, so it doesn't get to kill the
+            // process. Tools layer turns this into a structured error so the
+            // agent learns why; here we just refuse.
+            throw new AdoptedSlotCloseException(slotId);
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             // Find sibling slots sharing this pid. If any exist, this isn't the last
@@ -217,6 +231,8 @@ public class RhinoManager(
     {
         // Shutdown path: kill each unique pid once. No control-channel niceties —
         // we're tearing everything down anyway, and multiple slots may share a pid on Mac.
+        // Adopted slots are skipped: the user owns those Rhinos, so router shutdown
+        // must not take them down.
         string[] ids;
         lock (_lock) ids = _children.Keys.ToArray();
 
@@ -227,6 +243,7 @@ public class RhinoManager(
             lock (_lock)
             {
                 if (!_children.TryGetValue(id, out c)) continue;
+                if (c.Adopted) { _children.Remove(id); continue; }
                 _children.Remove(id);
             }
             if (!killed.Add(c.Pid)) continue;
@@ -250,6 +267,91 @@ public class RhinoManager(
     public ChildRhino? Get(string slotId)
     {
         lock (_lock) return _children.GetValueOrDefault(slotId);
+    }
+
+    // Walk the listener-announcement drop directory and adopt any plugin-side
+    // Rhino we don't already know about. The plugin writes one file per
+    // listener-bind into <temp>/rhino-mcp-listeners; we treat each file as a
+    // one-shot "look at me" doorbell — consume by deleting it whether or not
+    // adoption succeeded. Stale files (port no longer listening) are dropped
+    // silently; files for a pid+port we already track are deleted as a no-op so
+    // the Mac _router_spawn_listener path remains idempotent.
+    public void ScanAnnouncements()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
+        if (!Directory.Exists(dir)) return;
+
+        string[] files;
+        try { files = Directory.GetFiles(dir, "*.json"); }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Failed to enumerate listener-announcement dir {Dir}", dir);
+            return;
+        }
+
+        foreach (var file in files)
+        {
+            try
+            {
+                Announcement? ann;
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    ann = JsonSerializer.Deserialize(json, RouterJsonContext.Default.Announcement);
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "Bad announcement file {File}; deleting", file);
+                    TryDelete(file);
+                    continue;
+                }
+
+                if (ann is null || ann.Port <= 0 || ann.Pid <= 0)
+                {
+                    TryDelete(file);
+                    continue;
+                }
+
+                bool alreadyKnown;
+                lock (_lock)
+                {
+                    alreadyKnown = _children.Values.Any(c => c.Pid == ann.Pid && c.Port == ann.Port);
+                }
+
+                if (alreadyKnown)
+                {
+                    // Mac _router_spawn_listener case (and any other duplicate) —
+                    // file is harmless once consumed.
+                    TryDelete(file);
+                    continue;
+                }
+
+                if (!IsPortListening(ann.Port))
+                {
+                    log.LogDebug("Announcement for pid {Pid} port {Port} is stale (no listener); discarding",
+                        ann.Pid, ann.Port);
+                    TryDelete(file);
+                    continue;
+                }
+
+                var slotId = AnimalNames.Next();
+                var child = new ChildRhino(slotId, ann.Port, ann.Pid, ann.Version ?? "?", Adopted: true);
+                lock (_lock) _children[slotId] = child;
+                log.LogInformation("Adopted user-started Rhino {Version} as slot '{Slot}' (pid {Pid}, port {Port})",
+                    child.Version, slotId, ann.Pid, ann.Port);
+                TryDelete(file);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Unexpected failure processing announcement {File}", file);
+                TryDelete(file);
+            }
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); } catch { /* next scan will retry */ }
     }
 
     // Cheap liveness probe. Considers a slot alive iff its pid still exists AND
@@ -434,7 +536,21 @@ public class RhinoManager(
     }
 }
 
-public record ChildRhino(string SlotId, int Port, int Pid, string Version)
+// Thrown by CloseAsync when the caller tries to close an adopted slot. The
+// tools layer catches this and turns it into a structured `cannot_close_adopted`
+// payload — the agent learns why and we still avoid killing a user-started
+// Rhino.
+public sealed class AdoptedSlotCloseException(string slotId)
+    : InvalidOperationException($"Slot '{slotId}' was adopted from a user-started Rhino and cannot be closed by the router.")
+{
+    public string SlotId { get; } = slotId;
+}
+
+// `Adopted` is set when the router discovered this Rhino via a drop-file
+// announcement rather than spawning it. Adopted slots are never killed by the
+// router (CloseAll skips them; close_slot refuses) — the user started them, the
+// user closes them.
+public record ChildRhino(string SlotId, int Port, int Pid, string Version, bool Adopted = false)
 {
     public string Endpoint => $"http://localhost:{Port}";
 }
