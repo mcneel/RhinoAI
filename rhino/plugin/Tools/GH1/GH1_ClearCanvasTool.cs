@@ -9,7 +9,7 @@ public static class GH1_ClearCanvasTool
 {
     public record struct ClearResult(int Removed);
 
-    [McpServerTool(Name = "clear_canvas")]
+    [McpServerTool(Name = "g1_clear_canvas")]
     [Description("Remove every object from the active GH1 canvas. Destructive — requires confirm=true.")]
     public static string Clear(
         RhinoDoc _,

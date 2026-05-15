@@ -32,7 +32,7 @@ public static class GH1_GetCanvasGraphTool
     public record struct Wire(Endpoint From, Endpoint To);
     public record struct Graph(ObjectInfo[] Objects, Wire[] Wires);
 
-    [McpServerTool(Name = "get_canvas_graph")]
+    [McpServerTool(Name = "g1_get_canvas_graph")]
     [Description("Return a structured snapshot of the active GH1 canvas: objects (with messages, inputs/outputs and optional volatile data summaries) and wires between them.")]
     public static string GetGraph(
         RhinoDoc _,

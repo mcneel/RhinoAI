@@ -10,7 +10,7 @@ public static class GH2_SolveTool
     public record struct StatusInfo(string Name, MessageItem[] Messages);
     public record struct MessageItem(string Level, string Text);
 
-    [McpServerTool(Name = "solve_canvas")]
+    [McpServerTool(Name = "g2_solve_canvas")]
     [Description("Solves the active GH2 canvas. Returns per-object warning/error messages, if any.")]
     public static string SolveCanvas(RhinoDoc _)
     {

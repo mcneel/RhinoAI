@@ -23,7 +23,7 @@ public static class GH2_DescribeComponentTool
         ParamInfo[] Inputs,
         ParamInfo[] Outputs);
 
-    [McpServerTool(Name = "describe_component")]
+    [McpServerTool(Name = "g2_describe_component")]
     [Description("Look up a GH2 component by name and return its chapter, info, and input/output parameter list. Useful before placing or wiring components.")]
     public static string Describe(
         RhinoDoc _,

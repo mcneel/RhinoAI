@@ -13,8 +13,8 @@ public static class GH2_ConnectManyTool
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
     public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
 
-    [McpServerTool(Name = "connect_many")]
-    [Description("Wire multiple output→input connections in one call on the active GH2 canvas. Same selector semantics as 'connect'. A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
+    [McpServerTool(Name = "g2_connect_many")]
+    [Description("Wire multiple output→input connections in one call on the active GH2 canvas. Same selector semantics as 'g2_connect'. A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
     public static string ConnectMany(
         RhinoDoc _,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,

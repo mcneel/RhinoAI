@@ -5,7 +5,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class GH2_StartTool
 {
-    [McpServerTool(Name = "start_gh2")]
+    [McpServerTool(Name = "g2_start")]
     [Description("Starts GH2")]
     public static string Launch(RhinoDoc _)
     {

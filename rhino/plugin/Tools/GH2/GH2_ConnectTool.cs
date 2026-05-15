@@ -12,7 +12,7 @@ public static class GH2_ConnectTool
     public record struct OkResult(bool Ok, Endpoint Src, Endpoint Dst);
     public record struct ErrResult(bool Ok, string Error);
 
-    [McpServerTool(Name = "connect")]
+    [McpServerTool(Name = "g2_connect")]
     [Description("Wire an output parameter to an input parameter on the active GH2 canvas. 'src' and 'dst' may be a numeric index or a Name/UserName. For pure params (e.g. a slider) pass '' or '0'.")]
     public static string Connect(
         RhinoDoc _,

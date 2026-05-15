@@ -14,7 +14,7 @@ public static class GH2_PlaceComponentTool
     public record struct Candidate(Guid Guid, string Name, string Category, string SubCategory);
     public record struct AmbiguousResult(string Error, Candidate[] Candidates);
 
-    [McpServerTool(Name = "place_component")]
+    [McpServerTool(Name = "g2_place_component")]
     [Description("Place a GH2 component onto the active canvas. 'selector' may be a Guid (proxy id) or a component name. If multiple components share the name, returns an ambiguity payload listing candidates.")]
     public static string Place(
         RhinoDoc _,
