@@ -50,25 +50,27 @@ public class RhinoManager(
 
     // Lazily return the default slot, spawning a Rhino for it if one doesn't already exist.
     // Called by ProxyDispatcher when a tool is invoked without an explicit slot.
-    // Adopted Rhinos are deliberately not promoted to the default slot — slot-less
-    // calls still spawn a fresh router-owned Rhino so the user's manually-started
-    // session isn't hijacked.
+    // If the user started a Rhino manually and ran `_RhinoMCP`, the drop-file scan
+    // adopts it and we reuse that session instead of spawning a parallel one — the
+    // user's manual launch is the strongest possible signal that they want this
+    // Rhino used.
     public async Task<ChildRhino> GetOrCreateDefaultAsync(CancellationToken ct = default)
     {
         ScanAnnouncements();
 
         lock (_lock)
         {
-            if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+            if (TryPickDefault(out var existing)) return existing;
         }
 
         await _defaultGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            // Re-check under the gate — another caller may have spawned while we waited.
+            // Re-check under the gate — another caller may have spawned (or an
+            // announcement may have been adopted) while we waited.
             lock (_lock)
             {
-                if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+                if (TryPickDefault(out var existing)) return existing;
             }
             return await SpawnInternalAsync(config.DefaultVersion, DefaultSlotId, ct).ConfigureAwait(false);
         }
@@ -76,6 +78,27 @@ public class RhinoManager(
         {
             _defaultGate.Release();
         }
+    }
+
+    // Caller must hold _lock. Picks the slot a slot-less tool call should route
+    // to: the reserved "default" slot first, otherwise any adopted user-started
+    // Rhino on the configured version.
+    private bool TryPickDefault(out ChildRhino slot)
+    {
+        if (_children.TryGetValue(DefaultSlotId, out var def))
+        {
+            slot = def;
+            return true;
+        }
+        var adopted = _children.Values.FirstOrDefault(
+            c => c.Adopted && c.Version == config.DefaultVersion);
+        if (adopted is not null)
+        {
+            slot = adopted;
+            return true;
+        }
+        slot = default!;
+        return false;
     }
 
     private async Task<ChildRhino> SpawnInternalAsync(string version, string slotId, CancellationToken ct)
