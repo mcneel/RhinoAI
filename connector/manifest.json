@@ -18,17 +18,12 @@
     "screenshots/twisty-gh.png"
   ],
   "server": {
-    "type": "binary",
-    "entry_point": "router-launcher.sh",
+    "type": "node",
+    "entry_point": "router-launcher.mjs",
     "mcp_config": {
-      "command": "${__dirname}/router-launcher.sh",
-      "args": [],
-      "env": {},
-      "platform_overrides": {
-        "win32": {
-          "command": "${__dirname}/router-launcher.cmd"
-        }
-      }
+      "command": "node",
+      "args": ["${__dirname}/router-launcher.mjs"],
+      "env": {}
     }
   },
   "prompts": [
@@ -39,7 +34,10 @@
     }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32"]
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
   },
   "keywords": ["rhino", "rhino3d", "mcneel", "cad", "3d", "mcp"],
   "license": "MIT",
