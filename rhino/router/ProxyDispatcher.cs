@@ -19,13 +19,18 @@ public class ProxyDispatcher(
         string? slotId,
         string toolName,
         JsonNode args,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? defaultVersionOverride = null)
     {
         // Every exit path returns a string the MCP SDK forwards to the agent
         // verbatim. The SDK swallows exception messages into a generic "An error
         // occurred invoking '<tool>'", so on failure we MUST return a structured
         // payload, not throw. The catch at the bottom of this method is the
         // safety net for anything we didn't anticipate.
+        //
+        // `defaultVersionOverride` is set by codegen for tools that need a
+        // specific Rhino when no slot is passed (GH2_* tools pin "WIP" so they
+        // don't try to run on Rhino 8). It has no effect when `slotId` is set.
         ChildRhino? child = null;
         try
         {
@@ -33,9 +38,25 @@ public class ProxyDispatcher(
             // call `run_python(script=...)` etc. without a prior spawn_slot. Note
             // this can throw the same spawn-time exceptions SpawnSlotTool handles
             // (timeout, file-not-found, etc.); the outer catch translates them.
-            child = slotId is null
-                ? await manager.GetOrCreateDefaultAsync(ct).ConfigureAwait(false)
-                : manager.Get(slotId) ?? throw new SlotNotFoundException(slotId);
+            if (slotId is null)
+            {
+                child = await manager.GetOrCreateDefaultAsync(defaultVersionOverride, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                child = manager.Get(slotId) ?? throw new SlotNotFoundException(slotId);
+                // Explicit slot whose Rhino version doesn't match what this tool
+                // needs (GH2_* tools pin "WIP"). Short-circuit before forwarding —
+                // the plugin would otherwise return a generic "unknown tool" MCP
+                // error and the agent wouldn't know the cause was a version mismatch.
+                if (defaultVersionOverride is not null && child.Version != defaultVersionOverride)
+                {
+                    return SerializePayload(new SpawnErrorPayload(
+                        "wrong_rhino_version",
+                        $"Tool '{toolName}' only works on Rhino {defaultVersionOverride} but slot '{slotId}' is running Rhino {child.Version}. " +
+                        $"Omit the `slot` argument to auto-spawn Rhino {defaultVersionOverride}, or call spawn_slot with version=\"{defaultVersionOverride}\"."));
+                }
+            }
 
             var requestId = Guid.NewGuid().ToString("N");
             var rpc = new JsonRpcRequest(
@@ -114,7 +135,7 @@ public class ProxyDispatcher(
             Message:
                 $"Rhino slot '{child.SlotId}' (pid {child.Pid}, Rhino {child.Version}) is no longer responding — likely crashed mid-call to '{toolName}'. " +
                 "The stale slot has been pruned. " +
-                (child.SlotId == RhinoManager.DefaultSlotId
+                (child.SlotId.StartsWith(RhinoManager.DefaultSlotPrefix)
                     ? "Retry this call to auto-spawn a fresh default Rhino."
                     : "Call spawn_slot to start a new one."),
             CrashReport: crashFinder.TryFind(child.Pid));

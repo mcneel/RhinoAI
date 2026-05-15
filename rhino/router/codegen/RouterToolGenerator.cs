@@ -202,7 +202,17 @@ public class RouterToolGenerator : IIncrementalGenerator
                 sb.AppendLine($"        args[\"{p.Name}\"] = global::System.Text.Json.Nodes.JsonValue.Create({p.Name});");
             }
         }
-        sb.AppendLine($"        return proxy.CallToolAsync(slot, \"{tool.Name}\", args, ct);");
+        // GH2_* tools only work in Rhino WIP (Grasshopper 2 only ships there),
+        // so when no slot is passed the router auto-spawns WIP instead of the
+        // configured default. Non-GH2 tools pass null and use the configured default.
+        if (tool.ClassName.StartsWith("GH2_"))
+        {
+            sb.AppendLine($"        return proxy.CallToolAsync(slot, \"{tool.Name}\", args, ct, defaultVersionOverride: \"WIP\");");
+        }
+        else
+        {
+            sb.AppendLine($"        return proxy.CallToolAsync(slot, \"{tool.Name}\", args, ct);");
+        }
 
         sb.AppendLine("    }");
         sb.AppendLine("}");

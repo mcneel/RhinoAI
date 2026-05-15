@@ -35,9 +35,11 @@ public class RhinoManager(
     // work outside it on Mac.
     private readonly SemaphoreSlim _macSpawnGate = new(1, 1);
 
-    // Reserved slot id for the auto-spawned default Rhino used by tool calls that
-    // don't pass an explicit slot.
-    public const string DefaultSlotId = "default";
+    // Slot-id prefix for the auto-spawned default Rhino used by tool calls that
+    // don't pass an explicit slot. The version is appended so a GH2 tool that
+    // needs WIP gets its own default slot (e.g. "default-WIP") rather than
+    // colliding with a non-GH2 tool's "default-8".
+    public const string DefaultSlotPrefix = "default-";
 
     // Children walk forward from the conventional RhinoMCP port (10500) to find a free one.
     // A user who started a Rhino manually via `_RhinoMCP` will already be on 10500, so the
@@ -48,18 +50,21 @@ public class RhinoManager(
     public Task<ChildRhino> SpawnAsync(string? version = null, CancellationToken ct = default) =>
         SpawnInternalAsync(version ?? config.DefaultVersion, AnimalNames.Next(), ct);
 
-    // Lazily return the default slot, spawning a Rhino for it if one doesn't already exist.
-    // Called by ProxyDispatcher when a tool is invoked without an explicit slot.
-    // Adopted Rhinos are deliberately not promoted to the default slot — slot-less
-    // calls still spawn a fresh router-owned Rhino so the user's manually-started
-    // session isn't hijacked.
-    public async Task<ChildRhino> GetOrCreateDefaultAsync(CancellationToken ct = default)
+    // Lazily return the default slot for `version`, spawning a Rhino if one doesn't already exist.
+    // Called by ProxyDispatcher when a tool is invoked without an explicit slot. A null version
+    // resolves to the router's configured default. GH2 tool proxies pass "WIP" so they get a
+    // separate default slot from non-GH2 tools. Adopted Rhinos are deliberately not promoted to
+    // the default slot — slot-less calls still spawn a fresh router-owned Rhino so the user's
+    // manually-started session isn't hijacked.
+    public async Task<ChildRhino> GetOrCreateDefaultAsync(string? version = null, CancellationToken ct = default)
     {
         ScanAnnouncements();
+        string resolved = version ?? config.DefaultVersion;
+        string slotId = DefaultSlotPrefix + resolved;
 
         lock (_lock)
         {
-            if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+            if (_children.TryGetValue(slotId, out var existing)) return existing;
         }
 
         await _defaultGate.WaitAsync(ct).ConfigureAwait(false);
@@ -68,9 +73,9 @@ public class RhinoManager(
             // Re-check under the gate — another caller may have spawned while we waited.
             lock (_lock)
             {
-                if (_children.TryGetValue(DefaultSlotId, out var existing)) return existing;
+                if (_children.TryGetValue(slotId, out var existing)) return existing;
             }
-            return await SpawnInternalAsync(config.DefaultVersion, DefaultSlotId, ct).ConfigureAwait(false);
+            return await SpawnInternalAsync(resolved, slotId, ct).ConfigureAwait(false);
         }
         finally
         {
