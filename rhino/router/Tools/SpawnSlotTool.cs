@@ -32,18 +32,35 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
     }
 
     [McpServerTool(Name = "close_slot")]
-    [Description("Close a Rhino slot gracefully. Saves nothing.")]
-    public Task<bool> CloseAsync(
-        [Description("Slot ID returned by spawn_slot")]
+    [Description("Close a Rhino slot gracefully. Saves nothing. Returns { closed: bool, error?: string, message?: string }. `error=\"cannot_close_adopted\"` means the slot was a user-started Rhino — the router will not kill it; ask the user to close the Rhino window.")]
+    public async Task<string> CloseAsync(
+        [Description("Slot ID returned by spawn_slot, or an animal-name slot adopted from a user-started Rhino")]
         string slot,
-        CancellationToken ct = default) => manager.CloseAsync(slot, ct);
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var ok = await manager.CloseAsync(slot, ct).ConfigureAwait(false);
+            return JsonSerializer.Serialize(new CloseSlotResult(ok), RouterJsonContext.Default.CloseSlotResult);
+        }
+        catch (AdoptedSlotCloseException ex)
+        {
+            var payload = new CloseSlotResult(
+                Closed: false,
+                Error: "cannot_close_adopted",
+                Message: ex.Message + " Ask the user to close the Rhino window themselves.");
+            return JsonSerializer.Serialize(payload, RouterJsonContext.Default.CloseSlotResult);
+        }
+    }
 
     [McpServerTool(Name = "list_slots")]
-    [Description("List all currently-running Rhino slots managed by this router. Slots whose Rhino has crashed are pruned before returning.")]
+    [Description("List all currently-running Rhino slots managed by this router. Slots whose Rhino has crashed are pruned before returning. User-started Rhinos that have advertised themselves since the last call are adopted into the list.")]
     public IReadOnlyCollection<ChildRhino> List()
     {
-        // Probe each slot before reporting; a crashed Rhino otherwise looks alive
-        // until something tries to call into it.
+        // Adopt anything the plugin has announced since the last call, then probe
+        // each slot before reporting; a crashed Rhino otherwise looks alive until
+        // something tries to call into it.
+        manager.ScanAnnouncements();
         manager.ReapAllDead();
         return manager.List();
     }

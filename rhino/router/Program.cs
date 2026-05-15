@@ -43,6 +43,11 @@ RouterToolRegistrar.RegisterAll(mcpBuilder, jsonOptions);
 
 var host = builder.Build();
 
+// Adopt any user-started Rhinos that announced themselves before the router
+// came up. Cheap one-shot dir scan; later scans happen on every list_slots
+// and slot-less dispatch.
+host.Services.GetRequiredService<RhinoManager>().ScanAnnouncements();
+
 // Clean up child Rhinos when Claude Code closes the stdio connection.
 host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() =>
 {
