@@ -4,7 +4,7 @@
   "display_name": "Rhino MCP Platform",
   "version": "0.2.0",
   "description": "Desktop Connector for Rhino3d and Grasshopper",
-  "long_description": "Bridges Claude to the Rhino MCP Platform plugin running inside Rhino. Requires the Rhino-MCP-Platform Rhino plugin to be installed, and the `RhinoMCP` command to have been run in Rhino to start the HTTP server.",
+  "long_description": "Bridges Claude to the Rhino MCP Platform plugin running inside Rhino. Requires the Rhino-MCP-Platform Rhino plugin to be installed via Rhino's PackageManager — the router binary that ships with the plugin is what this connector launches.",
   "author": {
     "name": "McNeel",
     "email": "callum@mcneel.com",
@@ -18,15 +18,17 @@
     "screenshots/twisty-gh.png"
   ],
   "server": {
-    "type": "node",
-    "entry_point": "server/index.js",
+    "type": "binary",
+    "entry_point": "router-launcher.sh",
     "mcp_config": {
-      "command": "node",
-      "args": [
-        "${__dirname}/server/index.js",
-        "${user_config.instances}"
-      ],
-      "env": {}
+      "command": "${__dirname}/router-launcher.sh",
+      "args": [],
+      "env": {},
+      "platform_overrides": {
+        "win32": {
+          "command": "${__dirname}/router-launcher.cmd"
+        }
+      }
     }
   },
   "prompts": [
@@ -36,20 +38,8 @@
       "text": "TODO: Claude fill this in would ya?"
     }
   ],
-  "user_config": {
-    "instances": {
-      "type": "string",
-      "title": "Rhino instances",
-      "description": "Comma-separated list of name=url pairs, e.g. A=http://localhost:10500,B=http://localhost:10501. Tool names get prefixed with the instance name. A bare URL is allowed when there's only one instance.",
-      "default": "A=http://localhost:10500",
-      "required": false
-    }
-  },
   "compatibility": {
-    "platforms": ["darwin", "win32"],
-    "runtimes": {
-      "node": ">=18.0.0"
-    }
+    "platforms": ["darwin", "win32"]
   },
   "keywords": ["rhino", "rhino3d", "mcneel", "cad", "3d", "mcp"],
   "license": "MIT",
