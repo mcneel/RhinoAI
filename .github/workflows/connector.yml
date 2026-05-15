@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'connector/**'
+      - 'shared/router-launcher.mjs'
       - '.github/workflows/connector.yml'
   pull_request:
     branches: [main]
     paths:
       - 'connector/**'
+      - 'shared/router-launcher.mjs'
       - '.github/workflows/connector.yml'
 
 env:
