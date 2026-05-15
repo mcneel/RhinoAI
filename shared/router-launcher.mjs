@@ -90,10 +90,22 @@ if (r.considered.length === 0) {
   const summary = r.considered.map(c => `${c.ver}/${c.pkgver}${c === r.picked ? "*" : ""}`).join(", ");
   process.stderr.write(`rhino-mcp-launcher: candidates [${summary}] (* = picked)\n`);
   process.stderr.write(`rhino-mcp-launcher: exec ${r.picked.path}\n`);
+  // stdin/stdout via explicit pipes (not "inherit") because Claude Desktop's
+  // bundled Node spawns this launcher over a node-pty, and re-inheriting that
+  // PTY endpoint into a child process leaves the child's stdio half-detached:
+  // the child never receives the init bytes and its own stderr doesn't make
+  // it back to Claude's log. Pumping bytes through node-owned pipes sidesteps
+  // both. stderr stays inherited so router diagnostic logs still surface.
   try {
-    child = spawn(r.picked.path, process.argv.slice(2), { stdio: "inherit" });
+    child = spawn(r.picked.path, process.argv.slice(2), {
+      stdio: ["pipe", "pipe", "inherit"],
+    });
   } catch (err) {
     spawnFailed(err);
+  }
+  if (child) {
+    process.stdin.pipe(child.stdin);
+    child.stdout.pipe(process.stdout);
   }
 }
 
@@ -135,6 +147,12 @@ function parseDefaultVersion(args) {
 }
 
 function resolveYak(version) {
+  // Test override: skip platform-specific probing and use a caller-supplied
+  // path. Lets the launcher tests simulate "Rhino is installed" / "Rhino is
+  // missing" deterministically without depending on what's on the CI runner.
+  const override = process.env.RHINO_MCP_FAKE_YAK_PATH;
+  if (override != null) return override && isFile(override) ? override : null;
+
   if (process.platform === "darwin") {
     const app = { "8": "Rhino 8.app", "9": "Rhino 9.app", WIP: "RhinoWIP.app" }[version];
     if (!app) return null;
@@ -152,11 +170,14 @@ function resolveYak(version) {
 
 function runInstallFallback(reason) {
   const version = parseDefaultVersion(process.argv.slice(2));
-  process.stderr.write(`rhino-mcp-launcher: entering install-fallback mode (version=${version}, reason=${reason})\n`);
 
-  const send = msg => process.stdout.write(JSON.stringify(msg) + "\n");
-  const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
-  const error = (id, code, message) => send({ jsonrpc: "2.0", id, error: { code, message } });
+  // If Rhino itself isn't installed, the yak-install path will fail with a
+  // confusing error *after* the user consents. Detect that upfront and surface
+  // a different tool that points at the Rhino download page instead.
+  if (!resolveYak(version)) {
+    runRhinoMissingFallback(version);
+    return;
+  }
 
   const tool = {
     name: "install_rhino_mcp_platform",
@@ -189,6 +210,45 @@ function runInstallFallback(reason) {
     return { isError: !ok, content: [{ type: "text", text }] };
   }
 
+  runPlaceholderMcp({
+    mode: `install-fallback mode (version=${version}, reason=${reason})`,
+    serverName: "rhino-mcp-installer",
+    tool,
+    onCall: doInstall,
+  });
+}
+
+function runRhinoMissingFallback(version) {
+  const downloadUrl = "https://www.rhino3d.com/download";
+  const tool = {
+    name: "rhino_not_installed",
+    description:
+      `Rhino ${version} does not appear to be installed on this machine, so the Rhino MCP connector cannot start. ` +
+      `Tell the user to install Rhino ${version} from ${downloadUrl}, then reload this connector ` +
+      `(or restart Claude Desktop). Calling this tool just repeats the same instructions.`,
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  };
+
+  runPlaceholderMcp({
+    mode: `rhino-missing-fallback mode (version=${version})`,
+    serverName: "rhino-mcp-no-rhino",
+    tool,
+    onCall: () => ({
+      content: [{
+        type: "text",
+        text: `Rhino ${version} is not installed. Download it from ${downloadUrl} and reload this connector once the install finishes.`,
+      }],
+    }),
+  });
+}
+
+function runPlaceholderMcp({ mode, serverName, tool, onCall }) {
+  process.stderr.write(`rhino-mcp-launcher: entering ${mode}\n`);
+
+  const send = msg => process.stdout.write(JSON.stringify(msg) + "\n");
+  const reply = (id, result) => send({ jsonrpc: "2.0", id, result });
+  const error = (id, code, message) => send({ jsonrpc: "2.0", id, error: { code, message } });
+
   const rl = createInterface({ input: process.stdin });
   rl.on("line", line => {
     let req;
@@ -198,7 +258,7 @@ function runInstallFallback(reason) {
       reply(id, {
         protocolVersion: params?.protocolVersion ?? "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "rhino-mcp-installer", version: "0.0.1" },
+        serverInfo: { name: serverName, version: "0.0.1" },
       });
     } else if (method === "tools/list") {
       reply(id, { tools: [tool] });
@@ -207,9 +267,9 @@ function runInstallFallback(reason) {
         error(id, -32601, `unknown tool: ${params?.name}`);
         return;
       }
-      reply(id, doInstall());
+      reply(id, onCall());
     } else if (id !== undefined) {
-      error(id, -32601, `method not supported in install-fallback mode: ${method}`);
+      error(id, -32601, `method not supported in ${mode}: ${method}`);
     }
   });
   rl.on("close", () => process.exit(0));
