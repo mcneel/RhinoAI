@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.IO;
+
 namespace RhMcp;
 
 public static class RhinoMcpHost
@@ -30,7 +33,9 @@ public static class RhinoMcpHost
         McpServer server = new();
         Servers.Add(doc.RuntimeSerialNumber, server);
 
-        return server.Start(doc, port);
+        var ok = server.Start(doc, port);
+        if (ok) WriteAnnouncement(port);
+        return ok;
     }
 
     public static void Stop(RhinoDoc doc)
@@ -47,6 +52,32 @@ public static class RhinoMcpHost
         Stop(doc);
         Start(doc, port);
         return true;
+    }
+
+    // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
+    // running on this machine can discover and adopt this listener without us
+    // having to know whether one is up. The router consumes (probes + deletes)
+    // the file on its next scan; if no router ever sees it, temp sweep collects
+    // it eventually. See router's RhinoManager.ScanAnnouncements.
+    private static void WriteAnnouncement(int port)
+    {
+        try
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
+            Directory.CreateDirectory(dir);
+            var pid = Process.GetCurrentProcess().Id;
+            var version = RhinoApp.Version.Major.ToString();
+            var path = Path.Combine(dir, $"{pid}-{port}.json");
+            var tmp = path + ".tmp";
+            var json = JsonSerializer.Serialize(new { v = 1, pid, port, version });
+            File.WriteAllText(tmp, json);
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[Rhino MCP] Failed to write listener announcement: {ex.Message}");
+        }
     }
 
     // Stop the listener bound to the given port, regardless of doc. Used by the

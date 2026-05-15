@@ -21,6 +21,8 @@ namespace RhMcp.Router;
 [JsonSerializable(typeof(JsonRpcRequestParams))]
 [JsonSerializable(typeof(SpawnListenerArgs))]
 [JsonSerializable(typeof(CloseListenerArgs))]
+[JsonSerializable(typeof(Announcement))]
+[JsonSerializable(typeof(CloseSlotResult))]
 [JsonSerializable(typeof(JsonObject))]
 [JsonSerializable(typeof(JsonElement))]
 [JsonSerializable(typeof(JsonElement?))]
@@ -91,3 +93,21 @@ public sealed record SpawnListenerArgs();
 
 public sealed record CloseListenerArgs(
     [property: JsonPropertyName("port")] int Port);
+
+// close_slot's structured response. `closed=true` is the happy path;
+// `closed=false` covers both "no such slot" and "refused" cases, with `error`
+// and `message` populated when there's a specific reason the agent should
+// know about (e.g. the slot was adopted from a user-started Rhino).
+public sealed record CloseSlotResult(
+    [property: JsonPropertyName("closed")] bool Closed,
+    [property: JsonPropertyName("error")] string? Error = null,
+    [property: JsonPropertyName("message")] string? Message = null);
+
+// Drop-file shape written by the plugin into <temp>/rhino-mcp-listeners/.
+// `v` is a schema version — bump only if the file shape changes in a
+// non-additive way. Unknown future fields are ignored on read.
+public sealed record Announcement(
+    [property: JsonPropertyName("v")] int V,
+    [property: JsonPropertyName("pid")] int Pid,
+    [property: JsonPropertyName("port")] int Port,
+    [property: JsonPropertyName("version")] string? Version);
