@@ -140,6 +140,48 @@
       }
     },
     {
+      "label": "pack mcpb",
+      "type": "shell",
+      "command": "mcpb",
+      "args": ["pack"],
+      "options": {
+        "cwd": "${workspaceFolder}/connector"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "build and install mcpb",
+      "type": "shell",
+      "dependsOn": "pack mcpb",
+      "dependsOrder": "sequence",
+      "osx": {
+        "command": "open",
+        "args": ["connector.mcpb"]
+      },
+      "linux": {
+        "command": "xdg-open",
+        "args": ["connector.mcpb"]
+      },
+      "windows": {
+        "command": "cmd",
+        "args": ["/c", "start", "", "connector.mcpb"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/connector"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
       "label": "open claude tab",
       "type": "shell",
       "command": "echo",
