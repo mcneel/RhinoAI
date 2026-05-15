@@ -16,7 +16,7 @@ public static class GH2_StartTool
         }
         catch (Exception ex)
         {
-            return $"start_gh2 threw: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
+            return $"g2_start threw: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
         }
     }
 
