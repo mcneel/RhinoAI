@@ -16,6 +16,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
         configuration: [Debug, Release]
+        rhino_target: [R8, R9]
         include:
           # router_rids uses %3B to escape ; — MSBuild's -p: switch otherwise
           # splits the value on ; and treats the second half as a new property.
@@ -24,14 +25,13 @@ jobs:
           - os: windows-latest
             router_rids: win-x64%3Bwin-arm64
             yak_platform: win
-            # Windows runs yak.exe natively; bash run-command is empty.
-            yak_run: ""
+            yak_url: https://files.mcneel.com/yak/tools/0.13.0/yak.exe
+            yak_bin: yak.exe
           - os: macos-latest
             router_rids: osx-arm64
             yak_platform: mac
-            # McNeel only publishes yak.exe (a .NET Framework exe). On Mac we run it
-            # under Mono, which is preinstalled on macos-latest GitHub runners.
-            yak_run: "mono"
+            yak_url: https://files.mcneel.com/yak/tools/0.13.0/mac/yak
+            yak_bin: yak
 
     runs-on: ${{ matrix.os }}
 
@@ -44,48 +44,44 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore router (framework-dependent, for tests)
+        # Router is target-agnostic; only restore/test it once per OS+config.
+        if: matrix.rhino_target == 'R9'
         run: dotnet restore rhino/router/Router.csproj
 
       - name: Restore plugin
-        run: dotnet restore rhino/plugin/RhMcp.csproj
+        run: dotnet restore rhino/plugin/RhMcp.csproj '-p:RhinoTarget=${{ matrix.rhino_target }}'
 
       - name: Build router (framework-dependent, for tests)
+        if: matrix.rhino_target == 'R9'
         run: dotnet build rhino/router/Router.csproj --configuration ${{ matrix.configuration }} --no-restore
 
       - name: Test router
+        if: matrix.rhino_target == 'R9'
         run: dotnet test tests/router/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal
 
       - name: Build plugin (publishes router self-contained for RIDs ${{ matrix.router_rids }} into yak output)
         shell: bash
-        run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} '-p:RouterRids=${{ matrix.router_rids }}'
-
-      - name: Ensure Mono is installed (mac only)
-        if: matrix.configuration == 'Release' && matrix.yak_platform == 'mac'
-        shell: bash
-        run: |
-          if ! command -v mono >/dev/null 2>&1; then
-            brew install mono
-          fi
-          mono --version | head -1
+        run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} '-p:RouterRids=${{ matrix.router_rids }}' '-p:RhinoTarget=${{ matrix.rhino_target }}'
 
       - name: Download yak CLI
         if: matrix.configuration == 'Release'
         shell: bash
         run: |
-          curl -fsSL -o yak.exe https://files.mcneel.com/yak/tools/latest/yak.exe
-          chmod +x yak.exe
+          curl -fsSL -o "${{ matrix.yak_bin }}" "${{ matrix.yak_url }}"
+          chmod +x "${{ matrix.yak_bin }}"
 
-      - name: Build yak package (${{ matrix.yak_platform }})
+      - name: Build yak package (${{ matrix.yak_platform }} / ${{ matrix.rhino_target }})
         if: matrix.configuration == 'Release'
         shell: bash
-        run: ${{ matrix.yak_run }} "$GITHUB_WORKSPACE/yak.exe" build --platform ${{ matrix.yak_platform }}
+        run: |
+          "$GITHUB_WORKSPACE/${{ matrix.yak_bin }}" build --platform ${{ matrix.yak_platform }}
         working-directory: rhino/plugin/bin/Release
 
       - name: Upload yak artifact
         if: matrix.configuration == 'Release'
         uses: actions/upload-artifact@v5
         with:
-          name: rhino-mcp-platform-${{ matrix.yak_platform }}
+          name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.yak_platform }}
           path: rhino/plugin/bin/Release/*.yak
           if-no-files-found: error
           retention-days: 7

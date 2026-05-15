@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
+    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
   </PropertyGroup>
 
   <!--
@@ -71,9 +72,9 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <!-- Plugin tool sources, made visible to the generator as raw text. -->
   <ItemGroup>
     <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
+    <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
   </ItemGroup>
 
 </Project>

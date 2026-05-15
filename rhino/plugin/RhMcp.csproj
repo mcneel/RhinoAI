@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <!-- Rhino 9: net8.0 -->
+    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <LangVersion>12</LangVersion>
     <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -22,10 +23,23 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
-    <PackageReference Include="Grasshopper2" Version="2.0.9225-wip.14825" />
-    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
+    <PackageReference Include="RhinoCommon" Version="9.0.26135.9190-dujour" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="9.0.26135.9190-dujour" />
+    <PackageReference Include="Grasshopper2" Version="9.0.26135.9190-dujour" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+    <Compile Remove="Tools/GH2/**/*.cs" />
+    <Compile Remove="Resources/GH2/**/*.cs" />
   </ItemGroup>
 
   <!--
@@ -70,9 +84,9 @@
       which NETSDK1083 then rejects. Exec batches per item on %() in Command.
     -->
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router"
-          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) --output &quot;bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish&quot; --nologo" />
+          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;bin/$(Configuration)/$(RhinoTarget)/net8.0/%(_RouterRid.Identity)/publish&quot; --nologo" />
     <ItemGroup>
-      <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/**/*">
+      <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/$(RhinoTarget)/net8.0/%(_RouterRid.Identity)/publish/**/*">
         <Rid>%(_RouterRid.Identity)</Rid>
       </_RouterPublishedFile>
     </ItemGroup>
