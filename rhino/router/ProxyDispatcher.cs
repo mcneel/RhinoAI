@@ -49,7 +49,7 @@ public class ProxyDispatcher(
                 // needs (GH2_* tools pin "WIP"). Short-circuit before forwarding —
                 // the plugin would otherwise return a generic "unknown tool" MCP
                 // error and the agent wouldn't know the cause was a version mismatch.
-                if (defaultVersionOverride is not null && child.Version != defaultVersionOverride)
+                if (defaultVersionOverride is not null && !IsVersionCompatible(child.Version, defaultVersionOverride))
                 {
                     return SerializePayload(new SpawnErrorPayload(
                         "wrong_rhino_version",
@@ -192,6 +192,17 @@ public class ProxyDispatcher(
     private sealed class SlotNotFoundException(string slotId) : Exception($"No slot named '{slotId}'")
     {
         public string SlotId { get; } = slotId;
+    }
+
+    private static bool IsVersionCompatible(string actual, string required)
+    {
+        if (actual == required) return true;
+        return (actual, required) switch
+        {
+            ("9", "WIP") => true,
+            ("WIP", "9") => true,
+            _ => false,
+        };
     }
 
     // Detect transport-level failures (DNS, refused, reset, timeout) — these mean
