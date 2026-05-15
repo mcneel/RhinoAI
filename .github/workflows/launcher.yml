@@ -31,6 +31,8 @@ jobs:
             rid: osx-arm64
           - os: windows-latest
             rid: win-x64
+          - os: windows-11-arm
+            rid: win-arm64
           # Ubuntu runs only the "unsupported platform" test — the launcher
           # doesn't ship for linux and Rhino isn't published there, so we
           # don't build the router. Just keeps that platform-gate path honest.
