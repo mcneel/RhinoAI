@@ -10,6 +10,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
     <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
+    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(RhinoTarget)/</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/obj/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <!--
