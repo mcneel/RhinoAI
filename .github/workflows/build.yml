@@ -75,13 +75,13 @@ jobs:
         shell: bash
         run: |
           "$GITHUB_WORKSPACE/${{ matrix.yak_bin }}" build --platform ${{ matrix.yak_platform }}
-        working-directory: rhino/plugin/bin/Release
+        working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}/Release
 
       - name: Upload yak artifact
         if: matrix.configuration == 'Release'
         uses: actions/upload-artifact@v5
         with:
           name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.yak_platform }}
-          path: rhino/plugin/bin/Release/*.yak
+          path: rhino/plugin/bin/${{ matrix.rhino_target }}/Release/*.yak
           if-no-files-found: error
           retention-days: 7
