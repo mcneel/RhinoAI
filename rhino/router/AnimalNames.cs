@@ -1,36 +1,23 @@
 namespace RhMcp.Router;
 
 // Hand-picked list of memorable, short, distinct animal names for slot IDs.
-// Picked in order; once exhausted, falls back to numbered "slot-N".
+// Names are seeded into SlotStore's name_pool table on first router startup;
+// allocation happens inside the spawn transaction so concurrent routers can't
+// claim the same name. Pool order here defines first-seed idx; once persisted
+// in the DB it's the DB row that wins.
 public static class AnimalNames
 {
-    private static readonly string[] _pool =
+    public static string[] Pool { get; } =
     [
-        "armadillo", "axolotl",   "badger",   "capybara", "cheetah",
-        "echidna",   "falcon",    "fennec",   "gecko",    "ibex",
-        "kakapo",    "kinkajou",  "koala",    "lemur",    "magpie",
-        "manatee",   "marmot",    "narwhal",  "ocelot",   "okapi",
-        "otter",     "panda",     "pangolin", "platypus", "puffin",
-        "quokka",    "sifaka",    "tapir",    "tarsier",  "wombat"
+        "aardvark",  "armadillo", "axolotl",  "badger",   "bonobo",
+        "capybara",  "caracal",   "cheetah",  "coati",    "dingo",
+        "dugong",    "echidna",   "falcon",   "fennec",   "ferret",
+        "gecko",     "gibbon",    "hedgehog", "ibex",     "jerboa",
+        "kakapo",    "kinkajou",  "koala",    "lemur",    "llama",
+        "macaw",     "magpie",    "manatee",  "marmot",   "meerkat",
+        "mongoose",  "narwhal",   "numbat",   "ocelot",   "okapi",
+        "otter",     "panda",     "pangolin", "pika",     "platypus",
+        "puffin",    "quokka",    "quoll",    "raccoon",  "serval",
+        "sifaka",    "tapir",     "tarsier",  "vicuna",   "wombat"
     ];
-
-    private static int _index = 0;
-    private static readonly object _lock = new();
-
-    public static string Next()
-    {
-        lock (_lock)
-        {
-            if (_index < _pool.Length)
-            {
-                return _pool[_index++];
-            }
-            return $"slot-{++_index}";
-        }
-    }
-
-    public static void Reset()
-    {
-        lock (_lock) _index = 0;
-    }
 }

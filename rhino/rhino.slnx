@@ -1,10 +1,14 @@
 <Solution>
   <Folder Name="/plugin/">
-    <Project Path="/Users/sykes/gits/rh-mcp/rhino/plugin/RhMcp.csproj" />
+    <Project Path="plugin/RhMcp.csproj" />
   </Folder>
-  <Folder Name="/router/" />
-  <Folder Name="/router/codegen/">
-    <Project Path="/Users/sykes/gits/rh-mcp/rhino/router/codegen/Router.Codegen.csproj" />
+  <Folder Name="/router/">
+    <Project Path="router/Router.csproj" />
+    <Folder Name="/router/codegen/">
+      <Project Path="router/codegen/Router.Codegen.csproj" />
+    </Folder>
   </Folder>
-  <Project Path="/Users/sykes/gits/rh-mcp/rhino/router/Router.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="../tests/router/Router.Tests.csproj" />
+  </Folder>
 </Solution>

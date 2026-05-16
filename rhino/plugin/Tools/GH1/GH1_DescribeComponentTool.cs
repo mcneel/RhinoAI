@@ -20,7 +20,7 @@ public static class GH1_DescribeComponentTool
         ParamInfo[] Inputs,
         ParamInfo[] Outputs);
 
-    [McpServerTool(Name = "describe_component")]
+    [McpServerTool(Name = "g1_describe_component")]
     [Description("Look up a Grasshopper component by name and return its category, description, and input/output parameter list. Useful before placing or wiring components.")]
     public static string Describe(
         RhinoDoc _,

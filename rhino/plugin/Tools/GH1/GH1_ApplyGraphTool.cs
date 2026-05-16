@@ -26,16 +26,16 @@ public static class GH1_ApplyGraphTool
         WireResult[] Wires,
         int WiresOk);
 
-    [McpServerTool(Name = "apply_graph")]
-    [Description("Place sliders + components and wire them in one call. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'connect'.")]
+    [McpServerTool(Name = "g1_apply_graph")]
+    [Description("Place sliders + components and wire them in one call. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g1_connect'.")]
     public static string Apply(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Sliders to place: {Key, Min, Value, Max, Type, Name?, X, Y}. Type ∈ 'float'|'int'|'even'|'odd'.")] SliderSpec[] sliders,
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred — avoids name ambiguity) or component Name.")] ComponentSpec[] components,
         [Description("Wires to create: {SrcKey, Src, DstKey, Dst}. Keys must match a slider or component key above.")] WireSpec[] wires,
         [Description("If true, trigger a new solution at the end.")] bool solve = true)
     {
-        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document doc))
+        if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
             return "Could not get or create GH document";
 
         var keyToObj = new Dictionary<string, IGH_DocumentObject>(StringComparer.Ordinal);
@@ -43,49 +43,46 @@ public static class GH1_ApplyGraphTool
         var placeErrors = new List<PlaceError>();
         var wireResults = new WireResult[wires?.Length ?? 0];
 
-        RhinoApp.InvokeAndWait(() =>
+        if (sliders is not null)
         {
-            if (sliders is not null)
+            foreach (var s in sliders)
             {
-                foreach (var s in sliders)
+                if (TryPlaceSlider(doc, s, out var slider, out var err))
                 {
-                    if (TryPlaceSlider(doc, s, out var slider, out var err))
-                    {
-                        keyToObj[s.Key] = slider!;
-                        placed.Add(new PlacedRef(s.Key, slider!.InstanceGuid, "Slider"));
-                    }
-                    else
-                    {
-                        placeErrors.Add(new PlaceError(s.Key, err));
-                    }
+                    keyToObj[s.Key] = slider!;
+                    placed.Add(new PlacedRef(s.Key, slider!.InstanceGuid, "Slider"));
+                }
+                else
+                {
+                    placeErrors.Add(new PlaceError(s.Key, err));
                 }
             }
+        }
 
-            if (components is not null)
+        if (components is not null)
+        {
+            foreach (var c in components)
             {
-                foreach (var c in components)
+                if (TryPlaceComponent(doc, c, out var obj, out var err))
                 {
-                    if (TryPlaceComponent(doc, c, out var obj, out var err))
-                    {
-                        keyToObj[c.Key] = obj!;
-                        placed.Add(new PlacedRef(c.Key, obj!.InstanceGuid, GH1_Utils.ClassifyKind(obj.GetType())));
-                    }
-                    else
-                    {
-                        placeErrors.Add(new PlaceError(c.Key, err));
-                    }
+                    keyToObj[c.Key] = obj!;
+                    placed.Add(new PlacedRef(c.Key, obj!.InstanceGuid, GH1_Utils.ClassifyKind(obj.GetType())));
+                }
+                else
+                {
+                    placeErrors.Add(new PlaceError(c.Key, err));
                 }
             }
+        }
 
-            if (wires is not null)
-            {
-                for (int i = 0; i < wires.Length; i++)
-                    wireResults[i] = WireOne(i, wires[i], keyToObj);
-            }
+        if (wires is not null)
+        {
+            for (int i = 0; i < wires.Length; i++)
+                wireResults[i] = WireOne(i, wires[i], keyToObj);
+        }
 
-            if (solve) doc.NewSolution(false);
-            GH1_Utils.Redraw();
-        });
+        if (solve) doc.NewSolution(false);
+        GH1_Utils.Redraw();
 
         int wiresOk = 0;
         for (int i = 0; i < wireResults.Length; i++) if (wireResults[i].Ok) wiresOk++;

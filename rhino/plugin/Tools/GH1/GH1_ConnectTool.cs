@@ -11,7 +11,7 @@ public static class GH1_ConnectTool
     public record struct OkResult(bool Ok, Endpoint Src, Endpoint Dst);
     public record struct ErrResult(bool Ok, string Error);
 
-    [McpServerTool(Name = "connect")]
+    [McpServerTool(Name = "g1_connect")]
     [Description("Wire an output parameter to an input parameter on the active GH1 canvas. 'src' and 'dst' may be a numeric index or a Name/NickName. For pure params (e.g. a slider) pass '' or '0'.")]
     public static string Connect(
         RhinoDoc _,
@@ -47,12 +47,9 @@ public static class GH1_ConnectTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                dstParam!.AddSource(srcParam);
-                if (solve) doc.NewSolution(false);
-                GH1_Utils.Redraw();
-            });
+            dstParam!.AddSource(srcParam);
+            if (solve) doc.NewSolution(false);
+            GH1_Utils.Redraw();
         }
         catch (Exception ex)
         {

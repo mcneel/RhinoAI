@@ -10,6 +10,7 @@ public static class GetCommandsTool
     [McpServerTool(Name = "get_commands")]
     [Description("Discover Rhino command names available to run_command. Returns English names from all registered plugins (including those not yet loaded; invoking such a command may trigger plugin load). Test commands are excluded. Use filter to narrow the list before calling run_command.")]
     public static string GetCommands(
+        RhinoDoc doc,
         [Description("Substring filter (case-insensitive). Strongly recommended — unfiltered results can exceed 1000 commands.")] string? filter = null)
     {
         string[] all = Command.GetCommandNames(true, false)

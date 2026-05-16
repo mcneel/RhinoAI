@@ -19,13 +19,18 @@ public class ProxyDispatcher(
         string? slotId,
         string toolName,
         JsonNode args,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? defaultVersionOverride = null)
     {
         // Every exit path returns a string the MCP SDK forwards to the agent
         // verbatim. The SDK swallows exception messages into a generic "An error
         // occurred invoking '<tool>'", so on failure we MUST return a structured
         // payload, not throw. The catch at the bottom of this method is the
         // safety net for anything we didn't anticipate.
+        //
+        // `defaultVersionOverride` is set by codegen for tools that need a
+        // specific Rhino when no slot is passed (GH2_* tools pin "WIP" so they
+        // don't try to run on Rhino 8). It has no effect when `slotId` is set.
         ChildRhino? child = null;
         try
         {
@@ -33,26 +38,42 @@ public class ProxyDispatcher(
             // call `run_python(script=...)` etc. without a prior spawn_slot. Note
             // this can throw the same spawn-time exceptions SpawnSlotTool handles
             // (timeout, file-not-found, etc.); the outer catch translates them.
-            child = slotId is null
-                ? await manager.GetOrCreateDefaultAsync(ct).ConfigureAwait(false)
-                : manager.Get(slotId) ?? throw new SlotNotFoundException(slotId);
+            if (slotId is null)
+            {
+                child = await manager.GetOrCreateDefaultAsync(defaultVersionOverride, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                child = manager.Get(slotId) ?? throw new SlotNotFoundException(slotId);
+                // Explicit slot whose Rhino version doesn't match what this tool
+                // needs (GH2_* tools pin "WIP"). Short-circuit before forwarding —
+                // the plugin would otherwise return a generic "unknown tool" MCP
+                // error and the agent wouldn't know the cause was a version mismatch.
+                if (defaultVersionOverride is not null && !IsVersionCompatible(child.Version, defaultVersionOverride))
+                {
+                    return SerializePayload(new SpawnErrorPayload(
+                        "wrong_rhino_version",
+                        $"Tool '{toolName}' only works on Rhino {defaultVersionOverride} but slot '{slotId}' is running Rhino {child.Version}. " +
+                        $"Omit the `slot` argument to auto-spawn Rhino {defaultVersionOverride}, or call spawn_slot with version=\"{defaultVersionOverride}\"."));
+                }
+            }
 
-            var requestId = Guid.NewGuid().ToString("N");
-            var rpc = new JsonRpcRequest(
+            string requestId = Guid.NewGuid().ToString("N");
+            JsonRpcRequest rpc = new(
                 Jsonrpc: "2.0",
                 Id: requestId,
                 Method: "tools/call",
                 Params: new JsonRpcRequestParams(Name: toolName, Arguments: args));
 
-            var json = JsonSerializer.Serialize(rpc, RouterJsonContext.Default.JsonRpcRequest);
+            string json = JsonSerializer.Serialize(rpc, RouterJsonContext.Default.JsonRpcRequest);
             log.LogDebug("Proxying tool '{Tool}' to slot '{Slot}' at {Endpoint}: {Body}",
                 toolName, slotId, child.Endpoint, json);
 
-            var http = httpFactory.CreateClient();
+            HttpClient http = httpFactory.CreateClient();
             http.Timeout = TimeSpan.FromMinutes(5); // some tool calls can run long Python scripts
 
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage(HttpMethod.Post, child.Endpoint + "/")
+            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            using HttpRequestMessage request = new(HttpMethod.Post, child.Endpoint + "/")
             {
                 Content = content
             };
@@ -79,7 +100,7 @@ public class ProxyDispatcher(
 
             using (response)
             {
-                var responseBody = await response.Content.ReadAsStringAsync(ct);
+                string responseBody = await response.Content.ReadAsStringAsync(ct);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -101,7 +122,7 @@ public class ProxyDispatcher(
         catch (Exception ex)
         {
             log.LogWarning(ex, "Tool call '{Tool}' (slot '{Slot}') failed", toolName, slotId ?? "(default)");
-            return SerializePayload(DiagnoseFailure(ex, child, toolName));
+            return SerializePayload(DiagnoseFailure(ex, toolName));
         }
     }
 
@@ -114,7 +135,7 @@ public class ProxyDispatcher(
             Message:
                 $"Rhino slot '{child.SlotId}' (pid {child.Pid}, Rhino {child.Version}) is no longer responding — likely crashed mid-call to '{toolName}'. " +
                 "The stale slot has been pruned. " +
-                (child.SlotId == RhinoManager.DefaultSlotId
+                (child.SlotId.StartsWith(RhinoManager.DefaultSlotPrefix)
                     ? "Retry this call to auto-spawn a fresh default Rhino."
                     : "Call spawn_slot to start a new one."),
             CrashReport: crashFinder.TryFind(child.Pid));
@@ -123,7 +144,7 @@ public class ProxyDispatcher(
     // same SpawnErrorPayload shape SpawnSlotTool emits. Codes are kebab-case so
     // an agent can branch on them. Messages always end with what the agent
     // should do next.
-    private SpawnErrorPayload DiagnoseFailure(Exception ex, ChildRhino? child, string toolName) => ex switch
+    private SpawnErrorPayload DiagnoseFailure(Exception ex, string toolName) => ex switch
     {
         SlotNotFoundException snf => new(
             "slot_not_found",
@@ -173,18 +194,34 @@ public class ProxyDispatcher(
         public string SlotId { get; } = slotId;
     }
 
+    private static bool IsVersionCompatible(string actual, string required)
+    {
+        if (actual == required)
+            return true;
+        return (actual, required) switch
+        {
+            ("9", "WIP") => true,
+            ("WIP", "9") => true,
+            _ => false,
+        };
+    }
+
     // Detect transport-level failures (DNS, refused, reset, timeout) — these mean
     // Rhino's listener isn't there to respond, not that Rhino responded with an
     // error. .NET 8 exposes HttpRequestError; older causes (SocketException) are
     // also unwrapped here for belt-and-braces.
     private static bool IsConnectionFailure(HttpRequestException ex)
     {
-        if (ex.HttpRequestError == HttpRequestError.ConnectionError) return true;
-        if (ex.HttpRequestError == HttpRequestError.SecureConnectionError) return true;
+        if (ex.HttpRequestError == HttpRequestError.ConnectionError)
+            return true;
+        if (ex.HttpRequestError == HttpRequestError.SecureConnectionError)
+            return true;
         for (var inner = ex.InnerException; inner is not null; inner = inner.InnerException)
         {
-            if (inner is System.Net.Sockets.SocketException) return true;
-            if (inner is IOException) return true;
+            if (inner is System.Net.Sockets.SocketException)
+                return true;
+            if (inner is IOException)
+                return true;
         }
         return false;
     }
@@ -221,16 +258,16 @@ public class ProxyDispatcher(
 
     private static string ExtractFromJsonRpc(string rpcJson, string slotId, string toolName)
     {
-        using var doc = JsonDocument.Parse(rpcJson);
-        var root = doc.RootElement;
+        using JsonDocument doc = JsonDocument.Parse(rpcJson);
+        JsonElement root = doc.RootElement;
 
-        if (root.TryGetProperty("error", out var err))
+        if (root.TryGetProperty("error", out JsonElement err))
         {
             throw new InvalidOperationException(
                 $"Slot '{slotId}' tool '{toolName}' returned MCP error: {err.GetRawText()}");
         }
 
-        if (root.TryGetProperty("result", out var result))
+        if (root.TryGetProperty("result", out JsonElement result))
         {
             return result.GetRawText();
         }
