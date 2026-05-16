@@ -34,12 +34,13 @@
       "group": "build"
     },
     {
-      "label": "build release",
+      "label": "build release (R8)",
       "command": "dotnet",
       "type": "shell",
       "args": [
         "build",
         "-c:Release",
+        "-p:RhinoTarget=R8",
         "-clp:NoSummary",
         "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
       ],
@@ -51,9 +52,27 @@
       "group": "build"
     },
     {
-      "label": "pack yak",
+      "label": "build release (R9)",
+      "command": "dotnet",
       "type": "shell",
-      "dependsOn": "build release",
+      "args": [
+        "build",
+        "-c:Release",
+        "-p:RhinoTarget=R9",
+        "-clp:NoSummary",
+        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "pack yak (R8)",
+      "type": "shell",
+      "dependsOn": "build release (R8)",
       "args": ["build"],
       "windows": {
         "command": "C:/Program Files/Rhino 8/System/Yak.exe"
@@ -66,7 +85,57 @@
         "args": ["Yak build on Linux is unsupported."]
       },
       "options": {
-        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release"
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/R8/Release"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "pack yak (R9)",
+      "type": "shell",
+      "dependsOn": "build release (R9)",
+      "args": ["build"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak build on Linux is unsupported."]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/R9/Release"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "install yak (Rhino 8)",
+      "type": "shell",
+      "dependsOn": "pack yak (R8)",
+      "args": ["install", "*.yak"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak install on Linux is unsupported."]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/R8/Release"
       },
       "problemMatcher": [],
       "presentation": {
@@ -78,7 +147,7 @@
     {
       "label": "install yak (WIP)",
       "type": "shell",
-      "dependsOn": "pack yak",
+      "dependsOn": "pack yak (R9)",
       "args": ["install", "*.yak"],
       "windows": {
         "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
@@ -91,7 +160,35 @@
         "args": ["Yak install on Linux is unsupported."]
       },
       "options": {
-        "cwd": "${workspaceFolder}/rhino/plugin/bin/Release"
+        "cwd": "${workspaceFolder}/rhino/plugin/bin/R9/Release"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "install yak (Rhino 8 + WIP)",
+      "dependsOn": ["install yak (Rhino 8)", "install yak (WIP)"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "uninstall yak (Rhino 8)",
+      "type": "shell",
+      "args": ["uninstall", "Rhino-MCP-Platform"],
+      "windows": {
+        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
+      },
+      "osx": {
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
+      },
+      "linux": {
+        "command": "echo",
+        "args": ["Yak uninstall on Linux is unsupported."]
       },
       "problemMatcher": [],
       "presentation": {
@@ -119,6 +216,12 @@
         "reveal": "always",
         "clear": true
       },
+      "group": "build"
+    },
+    {
+      "label": "uninstall yak (Rhino 8 + WIP)",
+      "dependsOn": ["uninstall yak (Rhino 8)", "uninstall yak (WIP)"],
+      "problemMatcher": [],
       "group": "build"
     },
     {
