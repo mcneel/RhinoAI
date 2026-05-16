@@ -28,7 +28,11 @@ internal sealed class McpServer : IDisposable
             var builder = WebApplication.CreateSlimBuilder();
             builder.Logging.ClearProviders();
             builder.Logging.AddProvider(new RhinoLoggerProvider());
+#if DEBUG
             builder.Logging.SetMinimumLevel(LogLevel.Information);
+#else
+            builder.Logging.SetMinimumLevel(LogLevel.Warning);
+#endif
             builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(port));
 
             builder.Services.AddSingleton(doc);
