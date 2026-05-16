@@ -8,55 +8,53 @@ public class RhinoLocator
 {
     public string ResolveRhinoExe(string version)
     {
-        var path = TryResolve(version);
-        if (path is null)
-        {
-            throw new FileNotFoundException(
-                $"Could not locate Rhino executable for version '{version}'. " +
-                $"Installed versions found: {string.Join(", ", ListInstalledVersions())}");
-        }
-        return path;
+        if (TryResolve(version, out string path))
+            return path;
+
+        throw new FileNotFoundException(
+            $"Could not locate Rhino executable for version '{version}'. " +
+            $"Installed versions found: {string.Join(", ", ListInstalledVersions())}");
     }
 
-    private string? TryResolve(string version)
+    private bool TryResolve(string version, out string path)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // TODO: also try registry-based lookup if Program Files paths miss.
-            var dir = version switch
+            string dir = version switch
             {
                 "8" => @"C:\Program Files\Rhino 8",
                 "9" => @"C:\Program Files\Rhino 9",
                 "WIP" => @"C:\Program Files\Rhino 9 WIP",
-                _ => null
+                _ => string.Empty
             };
-            if (dir is null) return null;
-            var exe = Path.Combine(dir, "System", "Rhino.exe");
-            return File.Exists(exe) ? exe : null;
+            path = Path.Combine(dir, "System", "Rhino.exe");
+            return File.Exists(path);
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            var appName = version switch
+            string appName = version switch
             {
                 "8" => "Rhino 8.app",
                 "9" => "Rhino 9.app",
                 "WIP" => "RhinoWIP.app",
-                _ => null
+                _ => string.Empty
             };
-            if (appName is null) return null;
-            var appPath = $"/Applications/{appName}";
-            return Directory.Exists(appPath) ? appPath : null;
+            path = $"/Applications/{appName}";
+            return Directory.Exists(path);
         }
 
-        return null;
+        path = string.Empty;
+        return false;
     }
 
     public IEnumerable<string> ListInstalledVersions()
     {
-        foreach (var v in new[] { "8", "9", "WIP" })
+        foreach (string v in new[] { "8", "9", "WIP" })
         {
-            if (TryResolve(v) is not null) yield return v;
+            if (TryResolve(v, out _))
+                yield return v;
         }
     }
 }

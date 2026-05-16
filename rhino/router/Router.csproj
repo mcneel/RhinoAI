@@ -46,7 +46,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Title>Rhino MCP Router</Title>
     <Company>McNeel</Company>
     <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
@@ -59,6 +59,7 @@
          so router and plugin agree at runtime. The 0.4.x preview line targets .NET 10
          packages and won't load under a net8.0 runtime. -->
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
   </ItemGroup>
 
   <!--
@@ -76,5 +77,21 @@
     <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
     <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
   </ItemGroup>
+
+  <!--
+    AOT publish drops native deps like libe_sqlite3.dylib in $(OutDir), but the
+    AOT-linked binary lives in $(OutDir)native/. dlopen searches alongside the
+    binary, so without this copy the router crashes on startup with a
+    DllNotFoundException for e_sqlite3. The publish dir gets it right out of
+    the box; this target makes the `dotnet build -r <rid>` flow work too, so
+    MCP clients can point at bin/.../native/rhino-mcp-router during dev.
+  -->
+  <Target Name="CopyNativeSqliteAlongsideAotBinary"
+          AfterTargets="Build"
+          Condition="'$(PublishAot)' == 'true' AND Exists('$(OutDir)libe_sqlite3.dylib')">
+    <Copy SourceFiles="$(OutDir)libe_sqlite3.dylib"
+          DestinationFolder="$(OutDir)native"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

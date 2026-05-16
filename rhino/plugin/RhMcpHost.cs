@@ -54,7 +54,7 @@ public static class RhinoMcpHost
         return true;
     }
 
-    // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
+    // Drop a one-shot announcement into <temp>/rhino-mcp/listeners/ so a router
     // running on this machine can discover and adopt this listener without us
     // having to know whether one is up. The router consumes (probes + deletes)
     // the file on its next scan; if no router ever sees it, temp sweep collects
@@ -63,7 +63,7 @@ public static class RhinoMcpHost
     {
         try
         {
-            var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
+            var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp", "listeners");
             Directory.CreateDirectory(dir);
             var pid = Process.GetCurrentProcess().Id;
             var version = RhinoApp.Version.Major.ToString();
