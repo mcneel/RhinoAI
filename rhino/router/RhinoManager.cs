@@ -7,22 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace RhMcp.Router;
 
-// Spawns, tracks, and tears down Rhino "slots".
+// Spawns, tracks, and tears down Rhino "slots". State lives in SlotStore
+// (SQLite) so concurrent router processes can't race on port allocation or
+// duplicate-spawn the Mac shared-process lead.
 //
-// State lives in SlotStore (SQLite) so concurrent router processes — one per
-// Claude Code session — can't race on port allocation or duplicate-spawn the
-// Mac shared-process lead. The manager itself holds no in-memory registry;
-// every read/write goes through the store under BEGIN IMMEDIATE.
-//
-// Process model differs by OS:
-//   Windows: one OS process per slot. Each child gets its own RhinoDoc on its
-//            own private port that only the router talks to.
-//   macOS:   at most one OS process per Rhino version (Rhino is single-instance
-//            per bundle id). The first slot for a version launches the .app;
-//            subsequent slots for the same version share that pid and ask the
-//            existing listener to spawn another doc + listener via the
-//            _router_spawn_listener control tool. The "first slot" is decided
-//            inside SlotStore.Reserve so two routers can't both claim leader.
+// Windows: one OS process per slot, each on its own private port.
+// macOS:   one OS process per Rhino version (Rhino is single-instance per
+//          bundle id). First slot launches the .app; later slots share the pid
+//          and ask the existing listener to spawn another doc+listener via
+//          _router_spawn_listener. Leader election happens in SlotStore.Reserve.
 public class RhinoManager(
     RhinoLocator locator,
     RouterConfig config,
@@ -30,15 +23,10 @@ public class RhinoManager(
     SlotStore store,
     ILogger<RhinoManager> log)
 {
-    // Slot-id prefix for the auto-spawned default Rhino used by tool calls that
-    // don't pass an explicit slot. The version is appended so a GH2 tool that
-    // needs WIP gets its own default slot (e.g. "default-WIP") rather than
-    // colliding with a non-GH2 tool's "default-8".
+    // Version is appended (e.g. "default-WIP") so GH2 tools don't collide with non-GH2 tools.
     public const string DefaultSlotPrefix = "default-";
 
-    // Children walk forward from the conventional RhinoMCP port (10500) to find a free one.
-    // A user who started a Rhino manually via `_RhinoMCP` will already be on 10500, so the
-    // router-spawned children land on 10501, 10502, ... without colliding.
+    // Manually-started Rhino lives on 10500; children walk forward from there.
     private const int ChildPortBase = 10500;
     private const int SpawnTimeoutSeconds = 60;
     private static readonly TimeSpan StaleLaunchingMaxAge = TimeSpan.FromSeconds(90);
@@ -48,29 +36,21 @@ public class RhinoManager(
     public Task<ChildRhino> SpawnAsync(string? version = null, CancellationToken ct = default)
     {
         var resolved = version ?? config.DefaultVersion;
-        // Name allocation lives in the store (cross-router-safe). We use the
-        // returned slot_id as-is; no separate AnimalNames.Next() per process.
         store.ReapStaleLaunching(StaleLaunchingMaxAge);
         ReapAllDead();
         var (reservation, slotId) = store.ReserveNewNamed(resolved, _routerPid);
         return DispatchReservationAsync(resolved, slotId, reservation, ct);
     }
 
-    // Lazily return the default slot for `version`, spawning a Rhino if one doesn't already exist.
-    // Called by ProxyDispatcher when a tool is invoked without an explicit slot. A null version
-    // resolves to the router's configured default. GH2 tool proxies pass "WIP" so they get a
-    // separate default slot from non-GH2 tools. If the user started a Rhino manually and ran
-    // `_RhinoMCP`, the drop-file scan adopts it and we reuse that session (when its version
-    // matches) instead of spawning a parallel one — the user's manual launch is the strongest
-    // possible signal that they want this Rhino used.
+    // Lazily return the default slot for `version`, spawning a Rhino if needed.
+    // Prefers an adopted user-started Rhino on the matching version — manual launch
+    // is the strongest signal that the user wants that Rhino used.
     public async Task<ChildRhino> GetOrCreateDefaultAsync(string? version = null, CancellationToken ct = default)
     {
         ScanAnnouncements();
         string resolved = version ?? config.DefaultVersion;
         string slotId = DefaultSlotPrefix + resolved;
 
-        // Prefer an adopted user-started Rhino on the matching version over
-        // spawning our own — see class comment.
         var adopted = store.ListReady().FirstOrDefault(c => c.Adopted && c.Version == resolved);
         if (adopted is not null) return adopted;
 
@@ -79,8 +59,7 @@ public class RhinoManager(
 
     private async Task<ChildRhino> SpawnInternalAsync(string version, string slotId, CancellationToken ct)
     {
-        // Drop stale placeholders before deciding what to do, so a crashed
-        // router's abandoned 'launching' row doesn't make this caller wait 90s.
+        // Drop stale 'launching' rows first so a crashed router doesn't make us wait 90s.
         store.ReapStaleLaunching(StaleLaunchingMaxAge);
         ReapAllDead();
 
@@ -88,9 +67,6 @@ public class RhinoManager(
         return await DispatchReservationAsync(version, slotId, reservation, ct).ConfigureAwait(false);
     }
 
-    // Shared post-reservation branch. Both SpawnAsync (auto-named via the name
-    // pool) and SpawnInternalAsync (known slot_id, e.g. 'default-WIP') funnel
-    // through here so the existing/leader/follower handling lives in one place.
     private async Task<ChildRhino> DispatchReservationAsync(
         string version, string slotId, SlotReservation reservation, CancellationToken ct)
     {
@@ -146,12 +122,8 @@ public class RhinoManager(
                             $"Possible causes: startup crash, missing runtime dependency, license/EULA refused, " +
                             $"plugin load failure.");
                     case WaitResult.Timeout:
-                        // Re-read MainWindowHandle: it's cached on first access, so a
-                        // refresh covers the case where the window appeared after we
-                        // first observed the Process. A zero handle here means Rhino
-                        // is running headless from our perspective — usually because
-                        // the parent process tree (e.g. an IDE extension host) hasn't
-                        // given the child interactive-desktop access.
+                        // Refresh: MainWindowHandle is cached on first access. Zero handle
+                        // means no interactive-desktop access (e.g. spawned from IDE extension host).
                         proc.Refresh();
                         bool hasWindow = proc.MainWindowHandle != IntPtr.Zero;
                         try { proc.Kill(); } catch { /* best effort */ }
@@ -194,26 +166,21 @@ public class RhinoManager(
         }
         catch
         {
-            // Free the placeholder so the next caller can retry instead of
-            // waiting 90s for the stale-launching reaper.
+            // Free the placeholder so the next caller doesn't wait 90s for the reaper.
             store.Delete(slotId);
             throw;
         }
     }
 
+    // Mac-only: another slot for this version exists. Wait for the leader, then ask
+    // its listener to spawn a sibling doc+port.
     private async Task<ChildRhino> LaunchAsFollowerAsync(string version, string slotId, CancellationToken ct)
     {
-        // Mac-only path: another reservation for this version exists. Wait
-        // until at least one ready row for this version appears (it'll be the
-        // leader we follow), then ask that listener to spawn a sibling.
         try
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                // On Windows every slot is its own process, so "follower" makes
-                // no sense — promote to leader behavior. SlotStore only returns
-                // Follower when peers exist, which on Windows would still mean
-                // distinct processes, distinct ports.
+                // Windows has no shared-process model; every slot is its own process.
                 return await LaunchAsLeaderAsync(version, slotId, ct).ConfigureAwait(false);
             }
 
@@ -254,17 +221,13 @@ public class RhinoManager(
 
         if (child.Adopted)
         {
-            // The router didn't start this Rhino, so it doesn't get to kill the
-            // process. Tools layer turns this into a structured error so the
-            // agent learns why; here we just refuse.
+            // User started this Rhino, so the router doesn't get to kill it.
             throw new AdoptedSlotCloseException(slotId);
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            // Find sibling slots sharing this pid. If any exist, this isn't the last
-            // slot in the Rhino process — close just this listener via the control
-            // channel and keep Rhino running.
+            // If siblings share this pid, close just our listener and leave Rhino running.
             var sibling = store.FindSiblingByPid(slotId, child.Pid);
             if (sibling is not null)
             {
@@ -282,7 +245,7 @@ public class RhinoManager(
                     return false;
                 }
             }
-            // Last slot for this Rhino — fall through to process kill below.
+            // Last slot — fall through to process kill.
         }
 
         store.Delete(slotId);
@@ -299,13 +262,10 @@ public class RhinoManager(
         return true;
     }
 
+    // Shutdown path: kill each unique pid this router owns. Adopted slots and slots
+    // owned by other routers are skipped.
     public void CloseAll()
     {
-        // Shutdown path: kill each unique pid this router owns once. No control-channel
-        // niceties — we're tearing everything down anyway, and multiple slots may share a
-        // pid on Mac. Adopted slots are skipped: the user owns those Rhinos. Slots owned
-        // by *other* routers are also skipped — they're not ours to kill, and their owners
-        // will tear them down on their own shutdown.
         var owned = store.ListAllOwnedBy(_routerPid);
         var killed = new HashSet<int>();
         foreach (var c in owned)
@@ -334,13 +294,8 @@ public class RhinoManager(
         return c is null || c.Status != SlotStatus.Ready ? null : c;
     }
 
-    // Walk the listener-announcement drop directory and adopt any plugin-side
-    // Rhino we don't already know about. The plugin writes one file per
-    // listener-bind into <temp>/rhino-mcp/listeners; we treat each file as a
-    // one-shot "look at me" doorbell — consume by deleting it whether or not
-    // adoption succeeded. Stale files (port no longer listening) are dropped
-    // silently; files for a pid+port we already track are deleted as a no-op so
-    // the Mac _router_spawn_listener path remains idempotent.
+    // Adopt any user-started Rhino announced via the drop directory. Each file is a
+    // one-shot doorbell — always deleted, success or not.
     public void ScanAnnouncements()
     {
         var dir = RouterPaths.ListenersDir;
@@ -385,10 +340,6 @@ public class RhinoManager(
                     continue;
                 }
 
-                // AdoptIfNew handles the duplicate-(pid,port) check, name
-                // allocation, and the INSERT atomically. Returns null when the
-                // listener is already in the registry (Mac _router_spawn_listener
-                // duplicate, or another router already adopted it).
                 var slotId = store.AdoptIfNew(ann.Version ?? "?", ann.Port, ann.Pid, _routerPid);
                 if (slotId is not null)
                 {
@@ -410,22 +361,16 @@ public class RhinoManager(
         try { File.Delete(path); } catch { /* next scan will retry */ }
     }
 
-    // Cheap liveness probe. Considers a slot alive iff its pid still exists AND
-    // the listener is accepting connections. Pid-alive alone isn't enough on Mac
-    // (multiple slots share a pid; a single listener can die while the app keeps
-    // running), and port-listening alone isn't enough on Windows (a zombie or
-    // stuck process could leave the socket bound).
+    // Pid AND port must both be alive: on Mac one listener can die while the shared
+    // app keeps running; on Windows a zombie can leave the socket bound.
     public bool IsAlive(ChildRhino c)
     {
-        if (c.Status != SlotStatus.Ready) return true; // launching rows aren't "dead", just pending
+        if (c.Status != SlotStatus.Ready) return true; // launching rows are pending, not dead
         if (!IsProcessAlive(c.Pid)) return false;
         if (!IsPortListening(c.Port)) return false;
         return true;
     }
 
-    // Probe one slot; if dead, drop it from the registry. Returns true if reaped.
-    // Used by ProxyDispatcher when an HTTP call to a slot fails with a connection
-    // error, so the next tool call doesn't keep hitting the same dead slot.
     public bool TryReapDead(string slotId)
     {
         var c = store.Get(slotId);
@@ -437,9 +382,6 @@ public class RhinoManager(
         return true;
     }
 
-    // Probe every ready slot, drop the dead ones, return what was reaped. Called
-    // by list_slots so a silently-crashed Rhino doesn't appear healthy until the
-    // next tool call.
     public IReadOnlyCollection<ChildRhino> ReapAllDead()
     {
         var reaped = new List<ChildRhino>();
@@ -468,26 +410,20 @@ public class RhinoManager(
         catch (InvalidOperationException) { return false; }
     }
 
-    // Env var consumed by StartMCPCommand inside the plugin to autostart the listener.
     // Must match StartMCPCommand.PortEnvVar in rhino/plugin/StartMCPCommand.cs.
     private const string PortEnvVar = "RHINO_MCP_AUTOSTART_PORT";
 
+    // Uses CreateProcess + CREATE_BREAKAWAY_FROM_JOB; see WinSpawn for the rationale.
     private static Process LaunchWindows(string rhinoExe, int port)
     {
-        // CreateProcess + CREATE_BREAKAWAY_FROM_JOB so Rhino escapes the Job
-        // Object the router inherited from its parent (Claude Code / VS Code
-        // extension host). See WinSpawn for the rationale.
         return WinSpawn.Start(
             rhinoExe,
             "/nosplash /runscript=\"_StartMCP\"",
             new Dictionary<string, string> { [PortEnvVar] = port.ToString() });
     }
 
-    // Launches Rhino.app via `open -a`. We don't get a usable Process handle back —
-    // `open` exits immediately and the Rhino pid is resolved later by lsof against
-    // the listening port. The port is delivered via env var rather than as a runscript
-    // argument because feeding integer args through the runscript engine races with
-    // plugin command registration; StartMCP reads the env var directly.
+    // `open -a` exits immediately, so we resolve the Rhino pid via lsof later.
+    // Port goes through an env var because runscript int args race with command registration.
     private static void LaunchMac(string appPath, int port)
     {
         var psi = new ProcessStartInfo
@@ -504,7 +440,6 @@ public class RhinoManager(
 
         using var proc = Process.Start(psi)
             ?? throw new InvalidOperationException($"Failed to start `open -a {appPath}`.");
-        // `open` returns immediately once the app is launched; bounded wait is just defensive.
         proc.WaitForExit(10_000);
     }
 
@@ -543,11 +478,8 @@ public class RhinoManager(
 
     private enum WaitResult { Bound, ProcessDied, Timeout }
 
-    // Wait until `port` is accepting connections. When `proc` is supplied we
-    // also short-circuit on process exit so the caller can distinguish a crash
-    // from a slow startup — the Mac path doesn't have a Process handle (we use
-    // `open -a` and resolve the pid via lsof after bind), so it passes null and
-    // only sees Bound/Timeout.
+    // When `proc` is supplied, also short-circuit on process exit to distinguish
+    // a crash from a slow startup. Mac passes null (no Process handle from `open -a`).
     private static WaitResult WaitForPort(int port, TimeSpan timeout, Process? proc = null)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -575,24 +507,15 @@ public class RhinoManager(
     }
 }
 
-// Thrown by CloseAsync when the caller tries to close an adopted slot. The
-// tools layer catches this and turns it into a structured `cannot_close_adopted`
-// payload — the agent learns why and we still avoid killing a user-started
-// Rhino.
+// Tools layer catches this and turns it into a structured `cannot_close_adopted` payload.
 public sealed class AdoptedSlotCloseException(string slotId)
     : InvalidOperationException($"Slot '{slotId}' was adopted from a user-started Rhino and cannot be closed by the router.")
 {
     public string SlotId { get; } = slotId;
 }
 
-// `Adopted` is set when the router discovered this Rhino via a drop-file
-// announcement rather than spawning it. Adopted slots are never killed by the
-// router (CloseAll skips them; close_slot refuses) — the user started them, the
-// user closes them.
-//
-// `Status` is internal lifecycle state (launching/ready). It's kept off the
-// JSON wire so list_slots output stays the same shape as before — agents
-// shouldn't see 'launching' rows because ListReady already filters them out.
+// `Adopted` slots are never killed by the router — the user started them.
+// `Status` is internal lifecycle state, kept off the JSON wire.
 public record ChildRhino(
     string SlotId,
     int Port,

@@ -6,17 +6,13 @@ using System.Text;
 
 namespace RhMcp.Router;
 
-// Launches a Windows child via CreateProcess with CREATE_BREAKAWAY_FROM_JOB so
-// it escapes any Job Object the router inherited from its parent (e.g. the
-// Claude Code / VS Code extension host that spawned node -> the router).
-// Without breakaway, GUI children can come up alive but with no interactive
-// desktop and never paint a main window — see RhinoManager.LaunchAsLeaderAsync's
-// "never created a main window" diagnostic.
+// CreateProcess + CREATE_BREAKAWAY_FROM_JOB lets the child escape any Job Object
+// the router inherited (e.g. VS Code extension host). Without breakaway, GUI
+// children come up alive but can't paint a main window.
 //
-// We don't use Process.Start with UseShellExecute=true (which would also fix
-// the window problem) because ShellExecute silently ignores psi.Environment.
-// Going through CreateProcess keeps the env block per-child, so concurrent
-// spawns don't race on RHINO_MCP_AUTOSTART_PORT.
+// Process.Start + UseShellExecute=true would also fix the window problem, but
+// ShellExecute silently ignores psi.Environment, which would race concurrent
+// spawns on RHINO_MCP_AUTOSTART_PORT.
 internal static class WinSpawn
 {
     private const uint CREATE_BREAKAWAY_FROM_JOB  = 0x01000000;
@@ -24,8 +20,7 @@ internal static class WinSpawn
 
     public static Process Start(string exePath, string arguments, IDictionary<string, string> extraEnv)
     {
-        // CreateProcess can write into lpCommandLine; hand it a pre-sized buffer.
-        // 32k matches Windows' command-line limit.
+        // CreateProcess can write into lpCommandLine; pre-size to Windows' 32k limit.
         var cmdLine = new StringBuilder(32768);
         cmdLine.Append('"').Append(exePath).Append('"').Append(' ').Append(arguments);
 
@@ -61,9 +56,7 @@ internal static class WinSpawn
         }
     }
 
-    // UTF-16 env block: KEY1=val1\0KEY2=val2\0\0. Windows env-var lookup is
-    // case-insensitive, and the block must be sorted in case-insensitive
-    // ordinal order or some apps misbehave.
+    // UTF-16 env block (KEY=val\0...\0\0), case-insensitive ordinal sort required by Windows.
     private static IntPtr BuildEnvBlock(IDictionary<string, string> overrides)
     {
         var merged = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
