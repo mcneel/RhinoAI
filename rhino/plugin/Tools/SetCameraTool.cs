@@ -20,52 +20,41 @@ public static class SetCameraTool
         var view = doc.Views.ActiveView
             ?? throw new InvalidOperationException("No active view.");
 
-        string? error = null;
+        var vp = view.ActiveViewport;
 
-        RhinoApp.InvokeAndWait(() =>
+        if (!string.IsNullOrEmpty(projection))
         {
-            var vp = view.ActiveViewport;
+            if (projection.Equals("parallel", StringComparison.OrdinalIgnoreCase))
+                vp.ChangeToParallelProjection(true);
+            else if (projection.Equals("perspective", StringComparison.OrdinalIgnoreCase))
+                vp.ChangeToPerspectiveProjection(true, vp.Camera35mmLensLength > 0 ? vp.Camera35mmLensLength : 50.0);
+            else
+                return $"Unknown projection: {projection}";
+        }
 
-            if (!string.IsNullOrEmpty(projection))
-            {
-                if (projection.Equals("parallel", StringComparison.OrdinalIgnoreCase))
-                    vp.ChangeToParallelProjection(true);
-                else if (projection.Equals("perspective", StringComparison.OrdinalIgnoreCase))
-                    vp.ChangeToPerspectiveProjection(true, vp.Camera35mmLensLength > 0 ? vp.Camera35mmLensLength : 50.0);
-                else
-                {
-                    error = $"Unknown projection: {projection}";
-                    return;
-                }
-            }
+        if (location is not null)
+            vp.SetCameraLocation((Point3d)location, false);
 
-            if (location is not null)
-                vp.SetCameraLocation((Point3d)location, false);
+        if (target is not null)
+            vp.SetCameraTarget((Point3d)target, false);
 
-            if (target is not null)
-                vp.SetCameraTarget((Point3d)target, false);
+        if (up is not null)
+            vp.CameraUp = (Vector3d)up;
 
-            if (up is not null)
-                vp.CameraUp = (Vector3d)up;
+        if (lensLength.HasValue)
+            vp.Camera35mmLensLength = lensLength.Value;
 
-            if (lensLength.HasValue)
-                vp.Camera35mmLensLength = lensLength.Value;
+        if (boxMin is not null && boxMax is not null)
+        {
+            var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
+            if (bb.IsValid)
+                vp.ZoomBoundingBox(bb);
+            else
+                return "boxMin/boxMax do not form a valid bounding box.";
+        }
 
-            if (boxMin is not null && boxMax is not null)
-            {
-                var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
-                if (bb.IsValid)
-                    vp.ZoomBoundingBox(bb);
-                else
-                {
-                    error = "boxMin/boxMax do not form a valid bounding box.";
-                    return;
-                }
-            }
+        view.Redraw();
 
-            view.Redraw();
-        });
-
-        return error ?? "Camera updated.";
+        return "Camera updated.";
     }
 }

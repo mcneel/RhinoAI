@@ -40,73 +40,66 @@ public static class GetViewportImageTool
         string? error = null;
         CaptureMetadata? meta = null;
 
-        RhinoApp.InvokeAndWait(() =>
+        var vp = activeView.ActiveViewport;
+
+        try
         {
-            var vp = activeView.ActiveViewport;
-
-            try
+            if (!string.IsNullOrEmpty(view))
             {
-                if (!string.IsNullOrEmpty(view))
+                var proj = ParseProjection(view);
+                if (proj == DefinedViewportProjection.None)
                 {
-                    var proj = ParseProjection(view);
-                    if (proj == DefinedViewportProjection.None)
-                    {
-                        error = $"Unknown view: {view}";
-                        return;
-                    }
-                    vp.SetProjection(proj, null, true);
+                    return [new TextContent(SerializeResult(meta, $"Unknown view: {view}"))];
                 }
-
-                if (!string.IsNullOrEmpty(displayMode))
-                {
-                    var mode = FindDisplayMode(displayMode);
-                    if (mode is null)
-                    {
-                        error = $"Unknown display mode: {displayMode}";
-                        return;
-                    }
-                    vp.DisplayMode = mode;
-                }
-
-                if (cameraLocation is not null)
-                    vp.SetCameraLocation((Point3d)cameraLocation, false);
-
-                if (target is not null)
-                    vp.SetCameraTarget((Point3d)target, false);
-
-                if (boxMin is not null && boxMax is not null)
-                {
-                    var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
-                    if (bb.IsValid)
-                        vp.ZoomBoundingBox(bb);
-                    else
-                    {
-                        error = "boxMin/boxMax do not form a valid bounding box.";
-                        return;
-                    }
-                }
-
-                if (zoom.HasValue)
-                    vp.Magnify(zoom.Value, true);
-
-                activeView.Redraw();
-
-                meta = GatherMetadata(activeView, width, height);
-
-                if (meta.VisibleObjectCount == 0)
-                {
-                    error = "Viewport is empty — no document objects intersect the view frustum. " +
-                            "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives.";
-                    return;
-                }
-
-                bitmap = activeView.CaptureToBitmap(new Size(width, height));
+                vp.SetProjection(proj, null, true);
             }
-            catch (Exception ex)
+
+            if (!string.IsNullOrEmpty(displayMode))
             {
-                error = $"Capture failed: {ex.Message}";
+                var mode = FindDisplayMode(displayMode);
+                if (mode is null)
+                {
+                    return [new TextContent(SerializeResult(meta, $"Unknown display mode: {displayMode}"))];
+                }
+                vp.DisplayMode = mode;
             }
-        });
+
+            if (cameraLocation is not null)
+                vp.SetCameraLocation((Point3d)cameraLocation, false);
+
+            if (target is not null)
+                vp.SetCameraTarget((Point3d)target, false);
+
+            if (boxMin is not null && boxMax is not null)
+            {
+                var bb = new BoundingBox((Point3d)boxMin, (Point3d)boxMax);
+                if (bb.IsValid)
+                    vp.ZoomBoundingBox(bb);
+                else
+                {
+                    return [new TextContent(SerializeResult(meta, "boxMin/boxMax do not form a valid bounding box."))];
+                }
+            }
+
+            if (zoom.HasValue)
+                vp.Magnify(zoom.Value, true);
+
+            activeView.Redraw();
+
+            meta = GatherMetadata(activeView, width, height);
+
+            if (meta.VisibleObjectCount == 0)
+            {
+                return [new TextContent(SerializeResult(meta, "Viewport is empty — no document objects intersect the view frustum. " +
+                        "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives."))];
+            }
+
+            bitmap = activeView.CaptureToBitmap(new Size(width, height));
+        }
+        catch (Exception ex)
+        {
+            error = $"Capture failed: {ex.Message}";
+        }
 
         if (error is not null)
         {

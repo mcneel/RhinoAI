@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+
+using Rhino.FileIO;
 
 namespace RhMcp;
 
@@ -54,6 +57,27 @@ public static class RhinoMcpHost
         return true;
     }
 
+    // Shared dispatch for both the interactive `RhinoMCP` command and the
+    // hidden `StartMCP` autostart path. Writes user-facing status lines.
+    public static bool StartOrRestart(RhinoDoc doc, int port)
+    {
+        if (HasStarted(doc))
+        {
+            if (!RestartOnPort(doc, port))
+            {
+                RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
+                return false;
+            }
+            RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
+            return true;
+        }
+
+        if (Start(doc, port)) return true;
+
+        RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
+        return false;
+    }
+
     // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
     // running on this machine can discover and adopt this listener without us
     // having to know whether one is up. The router consumes (probes + deletes)
@@ -63,7 +87,7 @@ public static class RhinoMcpHost
     {
         try
         {
-            var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
+            var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp", "listeners");
             Directory.CreateDirectory(dir);
             var pid = Process.GetCurrentProcess().Id;
             var version = RhinoApp.Version.Major.ToString();
@@ -80,15 +104,57 @@ public static class RhinoMcpHost
         }
     }
 
-    // Stop the listener bound to the given port, regardless of doc. Used by the
-    // router's control channel on Mac to tear down a single slot without
-    // affecting other slots sharing the same Rhino process.
+    // Stop the listener bound to the given port and close its associated doc
+    // without keeping any save artefacts. Used by the router's control channel
+    // on Mac to tear down a single slot without affecting other slots sharing
+    // the same Rhino process. The router only calls this for slots it spawned
+    // (adopted slots are refused upstream), so discarding the doc is safe.
+    //
+    // Mac's `_-Close` command matches docs by their on-disk path (see
+    // src4/rhino4/commands/cmdFileIO.cpp) and is the only way to programmatically
+    // close a non-headless doc — RhinoDoc.Dispose is a no-op for them. We give
+    // the doc a temp path via WriteFile so the command can find it, then delete
+    // that file once Cocoa's deferred close has run.
     public static bool StopByPort(int port)
     {
         var entry = Servers.FirstOrDefault(kv => kv.Value.Port == port);
         if (entry.Value is null) return false;
-        Servers.Remove(entry.Key);
+        var docSerial = entry.Key;
+        Servers.Remove(docSerial);
         entry.Value.Stop();
+
+        var doc = RhinoDoc.FromRuntimeSerialNumber(docSerial);
+        if (doc is null) return true;
+
+        var tempPath = Path.Combine(
+            Path.GetTempPath(),
+            $"rh-mcp-slot-close-{docSerial}-{Guid.NewGuid():N}.3dm");
+        try
+        {
+            doc.Modified = false;
+            doc.WriteFile(tempPath, new FileWriteOptions
+            {
+                SuppressDialogBoxes = true,
+                WriteUserData = true,
+                UpdateDocumentPath = true,
+            });
+            RhinoApp.RunScript(docSerial, $"_-Close \"{tempPath}\"", false);
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[Rhino MCP] Slot doc close failed for port {port}: {ex.Message}");
+            return true;
+        }
+
+        // Mac defers the doc close via Cocoa performSelector:afterDelay:0.1.
+        // Wait past that, then delete the temp file. Fire-and-forget — we
+        // don't want to block the router's HTTP response.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000).ConfigureAwait(false);
+            try { File.Delete(tempPath); } catch { /* OS temp sweep will get it */ }
+        });
+
         return true;
     }
 }

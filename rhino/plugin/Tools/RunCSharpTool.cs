@@ -7,14 +7,15 @@ namespace RhMcp.Tools;
 public static class RunCSharpTool
 {
     [McpServerTool(Name = "run_csharp")]
-    [Description("Execute a C# script. Returns JSON with stdout and error fields; error is null on success.")]
+    [Description("Execute a C# script targeted at this slot's document. The script editor injects `__rhino_doc__` (type `RhinoDoc`) — use it as your document handle instead of `RhinoDoc.ActiveDoc` or anything else. Returns JSON with stdout and error fields; error is null on success.")]
     public static string RunCSharp(
+        RhinoDoc doc,
         [Description("Script")] string script)
     {
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.cs");
         File.WriteAllText(tmp, script);
         RhinoApp.CommandWindowCaptureEnabled = true;
-        RhinoApp.InvokeAndWait(() => RhinoApp.RunScript($"-ScriptEditor _Run \"{tmp}\"", false));
+        RhinoApp.RunScript(doc.RuntimeSerialNumber, $"-ScriptEditor _Run \"{tmp}\"", false);
         string[] lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
         _ = Task.Delay(15_000).ContinueWith(_ => { try { File.Delete(tmp); } catch { } });

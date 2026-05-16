@@ -20,58 +20,55 @@ public static class SetSelectionTool
         var selected = 0;
         string? warning = null;
 
-        RhinoApp.InvokeAndWait(() =>
+        doc.Objects.UnselectAll();
+
+        var guidSet = new HashSet<Guid>();
+        foreach (var idStr in ids)
+            if (Guid.TryParse(idStr, out var g))
+                guidSet.Add(g);
+
+        foreach (var guid in guidSet)
         {
-            doc.Objects.UnselectAll();
+            var obj = doc.Objects.FindId(guid);
+            if (obj != null) { obj.Select(true); selected++; }
+        }
 
-            var guidSet = new HashSet<Guid>();
-            foreach (var idStr in ids)
-                if (Guid.TryParse(idStr, out var g))
-                    guidSet.Add(g);
-
-            foreach (var guid in guidSet)
+        if (names.Length > 0 || !string.IsNullOrEmpty(layer) || !string.IsNullOrEmpty(geometryType))
+        {
+            var settings = new ObjectEnumeratorSettings
             {
-                var obj = doc.Objects.FindId(guid);
-                if (obj != null) { obj.Select(true); selected++; }
+                ActiveObjects = true,
+                HiddenObjects = false,
+                LockedObjects = true,
+                DeletedObjects = false,
+                IncludeLights = true,
+                IncludeGrips = false,
+            };
+
+            if (!string.IsNullOrEmpty(geometryType))
+                settings.ObjectTypeFilter = ParseObjectType(geometryType);
+
+            if (!string.IsNullOrEmpty(layer))
+            {
+                var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
+                if (idx >= 0)
+                    settings.LayerIndexFilter = idx;
+                else
+                    warning = $"Layer not found: {layer}";
             }
 
-            if (names.Length > 0 || !string.IsNullOrEmpty(layer) || !string.IsNullOrEmpty(geometryType))
+            var nameSet = names.ToHashSet(StringComparer.Ordinal);
+
+            foreach (var obj in doc.Objects.GetObjectList(settings))
             {
-                var settings = new ObjectEnumeratorSettings
-                {
-                    ActiveObjects = true,
-                    HiddenObjects = false,
-                    LockedObjects = true,
-                    DeletedObjects = false,
-                    IncludeLights = true,
-                    IncludeGrips = false,
-                };
-
-                if (!string.IsNullOrEmpty(geometryType))
-                    settings.ObjectTypeFilter = ParseObjectType(geometryType);
-
-                if (!string.IsNullOrEmpty(layer))
-                {
-                    var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
-                    if (idx >= 0)
-                        settings.LayerIndexFilter = idx;
-                    else
-                        warning = $"Layer not found: {layer}";
-                }
-
-                var nameSet = names.ToHashSet(StringComparer.Ordinal);
-
-                foreach (var obj in doc.Objects.GetObjectList(settings))
-                {
-                    if (nameSet.Count > 0 && !nameSet.Contains(obj.Name ?? string.Empty)) continue;
-                    if (guidSet.Contains(obj.Id)) continue;
-                    obj.Select(true);
-                    selected++;
-                }
+                if (nameSet.Count > 0 && !nameSet.Contains(obj.Name ?? string.Empty)) continue;
+                if (guidSet.Contains(obj.Id)) continue;
+                obj.Select(true);
+                selected++;
             }
+        }
 
-            doc.Views.Redraw();
-        });
+        doc.Views.Redraw();
 
         return warning is null
             ? $"Selected {selected} object(s)."

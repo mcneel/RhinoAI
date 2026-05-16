@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using RhMcp.Router;
 using RhMcp.Router.Tools.Generated;
 
-var config = RouterConfig.FromArgs(args);
+RouterConfig config = RouterConfig.FromArgs(args);
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Stdio MCP servers must not log to stdout — that's the JSON-RPC channel.
 // Route all logging to stderr.
@@ -19,6 +19,7 @@ builder.Services.AddSingleton(config);
 builder.Services.AddSingleton<RhinoLocator>();
 builder.Services.AddSingleton<RhinoControlClient>();
 builder.Services.AddSingleton<RhinoCrashReportFinder>();
+builder.Services.AddSingleton<SlotStore>();
 builder.Services.AddSingleton<RhinoManager>();
 builder.Services.AddSingleton<ProxyDispatcher>();
 builder.Services.AddHttpClient();

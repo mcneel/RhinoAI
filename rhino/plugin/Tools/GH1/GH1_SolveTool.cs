@@ -8,13 +8,13 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class GH1_SolveTool
 {
-    [McpServerTool(Name = "solve_graph")]
+    [McpServerTool(Name = "g1_solve_graph")]
     [Description("Solves the active GH canvas. zoom_views controls whether Rhino viewports zoom to the new preview: true=always, false=never, null=auto (zoom only when nothing was previewed before the solve).")]
     public static string Solve(
         RhinoDoc rhinoDoc,
         [Description("Auto-zoom every Rhino viewport to the GH preview after solving. true=always, false=never, null=zoom only when nothing was visible pre-solve.")] bool? zoom_views = null)
     {
-        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
+        if (!GH1_Utils.TryGetOrCreateDoc(rhinoDoc, out GH_Document ghDoc)) return "Could not get GHDoc";
 
         int activeCount = ghDoc.ActiveObjects().Count;
         if (activeCount <= 0)
@@ -27,13 +27,10 @@ public static class GH1_SolveTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                ghDoc.NewSolution(true);
+            ghDoc.NewSolution(true);
 
-                bool shouldZoom = zoom_views ?? !wasPreviewVisible;
-                if (shouldZoom) ZoomViewsToPreview(rhinoDoc, ghDoc);
-            });
+            bool shouldZoom = zoom_views ?? !wasPreviewVisible;
+            if (shouldZoom) ZoomViewsToPreview(rhinoDoc, ghDoc);
         }
         catch (Exception ex)
         {

@@ -14,16 +14,16 @@ public static class GH1_PlaceComponentTool
     public record struct Candidate(Guid Guid, string Name, string Category, string SubCategory);
     public record struct AmbiguousResult(string Error, Candidate[] Candidates);
 
-    [McpServerTool(Name = "place_component")]
+    [McpServerTool(Name = "g1_place_component")]
     [Description("Place a Grasshopper component onto the active GH1 canvas. 'selector' may be a Guid (proxy id) or a component name. If multiple components share the name, returns an ambiguity payload listing candidates.")]
     public static string Place(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Component Guid (proxy id) or component Name (case-insensitive).")] string selector,
         [Description("Canvas X position in pixels.")] float x = 100,
         [Description("Canvas Y position in pixels.")] float y = 100,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
-        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document doc))
+        if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
             return "Could not get or create GH document";
 
         IGH_DocumentObject? obj;
@@ -60,12 +60,9 @@ public static class GH1_PlaceComponentTool
         if (obj.Attributes is null) return $"Failed to create attributes for '{selector}'";
         obj.Attributes.Pivot = new PointF(x, y);
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.AddObject(obj, false);
-            if (solve) doc.NewSolution(false);
-            GH1_Utils.ZoomExtents();
-        });
+        doc.AddObject(obj, false);
+        if (solve) doc.NewSolution(false);
+        GH1_Utils.ZoomExtents();
 
         return JsonSerializer.Serialize(new PlacedInfo(
             obj.InstanceGuid,

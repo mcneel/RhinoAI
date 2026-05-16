@@ -9,7 +9,7 @@ public static class GH1_ClearCanvasTool
 {
     public record struct ClearResult(int Removed);
 
-    [McpServerTool(Name = "clear_canvas")]
+    [McpServerTool(Name = "g1_clear_canvas")]
     [Description("Remove every object from the active GH1 canvas. Destructive — requires confirm=true.")]
     public static string Clear(
         RhinoDoc _,
@@ -24,12 +24,9 @@ public static class GH1_ClearCanvasTool
         var snapshot = doc.Objects.ToList();
         int count = snapshot.Count;
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.RemoveObjects(snapshot, false);
-            if (solve) doc.NewSolution(true);
-            GH1_Utils.Redraw();
-        });
+        doc.RemoveObjects(snapshot, false);
+        if (solve) doc.NewSolution(true);
+        GH1_Utils.Redraw();
 
         return JsonSerializer.Serialize(new ClearResult(count));
     }

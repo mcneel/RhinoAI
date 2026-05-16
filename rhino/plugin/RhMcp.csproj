@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <!-- Rhino 9: net8.0 -->
+    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <LangVersion>12</LangVersion>
     <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -11,10 +12,19 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>RhMcp</RootNamespace>
     <AssemblyName>RhinoMcpPlatform</AssemblyName>
+    <!--
+      Segment bin/ by RhinoTarget so R8 and R9 builds coexist. Without this,
+      flipping RhinoTarget clobbers the previous yak staging dir and Rhino 8
+      ends up with a Rhino 9 build (or vice versa). obj/ is intentionally
+      shared — segmenting it from a csproj is fiddly with SDK-style projects,
+      and the cost is just a NuGet restore + recompile when flipping targets.
+    -->
+    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)/</BaseOutputPath>
+    <YakStagingDir>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)/$(Configuration)</YakStagingDir>
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.2.0</Version>
+    <Version>0.1.0</Version>
     <Title>Rhino MCP Platform</Title>
     <Company>McNeel</Company>
     <Description>MCP server plugin for Rhino</Description>
@@ -22,20 +32,36 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
-    <PackageReference Include="Grasshopper2" Version="2.0.9225-wip.14825" />
-    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
+    <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" />
+    <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+    <Compile Remove="Tools/GH2/**/*.cs" />
+    <Compile Remove="Resources/GH2/**/*.cs" />
   </ItemGroup>
 
   <!--
     Yak for a net8.0 plugin is built from the parent of the TFM folder, so the
-    manifest and icon live one level up from $(OutputPath). The .yak ends up at
-    bin/$(Configuration)/ alongside the net8.0/ content directory.
+    manifest and icon live in $(YakStagingDir) (sibling to `net8.0/`). We use
+    that explicit path rather than $(OutputPath)../ because TargetFrameworks
+    (plural) enables cross-targeting: AfterTargets="Build" can run in the outer
+    context where $(OutputPath) is $(YakStagingDir)/ (no TFM), which makes
+    `$(OutputPath)../` resolve to `bin/$(RhinoTarget)/` — one level too high.
   -->
   <Target Name="BuildYakPackage" AfterTargets="Build">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)../" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)../" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(YakStagingDir)/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(YakStagingDir)/" SkipUnchangedFiles="true" />
   </Target>
 
   <!--
@@ -54,9 +80,6 @@
   </PropertyGroup>
 
   <!--
-    Bundle one published router per RID under `router/<rid>/`. The router lives in
-    a subdirectory (not the plugin root) to keep its single-file extraction and
-    deps isolated from the plugin's bundled ASP.NET Core dlls.
   -->
   <Target Name="BundleRouter" AfterTargets="Build">
     <ItemGroup>
@@ -70,18 +93,16 @@
       which NETSDK1083 then rejects. Exec batches per item on %() in Command.
     -->
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router"
-          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) --output &quot;bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish&quot; --nologo" />
-    <ItemGroup>
-      <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/net8.0/%(_RouterRid.Identity)/publish/**/*">
-        <Rid>%(_RouterRid.Identity)</Rid>
-      </_RouterPublishedFile>
-    </ItemGroup>
-    <Copy SourceFiles="@(_RouterPublishedFile)"
-          DestinationFiles="@(_RouterPublishedFile->'$(OutputPath)router/%(Rid)/%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"
-          Condition="'@(_RouterPublishedFile)' != ''" />
+          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;$(YakStagingDir)/router/%(_RouterRid.Identity)&quot; --nologo" />
+    <!--
+      Strip debug artifacts after publish. The router's Release config sets
+      NativeDebugSymbols=false / DebugType=none, but NativeAOT's macOS publish
+      still emits a .dsym bundle (the linker strip step ignores those flags).
+      Delete is idempotent so non-existent paths are fine on the other RID.
+    -->
+    <RemoveDir Directories="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
+    <Delete Files="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
     <Message Importance="high" Text="[Rhino MCP] Bundled router RIDs: $(RouterRids)" />
-    <Warning Text="[Rhino MCP] No router publish output found for RIDs: $(RouterRids)" Condition="'@(_RouterPublishedFile)' == ''" />
   </Target>
 
   <!--
@@ -138,7 +159,13 @@
           $(_AspNetCorePath)/Microsoft.Extensions.Identity*.dll
         " />
     </ItemGroup>
-    <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <!--
+      Hardcode the net8.0/ destination instead of using $(OutputPath). Same
+      cross-targeting quirk as BuildYakPackage: at outer-build context with
+      TargetFrameworks plural, $(OutputPath) is $(YakStagingDir)/ (no TFM
+      subdir), which would scatter ~100 framework DLLs at the staging root.
+    -->
+    <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(YakStagingDir)/net8.0/" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core from $(_AspNetCorePath) (subset filter applied)" />
   </Target>
 

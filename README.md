@@ -52,3 +52,17 @@ Ask questions, post discussions and ideas to the [Rhino Discourse forums](https:
 # What can an MCP Server do?
 
 MCP Servers are a new way of controlling your programs. They let you control Rhino but using written human language. You can ask about the model, have your AI agent create things in the model, or organise it for you. The capabilities are endless.
+
+## What can the RhinoMCP Server do?
+
+### Rhino
+- Model 3d geometry given an image
+
+### Grasshopper 1/2
+- Create scripts
+- Upgrade GH1 scripts to 2
+- De-spaghettify scripts
+- Simplify scripts
+
+### Both
+- Create C#/py scripts for you
