@@ -60,12 +60,9 @@ public static class GH1_PlaceComponentTool
         if (obj.Attributes is null) return $"Failed to create attributes for '{selector}'";
         obj.Attributes.Pivot = new PointF(x, y);
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.AddObject(obj, false);
-            if (solve) doc.NewSolution(false);
-            GH1_Utils.ZoomExtents();
-        });
+        doc.AddObject(obj, false);
+        if (solve) doc.NewSolution(false);
+        GH1_Utils.ZoomExtents();
 
         return JsonSerializer.Serialize(new PlacedInfo(
             obj.InstanceGuid,

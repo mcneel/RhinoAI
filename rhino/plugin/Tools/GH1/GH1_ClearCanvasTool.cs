@@ -24,12 +24,9 @@ public static class GH1_ClearCanvasTool
         var snapshot = doc.Objects.ToList();
         int count = snapshot.Count;
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.RemoveObjects(snapshot, false);
-            if (solve) doc.NewSolution(true);
-            GH1_Utils.Redraw();
-        });
+        doc.RemoveObjects(snapshot, false);
+        if (solve) doc.NewSolution(true);
+        GH1_Utils.Redraw();
 
         return JsonSerializer.Serialize(new ClearResult(count));
     }

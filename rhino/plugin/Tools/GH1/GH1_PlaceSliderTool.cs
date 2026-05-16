@@ -44,12 +44,9 @@ public static class GH1_PlaceSliderTool
 
         slider.Attributes.Pivot = new PointF(x, y);
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.AddObject(slider, false);
-            if (solve) doc.NewSolution(false);
-            GH1_Utils.ZoomExtents();
-        });
+        doc.AddObject(slider, false);
+        if (solve) doc.NewSolution(false);
+        GH1_Utils.ZoomExtents();
 
         return JsonSerializer.Serialize(new SliderInfo(
             slider.InstanceGuid,

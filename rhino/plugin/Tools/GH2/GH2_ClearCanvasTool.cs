@@ -24,14 +24,11 @@ public static class GH2_ClearCanvasTool
         var snapshot = doc.Objects.Forwards.ToList();
         int count = snapshot.Count;
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            foreach (var obj in snapshot)
-                doc.Objects.Remove(obj.InstanceId);
+        foreach (var obj in snapshot)
+            doc.Objects.Remove(obj.InstanceId);
 
-            if (solve) doc.Solution.Start();
-            GH2_Utils.Redraw();
-        });
+        if (solve) doc.Solution.Start();
+        GH2_Utils.Redraw();
 
         return JsonSerializer.Serialize(new ClearResult(count));
     }

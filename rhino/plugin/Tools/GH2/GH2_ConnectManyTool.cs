@@ -27,14 +27,11 @@ public static class GH2_ConnectManyTool
 
         var results = new WireResult[wires.Length];
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            for (int i = 0; i < wires.Length; i++)
-                results[i] = WireOne(doc, i, wires[i]);
+        for (int i = 0; i < wires.Length; i++)
+            results[i] = WireOne(doc, i, wires[i]);
 
-            if (solve) doc.Solution.Start();
-            GH2_Utils.Redraw();
-        });
+        if (solve) doc.Solution.Start();
+        GH2_Utils.Redraw();
 
         int okCount = 0;
         for (int i = 0; i < results.Length; i++) if (results[i].Ok) okCount++;

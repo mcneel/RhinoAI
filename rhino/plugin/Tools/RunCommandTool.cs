@@ -9,7 +9,7 @@ public static class RunCommandTool
         [Description("Rhino command string to execute")] string command)
     {
         RhinoApp.CommandWindowCaptureEnabled = true;
-        RhinoApp.InvokeAndWait(() => RhinoApp.RunScript(command, false));
+        RhinoApp.RunScript(command, false);
         var lines = RhinoApp.CapturedCommandWindowStrings(true);
         RhinoApp.CommandWindowCaptureEnabled = false;
         return lines is { Length: > 0 } ? string.Join("\n", lines) : "Done.";

@@ -27,11 +27,8 @@ public static class ZoomToObjectTool
         var vp = doc.Views.ActiveView?.ActiveViewport
             ?? throw new InvalidOperationException("No active viewport.");
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            vp.ZoomBoundingBox(bb);
-            doc.Views.Redraw();
-        });
+        vp.ZoomBoundingBox(bb);
+        doc.Views.Redraw();
 
         return $"Zoomed to {ids.Length} object(s).";
     }

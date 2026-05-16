@@ -15,7 +15,7 @@ public static class GH2_StartTool
         if (RhinoApp.Version.Major < 9) return "G2 is not installed";
         try
         {
-            RhinoApp.InvokeAndWait(() => RhinoApp.RunScript("_G2", true));
+            RhinoApp.RunScript("_G2", true);
             return Verify();
         }
         catch (Exception ex)

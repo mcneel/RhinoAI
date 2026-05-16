@@ -35,12 +35,9 @@ public static class GH2_PlaceSliderTool
         var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
         var slider = new NumberSliderObject(name ?? "num", number);
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.Objects.Add(slider, new PointF(x, y));
-            if (solve) doc.Solution.Start();
-            GH2_Utils.Redraw();
-        });
+        doc.Objects.Add(slider, new PointF(x, y));
+        if (solve) doc.Solution.Start();
+        GH2_Utils.Redraw();
 
         var current = slider.InternalNumber;
         return JsonSerializer.Serialize(new SliderInfo(

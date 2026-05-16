@@ -48,12 +48,9 @@ public static class GH2_ConnectTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                Connections.Connect(srcParam!, dstParam!);
-                if (solve) doc.Solution.Start();
-                GH2_Utils.Redraw();
-            });
+            Connections.Connect(srcParam!, dstParam!);
+            if (solve) doc.Solution.Start();
+            GH2_Utils.Redraw();
         }
         catch (Exception ex)
         {

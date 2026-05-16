@@ -18,10 +18,7 @@ public static class GH2_SolveTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                ghDoc.Solution.StartWait();
-            });
+            ghDoc.Solution.StartWait();
         }
         catch (Exception ex)
         {

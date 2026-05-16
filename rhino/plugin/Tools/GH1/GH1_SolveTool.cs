@@ -27,13 +27,10 @@ public static class GH1_SolveTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                ghDoc.NewSolution(true);
+            ghDoc.NewSolution(true);
 
-                bool shouldZoom = zoom_views ?? !wasPreviewVisible;
-                if (shouldZoom) ZoomViewsToPreview(rhinoDoc, ghDoc);
-            });
+            bool shouldZoom = zoom_views ?? !wasPreviewVisible;
+            if (shouldZoom) ZoomViewsToPreview(rhinoDoc, ghDoc);
         }
         catch (Exception ex)
         {

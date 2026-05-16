@@ -58,12 +58,9 @@ public static class GH2_PlaceComponentTool
             if (obj is null) return $"Failed to instantiate '{selector}'";
         }
 
-        RhinoApp.InvokeAndWait(() =>
-        {
-            doc.Objects.Add(obj, new PointF(x, y));
-            if (solve) doc.Solution.Start();
-            GH2_Utils.Redraw();
-        });
+        doc.Objects.Add(obj, new PointF(x, y));
+        if (solve) doc.Solution.Start();
+        GH2_Utils.Redraw();
 
         return JsonSerializer.Serialize(new PlacedInfo(
             obj.InstanceId,

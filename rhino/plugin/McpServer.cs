@@ -37,15 +37,20 @@ internal sealed class McpServer : IDisposable
 
             builder.Services.AddSingleton(doc);
 
+            var asm = typeof(McpServer).Assembly;
+            var optOut = MainThreadFilter.ScanOptOut(asm);
+
             var mcp = builder.Services
                 .AddMcpServer(o =>
                 {
                     o.ServerInfo = new() { Name = "rhino-mcp", Version = "0.1.0" };
                 })
                 .WithHttpTransport(o => o.Stateless = true)
-                .WithToolsFromAssembly(typeof(McpServer).Assembly)
-                .WithResourcesFromAssembly(typeof(McpServer).Assembly)
-                .WithPromptsFromAssembly(typeof(McpServer).Assembly);
+                .WithToolsFromAssembly(asm)
+                .WithResourcesFromAssembly(asm)
+                .WithPromptsFromAssembly(asm);
+
+            mcp.WithRequestFilters(f => f.AddCallToolFilter(MainThreadFilter.Create(optOut)));
 
 #if DEBUG
             mcp.WithRequestFilters(f => f.AddCallToolFilter(DebugErrorFilter.Filter));

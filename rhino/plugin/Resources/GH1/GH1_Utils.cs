@@ -12,16 +12,13 @@ public static class GH1_Utils
     doc = default!;
     if (Instances.ActiveCanvas is null)
     {
-      RhinoApp.InvokeAndWait(() => RhinoApp.RunScript("_Grasshopper", true));
+      RhinoApp.RunScript("_Grasshopper", true);
       if (Instances.ActiveCanvas is null) return false;
     }
 
     var canvas = Instances.ActiveCanvas;
 
-    RhinoApp.InvokeAndWait(() =>
-    {
-      canvas.Document ??= new GH_Document();
-    });
+    canvas.Document ??= new GH_Document();
     doc = canvas.Document;
     return doc is not null;
   }

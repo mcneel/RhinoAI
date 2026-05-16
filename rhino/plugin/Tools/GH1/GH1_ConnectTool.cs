@@ -47,12 +47,9 @@ public static class GH1_ConnectTool
 
         try
         {
-            RhinoApp.InvokeAndWait(() =>
-            {
-                dstParam!.AddSource(srcParam);
-                if (solve) doc.NewSolution(false);
-                GH1_Utils.Redraw();
-            });
+            dstParam!.AddSource(srcParam);
+            if (solve) doc.NewSolution(false);
+            GH1_Utils.Redraw();
         }
         catch (Exception ex)
         {
