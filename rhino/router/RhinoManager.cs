@@ -136,12 +136,31 @@ public class RhinoManager(
                 log.LogInformation("Spawning Rhino {Version} as slot '{Slot}' on port {Port} (exe: {Exe})",
                     version, slotId, port, rhinoExe);
                 var proc = LaunchWindows(rhinoExe, port);
-                if (!WaitForPort(port, TimeSpan.FromSeconds(SpawnTimeoutSeconds)))
+                switch (WaitForPort(port, TimeSpan.FromSeconds(SpawnTimeoutSeconds), proc))
                 {
-                    try { proc.Kill(); } catch { /* best effort */ }
-                    throw new TimeoutException(
-                        $"Rhino {version} (pid {proc.Id}) did not bind port {port} within {SpawnTimeoutSeconds}s. " +
-                        $"Possible causes: plugin missing, plugin failed to init, license dialog, slow disk.");
+                    case WaitResult.Bound:
+                        break;
+                    case WaitResult.ProcessDied:
+                        throw new TimeoutException(
+                            $"Rhino {version} (pid {proc.Id}) exited with code {proc.ExitCode} before binding port {port}. " +
+                            $"Possible causes: startup crash, missing runtime dependency, license/EULA refused, " +
+                            $"plugin load failure.");
+                    case WaitResult.Timeout:
+                        // Re-read MainWindowHandle: it's cached on first access, so a
+                        // refresh covers the case where the window appeared after we
+                        // first observed the Process. A zero handle here means Rhino
+                        // is running headless from our perspective — usually because
+                        // the parent process tree (e.g. an IDE extension host) hasn't
+                        // given the child interactive-desktop access.
+                        proc.Refresh();
+                        bool hasWindow = proc.MainWindowHandle != IntPtr.Zero;
+                        try { proc.Kill(); } catch { /* best effort */ }
+                        throw new TimeoutException(hasWindow
+                            ? $"Rhino {version} (pid {proc.Id}) has a main window but did not bind port {port} within {SpawnTimeoutSeconds}s. " +
+                              $"Possible causes: license/EULA dialog blocking, plugin failed to load, runscript stuck."
+                            : $"Rhino {version} (pid {proc.Id}) is running but never created a main window. " +
+                              $"Likely the router was launched from a process context without interactive-desktop access " +
+                              $"(IDE extension host, service, or session-0). Try launching the router from a regular terminal to confirm.");
                 }
                 store.MarkReady(slotId, port, proc.Id);
                 log.LogInformation("Slot '{Slot}' ready: pid {Pid}, port {Port}", slotId, proc.Id, port);
@@ -154,7 +173,7 @@ public class RhinoManager(
                 log.LogInformation("Launching Rhino {Version} as slot '{Slot}' on port {Port} (app: {App})",
                     version, slotId, port, rhinoExe);
                 LaunchMac(rhinoExe, port);
-                if (!WaitForPort(port, TimeSpan.FromSeconds(SpawnTimeoutSeconds)))
+                if (WaitForPort(port, TimeSpan.FromSeconds(SpawnTimeoutSeconds)) != WaitResult.Bound)
                 {
                     throw new TimeoutException(
                         $"Rhino {version} did not bind port {port} within {SpawnTimeoutSeconds}s. " +
@@ -455,17 +474,13 @@ public class RhinoManager(
 
     private static Process LaunchWindows(string rhinoExe, int port)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = rhinoExe,
-            Arguments = $"/nosplash /runscript=\"_StartMCP\"",
-            UseShellExecute = false,
-            WindowStyle = ProcessWindowStyle.Normal,
-        };
-        psi.Environment[PortEnvVar] = port.ToString();
-
-        return Process.Start(psi)
-            ?? throw new InvalidOperationException($"Process.Start returned null for {rhinoExe}");
+        // CreateProcess + CREATE_BREAKAWAY_FROM_JOB so Rhino escapes the Job
+        // Object the router inherited from its parent (Claude Code / VS Code
+        // extension host). See WinSpawn for the rationale.
+        return WinSpawn.Start(
+            rhinoExe,
+            "/nosplash /runscript=\"_StartMCP\"",
+            new Dictionary<string, string> { [PortEnvVar] = port.ToString() });
     }
 
     // Launches Rhino.app via `open -a`. We don't get a usable Process handle back —
@@ -526,15 +541,23 @@ public class RhinoManager(
         return 0;
     }
 
-    private static bool WaitForPort(int port, TimeSpan timeout)
+    private enum WaitResult { Bound, ProcessDied, Timeout }
+
+    // Wait until `port` is accepting connections. When `proc` is supplied we
+    // also short-circuit on process exit so the caller can distinguish a crash
+    // from a slow startup — the Mac path doesn't have a Process handle (we use
+    // `open -a` and resolve the pid via lsof after bind), so it passes null and
+    // only sees Bound/Timeout.
+    private static WaitResult WaitForPort(int port, TimeSpan timeout, Process? proc = null)
     {
         var deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
         {
-            if (IsPortListening(port)) return true;
+            if (IsPortListening(port)) return WaitResult.Bound;
+            if (proc is not null && proc.HasExited) return WaitResult.ProcessDied;
             Thread.Sleep(500);
         }
-        return false;
+        return WaitResult.Timeout;
     }
 
     private static bool IsPortListening(int port)
