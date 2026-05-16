@@ -37,6 +37,12 @@
     <SelfContained>true</SelfContained>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <NativeDebugSymbols>false</NativeDebugSymbols>
+  </PropertyGroup>
+
   <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from
        the router's default **/*.cs glob so they only compile in that project. -->
   <ItemGroup>

@@ -86,9 +86,10 @@ Then tell the user to reload";
     private static string RouterPath()
     {
         string pluginDir = Path.GetDirectoryName(typeof(RhMcpPlugin).Assembly.Location) ?? string.Empty;
+        string routerRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", "router"));
         string rid = GetRid();
         string exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "rhino-mcp-router.exe" : "rhino-mcp-router";
-        return Path.Combine(pluginDir, "router", rid, exe);
+        return Path.Combine(routerRoot, rid, exe);
     }
 
     private static string GetRid()

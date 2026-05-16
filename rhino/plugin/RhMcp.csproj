@@ -44,12 +44,15 @@
 
   <!--
     Yak for a net8.0 plugin is built from the parent of the TFM folder, so the
-    manifest and icon live one level up from $(OutputPath). The .yak ends up at
-    bin/$(Configuration)/ alongside the net8.0/ content directory.
+    manifest and icon live in `bin/$(Configuration)/` (sibling to `net8.0/`).
+    We use an explicit path rather than $(OutputPath)../ because TargetFrameworks
+    (plural) enables cross-targeting: AfterTargets="Build" can run in the outer
+    context where $(OutputPath) is `bin/$(Configuration)/` (no TFM), which makes
+    `$(OutputPath)../` resolve to `bin/` — one level too high.
   -->
   <Target Name="BuildYakPackage" AfterTargets="Build">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(OutputPath)../" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(OutputPath)../" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(MSBuildProjectDirectory)/bin/$(Configuration)/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/manifest.yml" DestinationFolder="$(MSBuildProjectDirectory)/bin/$(Configuration)/" SkipUnchangedFiles="true" />
   </Target>
 
   <!--
@@ -68,9 +71,6 @@
   </PropertyGroup>
 
   <!--
-    Bundle one published router per RID under `router/<rid>/`. The router lives in
-    a subdirectory (not the plugin root) to keep its single-file extraction and
-    deps isolated from the plugin's bundled ASP.NET Core dlls.
   -->
   <Target Name="BundleRouter" AfterTargets="Build">
     <ItemGroup>
@@ -84,18 +84,16 @@
       which NETSDK1083 then rejects. Exec batches per item on %() in Command.
     -->
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router"
-          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;bin/$(Configuration)/$(RhinoTarget)/net8.0/%(_RouterRid.Identity)/publish&quot; --nologo" />
-    <ItemGroup>
-      <_RouterPublishedFile Include="$(MSBuildProjectDirectory)/../router/bin/$(Configuration)/$(RhinoTarget)/net8.0/%(_RouterRid.Identity)/publish/**/*">
-        <Rid>%(_RouterRid.Identity)</Rid>
-      </_RouterPublishedFile>
-    </ItemGroup>
-    <Copy SourceFiles="@(_RouterPublishedFile)"
-          DestinationFiles="@(_RouterPublishedFile->'$(OutputPath)router/%(Rid)/%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"
-          Condition="'@(_RouterPublishedFile)' != ''" />
+          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;$(MSBuildProjectDirectory)/bin/$(Configuration)/router/%(_RouterRid.Identity)&quot; --nologo" />
+    <!--
+      Strip debug artifacts after publish. The router's Release config sets
+      NativeDebugSymbols=false / DebugType=none, but NativeAOT's macOS publish
+      still emits a .dsym bundle (the linker strip step ignores those flags).
+      Delete is idempotent so non-existent paths are fine on the other RID.
+    -->
+    <RemoveDir Directories="@(_RouterRid->'$(MSBuildProjectDirectory)/bin/$(Configuration)/router/%(Identity)/rhino-mcp-router.dsym')" />
+    <Delete Files="@(_RouterRid->'$(MSBuildProjectDirectory)/bin/$(Configuration)/router/%(Identity)/rhino-mcp-router.pdb')" />
     <Message Importance="high" Text="[Rhino MCP] Bundled router RIDs: $(RouterRids)" />
-    <Warning Text="[Rhino MCP] No router publish output found for RIDs: $(RouterRids)" Condition="'@(_RouterPublishedFile)' == ''" />
   </Target>
 
   <!--
@@ -152,7 +150,13 @@
           $(_AspNetCorePath)/Microsoft.Extensions.Identity*.dll
         " />
     </ItemGroup>
-    <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <!--
+      Hardcode the net8.0/ destination instead of using $(OutputPath). Same
+      cross-targeting quirk as BuildYakPackage: at outer-build context with
+      TargetFrameworks plural, $(OutputPath) is `bin/$(Configuration)/` (no
+      TFM subdir), which would scatter ~100 framework DLLs at the Release root.
+    -->
+    <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(MSBuildProjectDirectory)/bin/$(Configuration)/net8.0/" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core from $(_AspNetCorePath) (subset filter applied)" />
   </Target>
 
