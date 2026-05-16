@@ -123,12 +123,12 @@
       "label": "install yak (Rhino 8)",
       "type": "shell",
       "dependsOn": "pack yak (R8)",
-      "args": ["install", "*.yak"],
       "windows": {
-        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 8/System/Yak.exe' install $_.Name }"
       },
       "osx": {
-        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak",
+        "args": ["install", "*.yak"]
       },
       "linux": {
         "command": "echo",
@@ -148,12 +148,12 @@
       "label": "install yak (WIP)",
       "type": "shell",
       "dependsOn": "pack yak (R9)",
-      "args": ["install", "*.yak"],
       "windows": {
-        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe"
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 WIP/System/Yak.exe' install $_.Name }"
       },
       "osx": {
-        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak"
+        "command": "/Applications/RhinoWIP.app/Contents/Resources/bin/yak",
+        "args": ["install", "*.yak"]
       },
       "linux": {
         "command": "echo",
