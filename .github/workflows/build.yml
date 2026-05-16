@@ -15,7 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-        configuration: [Debug, Release]
         rhino_target: [R8, R9]
         include:
           # router_rids uses %3B to escape ; — MSBuild's -p: switch otherwise
@@ -53,32 +52,29 @@ jobs:
 
       - name: Build router (framework-dependent, for tests)
         if: matrix.rhino_target == 'R9'
-        run: dotnet build rhino/router/Router.csproj --configuration ${{ matrix.configuration }} --no-restore
+        run: dotnet build rhino/router/Router.csproj --configuration Release --no-restore
 
       - name: Test router
         if: matrix.rhino_target == 'R9'
-        run: dotnet test tests/router/Router.Tests.csproj --configuration ${{ matrix.configuration }} --verbosity normal
+        run: dotnet test tests/router/Router.Tests.csproj --configuration Release --verbosity normal
 
       - name: Build plugin (publishes router self-contained for RIDs ${{ matrix.router_rids }} into yak output)
         shell: bash
-        run: dotnet build rhino/plugin/RhMcp.csproj --configuration ${{ matrix.configuration }} '-p:RouterRids=${{ matrix.router_rids }}' '-p:RhinoTarget=${{ matrix.rhino_target }}'
+        run: dotnet build rhino/plugin/RhMcp.csproj --configuration Release '-p:RouterRids=${{ matrix.router_rids }}' '-p:RhinoTarget=${{ matrix.rhino_target }}'
 
       - name: Download yak CLI
-        if: matrix.configuration == 'Release'
         shell: bash
         run: |
           curl -fsSL -o "${{ matrix.yak_bin }}" "${{ matrix.yak_url }}"
           chmod +x "${{ matrix.yak_bin }}"
 
       - name: Build yak package (${{ matrix.yak_platform }} / ${{ matrix.rhino_target }})
-        if: matrix.configuration == 'Release'
         shell: bash
         run: |
           "$GITHUB_WORKSPACE/${{ matrix.yak_bin }}" build --platform ${{ matrix.yak_platform }}
         working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}/Release
 
       - name: Upload yak artifact
-        if: matrix.configuration == 'Release'
         uses: actions/upload-artifact@v5
         with:
           name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.yak_platform }}
