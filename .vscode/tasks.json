@@ -24,7 +24,8 @@
       "args": [
         "build",
         "-clp:NoSummary",
-        "${workspaceFolder}/rhino/router/Router.csproj"
+        "${workspaceFolder}/rhino/router/Router.csproj",
+        "-p:RhinoTarget=R9"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -182,24 +183,11 @@
       "group": "build"
     },
     {
-      "label": "open claude tab",
-      "type": "shell",
-      "command": "echo",
-      "args": ["${command:claude-vscode.newConversation}"],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "silent",
-        "echo": false,
-        "panel": "dedicated"
-      }
-    },
-    {
-      "label": "router: build + register + open claude",
+      "label": "router: build + register",
       "dependsOrder": "sequence",
       "dependsOn": [
         "build router",
         "register router with claude",
-        "open claude tab"
       ],
       "problemMatcher": []
     }

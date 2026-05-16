@@ -30,7 +30,7 @@
       "name": "Router - launch",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "router: build + register + open claude",
+      "preLaunchTask": "router: build + register",
       "program": "${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.dll",
       "args": [],
       "cwd": "${workspaceFolder}/rhino/router",

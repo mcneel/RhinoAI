@@ -123,7 +123,17 @@ public class ProxyDispatcher(
     // same SpawnErrorPayload shape SpawnSlotTool emits. Codes are kebab-case so
     // an agent can branch on them. Messages always end with what the agent
     // should do next.
-    private SpawnErrorPayload DiagnoseFailure(Exception ex, ChildRhino? child, string toolName) => ex switch
+    private SpawnErrorPayload DiagnoseFailure(Exception ex, ChildRhino? child, string toolName) =>
+        DiagnoseFailure(ex, child, toolName, crashFinder);
+
+    // Static overload used directly by tests so we don't need to spin up a full
+    // ProxyDispatcher (which depends on RhinoManager). Production calls the
+    // instance overload above which forwards the injected crashFinder.
+    internal static SpawnErrorPayload DiagnoseFailure(
+        Exception ex,
+        ChildRhino? child,
+        string toolName,
+        RhinoCrashReportFinder crashFinder) => ex switch
     {
         SlotNotFoundException snf => new(
             "slot_not_found",
@@ -173,11 +183,22 @@ public class ProxyDispatcher(
         public string SlotId { get; } = slotId;
     }
 
+    internal static bool IsVersionCompatible(string actual, string required)
+    {
+        if (actual == required) return true;
+        return (actual, required) switch
+        {
+            ("9", "WIP") => true,
+            ("WIP", "9") => true,
+            _ => false,
+        };
+    }
+
     // Detect transport-level failures (DNS, refused, reset, timeout) — these mean
     // Rhino's listener isn't there to respond, not that Rhino responded with an
     // error. .NET 8 exposes HttpRequestError; older causes (SocketException) are
     // also unwrapped here for belt-and-braces.
-    private static bool IsConnectionFailure(HttpRequestException ex)
+    internal static bool IsConnectionFailure(HttpRequestException ex)
     {
         if (ex.HttpRequestError == HttpRequestError.ConnectionError) return true;
         if (ex.HttpRequestError == HttpRequestError.SecureConnectionError) return true;
@@ -189,7 +210,7 @@ public class ProxyDispatcher(
         return false;
     }
 
-    private static string ExtractResult(string responseBody, string slotId, string toolName)
+    internal static string ExtractResult(string responseBody, string slotId, string toolName)
     {
         // The plugin's Stateless HTTP transport returns either:
         //   - A bare JSON-RPC object: {"jsonrpc":"2.0","id":"...","result":{...}}
@@ -219,7 +240,7 @@ public class ProxyDispatcher(
         return ExtractFromJsonRpc(responseBody, slotId, toolName);
     }
 
-    private static string ExtractFromJsonRpc(string rpcJson, string slotId, string toolName)
+    internal static string ExtractFromJsonRpc(string rpcJson, string slotId, string toolName)
     {
         using var doc = JsonDocument.Parse(rpcJson);
         var root = doc.RootElement;

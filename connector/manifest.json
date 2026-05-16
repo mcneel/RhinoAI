@@ -35,7 +35,7 @@
       "type": "string",
       "title": "Rhino Version",
       "description": "Which Rhino to launch when a tool needs one. Accepted values: 8, 9, WIP.",
-      "required": true,
+      "required": false,
       "default": "8"
     }
   },

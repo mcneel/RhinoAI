@@ -1,8 +1,7 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(claude mcp *)",
-      "mcp__rhino__*"
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

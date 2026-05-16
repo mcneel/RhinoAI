@@ -299,9 +299,9 @@ public class RhinoManager(
     // adoption succeeded. Stale files (port no longer listening) are dropped
     // silently; files for a pid+port we already track are deleted as a no-op so
     // the Mac _router_spawn_listener path remains idempotent.
-    public void ScanAnnouncements()
+    public void ScanAnnouncements(string? dir = null)
     {
-        var dir = Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
+        dir ??= Path.Combine(Path.GetTempPath(), "rhino-mcp-listeners");
         if (!Directory.Exists(dir)) return;
 
         string[] files;
