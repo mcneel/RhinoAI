@@ -12,7 +12,7 @@ public static class GH1_Utils
     doc = default!;
     if (Instances.ActiveCanvas is null)
     {
-      RhinoApp.RunScript("_Grasshopper", true);
+      RhinoApp.RunScript(doc.RuntimeSerialNumber, "_Grasshopper", true);
       if (Instances.ActiveCanvas is null) return false;
     }
 
