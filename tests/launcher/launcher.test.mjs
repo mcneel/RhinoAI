@@ -120,11 +120,11 @@ test("linux reports unsupported platform and exits 1", { skip: isSupported }, ()
 
 test("picks newest pkg-ver under one Rhino major", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.1.0": { binary: "exec" }, "0.1.0": { binary: "exec" } },
+    "9.0": { "0.0.1": { binary: "exec" }, "0.1.0": { binary: "exec" } },
   });
   const r = runLauncher(fake.env, ["-e", "process.exit(0)"]);
   assert.equal(r.status, 0);
-  assert.match(r.stderr, /9\.0\/0\.2\.0\*/);
+  assert.match(r.stderr, /9\.0\/0\.1\.0\*/);
 });
 
 test("numeric semver: 0.10.0 ranks above 0.1.0", { skip: !isSupported }, () => {
