@@ -55,7 +55,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Version>0.2.0</Version>
+    <Version>0.1.0</Version>
     <Title>Rhino MCP Router</Title>
     <Company>McNeel</Company>
     <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>

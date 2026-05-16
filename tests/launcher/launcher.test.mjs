@@ -120,16 +120,16 @@ test("linux reports unsupported platform and exits 1", { skip: isSupported }, ()
 
 test("picks newest pkg-ver under one Rhino major", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.1.0": { binary: "exec" }, "0.2.0": { binary: "exec" } },
+    "9.0": { "0.1.0": { binary: "exec" }, "0.1.0": { binary: "exec" } },
   });
   const r = runLauncher(fake.env, ["-e", "process.exit(0)"]);
   assert.equal(r.status, 0);
   assert.match(r.stderr, /9\.0\/0\.2\.0\*/);
 });
 
-test("numeric semver: 0.10.0 ranks above 0.2.0", { skip: !isSupported }, () => {
+test("numeric semver: 0.10.0 ranks above 0.1.0", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.2.0": { binary: "exec" }, "0.10.0": { binary: "exec" } },
+    "9.0": { "0.1.0": { binary: "exec" }, "0.10.0": { binary: "exec" } },
   });
   const r = runLauncher(fake.env, ["-e", "process.exit(0)"]);
   assert.equal(r.status, 0);
@@ -168,7 +168,7 @@ test("no yak installed → enters install-fallback (exit 0 on stdin EOF)", { ski
 
 test("yak exists but no router binary for this rid → enters install-fallback", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.2.0": { binary: null } },
+    "9.0": { "0.1.0": { binary: null } },
   });
   const r = runLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   assert.equal(r.status, 0);
@@ -187,7 +187,7 @@ test("no yak AND Rhino not installed → enters rhino-missing-fallback", { skip:
 
 test("non-executable binary at picked path → exit 1, not exit 0", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.2.0": { binary: "nonexec" } },
+    "9.0": { "0.1.0": { binary: "nonexec" } },
   });
   const r = runLauncher(fake.env);
   // Was the original bug: error+close both fired and process.exit(code ?? 0)
@@ -198,7 +198,7 @@ test("non-executable binary at picked path → exit 1, not exit 0", { skip: !isS
 
 test("successful child exit (code 0) propagates", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.2.0": { binary: "exec" } },
+    "9.0": { "0.1.0": { binary: "exec" } },
   });
   const r = runLauncher(fake.env, ["-e", "process.exit(0)"]);
   assert.equal(r.status, 0);
@@ -206,7 +206,7 @@ test("successful child exit (code 0) propagates", { skip: !isSupported }, () => 
 
 test("non-zero child exit code propagates verbatim", { skip: !isSupported }, () => {
   const fake = makeFakeRoot({
-    "9.0": { "0.2.0": { binary: "exec" } },
+    "9.0": { "0.1.0": { binary: "exec" } },
   });
   const r = runLauncher(fake.env, ["-e", "process.exit(42)"]);
   assert.equal(r.status, 42);
@@ -339,7 +339,7 @@ test("fallback: no yak → initialize advertises rhino-mcp-installer", { skip: !
 });
 
 test("fallback: yak-but-no-binary path also enters fallback (different reason)", { skip: !isSupported }, async () => {
-  const fake = makeFakeRoot({ "9.0": { "0.2.0": { binary: null } } });
+  const fake = makeFakeRoot({ "9.0": { "0.1.0": { binary: null } } });
   const l = startFallbackLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   try {
     const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);

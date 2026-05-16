@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "rhino-mcp-platform",
   "display_name": "Rhino MCP Platform",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Desktop Connector for Rhino3d and Grasshopper",
   "long_description": "Bridges Claude to Rhino3d and Grasshopper. Requires the Rhino-MCP-Platform Rhino plugin to be installed via Rhino's PackageManager.",
   "author": {

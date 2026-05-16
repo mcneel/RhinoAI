@@ -42,7 +42,7 @@ function findRouter() {
 
   const exe = process.platform === "win32" ? "rhino-mcp-router.exe" : "rhino-mcp-router";
 
-  // Numeric-aware reverse sort: 0.10.0 ranks above 0.2.0 (lexical would invert).
+  // Numeric-aware reverse sort: 0.10.0 ranks above 0.1.0 (lexical would invert).
   const byVersionDesc = (a, b) => b.localeCompare(a, undefined, { numeric: true });
 
   const considered = [];
