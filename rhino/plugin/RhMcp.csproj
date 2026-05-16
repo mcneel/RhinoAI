@@ -32,9 +32,9 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
-    <PackageReference Include="RhinoCommon" Version="9.0.26135.9190-dujour" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="9.0.26135.9190-dujour" />
-    <PackageReference Include="Grasshopper2" Version="9.0.26135.9190-dujour" />
+    <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" />
+    <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">

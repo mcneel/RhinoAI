@@ -12,7 +12,7 @@ public static class GH2_StartTool
     [Description("Starts GH2")]
     public static string Launch(RhinoDoc _)
     {
-        if (!IsInstalled()) return "G2 is not installed";
+        if (RhinoApp.Version.Major < 9) return "G2 is not installed";
         try
         {
             RhinoApp.InvokeAndWait(() => RhinoApp.RunScript("_G2", true));
@@ -25,11 +25,5 @@ public static class GH2_StartTool
     }
 
     private static string Verify() => GH2_Utils.TryGetDoc(out _) ? "Opened G2" : "Failure opening G2";
-
-    private static bool IsInstalled()
-    {
-        var plugIn = Rhino.PlugIns.PlugIn.Find(GH2_PlugInId);
-        return plugIn is not null;
-    }
 
 }
