@@ -23,27 +23,6 @@ public class MCPCommand : Command
         if (go.Get() != GetResult.Number) return Result.Cancel;
         port = go.Number();
 
-        if (RhinoMcpHost.HasStarted(doc))
-        {
-            if (!RhinoMcpHost.RestartOnPort(doc, port))
-            {
-                RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
-                return Result.Failure;
-            }
-            else
-            {
-                RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
-            }
-        }
-        else if (RhinoMcpHost.Start(doc, port))
-        {
-            // Start runs WriteLine
-        }
-        else
-        {
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
-        }
-
-        return Result.Success;
+        return RhinoMcpHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
     }
 }
