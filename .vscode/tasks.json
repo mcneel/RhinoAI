@@ -2,11 +2,29 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build",
+      "label": "build (R8)",
       "command": "dotnet",
       "type": "shell",
       "args": [
         "build",
+        "-p:RhinoTarget=R8",
+        "-clp:NoSummary",
+        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "build (R9)",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "-p:RhinoTarget=R9",
         "-clp:NoSummary",
         "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
       ],
