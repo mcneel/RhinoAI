@@ -55,11 +55,4 @@ public static class GH2_Utils
   public static bool IsValueSource(IDocumentObject obj) =>
     obj.GetType().Namespace?.Contains("Parameters.Special") ?? false;
 
-  private static Guid GH2_PlugInId { get; } = new Guid("8307876d-a461-4daa-bb77-eb3715925513");
-  public static bool IsInstalled()
-  {
-    var plugIn = Rhino.PlugIns.PlugIn.Find(GH2_PlugInId);
-    return plugIn is not null;
-  }
-
 }
