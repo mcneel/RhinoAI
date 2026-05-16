@@ -4,12 +4,6 @@ namespace RhMcp.Internal;
 // HTTP endpoint as a control channel; they are intentionally kept out of
 // /plugin/Tools/ so the router's source generator (which scans that folder)
 // cannot turn them into agent-facing proxies.
-//
-// Used on macOS, where Rhino is single-process-per-bundle-id: multiple "slots"
-// for the same Rhino version share one OS process, and each slot is a separate
-// RhinoDoc with its own MCP listener. The first slot is launched via `open -a`
-// with `_-RhinoMCP <port> _Enter`; subsequent slots are created by calling
-// SpawnListener on the existing first listener.
 [McpServerToolType]
 public static class RouterControlTool
 {
