@@ -9,7 +9,7 @@
       "program": "",
       "osx": {
         "program": "/Applications/RhinoWIP.app/Contents/MacOS/Rhinoceros",
-        "args": ["-runscript=_-RhinoMCP _Enter"],
+        "args": ["-runscript=_-StartMCP 10506 _Enter"],
       },
       "windows": {
         "program": "C:\\Program Files\\Rhino 9 WIP\\System\\Rhino.exe",
