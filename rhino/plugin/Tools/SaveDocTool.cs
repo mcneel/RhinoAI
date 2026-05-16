@@ -18,11 +18,12 @@ public static class SaveDocTool
         if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
             throw new System.IO.DirectoryNotFoundException($"Directory does not exist: {dir}");
 
+        // UpdateDocumentPath=false: avoids the post-write LockDocument that pops a modal in R9.
         var options = new FileWriteOptions
         {
             SuppressDialogBoxes = true,
             WriteUserData = true,
-            UpdateDocumentPath = true,
+            UpdateDocumentPath = false,
         };
 
         if (!doc.WriteFile(path, options))
