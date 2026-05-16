@@ -54,7 +54,28 @@ public static class RhinoMcpHost
         return true;
     }
 
-    // Drop a one-shot announcement into <temp>/rhino-mcp/listeners/ so a router
+    // Shared dispatch for both the interactive `RhinoMCP` command and the
+    // hidden `StartMCP` autostart path. Writes user-facing status lines.
+    public static bool StartOrRestart(RhinoDoc doc, int port)
+    {
+        if (HasStarted(doc))
+        {
+            if (!RestartOnPort(doc, port))
+            {
+                RhinoApp.WriteLine($"[Rhino MCP] Failed to bind port {port}.");
+                return false;
+            }
+            RhinoApp.WriteLine($"[Rhino MCP] Restarted on http://localhost:{port}/");
+            return true;
+        }
+
+        if (Start(doc, port)) return true;
+
+        RhinoApp.WriteLine($"[Rhino MCP] MCP server failed to start. Try a different port.");
+        return false;
+    }
+
+    // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
     // running on this machine can discover and adopt this listener without us
     // having to know whether one is up. The router consumes (probes + deletes)
     // the file on its next scan; if no router ever sees it, temp sweep collects

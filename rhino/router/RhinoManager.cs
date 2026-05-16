@@ -449,15 +449,20 @@ public class RhinoManager(
         catch (InvalidOperationException) { return false; }
     }
 
+    // Env var consumed by StartMCPCommand inside the plugin to autostart the listener.
+    // Must match StartMCPCommand.PortEnvVar in rhino/plugin/StartMCPCommand.cs.
+    private const string PortEnvVar = "RHINO_MCP_AUTOSTART_PORT";
+
     private static Process LaunchWindows(string rhinoExe, int port)
     {
         var psi = new ProcessStartInfo
         {
             FileName = rhinoExe,
-            Arguments = $"/nosplash /runscript=\"_RhinoMCP {port} _Enter\"",
-            UseShellExecute = true,
+            Arguments = $"/nosplash /runscript=\"_StartMCP\"",
+            UseShellExecute = false,
             WindowStyle = ProcessWindowStyle.Normal,
         };
+        psi.Environment[PortEnvVar] = port.ToString();
 
         return Process.Start(psi)
             ?? throw new InvalidOperationException($"Process.Start returned null for {rhinoExe}");
@@ -465,8 +470,9 @@ public class RhinoManager(
 
     // Launches Rhino.app via `open -a`. We don't get a usable Process handle back —
     // `open` exits immediately and the Rhino pid is resolved later by lsof against
-    // the listening port. ArgumentList ensures the runscript value (which contains
-    // spaces) survives as a single argv element.
+    // the listening port. The port is delivered via env var rather than as a runscript
+    // argument because feeding integer args through the runscript engine races with
+    // plugin command registration; StartMCP reads the env var directly.
     private static void LaunchMac(string appPath, int port)
     {
         var psi = new ProcessStartInfo
@@ -474,11 +480,12 @@ public class RhinoManager(
             FileName = "/usr/bin/open",
             UseShellExecute = false,
         };
+        psi.Environment[PortEnvVar] = port.ToString();
         psi.ArgumentList.Add("-a");
         psi.ArgumentList.Add(appPath);
         psi.ArgumentList.Add("--args");
         psi.ArgumentList.Add("-nosplash");
-        psi.ArgumentList.Add($"-runscript=_RhinoMCP {port} _Enter");
+        psi.ArgumentList.Add("-runscript=_StartMCP");
 
         using var proc = Process.Start(psi)
             ?? throw new InvalidOperationException($"Failed to start `open -a {appPath}`.");
