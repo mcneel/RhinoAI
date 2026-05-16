@@ -65,7 +65,7 @@ public static class RouterControlTool
     }
 
     [McpServerTool(Name = "_router_close_listener")]
-    [Description("Router-internal: stop the MCP listener on the given port. The doc is left open — the user can close it manually.")]
+    [Description("Router-internal: stop the MCP listener on the given port and close its associated doc without saving.")]
     public static string CloseListener(int port)
     {
         bool ok = false;

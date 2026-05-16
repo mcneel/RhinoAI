@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+
+using Rhino.FileIO;
 
 namespace RhMcp;
 
@@ -101,15 +104,57 @@ public static class RhinoMcpHost
         }
     }
 
-    // Stop the listener bound to the given port, regardless of doc. Used by the
-    // router's control channel on Mac to tear down a single slot without
-    // affecting other slots sharing the same Rhino process.
+    // Stop the listener bound to the given port and close its associated doc
+    // without keeping any save artefacts. Used by the router's control channel
+    // on Mac to tear down a single slot without affecting other slots sharing
+    // the same Rhino process. The router only calls this for slots it spawned
+    // (adopted slots are refused upstream), so discarding the doc is safe.
+    //
+    // Mac's `_-Close` command matches docs by their on-disk path (see
+    // src4/rhino4/commands/cmdFileIO.cpp) and is the only way to programmatically
+    // close a non-headless doc — RhinoDoc.Dispose is a no-op for them. We give
+    // the doc a temp path via WriteFile so the command can find it, then delete
+    // that file once Cocoa's deferred close has run.
     public static bool StopByPort(int port)
     {
         var entry = Servers.FirstOrDefault(kv => kv.Value.Port == port);
         if (entry.Value is null) return false;
-        Servers.Remove(entry.Key);
+        var docSerial = entry.Key;
+        Servers.Remove(docSerial);
         entry.Value.Stop();
+
+        var doc = RhinoDoc.FromRuntimeSerialNumber(docSerial);
+        if (doc is null) return true;
+
+        var tempPath = Path.Combine(
+            Path.GetTempPath(),
+            $"rh-mcp-slot-close-{docSerial}-{Guid.NewGuid():N}.3dm");
+        try
+        {
+            doc.Modified = false;
+            doc.WriteFile(tempPath, new FileWriteOptions
+            {
+                SuppressDialogBoxes = true,
+                WriteUserData = true,
+                UpdateDocumentPath = true,
+            });
+            RhinoApp.RunScript(docSerial, $"_-Close \"{tempPath}\"", false);
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[Rhino MCP] Slot doc close failed for port {port}: {ex.Message}");
+            return true;
+        }
+
+        // Mac defers the doc close via Cocoa performSelector:afterDelay:0.1.
+        // Wait past that, then delete the temp file. Fire-and-forget — we
+        // don't want to block the router's HTTP response.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000).ConfigureAwait(false);
+            try { File.Delete(tempPath); } catch { /* OS temp sweep will get it */ }
+        });
+
         return true;
     }
 }
