@@ -14,7 +14,7 @@ public static class GH1_SolveTool
         RhinoDoc rhinoDoc,
         [Description("Auto-zoom every Rhino viewport to the GH preview after solving. true=always, false=never, null=zoom only when nothing was visible pre-solve.")] bool? zoom_views = null)
     {
-        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document ghDoc)) return "Could not get GHDoc";
+        if (!GH1_Utils.TryGetOrCreateDoc(rhinoDoc, out GH_Document ghDoc)) return "Could not get GHDoc";
 
         int activeCount = ghDoc.ActiveObjects().Count;
         if (activeCount <= 0)

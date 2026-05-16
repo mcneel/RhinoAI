@@ -17,13 +17,13 @@ public static class GH2_PlaceComponentTool
     [McpServerTool(Name = "g2_place_component")]
     [Description("Place a GH2 component onto the active canvas. 'selector' may be a Guid (proxy id) or a component name. If multiple components share the name, returns an ambiguity payload listing candidates.")]
     public static string Place(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Component Guid (proxy id) or component Name (case-insensitive).")] string selector,
         [Description("Canvas X position in pixels.")] float x = 100,
         [Description("Canvas Y position in pixels.")] float y = 100,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "Could not get or create GH2 document";
 
         IDocumentObject? obj;

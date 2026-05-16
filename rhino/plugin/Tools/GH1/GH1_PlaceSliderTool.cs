@@ -16,7 +16,7 @@ public static class GH1_PlaceSliderTool
     [McpServerTool(Name = "g1_place_slider")]
     [Description("Place a Number Slider on the active GH1 canvas with the given range and current value. type: 'float' | 'int' | 'even' | 'odd'.")]
     public static string Place(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Minimum slider value.")] double min,
         [Description("Initial slider value.")] double value,
         [Description("Maximum slider value.")] double max,
@@ -29,7 +29,7 @@ public static class GH1_PlaceSliderTool
         if (!TryParseAccuracy(type, out GH_SliderAccuracy accuracy))
             return $"Invalid type '{type}'. Valid values: 'float', 'int', 'even', 'odd'.";
 
-        if (!GH1_Utils.TryGetOrCreateDoc(out GH_Document doc))
+        if (!GH1_Utils.TryGetOrCreateDoc(rhDoc, out GH_Document doc))
             return "Could not get or create GH document";
 
         var slider = new GH_NumberSlider();

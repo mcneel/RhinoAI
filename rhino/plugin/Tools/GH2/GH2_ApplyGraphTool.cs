@@ -30,13 +30,13 @@ public static class GH2_ApplyGraphTool
     [McpServerTool(Name = "g2_apply_graph")]
     [Description("Place sliders + components and wire them in one call on the active GH2 canvas. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g2_connect'.")]
     public static string Apply(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Sliders to place: {Key, Min, Value, Max, Decimals, Name?, X, Y}. Decimals: 0..12.")] SliderSpec[] sliders,
         [Description("Components to place: {Key, Selector, X, Y}. Selector is a Guid (preferred) or component Name.")] ComponentSpec[] components,
         [Description("Wires to create: {SrcKey, Src, DstKey, Dst}. Keys must match a slider or component key above.")] WireSpec[] wires,
         [Description("If true, trigger a new solution at the end.")] bool solve = true)
     {
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "Could not get or create GH2 document";
 
         var keyToObj = new Dictionary<string, IDocumentObject>(StringComparer.Ordinal);

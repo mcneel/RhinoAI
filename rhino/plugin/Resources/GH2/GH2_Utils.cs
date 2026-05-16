@@ -13,14 +13,14 @@ namespace RhMcp.Resources;
 public static class GH2_Utils
 {
 
-  public static bool TryGetDoc(out Document doc)
+  public static bool TryGetDoc(RhinoDoc rhDoc, out Document doc)
   {
     doc = default!;
 
     Editor editor = Editor.Instance;
     if (editor is null)
     {
-      RhinoApp.RunScript(doc.RuntimeSerialNumber, "_G2", true);
+      RhinoApp.RunScript(rhDoc.RuntimeSerialNumber, "_G2", true);
       editor = Editor.Instance;
       if (editor is null) return false;
     }
@@ -30,9 +30,9 @@ public static class GH2_Utils
     return doc is not null;
   }
 
-  public static bool TryLoadDocument(string path)
+  public static bool TryLoadDocument(RhinoDoc rhDoc, string path)
   {
-    if (!TryGetDoc(out _)) return false;
+    if (!TryGetDoc(rhDoc, out _)) return false;
     return Editor.Instance.Documents.TryOpenDocument(path, OpenDocumentOptions.Default);
   }
 

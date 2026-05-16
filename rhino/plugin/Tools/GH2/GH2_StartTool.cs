@@ -10,13 +10,13 @@ public static class GH2_StartTool
 
     [McpServerTool(Name = "g2_start")]
     [Description("Starts GH2")]
-    public static string Launch(RhinoDoc _)
+    public static string Launch(RhinoDoc doc)
     {
         if (RhinoApp.Version.Major < 9) return "G2 is not installed";
         try
         {
             RhinoApp.RunScript(doc.RuntimeSerialNumber, "_G2", true);
-            return Verify();
+            return Verify(doc);
         }
         catch (Exception ex)
         {
@@ -24,6 +24,6 @@ public static class GH2_StartTool
         }
     }
 
-    private static string Verify() => GH2_Utils.TryGetDoc(out _) ? "Opened G2" : "Failure opening G2";
+    private static string Verify(RhinoDoc doc) => GH2_Utils.TryGetDoc(doc, out _) ? "Opened G2" : "Failure opening G2";
 
 }

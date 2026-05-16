@@ -9,6 +9,7 @@ public static class RunPythonTool
     [McpServerTool(Name = "run_python")]
     [Description("Execute a Python 3 script. Returns JSON with stdout and error fields; error is null on success.")]
     public static string RunPython(
+        RhinoDoc doc,
         [Description("Script")] string script)
     {
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.py");

@@ -12,13 +12,13 @@ public static class GH2_ClearCanvasTool
     [McpServerTool(Name = "g2_clear_canvas")]
     [Description("Remove every object from the active GH2 canvas. Destructive — requires confirm=true.")]
     public static string Clear(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Must be true to actually wipe the canvas. Defaults to false as a safety guard.")] bool confirm = false,
         [Description("If true, trigger a new solution after clearing.")] bool solve = true)
     {
         if (!confirm) return "Refused: pass confirm=true to wipe the canvas.";
 
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "Could not get GH2 document";
 
         var snapshot = doc.Objects.Forwards.ToList();

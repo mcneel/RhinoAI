@@ -12,9 +12,9 @@ public static class GH2_SolveTool
 
     [McpServerTool(Name = "g2_solve_canvas")]
     [Description("Solves the active GH2 canvas. Returns per-object warning/error messages, if any.")]
-    public static string SolveCanvas(RhinoDoc _)
+    public static string SolveCanvas(RhinoDoc rhDoc)
     {
-        if (!GH2_Utils.TryGetDoc(out Document ghDoc)) return "Could not get GH2 document";
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document ghDoc)) return "Could not get GH2 document";
 
         try
         {

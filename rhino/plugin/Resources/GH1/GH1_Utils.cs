@@ -7,12 +7,12 @@ namespace RhMcp.Resources;
 public static class GH1_Utils
 {
 
-  public static bool TryGetOrCreateDoc(out GH_Document doc)
+  public static bool TryGetOrCreateDoc(RhinoDoc rhDoc, out GH_Document doc)
   {
     doc = default!;
     if (Instances.ActiveCanvas is null)
     {
-      RhinoApp.RunScript(doc.RuntimeSerialNumber, "_Grasshopper", true);
+      RhinoApp.RunScript(rhDoc.RuntimeSerialNumber, "_Grasshopper", true);
       if (Instances.ActiveCanvas is null) return false;
     }
 

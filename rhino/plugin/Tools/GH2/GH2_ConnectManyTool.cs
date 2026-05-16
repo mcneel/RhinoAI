@@ -16,13 +16,13 @@ public static class GH2_ConnectManyTool
     [McpServerTool(Name = "g2_connect_many")]
     [Description("Wire multiple output→input connections in one call on the active GH2 canvas. Same selector semantics as 'g2_connect'. A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
     public static string ConnectMany(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Array of {SrcId, Src, DstId, Dst} wire descriptors.")] WireSpec[] wires,
         [Description("If true, trigger a new solution after wiring. Set false to batch further.")] bool solve = true)
     {
         if (wires is null || wires.Length == 0) return JsonSerializer.Serialize(new BatchResult(0, 0, Array.Empty<WireResult>()));
 
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "No active GH2 document";
 
         var results = new WireResult[wires.Length];

@@ -16,7 +16,7 @@ public static class GH2_PlaceSliderTool
     [McpServerTool(Name = "g2_place_slider")]
     [Description("Place a Number Slider on the active GH2 canvas with the given range and current value.")]
     public static string Place(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Minimum slider value.")] double min,
         [Description("Initial slider value.")] double value,
         [Description("Maximum slider value.")] double max,
@@ -29,7 +29,7 @@ public static class GH2_PlaceSliderTool
         if (decimals < 0 || decimals > 12)
             return $"Invalid decimals '{decimals}'. Valid range: 0..12.";
 
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "Could not get or create GH2 document";
 
         var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);

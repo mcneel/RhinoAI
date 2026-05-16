@@ -34,11 +34,11 @@ public static class GH2_GetCanvasGraphTool
     [McpServerTool(Name = "g2_get_canvas_graph")]
     [Description("Return a structured snapshot of the active GH2 canvas: objects (with messages, inputs/outputs and optional volatile data summaries) and wires between them.")]
     public static string GetGraph(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Include per-param volatile data summaries (branches/items/sample).")] bool include_data = true,
         [Description("How many items to include in each data sample.")] int sample_size = 3)
     {
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return "Could not get GH2 document";
 
         var objects = new List<ObjectInfo>();

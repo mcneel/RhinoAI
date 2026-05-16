@@ -15,14 +15,14 @@ public static class GH2_ConnectTool
     [McpServerTool(Name = "g2_connect")]
     [Description("Wire an output parameter to an input parameter on the active GH2 canvas. 'src' and 'dst' may be a numeric index or a Name/UserName. For pure params (e.g. a slider) pass '' or '0'.")]
     public static string Connect(
-        RhinoDoc _,
+        RhinoDoc rhDoc,
         [Description("Guid of the source IDocumentObject.")] string src_id,
         [Description("Output identifier: numeric index, output Name, or UserName. Use '' or '0' for pure params.")] string src,
         [Description("Guid of the destination IDocumentObject.")] string dst_id,
         [Description("Input identifier: numeric index, input Name, or UserName. Use '' or '0' for pure params.")] string dst,
         [Description("If true, trigger a new solution after wiring. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
-        if (!GH2_Utils.TryGetDoc(out Document doc))
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
             return Err("No active GH2 document");
 
         if (!Guid.TryParse(src_id, out Guid srcGuid)) return Err($"Invalid src_id guid '{src_id}'");

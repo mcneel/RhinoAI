@@ -9,6 +9,7 @@ public static class RunCSharpTool
     [McpServerTool(Name = "run_csharp")]
     [Description("Execute a C# script. Returns JSON with stdout and error fields; error is null on success.")]
     public static string RunCSharp(
+        RhinoDoc doc,
         [Description("Script")] string script)
     {
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.cs");
