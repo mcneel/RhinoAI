@@ -32,7 +32,6 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">

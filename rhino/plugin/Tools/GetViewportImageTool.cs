@@ -2,10 +2,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 
-using Microsoft.Extensions.AI;
-
-using ModelContextProtocol;
-
 using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -18,7 +14,7 @@ public static class GetViewportImageTool
 
     [McpServerTool(Name = "get_viewport_image")]
     [Description("Capture the active Rhino viewport as JPG. Returns the image plus a JSON metadata block describing the resulting camera, display mode, framed scene bounds, and on-screen object count — use the metadata to diagnose empty/off-screen captures without re-shooting.")]
-    public static IEnumerable<AIContent> GetViewportImage(
+    public static IEnumerable<ContentBlock> GetViewportImage(
         RhinoDoc doc,
         [Description("Image width pixels (default 480) (max 1280) increase sparingly")] int width = 480,
         [Description("Image height pixels (default 270) (max 720) increase sparingly")] int height = 270,
@@ -34,7 +30,7 @@ public static class GetViewportImageTool
         height = Math.Min(height, 720);
 
         var activeView = doc.Views.ActiveView
-            ?? throw new McpException("No active view.");
+            ?? throw new InvalidOperationException("No active view.");
 
         Bitmap? bitmap = null;
         string? error = null;
@@ -49,7 +45,7 @@ public static class GetViewportImageTool
                 var proj = ParseProjection(view);
                 if (proj == DefinedViewportProjection.None)
                 {
-                    return [new TextContent(SerializeResult(meta, $"Unknown view: {view}"))];
+                    return [ContentBlock.CreateText(SerializeResult(meta, $"Unknown view: {view}"))];
                 }
                 vp.SetProjection(proj, null, true);
             }
@@ -59,7 +55,7 @@ public static class GetViewportImageTool
                 var mode = FindDisplayMode(displayMode);
                 if (mode is null)
                 {
-                    return [new TextContent(SerializeResult(meta, $"Unknown display mode: {displayMode}"))];
+                    return [ContentBlock.CreateText(SerializeResult(meta, $"Unknown display mode: {displayMode}"))];
                 }
                 vp.DisplayMode = mode;
             }
@@ -77,7 +73,7 @@ public static class GetViewportImageTool
                     vp.ZoomBoundingBox(bb);
                 else
                 {
-                    return [new TextContent(SerializeResult(meta, "boxMin/boxMax do not form a valid bounding box."))];
+                    return [ContentBlock.CreateText(SerializeResult(meta, "boxMin/boxMax do not form a valid bounding box."))];
                 }
             }
 
@@ -90,7 +86,7 @@ public static class GetViewportImageTool
 
             if (meta.VisibleObjectCount == 0)
             {
-                return [new TextContent(SerializeResult(meta, "Viewport is empty — no document objects intersect the view frustum. " +
+                return [ContentBlock.CreateText(SerializeResult(meta, "Viewport is empty — no document objects intersect the view frustum. " +
                         "Camera/target may be off the model. See metadata.scene.boundingBox for where geometry actually lives."))];
             }
 
@@ -103,11 +99,11 @@ public static class GetViewportImageTool
 
         if (error is not null)
         {
-            return [new TextContent(SerializeResult(meta, error))];
+            return [ContentBlock.CreateText(SerializeResult(meta, error))];
         }
         if (bitmap is null)
         {
-            return [new TextContent(SerializeResult(meta, "could not capture image"))];
+            return [ContentBlock.CreateText(SerializeResult(meta, "could not capture image"))];
         }
 
         using var ms = new MemoryStream();
@@ -115,8 +111,8 @@ public static class GetViewportImageTool
 
         return
         [
-            new TextContent(SerializeResult(meta, null)),
-            new DataContent(ms.ToArray(), "image/jpeg"),
+            ContentBlock.CreateText(SerializeResult(meta, null)),
+            ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"),
         ];
     }
 
