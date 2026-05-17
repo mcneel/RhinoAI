@@ -1,0 +1,6 @@
+/* Hextra's card template wraps title+subtitle in `mt-auto`, which bottom-aligns
+   content inside flex-column cards. When titles wrap to different line counts
+   across a row, that makes the tops misalign. Force top-alignment instead. */
+.hextra-card > div {
+  margin-top: 0 !important;
+}

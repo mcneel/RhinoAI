@@ -17,20 +17,28 @@ toc: false
 </h1>
 
 
-## What is this?
+## What is it?
 
-Rhino MCP is a free MCP from McNeel that connects Rhino to AI assistants
-like **Claude**, **CoPilot** and **Codex**. Once it's installed,
-your assistant can see what's in your document, create geometry, run commands, scripts,
-build Grasshopper definitions, and explain what it did all by using natural language.
-
-You stay in control. The assistant works in your active Rhino window, and
-every change shows up live so you can undo, tweak, or take over at any
-point.
+The Rhino MCP Platform is a free MCP from McNeel that connects Rhino to AI assistants like **Claude**, **CoPilot** and **Codex**. Once it's installed, your assistant can see what's in your document, create geometry, run commands, scripts build Grasshopper definitions.
 
 <div style="display: flex; justify-content: center; margin: 2rem 0 3rem;">
 {{< hextra/hero-button text="Get started" link="docs/getting-started" >}}
 </div>
+
+## What kind of user are you?
+
+{{< cards >}}
+
+  {{< card link="docs/getting-started" title="I'm new, show me how!" subtitle="Install the plugin, pick an AI assistant, and try your first prompt." >}}
+
+  {{< card link="docs/recipes" title="Just give me prompts to try" subtitle="A growing library of things you can ask, grouped by what you want to do." >}}
+
+  {{< card link="advanced" title="I know what I'm doing" subtitle="I know Rhino & GH, show me how to supercharge" >}}
+
+  {{< card link="developers" title="I'm a Rhino developer" subtitle="How the RhinoMCP can assist you in plugin development" >}}
+
+{{< /cards >}}
+
 
 ## What can I do with it?
 
@@ -51,15 +59,3 @@ point.
 {{< /cards >}}
 
 See the [Recipes](docs/recipes) for more ready-to-paste prompts.
-
-## What kind of user are you?
-
-{{< cards >}}
-
-  {{< card link="docs/getting-started" title="I'm new, show me how!" subtitle="Install the plugin, pick an AI assistant, and try your first prompt." >}}
-
-  {{< card link="docs/recipes" title="Just give me prompts to try" subtitle="A growing library of things you can ask, grouped by what you want to do." >}}
-
-  {{< card link="developers" title="I want to build on it" subtitle="Architecture, the full tool reference, and notes for contributors." >}}
-
-{{< /cards >}}

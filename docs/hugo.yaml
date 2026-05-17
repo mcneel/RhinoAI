@@ -71,8 +71,8 @@ params:
     displayToggle: true
   footer:
     enable: true
-    displayCopyright: true
-    displayPoweredBy: true
+    displayCopyright: false
+    displayPoweredBy: false
   editURL:
     enable: true
     base: https://github.com/mcneel/RhinoMCP/edit/main/docs/content

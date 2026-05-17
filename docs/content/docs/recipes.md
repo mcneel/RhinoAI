@@ -88,6 +88,14 @@ don't have to get the prompt right on the first try.
 > merged, removed, or replaced with a simpler equivalent? Suggest
 > changes, but don't apply them until I say so.
 
+### De-spaghetify
+
+> This canvas is a mess. Tidy it up: align components into a left-to-right
+> flow, group related logic with coloured groups and short scribbled
+> labels, straighten out crossed wires (insert relays where needed), and
+> hide any wires that are purely structural. Don't change what the
+> definition does &mdash; just make it readable.
+
 ## Cleanup &amp; chores
 
 ### Layer hygiene
