@@ -10,8 +10,10 @@ confirm it works.
 
 Start a new chat or session and ask:
 
-> "Open a fresh Rhino doc and make me a torus, then take a screenshot
-> and show me how it looks."
+{{< prompt >}}
+Open a fresh Rhino doc and make me a torus, then take a screenshot
+and show me how it looks.
+{{< /prompt >}}
 
 If everything's wired up:
 

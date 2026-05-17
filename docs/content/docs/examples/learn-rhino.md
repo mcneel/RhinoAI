@@ -9,8 +9,10 @@ and ask.
 
 ## Try this prompt
 
-> How do I make a fillet between these two surfaces? Walk me through it,
-> and do the first step for me so I can see what it looks like.
+{{< prompt >}}
+How do I make a fillet between these two surfaces? Walk me through it,
+and do the first step for me so I can see what it looks like.
+{{< /prompt >}}
 
 ## What you should see
 

@@ -25,11 +25,13 @@ it.
 
 ## A prompt to start with
 
-> "Here's a sketch of a shelving unit I want to build. Read the
-> proportions and structure off the drawing, tell me what you think the
-> key parameters are, and propose a parametric model. Don't build
-> anything yet &mdash; show me your interpretation first so I can
-> correct it."
+{{< prompt >}}
+Here's a sketch of a shelving unit I want to build. Read the
+proportions and structure off the drawing, tell me what you think the
+key parameters are, and propose a parametric model. Don't build
+anything yet &mdash; show me your interpretation first so I can
+correct it.
+{{< /prompt >}}
 
 That second sentence matters. Without it the assistant will dive
 straight to geometry and you'll spend longer correcting the result than

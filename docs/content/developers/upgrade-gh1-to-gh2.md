@@ -35,11 +35,13 @@ enough on its own.
 
 ## A prompt to start with
 
-> "For each GH1 component in this plugin, add a GH2 equivalent. After each
-> one, place the GH1 version on a GH1 canvas and the GH2 version on a GH2
-> canvas with the same sample inputs, and confirm they solve to the same
-> result. Work one component at a time and show me the diff before each
-> file change."
+{{< prompt >}}
+For each GH1 component in this plugin, add a GH2 equivalent. After each
+one, place the GH1 version on a GH1 canvas and the GH2 version on a GH2
+canvas with the same sample inputs, and confirm they solve to the same
+result. Work one component at a time and show me the diff before each
+file change.
+{{< /prompt >}}
 
 ## What to review
 

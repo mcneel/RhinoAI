@@ -30,12 +30,14 @@ was worth pursuing.
 
 ## A prompt to start with
 
-> "Scaffold a Rhino 8 plugin in this folder called `EdgeAudit`. It
-> should add one command, `EdgeAuditReport`, that scans the active doc
-> for Breps with naked edges, prints a per-object count to the command
-> line, and selects the worst offender. Use the standard plugin
-> template, target `net7.0`, and once it builds load it into Rhino and
-> run the command on whatever's open so I can see it work."
+{{< prompt >}}
+Scaffold a Rhino 8 plugin in this folder called `EdgeAudit`. It
+should add one command, `EdgeAuditReport`, that scans the active doc
+for Breps with naked edges, prints a per-object count to the command
+line, and selects the worst offender. Use the standard plugin
+template, target `net7.0`, and once it builds load it into Rhino and
+run the command on whatever's open so I can see it work.
+{{< /prompt >}}
 
 Adjust scope to taste &mdash; one command, three commands, a Grasshopper
 component, a display conduit. The pattern is the same.

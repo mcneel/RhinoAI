@@ -73,15 +73,19 @@ Start a Claude Code session and follow the prompts on the
 
 Once that's working, see the specialist agents in action. Ask:
 
-> "What's in my Rhino document?"
+{{< prompt >}}
+What's in my Rhino document?
+{{< /prompt >}}
 
 Claude should delegate to `rhino-inspector` and reply with a summary of
 layers, objects, and the viewport.
 
 Then try:
 
-> "Modeller: design a 1.6m park bench with wooden slats and cast iron
-> legs."
+{{< prompt >}}
+Modeller: design a 1.6m park bench with wooden slats and cast iron
+legs.
+{{< /prompt >}}
 
 You should see the bench appear in your Rhino window.
 

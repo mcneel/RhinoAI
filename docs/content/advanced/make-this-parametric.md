@@ -24,12 +24,14 @@ it as a GH2 graph that drives the same result from sliders.
 
 ## A prompt to start with
 
-> "I've modelled this stair by hand. Look at the geometry on layer
-> `Stair`, work out the construction recipe, and rebuild it as a GH2
-> definition driven by sliders for tread depth, riser height, total
-> rise, and number of treads. Reference my existing geometry in the
-> Rhino doc only as a target to match &mdash; the GH definition should
-> generate it from scratch. Solve and compare."
+{{< prompt >}}
+I've modelled this stair by hand. Look at the geometry on layer
+`Stair`, work out the construction recipe, and rebuild it as a GH2
+definition driven by sliders for tread depth, riser height, total
+rise, and number of treads. Reference my existing geometry in the
+Rhino doc only as a target to match &mdash; the GH definition should
+generate it from scratch. Solve and compare.
+{{< /prompt >}}
 
 ## What you should see
 

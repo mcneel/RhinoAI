@@ -8,8 +8,10 @@ Useful for audits, hand-offs, and finding the mess before a client does.
 
 ## Try this prompt
 
-> What's in this document? Group it by layer and tell me which objects are
-> off-layer or on a hidden layer.
+{{< prompt >}}
+What's in this document? Group it by layer and tell me which objects are
+off-layer or on a hidden layer.
+{{< /prompt >}}
 
 ## What you should see
 

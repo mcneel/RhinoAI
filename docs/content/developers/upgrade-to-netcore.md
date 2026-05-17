@@ -31,11 +31,13 @@ asking you to copy errors back and forth.
 
 ## A prompt to start with
 
-> "This repo is a Rhino plugin targeting `net48`. Convert it to multi-target
-> both `net48` and `net8.0` so it builds for Rhino 7 and Rhino 8. Work one
-> error at a time, build after each change, and once it builds cleanly load
-> it into Rhino and run each of its commands to confirm nothing regressed.
-> Show me the diff before each file change."
+{{< prompt >}}
+This repo is a Rhino plugin targeting `net48`. Convert it to multi-target
+both `net48` and `net8.0` so it builds for Rhino 7 and Rhino 8. Work one
+error at a time, build after each change, and once it builds cleanly load
+it into Rhino and run each of its commands to confirm nothing regressed.
+Show me the diff before each file change.
+{{< /prompt >}}
 
 Adjust the target framework and "show me the diff" cadence to taste.
 

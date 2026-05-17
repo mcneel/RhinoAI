@@ -12,4 +12,5 @@ assistant does the heavy lifting and you stay in review.
   {{< card link="headless-render-farm" title="Headless render farm" subtitle="Spawn slots, point cameras, dump images, tear them down &mdash; without losing your active document." >}}
   {{< card link="make-this-parametric" title="Make this parametric" subtitle="Hand-modelled something? Have the assistant infer the recipe and rebuild it as a GH2 graph." >}}
   {{< card link="sketch-to-model" title="Sketch to model" subtitle="Drop in a napkin sketch, agree an interpretation, get a first-pass parametric build." >}}
+  {{< card link="bulk-file-processing" title="Bulk file processing" subtitle="Open, modify, and save a whole folder of `.3dm` files in slots &mdash; without the `RunScript` fragility." >}}
 {{< /cards >}}

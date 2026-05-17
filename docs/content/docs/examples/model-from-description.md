@@ -8,9 +8,11 @@ drafts, study models, and anything where the spec is in your head.
 
 ## Try this prompt
 
-> Make a parametric park bench, 1.6m long, with five wooden slats. Cast-iron
-> legs at each end. Put it on a layer called `Furniture` and apply
-> appropriate materials.
+{{< prompt >}}
+Make a parametric park bench, 1.6m long, with five wooden slats. Cast-iron
+legs at each end. Put it on a layer called `Furniture` and apply
+appropriate materials.
+{{< /prompt >}}
 
 ## What you should see
 

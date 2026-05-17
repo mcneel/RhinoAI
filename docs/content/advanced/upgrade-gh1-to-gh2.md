@@ -23,10 +23,12 @@ here you're porting a `.gh` definition, not source code.
 
 ## A prompt to start with
 
-> "Look at my GH1 canvas and rebuild the same definition on a GH2 canvas.
-> Use the same sample inputs on both, solve them, and tell me whether
-> the outputs match. If anything doesn't have a clean GH2 equivalent,
-> stop and ask before substituting."
+{{< prompt >}}
+Look at my GH1 canvas and rebuild the same definition on a GH2 canvas.
+Use the same sample inputs on both, solve them, and tell me whether
+the outputs match. If anything doesn't have a clean GH2 equivalent,
+stop and ask before substituting.
+{{< /prompt >}}
 
 ## What you should see
 

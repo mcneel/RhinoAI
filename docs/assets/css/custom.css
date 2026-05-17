@@ -4,3 +4,115 @@
 .hextra-card > div {
   margin-top: 0 !important;
 }
+
+/* AI prompt component — replaces blockquote-style prompts with a labelled
+   block, sparkle icon, and copy-to-clipboard button. */
+.ai-prompt {
+  position: relative;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(99, 102, 241, 0.04) 40%, rgba(236, 72, 153, 0.04));
+  overflow: hidden;
+}
+
+.dark .ai-prompt {
+  border-color: rgba(167, 139, 250, 0.45);
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(99, 102, 241, 0.08) 40%, rgba(236, 72, 153, 0.08));
+}
+
+.ai-prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(139, 92, 246, 0.04);
+}
+
+.dark .ai-prompt-header {
+  border-bottom-color: rgba(167, 139, 250, 0.25);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.ai-prompt-icon {
+  display: inline-flex;
+  color: #8b5cf6;
+  animation: ai-prompt-sparkle 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.4));
+}
+
+.dark .ai-prompt-icon {
+  color: #c4b5fd;
+}
+
+@keyframes ai-prompt-sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.12) rotate(8deg); opacity: 0.85; }
+}
+
+.ai-prompt-label {
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6d28d9;
+}
+
+.dark .ai-prompt-label {
+  color: #c4b5fd;
+}
+
+.ai-prompt-copy {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ai-prompt-copy:hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.dark .ai-prompt-copy:hover {
+  background: rgba(167, 139, 250, 0.18);
+}
+
+.ai-prompt-copy.copied {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #15803d;
+}
+
+.dark .ai-prompt-copy.copied {
+  color: #86efac;
+}
+
+.ai-prompt-body {
+  padding: 0.85rem 1rem;
+  color: inherit;
+}
+
+.ai-prompt-body > :first-child {
+  margin-top: 0;
+}
+
+.ai-prompt-body > :last-child {
+  margin-bottom: 0;
+}
+
+.ai-prompt-body p {
+  margin: 0.5em 0;
+}

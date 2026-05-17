@@ -8,8 +8,10 @@ without building each variant by hand.
 
 ## Try this prompt
 
-> Create 30 columns in a grid, randomise their heights between 2m and 6m,
-> and colour them by height (short = pale, tall = dark).
+{{< prompt >}}
+Create 30 columns in a grid, randomise their heights between 2m and 6m,
+and colour them by height (short = pale, tall = dark).
+{{< /prompt >}}
 
 ## What you should see
 

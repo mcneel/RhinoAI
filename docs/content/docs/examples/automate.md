@@ -8,8 +8,10 @@ of thing you'd write a script for if you did it often enough.
 
 ## Try this prompt
 
-> Rename every layer to title case, delete the empty ones, and move any
-> off-layer objects to a layer called `Imported`.
+{{< prompt >}}
+Rename every layer to title case, delete the empty ones, and move any
+off-layer objects to a layer called `Imported`.
+{{< /prompt >}}
 
 ## What you should see
 

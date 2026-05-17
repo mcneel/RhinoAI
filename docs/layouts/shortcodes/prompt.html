@@ -1,0 +1,23 @@
+{{- $inner := .Inner -}}
+<div class="ai-prompt">
+  <div class="ai-prompt-header">
+    <span class="ai-prompt-icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/>
+        <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/>
+      </svg>
+    </span>
+    <span class="ai-prompt-label">Prompt</span>
+    <button type="button" class="ai-prompt-copy" aria-label="Copy prompt to clipboard"
+      onclick="(function(btn){var body=btn.closest('.ai-prompt').querySelector('.ai-prompt-body');navigator.clipboard.writeText(body.innerText.trim()).then(function(){var t=btn.querySelector('.ai-prompt-copy-text');var o=t.textContent;t.textContent='Copied';btn.classList.add('copied');setTimeout(function(){t.textContent=o;btn.classList.remove('copied');},1500);});})(this)">
+      <svg class="ai-prompt-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      <span class="ai-prompt-copy-text">Copy</span>
+    </button>
+  </div>
+  <div class="ai-prompt-body">
+{{ $inner | $.Page.RenderString (dict "display" "block") }}
+  </div>
+</div>

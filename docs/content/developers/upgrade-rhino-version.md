@@ -33,11 +33,13 @@ With Rhino MCP loaded, the assistant can:
 
 ## A prompt to start with
 
-> "This repo is a Rhino 7 plugin. I want it working on Rhino 8. Bump the
-> RhinoCommon and Grasshopper package references, fix any build errors,
-> then install it into the Rhino I have open and run each of its commands
-> and Grasshopper components to confirm they still behave the same. Show
-> me the diff before each file change."
+{{< prompt >}}
+This repo is a Rhino 7 plugin. I want it working on Rhino 8. Bump the
+RhinoCommon and Grasshopper package references, fix any build errors,
+then install it into the Rhino I have open and run each of its commands
+and Grasshopper components to confirm they still behave the same. Show
+me the diff before each file change.
+{{< /prompt >}}
 
 For Rhino 8 → 9, the same prompt works &mdash; just swap the target version.
 

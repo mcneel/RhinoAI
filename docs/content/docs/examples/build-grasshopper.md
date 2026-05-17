@@ -9,9 +9,11 @@ where it left off.
 
 ## Try this prompt
 
-> Make a Grasshopper definition that lofts a curve through these points,
-> then offsets the result by 200mm on both sides. Expose the offset as a
-> slider.
+{{< prompt >}}
+Make a Grasshopper definition that lofts a curve through these points,
+then offsets the result by 200mm on both sides. Expose the offset as a
+slider.
+{{< /prompt >}}
 
 ## What you should see
 

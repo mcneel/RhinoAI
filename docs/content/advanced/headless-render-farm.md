@@ -26,11 +26,13 @@ actually doing.
 
 ## A prompt to start with
 
-> "Open `studies/option-*.3dm`, each in its own slot. For every file,
-> set the camera to an isometric view framed on layer `Massing`, render
-> the active viewport at 1920&times;1080, save it as
-> `renders/<filename>.png`, and close the slot. Don't touch my current
-> document."
+{{< prompt >}}
+Open `studies/option-*.3dm`, each in its own slot. For every file,
+set the camera to an isometric view framed on layer `Massing`, render
+the active viewport at 1920&times;1080, save it as
+`renders/<filename>.png`, and close the slot. Don't touch my current
+document.
+{{< /prompt >}}
 
 Variations worth trying:
 
