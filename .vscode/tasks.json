@@ -323,6 +323,50 @@
         "open claude tab"
       ],
       "problemMatcher": []
+    },
+    {
+      "label": "docs: serve",
+      "type": "shell",
+      "command": "hugo",
+      "args": ["server", "--buildDrafts", "--disableFastRender"],
+      "options": {
+        "cwd": "${workspaceFolder}/docs"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "hugo",
+        "pattern": {
+          "regexp": "^.*$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Start building sites",
+          "endsPattern": "^Web Server is available at"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "build"
+    },
+    {
+      "label": "docs: build",
+      "type": "shell",
+      "command": "hugo",
+      "args": ["--minify"],
+      "options": {
+        "cwd": "${workspaceFolder}/docs"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      },
+      "group": "build"
     }
   ]
 }

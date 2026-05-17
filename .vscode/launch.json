@@ -37,6 +37,18 @@
       "stopAtEntry": false,
       "console": "integratedTerminal"
     },
+    {
+      "name": "Docs - hugo server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "hugo server --buildDrafts --disableFastRender",
+      "cwd": "${workspaceFolder}/docs",
+      "serverReadyAction": {
+        "pattern": "Web Server is available at (https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
   ],
   "compounds": []
 }
