@@ -72,8 +72,13 @@ internal static class ParameterBinder
 
     private static bool IsNullable(ParameterInfo pi)
     {
-        if (!pi.ParameterType.IsValueType) return true;
-        return Nullable.GetUnderlyingType(pi.ParameterType) is not null;
+        if (pi.ParameterType.IsValueType)
+            return Nullable.GetUnderlyingType(pi.ParameterType) is not null;
+        // Reference type: honour NRT annotations. `string?` is nullable, `string`
+        // is not. Treat Unknown (assemblies built without NRT) as not-nullable
+        // so missing arguments still error out loudly.
+        NullabilityInfoContext ctx = new();
+        return ctx.Create(pi).WriteState == NullabilityState.Nullable;
     }
 }
 
@@ -94,7 +99,15 @@ internal static class ResultUnwrapper
         await task.ConfigureAwait(false);
         Type taskType = task.GetType();
         if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            // Task.CompletedTask and Task.FromResult(default) are actually
+            // Task<VoidTaskResult> at runtime; the sentinel result type is the
+            // BCL's way of unifying void-returning tasks. Surface it as null
+            // so non-generic Task signatures behave consistently.
+            if (taskType.GetGenericArguments()[0].FullName == "System.Threading.Tasks.VoidTaskResult")
+                return null;
             return taskType.GetProperty("Result")?.GetValue(task);
+        }
         return null;
     }
 

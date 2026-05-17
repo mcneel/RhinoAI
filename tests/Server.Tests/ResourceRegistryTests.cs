@@ -29,7 +29,7 @@ internal sealed class NotADecoratedType
 }
 
 [TestFixture]
-public class ResourceRegistryTests
+internal class ResourceRegistryTests
 {
     private static IServiceProvider EmptyServices()
         => new ServiceCollection().BuildServiceProvider();
@@ -195,26 +195,17 @@ public class ResourceRegistryTests
             services: EmptyServices()));
     }
 
-    // Documents bug F-NEW ResourceRegistry.cs:29. Match iterates Handlers in
-    // registration order with no static-before-templated priority. When the
-    // templated handler "rhino://config/{key}" is registered before the static
-    // "rhino://config/version", Match returns the templated one — the static
-    // is silently shadowed. The test forces a specific order via reflection
-    // so it doesn't depend on GetMethods's undefined ordering.
+    // Register the templated handler first to defeat any incidental ordering
+    // from reflection — the static handler must still win.
     [Test]
     public void Match_prefers_static_over_templated_when_both_apply()
     {
         ResourceRegistry registry = new();
-        FieldInfo handlersField = typeof(ResourceRegistry).GetField(
-            "<Handlers>k__BackingField",
-            BindingFlags.NonPublic | BindingFlags.Instance)!;
-        List<ResourceHandler> handlers = (List<ResourceHandler>)handlersField.GetValue(registry)!;
-
         IServiceProvider sp = EmptyServices();
-        handlers.Add(new ResourceHandler(
+        registry.Add(new ResourceHandler(
             typeof(FixtureResources).GetMethod(nameof(FixtureResources.GetByKey))!,
             "rhino://config/{key}", "byKey", null, null, sp));
-        handlers.Add(new ResourceHandler(
+        registry.Add(new ResourceHandler(
             typeof(FixtureResources).GetMethod(nameof(FixtureResources.GetVersion))!,
             "rhino://config/version", "version", null, null, sp));
 

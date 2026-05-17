@@ -59,7 +59,11 @@ internal static class SchemaBuilder
             _ when u == typeof(byte) || u == typeof(sbyte) || u == typeof(short) || u == typeof(ushort) ||
                    u == typeof(int) || u == typeof(uint) || u == typeof(long) || u == typeof(ulong) => "integer",
             _ when u == typeof(float) || u == typeof(double) || u == typeof(decimal) => "number",
-            { IsEnum: true } => "string",
+            // Advertise as integer to match the binder: McpSerializer.Options
+            // doesn't register JsonStringEnumConverter, so STJ only reads
+            // enums from numbers. Switch this to "string" if/when the binder
+            // grows string-enum support.
+            { IsEnum: true } => "integer",
             { IsArray: true } => "array",
             _ when IsCollectionType(u) => "array",
             _ => "object",
@@ -97,8 +101,13 @@ internal sealed class ParameterDescriptor
             if (Parameter.HasDefaultValue) return false;
             Type pt = Parameter.ParameterType;
             if (Nullable.GetUnderlyingType(pt) is not null) return false;
-            if (!pt.IsValueType) return false;
-            return true;
+            if (pt.IsValueType) return true;
+            // Reference type: a `string?` arg is optional, a `string` arg is required.
+            // NullabilityInfoContext reads the NullableAttribute metadata emitted by
+            // the compiler when Nullable=enable; falls back to "required" for assemblies
+            // built without NRT (WriteState == Unknown).
+            NullabilityInfoContext ctx = new();
+            return ctx.Create(Parameter).WriteState != NullabilityState.Nullable;
         }
     }
 

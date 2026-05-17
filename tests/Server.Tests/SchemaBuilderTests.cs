@@ -1,12 +1,13 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using RhMcp.Server;
 
 namespace RhMcp.Server.Tests;
 
 [TestFixture]
-public class SchemaBuilderTests
+internal class SchemaBuilderTests
 {
     private enum Color { Red, Green, Blue }
 
@@ -73,11 +74,6 @@ public class SchemaBuilderTests
             "Nullable<T> params are implicitly optional");
     }
 
-    // Documents bug F-NEW SchemaBuilder.cs:104. A non-nullable reference-type
-    // parameter with no default *should* appear in `required`. Today's
-    // implementation short-circuits on !IsValueType and returns false, so this
-    // test will fail until IsRequired honours NRT or treats reference types as
-    // required-by-default.
     [Test]
     public void Required_array_includes_non_nullable_reference_type_with_no_default()
     {
@@ -116,23 +112,35 @@ public class SchemaBuilderTests
         Assert.That(actual, Is.EqualTo(expected));
     }
 
-    // Documents bug F-NEW SchemaBuilder.cs:67. Enum types are advertised as
-    // "string" but McpSerializer.Options does not register a string enum
-    // converter, so the binder only accepts integers. Pick one canonical
-    // representation; this test pins the schema to whatever the binder accepts.
+    // Round-trip: whatever representation the schema advertises for an enum,
+    // the binder must accept that same representation. Catches drift between
+    // SchemaBuilder.MapType and McpSerializer.Options enum-converter setup.
     [Test]
-    public void Enum_schema_type_matches_what_binder_accepts()
+    public void Enum_schema_and_binder_agree_on_representation()
     {
-        JsonElement schema = Build(Arg(nameof(SampleMethods.Types), "color"));
-        string actual = schema.GetProperty("properties").GetProperty("color")
+        ParameterDescriptor desc = Arg(nameof(SampleMethods.Types), "color");
+        JsonElement schema = Build(desc);
+        string schemaType = schema.GetProperty("properties").GetProperty("color")
             .GetProperty("type").GetString()!;
-        Assert.That(actual, Is.EqualTo("string").Or.EqualTo("integer"),
-            "schema must not advertise a representation the binder cannot read");
+
+        string argJson = schemaType switch
+        {
+            "integer" => """{ "color": 1 }""",
+            "string" => """{ "color": "Green" }""",
+            _ => throw new AssertionException($"Unsupported enum schema type '{schemaType}'"),
+        };
+        JsonDocument doc = JsonDocument.Parse(argJson);
+        Dictionary<string, JsonElement> args = new();
+        foreach (JsonProperty prop in doc.RootElement.EnumerateObject())
+            args[prop.Name] = prop.Value.Clone();
+
+        object? value = ParameterBinder.Resolve(
+            desc, args, new ServiceCollection().BuildServiceProvider(), default);
+        Assert.That(value, Is.EqualTo(Color.Green));
     }
 
-    // Documents bug F-NEW SchemaBuilder.cs:69. Dictionary<,> falls through to
-    // "object" with no inner shape — arguably fine, but it shouldn't claim to
-    // be an "array" either. Pin the current shallow-object behaviour.
+    // Dictionary<,> falls through to "object" with no inner shape. It must
+    // not be advertised as "array" — that would mislead clients.
     [Test]
     public void Dictionary_param_is_object_not_array()
     {

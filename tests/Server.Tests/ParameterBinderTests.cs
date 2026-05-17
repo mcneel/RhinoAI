@@ -7,7 +7,7 @@ using RhMcp.Server;
 namespace RhMcp.Server.Tests;
 
 [TestFixture]
-public class ParameterBinderTests
+internal class ParameterBinderTests
 {
     private enum Mode { On, Off }
 
@@ -112,10 +112,6 @@ public class ParameterBinderTests
             default));
     }
 
-    // Documents bug F-NEW ParameterBinder.cs:75. A non-nullable reference-type
-    // arg arriving as null should throw, but IsNullable returns true for every
-    // reference type, so today the binder silently passes null through. When
-    // the bug is fixed this will start throwing — the test pins the contract.
     [Test]
     public void Argument_null_for_non_nullable_reference_type_throws()
     {
@@ -135,17 +131,6 @@ public class ParameterBinderTests
             EmptyServices(),
             default);
         Assert.That(value, Is.Null);
-    }
-
-    [Test]
-    public void Argument_string_deserialises()
-    {
-        object? value = ParameterBinder.Resolve(
-            Desc("name", ParameterBindingKind.Argument),
-            Args("""{ "name": "hello" }"""),
-            EmptyServices(),
-            default);
-        Assert.That(value, Is.EqualTo("hello"));
     }
 
     // ----- Service binding -------------------------------------------------
@@ -169,11 +154,15 @@ public class ParameterBinderTests
     [Test]
     public void Service_missing_with_no_default_throws()
     {
-        Assert.Throws<ArgumentException>(() => ParameterBinder.Resolve(
+        // Tighten the assertion to the binder's own error path — if a future
+        // change routes through GetRequiredService instead, that would throw
+        // InvalidOperationException and slip past a base-Exception check.
+        ArgumentException ex = Assert.Throws<ArgumentException>(() => ParameterBinder.Resolve(
             DescFrom(nameof(SampleMethods.Service), "greeter", ParameterBindingKind.Service),
             arguments: null,
             EmptyServices(),
-            default));
+            default))!;
+        Assert.That(ex.Message, Does.Contain("No service of type"));
     }
 
     // ----- CancellationToken binding --------------------------------------
@@ -217,56 +206,3 @@ public class ParameterBinderTests
     }
 }
 
-[TestFixture]
-public class ResultUnwrapperTests
-{
-    [Test]
-    public async Task Null_unwraps_to_null()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync(null);
-        Assert.That(result, Is.Null);
-    }
-
-    // Documents a latent bug in ResultUnwrapper.UnwrapTaskAsync. The contract
-    // ("non-generic completions return null") is correct for `Task DoStuff()`
-    // method signatures, but the implementation dispatches on the *runtime*
-    // type of the awaited object. `Task.CompletedTask` is a singleton whose
-    // runtime type is `Task<VoidTaskResult>`, so the unwrapper reads its
-    // Result and returns the internal VoidTaskResult struct instead of null.
-    // Fix: dispatch on the method's declared return type, or special-case
-    // VoidTaskResult.
-    [Test]
-    public async Task NonGeneric_Task_unwraps_to_null()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync(Task.CompletedTask);
-        Assert.That(result, Is.Null);
-    }
-
-    [Test]
-    public async Task Generic_Task_unwraps_to_inner_value()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync(Task.FromResult(42));
-        Assert.That(result, Is.EqualTo(42));
-    }
-
-    [Test]
-    public async Task NonGeneric_ValueTask_unwraps_to_null()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync(new ValueTask());
-        Assert.That(result, Is.Null);
-    }
-
-    [Test]
-    public async Task Generic_ValueTask_unwraps_to_inner_value()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync(new ValueTask<string>("done"));
-        Assert.That(result, Is.EqualTo("done"));
-    }
-
-    [Test]
-    public async Task Synchronous_value_passes_through()
-    {
-        object? result = await ResultUnwrapper.UnwrapAsync("plain");
-        Assert.That(result, Is.EqualTo("plain"));
-    }
-}

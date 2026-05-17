@@ -24,11 +24,25 @@ internal sealed class ResourceRegistry
     public IReadOnlyList<ResourceHandler> Templated =>
         Handlers.Where(h => h.IsTemplated).ToList();
 
+    // Exposed for tests that need to control registration order; production
+    // code populates the registry via Scan.
+    internal void Add(ResourceHandler handler) => Handlers.Add(handler);
+
     public ResourceHandler? Match(string uri, out IReadOnlyDictionary<string, string> variables)
     {
+        // Try literal-URI handlers first so an exact match isn't shadowed by a
+        // templated handler that also captures it. Reflection ordering of
+        // GetMethods is unspecified, so without this pass the precedence
+        // between e.g. `rhino://config/version` and `rhino://config/{key}`
+        // depends on method-discovery order.
         foreach (ResourceHandler h in Handlers)
         {
-            if (h.TryMatch(uri, out variables!))
+            if (!h.IsTemplated && h.TryMatch(uri, out variables!))
+                return h;
+        }
+        foreach (ResourceHandler h in Handlers)
+        {
+            if (h.IsTemplated && h.TryMatch(uri, out variables!))
                 return h;
         }
         variables = new Dictionary<string, string>();

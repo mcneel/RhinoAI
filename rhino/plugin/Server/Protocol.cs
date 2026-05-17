@@ -19,6 +19,12 @@ internal sealed class JsonRpcRequest
 internal sealed class JsonRpcResponse
 {
     public string Jsonrpc { get; set; } = "2.0";
+
+    // JSON-RPC 2.0 §5: when the server can't recover the request id (parse
+    // error, invalid request), the response must include `id: null` rather
+    // than omitting the field. The global serializer default skips nulls,
+    // so we force inclusion here.
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public JsonElement? Id { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

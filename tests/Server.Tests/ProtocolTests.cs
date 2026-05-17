@@ -60,10 +60,8 @@ internal class ProtocolTests
         Assert.That((int)code, Is.EqualTo(expected));
     }
 
-    // Documents bug F-NEW Protocol.cs:198. JSON-RPC 2.0 §5 requires the `id`
-    // field to be present (with value null) when a server can't recover the
-    // request id (parse error / invalid request). With DefaultIgnoreCondition
-    // = WhenWritingNull the field is silently omitted.
+    // JSON-RPC 2.0 §5: parse-error and invalid-request responses must emit
+    // `"id": null` (field present, value null), not omit the field entirely.
     [Test]
     public void Response_preserves_explicit_null_id_for_parse_errors()
     {
@@ -124,6 +122,19 @@ internal class ProtocolTests
         Assert.That(json.GetProperty("data").GetString(), Is.EqualTo(System.Convert.ToBase64String(bytes)));
         Assert.That(json.GetProperty("mimeType").GetString(), Is.EqualTo("image/png"));
         Assert.That(json.TryGetProperty("text", out _), Is.False);
+    }
+
+    // Boundary case: an empty byte[] should produce an empty `data` string,
+    // not throw, and not omit the property — tools that yield a zero-byte
+    // placeholder image should still emit a well-formed image block.
+    [Test]
+    public void ContentBlock_CreateImage_with_empty_bytes_emits_empty_data()
+    {
+        ContentBlock block = ContentBlock.CreateImage(System.Array.Empty<byte>(), "image/png");
+        JsonElement json = Serialize(block);
+        Assert.That(json.GetProperty("type").GetString(), Is.EqualTo("image"));
+        Assert.That(json.GetProperty("data").GetString(), Is.EqualTo(""));
+        Assert.That(json.GetProperty("mimeType").GetString(), Is.EqualTo("image/png"));
     }
 
     [Test]
