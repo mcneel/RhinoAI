@@ -34,7 +34,7 @@ public static class RhinoMcpHost
     {
         if (HasStarted(doc)) return true;
         McpServer server = new();
-        Servers.Add(doc.RuntimeSerialNumber, server);
+        Servers[doc.RuntimeSerialNumber] = server;
 
         var ok = server.Start(doc, port);
         if (ok) WriteAnnouncement(port);

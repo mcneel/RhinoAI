@@ -9,6 +9,6 @@
     </Folder>
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="../tests/router/Router.Tests.csproj" />
+    <Project Path="../tests/Router.Tests/Router.Tests.csproj" />
   </Folder>
 </Solution>

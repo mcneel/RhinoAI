@@ -8,6 +8,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using RhMcp.Server;
+
 namespace RhMcp;
 
 internal sealed class McpServer : IDisposable
@@ -38,26 +40,19 @@ internal sealed class McpServer : IDisposable
             builder.Services.AddSingleton(doc);
 
             var asm = typeof(McpServer).Assembly;
-            var optOut = MainThreadFilter.ScanOptOut(asm);
-
-            var mcp = builder.Services
-                .AddMcpServer(o =>
-                {
-                    o.ServerInfo = new() { Name = "rhino-mcp", Version = "0.1.0" };
-                })
-                .WithHttpTransport(o => o.Stateless = true)
-                .WithToolsFromAssembly(asm)
-                .WithResourcesFromAssembly(asm)
-                .WithPromptsFromAssembly(asm);
-
-            mcp.WithRequestFilters(f => f.AddCallToolFilter(MainThreadFilter.Create(optOut)));
-
-#if DEBUG
-            mcp.WithRequestFilters(f => f.AddCallToolFilter(DebugErrorFilter.Filter));
-#endif
 
             _app = builder.Build();
-            _app.MapMcp();
+
+            var endpointOptions = new McpEndpointOptions
+            {
+                ServerName = "rhino-mcp",
+                ServerVersion = "0.1.0",
+                ToolAssembly = asm,
+#if DEBUG
+                SurfaceExceptionDetailsToClient = true,
+#endif
+            };
+            _app.MapMcp("/", endpointOptions);
 
             _cts = new CancellationTokenSource();
             _ = _app.RunAsync(_cts.Token);
@@ -67,10 +62,18 @@ internal sealed class McpServer : IDisposable
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to start: {ex.Message}");
+            RhinoApp.WriteLine($"[Rhino MCP] Failed to start: {DescribeException(ex)}");
             _app = null;
             return false;
         }
+    }
+
+    private static string DescribeException(Exception ex)
+    {
+        var parts = new List<string>();
+        for (var cur = ex; cur is not null; cur = cur.InnerException)
+            parts.Add($"{cur.GetType().FullName}: {cur.Message}");
+        return string.Join(" --> ", parts);
     }
 
     public void Stop()

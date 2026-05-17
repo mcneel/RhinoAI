@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>RhMcp.Server.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+  </ItemGroup>
+
+  <!--
+    Pull only the pure (non-Rhino, non-AspNetCore) Server sources into the test
+    assembly. McpEndpoint.cs depends on Microsoft.AspNetCore and ToolRegistry.cs
+    depends on RhinoApp; those need a different host to test and live elsewhere.
+    Compiling the sources in (rather than ProjectReference'ing RhMcp.csproj)
+    keeps the test assembly RhinoCommon-free and side-steps internals-visibility.
+  -->
+  <ItemGroup>
+    <Compile Include="../../rhino/plugin/Server/Attributes.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/Protocol.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/SchemaBuilder.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/ParameterBinder.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/ResourceRegistry.cs" LinkBase="ServerSources" />
+  </ItemGroup>
+
+</Project>

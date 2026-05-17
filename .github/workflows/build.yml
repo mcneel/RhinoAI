@@ -56,7 +56,13 @@ jobs:
 
       - name: Test router
         if: matrix.rhino_target == 'R9'
-        run: dotnet test tests/router/Router.Tests.csproj --configuration Release --verbosity normal
+        run: dotnet test tests/Router.Tests/Router.Tests.csproj --configuration Release --verbosity normal
+
+      - name: Test server
+        # Server tests pull pure plugin sources in directly (no RhinoCommon /
+        # AspNetCore dep), so they're target-agnostic — run them once per OS.
+        if: matrix.rhino_target == 'R9'
+        run: dotnet test tests/Server.Tests/Server.Tests.csproj --configuration Release --verbosity normal
 
       - name: Build plugin (publishes router self-contained for RIDs ${{ matrix.router_rids }} into yak output)
         shell: bash
