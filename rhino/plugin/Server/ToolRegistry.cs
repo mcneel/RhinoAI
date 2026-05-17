@@ -21,24 +21,24 @@ internal sealed class ToolRegistry
 
     public static ToolRegistry Scan(Assembly assembly, IServiceProvider services)
     {
-        var registry = new ToolRegistry();
-        foreach (var type in SafeGetTypes(assembly))
+        ToolRegistry registry = new();
+        foreach (Type type in SafeGetTypes(assembly))
         {
             if (type.GetCustomAttribute<McpServerToolTypeAttribute>() is null) continue;
 
             const BindingFlags flags =
                 BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance |
                 BindingFlags.DeclaredOnly;
-            foreach (var method in type.GetMethods(flags))
+            foreach (MethodInfo method in type.GetMethods(flags))
             {
-                var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
+                McpServerToolAttribute? toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
                 if (toolAttr is null) continue;
 
-                var name = toolAttr.Name ?? method.Name;
-                var description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
-                var marshalToUi = method.GetCustomAttribute<BackgroundThreadAttribute>() is null;
+                string name = toolAttr.Name ?? method.Name;
+                string? description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
+                bool marshalToUi = method.GetCustomAttribute<BackgroundThreadAttribute>() is null;
 
-                var handler = new ToolHandler(method, name, toolAttr.Title, description, marshalToUi, services);
+                ToolHandler handler = new(method, name, toolAttr.Title, description, marshalToUi, services);
                 if (!registry._byName.TryAdd(name, handler))
                     throw new InvalidOperationException($"Duplicate MCP tool name: {name}");
             }
@@ -112,7 +112,7 @@ internal sealed class ToolHandler
         // AppKit aborts the process if any UI/document API is touched off the
         // main thread, and most tools manipulate RhinoDoc. Tools that opt out
         // via [BackgroundThread] take the direct path above.
-        var tcs = new TaskCompletionSource<CallToolResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<CallToolResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RhinoApp.InvokeOnUiThread(new Action(async () =>
         {
             try { tcs.SetResult(await InvokeCoreAsync(arguments, scope, ct).ConfigureAwait(false)); }

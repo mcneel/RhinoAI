@@ -30,20 +30,20 @@ internal sealed class JsonRpcResponse
 
 internal sealed class JsonRpcError
 {
-    public int Code { get; set; }
+    public JsonRpcErrorCode Code { get; set; }
     public string Message { get; set; } = "";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Data { get; set; }
 }
 
-internal static class JsonRpcErrorCodes
+internal enum JsonRpcErrorCode
 {
-    public const int ParseError = -32700;
-    public const int InvalidRequest = -32600;
-    public const int MethodNotFound = -32601;
-    public const int InvalidParams = -32602;
-    public const int InternalError = -32603;
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InternalError = -32603,
 }
 
 // ----- MCP-level types --------------------------------------------------------

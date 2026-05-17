@@ -19,14 +19,14 @@ internal static class SchemaBuilder
 {
     public static JsonElement BuildInputSchema(IReadOnlyList<ParameterDescriptor> descriptors)
     {
-        var properties = new JsonObject();
-        var required = new JsonArray();
+        JsonObject properties = new();
+        JsonArray required = new();
 
-        foreach (var p in descriptors)
+        foreach (ParameterDescriptor p in descriptors)
         {
             if (!p.IncludeInSchema) continue;
 
-            var prop = new JsonObject { ["type"] = MapType(p.ParameterType) };
+            JsonObject prop = new() { ["type"] = MapType(p.ParameterType) };
             if (!string.IsNullOrEmpty(p.Description))
                 prop["description"] = p.Description;
             properties[p.WireName] = prop;
@@ -34,7 +34,7 @@ internal static class SchemaBuilder
             if (p.IsRequired) required.Add(p.WireName);
         }
 
-        var schema = new JsonObject
+        JsonObject schema = new()
         {
             ["type"] = "object",
             ["properties"] = properties,
@@ -51,34 +51,30 @@ internal static class SchemaBuilder
     {
         Type u = Nullable.GetUnderlyingType(t) ?? t;
 
-        if (u == typeof(string) || u == typeof(Guid) || u == typeof(Uri) ||
-            u == typeof(DateTime) || u == typeof(DateTimeOffset) || u == typeof(TimeSpan))
-            return "string";
-
-        if (u == typeof(bool)) return "boolean";
-
-        if (u == typeof(byte) || u == typeof(sbyte) || u == typeof(short) || u == typeof(ushort) ||
-            u == typeof(int) || u == typeof(uint) || u == typeof(long) || u == typeof(ulong))
-            return "integer";
-
-        if (u == typeof(float) || u == typeof(double) || u == typeof(decimal))
-            return "number";
-
-        if (u.IsEnum) return "string";
-
-        if (u.IsArray) return "array";
-        if (u.IsGenericType)
+        return u switch
         {
-            var def = u.GetGenericTypeDefinition();
-            if (def == typeof(List<>) ||
-                def == typeof(IEnumerable<>) ||
-                def == typeof(IReadOnlyList<>) ||
-                def == typeof(IReadOnlyCollection<>) ||
-                def == typeof(ICollection<>))
-                return "array";
-        }
+            _ when u == typeof(string) || u == typeof(Guid) || u == typeof(Uri) ||
+                   u == typeof(DateTime) || u == typeof(DateTimeOffset) || u == typeof(TimeSpan) => "string",
+            _ when u == typeof(bool) => "boolean",
+            _ when u == typeof(byte) || u == typeof(sbyte) || u == typeof(short) || u == typeof(ushort) ||
+                   u == typeof(int) || u == typeof(uint) || u == typeof(long) || u == typeof(ulong) => "integer",
+            _ when u == typeof(float) || u == typeof(double) || u == typeof(decimal) => "number",
+            { IsEnum: true } => "string",
+            { IsArray: true } => "array",
+            _ when IsCollectionType(u) => "array",
+            _ => "object",
+        };
+    }
 
-        return "object";
+    private static bool IsCollectionType(Type u)
+    {
+        if (!u.IsGenericType) return false;
+        Type def = u.GetGenericTypeDefinition();
+        return def == typeof(List<>) ||
+               def == typeof(IEnumerable<>) ||
+               def == typeof(IReadOnlyList<>) ||
+               def == typeof(IReadOnlyCollection<>) ||
+               def == typeof(ICollection<>);
     }
 }
 
@@ -99,7 +95,7 @@ internal sealed class ParameterDescriptor
         get
         {
             if (Parameter.HasDefaultValue) return false;
-            var pt = Parameter.ParameterType;
+            Type pt = Parameter.ParameterType;
             if (Nullable.GetUnderlyingType(pt) is not null) return false;
             if (!pt.IsValueType) return false;
             return true;

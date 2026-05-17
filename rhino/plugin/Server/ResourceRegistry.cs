@@ -14,21 +14,22 @@ namespace RhMcp.Server;
 // variables are bound to method parameters by name.
 internal sealed class ResourceRegistry
 {
-    private readonly List<ResourceHandler> _handlers = new();
+    private List<ResourceHandler> Handlers { get; } = new();
 
-    public IReadOnlyList<ResourceHandler> All => _handlers;
+    public IReadOnlyList<ResourceHandler> All => Handlers;
 
     public IReadOnlyList<ResourceHandler> StaticResources =>
-        _handlers.Where(h => !h.IsTemplated).ToList();
+        Handlers.Where(h => !h.IsTemplated).ToList();
 
     public IReadOnlyList<ResourceHandler> Templated =>
-        _handlers.Where(h => h.IsTemplated).ToList();
+        Handlers.Where(h => h.IsTemplated).ToList();
 
     public ResourceHandler? Match(string uri, out IReadOnlyDictionary<string, string> variables)
     {
-        foreach (var h in _handlers)
+        foreach (ResourceHandler h in Handlers)
         {
-            if (h.TryMatch(uri, out variables!)) return h;
+            if (h.TryMatch(uri, out variables!))
+                return h;
         }
         variables = new Dictionary<string, string>();
         return null;
@@ -36,25 +37,27 @@ internal sealed class ResourceRegistry
 
     public static ResourceRegistry Scan(Assembly assembly, IServiceProvider services)
     {
-        var registry = new ResourceRegistry();
-        foreach (var type in SafeGetTypes(assembly))
-        {
-            if (type.GetCustomAttribute<McpServerResourceTypeAttribute>() is null) continue;
+        ResourceRegistry registry = new();
 
-            const BindingFlags flags =
-                BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance |
-                BindingFlags.DeclaredOnly;
-            foreach (var method in type.GetMethods(flags))
+        const BindingFlags flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+        foreach (Type type in SafeGetTypes(assembly))
+        {
+            if (type.GetCustomAttribute<McpServerResourceTypeAttribute>() is null)
+                continue;
+
+            foreach (MethodInfo method in type.GetMethods(flags))
             {
-                var resAttr = method.GetCustomAttribute<McpServerResourceAttribute>();
-                if (resAttr is null) continue;
+                McpServerResourceAttribute? resAttr = method.GetCustomAttribute<McpServerResourceAttribute>();
+                if (resAttr is null)
+                    continue;
 
                 if (string.IsNullOrEmpty(resAttr.UriTemplate))
                     throw new InvalidOperationException(
                         $"{type.FullName}.{method.Name}: McpServerResource attribute requires UriTemplate.");
 
-                var description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
-                registry._handlers.Add(new ResourceHandler(
+                string? description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
+                registry.Handlers.Add(new ResourceHandler(
                     method,
                     uriTemplate: resAttr.UriTemplate!,
                     name: resAttr.Name ?? method.Name,
@@ -68,7 +71,8 @@ internal sealed class ResourceRegistry
 
     private static IEnumerable<Type> SafeGetTypes(Assembly asm)
     {
-        try { return asm.GetTypes(); }
+        try
+        { return asm.GetTypes(); }
         catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t is not null)!; }
     }
 }
@@ -109,8 +113,8 @@ internal sealed class ResourceHandler
     // since we can short-circuit those with string equality.
     private static (Regex? matcher, string[] variables) CompileUriTemplate(string template)
     {
-        var vars = new List<string>();
-        var pattern = new StringBuilder("^");
+        List<string> vars = new();
+        StringBuilder pattern = new("^");
 
         int i = 0;
         while (i < template.Length)
@@ -128,7 +132,7 @@ internal sealed class ResourceHandler
                 throw new InvalidOperationException(
                     $"Unterminated '{{' in URI template '{template}'.");
 
-            var name = template.Substring(open + 1, close - open - 1);
+            string name = template.Substring(open + 1, close - open - 1);
             if (name.Length == 0)
                 throw new InvalidOperationException(
                     $"Empty variable name in URI template '{template}'.");
@@ -179,11 +183,13 @@ internal sealed class ResourceHandler
             return false;
         }
 
-        var match = _matcher.Match(uri);
-        if (!match.Success) { values = new Dictionary<string, string>(); return false; }
+        Match match = _matcher.Match(uri);
+        if (!match.Success)
+        { values = new Dictionary<string, string>(); return false; }
 
-        var dict = new Dictionary<string, string>(_variables.Length, StringComparer.Ordinal);
-        foreach (var v in _variables) dict[v] = match.Groups[v].Value;
+        Dictionary<string, string> dict = new(_variables.Length, StringComparer.Ordinal);
+        foreach (string v in _variables)
+            dict[v] = match.Groups[v].Value;
         values = dict;
         return true;
     }

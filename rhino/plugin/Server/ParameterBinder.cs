@@ -17,46 +17,48 @@ internal static class ParameterBinder
         IServiceProvider services,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, string>? uriTemplateValues = null)
-    {
-        switch (p.Kind)
+        => p.Kind switch
         {
-            case ParameterBindingKind.CancellationToken:
-                return cancellationToken;
+            ParameterBindingKind.CancellationToken => cancellationToken,
+            ParameterBindingKind.Service => ResolveService(p, services),
+            ParameterBindingKind.UriTemplate => ResolveUriTemplate(p, uriTemplateValues),
+            ParameterBindingKind.Argument => ResolveArgument(p, arguments),
+            _ => throw new InvalidOperationException($"Unknown binding kind {p.Kind}"),
+        };
 
-            case ParameterBindingKind.Service:
-                return services.GetService(p.ParameterType)
-                    ?? (p.Parameter.HasDefaultValue
-                        ? p.Parameter.DefaultValue
-                        : throw new ArgumentException(
-                            $"No service of type {p.ParameterType.FullName} was registered for parameter '{p.WireName}'."));
+    private static object? ResolveService(ParameterDescriptor p, IServiceProvider services)
+        => services.GetService(p.ParameterType)
+            ?? (p.Parameter.HasDefaultValue
+                ? p.Parameter.DefaultValue
+                : throw new ArgumentException(
+                    $"No service of type {p.ParameterType.FullName} was registered for parameter '{p.WireName}'."));
 
-            case ParameterBindingKind.UriTemplate:
-                if (uriTemplateValues is null || !uriTemplateValues.TryGetValue(p.WireName, out var raw))
-                {
-                    if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
-                    throw new ArgumentException(
-                        $"URI template variable '{p.WireName}' was not present in the request URI.");
-                }
-                return ConvertString(raw, p.ParameterType);
-
-            case ParameterBindingKind.Argument:
-                if (arguments is null || !arguments.TryGetValue(p.WireName, out var element))
-                {
-                    if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
-                    if (IsNullable(p.Parameter)) return null;
-                    throw new ArgumentException($"Required argument '{p.WireName}' was not supplied.");
-                }
-                if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-                {
-                    if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
-                    if (IsNullable(p.Parameter)) return null;
-                    throw new ArgumentException($"Argument '{p.WireName}' was null but the parameter is not nullable.");
-                }
-                return JsonSerializer.Deserialize(element.GetRawText(), p.ParameterType, McpSerializer.Options);
-
-            default:
-                throw new InvalidOperationException($"Unknown binding kind {p.Kind}");
+    private static object? ResolveUriTemplate(ParameterDescriptor p, IReadOnlyDictionary<string, string>? uriTemplateValues)
+    {
+        if (uriTemplateValues is null || !uriTemplateValues.TryGetValue(p.WireName, out string? raw))
+        {
+            if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
+            throw new ArgumentException(
+                $"URI template variable '{p.WireName}' was not present in the request URI.");
         }
+        return ConvertString(raw, p.ParameterType);
+    }
+
+    private static object? ResolveArgument(ParameterDescriptor p, IDictionary<string, JsonElement>? arguments)
+    {
+        if (arguments is null || !arguments.TryGetValue(p.WireName, out JsonElement element))
+        {
+            if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
+            if (IsNullable(p.Parameter)) return null;
+            throw new ArgumentException($"Required argument '{p.WireName}' was not supplied.");
+        }
+        if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            if (p.Parameter.HasDefaultValue) return p.Parameter.DefaultValue;
+            if (IsNullable(p.Parameter)) return null;
+            throw new ArgumentException($"Argument '{p.WireName}' was null but the parameter is not nullable.");
+        }
+        return JsonSerializer.Deserialize(element.GetRawText(), p.ParameterType, McpSerializer.Options);
     }
 
     private static object? ConvertString(string raw, Type target)
@@ -79,29 +81,36 @@ internal static class ParameterBinder
 // value (or null for non-generic completions).
 internal static class ResultUnwrapper
 {
-    public static async ValueTask<object?> UnwrapAsync(object? raw)
+    public static ValueTask<object?> UnwrapAsync(object? raw) => raw switch
     {
-        switch (raw)
-        {
-            case null: return null;
+        null => new ValueTask<object?>((object?)null),
+        Task task => UnwrapTaskAsync(task),
+        ValueTask vt => UnwrapValueTaskAsync(vt),
+        _ => UnwrapOtherAsync(raw),
+    };
 
-            case Task task:
-                await task.ConfigureAwait(false);
-                var taskType = task.GetType();
-                if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
-                    return taskType.GetProperty("Result")?.GetValue(task);
-                return null;
+    private static async ValueTask<object?> UnwrapTaskAsync(Task task)
+    {
+        await task.ConfigureAwait(false);
+        Type taskType = task.GetType();
+        if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
+            return taskType.GetProperty("Result")?.GetValue(task);
+        return null;
+    }
 
-            case ValueTask vt:
-                await vt.ConfigureAwait(false);
-                return null;
-        }
+    private static async ValueTask<object?> UnwrapValueTaskAsync(ValueTask vt)
+    {
+        await vt.ConfigureAwait(false);
+        return null;
+    }
 
-        // ValueTask<T> is a struct so it doesn't hit the type-pattern above.
-        var rt = raw.GetType();
+    // ValueTask<T> is a struct so it doesn't match the Task/ValueTask type patterns.
+    private static async ValueTask<object?> UnwrapOtherAsync(object raw)
+    {
+        Type rt = raw.GetType();
         if (rt.IsGenericType && rt.GetGenericTypeDefinition() == typeof(ValueTask<>))
         {
-            var converted = (Task)rt.GetMethod(nameof(ValueTask<object>.AsTask))!.Invoke(raw, null)!;
+            Task converted = (Task)rt.GetMethod(nameof(ValueTask<object>.AsTask))!.Invoke(raw, null)!;
             await converted.ConfigureAwait(false);
             return converted.GetType().GetProperty("Result")?.GetValue(converted);
         }

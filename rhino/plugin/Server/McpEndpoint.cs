@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -23,7 +24,7 @@ public static class McpEndpointExtensions
     public static IEndpointConventionBuilder MapMcp(
         this IEndpointRouteBuilder endpoints, string pattern, McpEndpointOptions options)
     {
-        var dispatcher = new McpDispatcher(options, endpoints.ServiceProvider);
+        McpDispatcher dispatcher = new(options, endpoints.ServiceProvider);
         return endpoints.MapPost(pattern, dispatcher.HandleAsync);
     }
 }
@@ -51,8 +52,7 @@ internal sealed class McpDispatcher
 
     public async Task HandleAsync(HttpContext ctx)
     {
-        var logger = ctx.RequestServices.GetService<ILoggerFactory>()
-            ?.CreateLogger("RhMcp.Server");
+        ILogger? logger = ctx.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("RhMcp.Server");
 
         JsonRpcRequest? request;
         try
@@ -65,17 +65,17 @@ internal sealed class McpDispatcher
         {
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
-                Error = new JsonRpcError { Code = JsonRpcErrorCodes.ParseError, Message = ex.Message }
+                Error = new JsonRpcError { Code = JsonRpcErrorCode.ParseError, Message = ex.Message }
             }).ConfigureAwait(false);
             return;
         }
 
-        if (request is null || request.Method is null || string.IsNullOrEmpty(request.Method))
+        if (string.IsNullOrEmpty(request?.Method))
         {
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
                 Id = request?.Id,
-                Error = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidRequest, Message = "Missing method." }
+                Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidRequest, Message = "Missing method." }
             }).ConfigureAwait(false);
             return;
         }
@@ -107,7 +107,7 @@ internal sealed class McpDispatcher
                 Id = request.Id,
                 Error = new JsonRpcError
                 {
-                    Code = JsonRpcErrorCodes.InternalError,
+                    Code = JsonRpcErrorCode.InternalError,
                     Message = _options.SurfaceExceptionDetailsToClient
                         ? $"{ex.GetType().FullName}: {ex.Message}"
                         : "Internal error.",
@@ -116,94 +116,96 @@ internal sealed class McpDispatcher
         }
     }
 
-    private async Task<JsonRpcResponse> DispatchAsync(
-        JsonRpcRequest request, IServiceProvider services, CancellationToken ct)
-    {
-        switch (request.Method)
+    private Task<JsonRpcResponse> DispatchAsync(
+        JsonRpcRequest request, IServiceProvider services, CancellationToken ct) =>
+        request.Method switch
         {
-            case "initialize":
-                return new JsonRpcResponse
+            "initialize" => HandleInitialize(),
+            "notifications/initialized" or "notifications/cancelled" => HandleNotification(),
+            "ping" => HandlePing(),
+            "tools/list" => HandleToolsList(),
+            "tools/call" => HandleToolCallAsync(request, services, ct),
+            "resources/list" => HandleResourcesList(),
+            "resources/templates/list" => HandleResourceTemplatesList(),
+            "resources/read" => HandleResourceReadAsync(request, services, ct),
+            _ => HandleUnknownMethod(request.Method),
+        };
+
+    private Task<JsonRpcResponse> HandleInitialize() =>
+        Task.FromResult(new JsonRpcResponse
+        {
+            Result = new InitializeResult
+            {
+                ServerInfo = new ServerInfo { Name = _options.ServerName, Version = _options.ServerVersion },
+                Capabilities = new ServerCapabilities
                 {
-                    Result = new InitializeResult
-                    {
-                        ServerInfo = new ServerInfo { Name = _options.ServerName, Version = _options.ServerVersion },
-                        Capabilities = new ServerCapabilities
-                        {
-                            Tools = new ToolsCapability(),
-                            Resources = _resources.All.Count > 0 ? new ResourcesCapability() : null,
-                        },
-                    },
-                };
+                    Tools = new ToolsCapability(),
+                    Resources = _resources.All.Count > 0 ? new ResourcesCapability() : null,
+                },
+            },
+        });
 
-            case "notifications/initialized":
-            case "notifications/cancelled":
-                return new JsonRpcResponse(); // notification — no result, no error
+    // Notification — no result, no error.
+    private static Task<JsonRpcResponse> HandleNotification() =>
+        Task.FromResult(new JsonRpcResponse());
 
-            case "ping":
-                return new JsonRpcResponse { Result = new { } };
+    private static Task<JsonRpcResponse> HandlePing() =>
+        Task.FromResult(new JsonRpcResponse { Result = new { } });
 
-            case "tools/list":
-                return new JsonRpcResponse
+    private Task<JsonRpcResponse> HandleToolsList() =>
+        Task.FromResult(new JsonRpcResponse
+        {
+            Result = new ListToolsResult
+            {
+                Tools = _tools.All.Select(t => new ToolDescriptor
                 {
-                    Result = new ListToolsResult
-                    {
-                        Tools = _tools.All.Select(t => new ToolDescriptor
-                        {
-                            Name = t.Name,
-                            Title = t.Title,
-                            Description = t.Description,
-                            InputSchema = t.InputSchema,
-                        }).ToList(),
-                    },
-                };
+                    Name = t.Name,
+                    Title = t.Title,
+                    Description = t.Description,
+                    InputSchema = t.InputSchema,
+                }).ToList(),
+            },
+        });
 
-            case "tools/call":
-                return await HandleToolCallAsync(request, services, ct).ConfigureAwait(false);
-
-            case "resources/list":
-                return new JsonRpcResponse
+    private Task<JsonRpcResponse> HandleResourcesList() =>
+        Task.FromResult(new JsonRpcResponse
+        {
+            Result = new ListResourcesResult
+            {
+                Resources = _resources.StaticResources.Select(r => new ResourceDescriptor
                 {
-                    Result = new ListResourcesResult
-                    {
-                        Resources = _resources.StaticResources.Select(r => new ResourceDescriptor
-                        {
-                            Uri = r.UriTemplate,
-                            Name = r.Name,
-                            Description = r.Description,
-                            MimeType = r.MimeType,
-                        }).ToList(),
-                    },
-                };
+                    Uri = r.UriTemplate,
+                    Name = r.Name,
+                    Description = r.Description,
+                    MimeType = r.MimeType,
+                }).ToList(),
+            },
+        });
 
-            case "resources/templates/list":
-                return new JsonRpcResponse
+    private Task<JsonRpcResponse> HandleResourceTemplatesList() =>
+        Task.FromResult(new JsonRpcResponse
+        {
+            Result = new ListResourceTemplatesResult
+            {
+                ResourceTemplates = _resources.Templated.Select(r => new ResourceTemplateDescriptor
                 {
-                    Result = new ListResourceTemplatesResult
-                    {
-                        ResourceTemplates = _resources.Templated.Select(r => new ResourceTemplateDescriptor
-                        {
-                            UriTemplate = r.UriTemplate,
-                            Name = r.Name,
-                            Description = r.Description,
-                            MimeType = r.MimeType,
-                        }).ToList(),
-                    },
-                };
+                    UriTemplate = r.UriTemplate,
+                    Name = r.Name,
+                    Description = r.Description,
+                    MimeType = r.MimeType,
+                }).ToList(),
+            },
+        });
 
-            case "resources/read":
-                return await HandleResourceReadAsync(request, services, ct).ConfigureAwait(false);
-
-            default:
-                return new JsonRpcResponse
-                {
-                    Error = new JsonRpcError
-                    {
-                        Code = JsonRpcErrorCodes.MethodNotFound,
-                        Message = $"Method '{request.Method}' is not implemented by this server.",
-                    },
-                };
-        }
-    }
+    private static Task<JsonRpcResponse> HandleUnknownMethod(string method) =>
+        Task.FromResult(new JsonRpcResponse
+        {
+            Error = new JsonRpcError
+            {
+                Code = JsonRpcErrorCode.MethodNotFound,
+                Message = $"Method '{method}' is not implemented by this server.",
+            },
+        });
 
     private async Task<JsonRpcResponse> HandleToolCallAsync(
         JsonRpcRequest request, IServiceProvider services, CancellationToken ct)
@@ -215,22 +217,22 @@ internal sealed class McpDispatcher
         if (p is null || string.IsNullOrEmpty(p.Name))
             return new JsonRpcResponse
             {
-                Error = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidParams, Message = "Missing tool name." }
+                Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidParams, Message = "Missing tool name." }
             };
 
-        if (!_tools.TryGet(p.Name, out var tool))
+        if (!_tools.TryGet(p.Name, out ToolHandler tool))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
                 {
-                    Code = JsonRpcErrorCodes.MethodNotFound,
+                    Code = JsonRpcErrorCode.MethodNotFound,
                     Message = $"Tool '{p.Name}' is not registered.",
                 }
             };
 
         try
         {
-            var result = await tool.InvokeAsync(p.Arguments, services, ct).ConfigureAwait(false);
+            CallToolResult result = await tool.InvokeAsync(p.Arguments, services, ct).ConfigureAwait(false);
             return new JsonRpcResponse { Result = result };
         }
         catch (Exception ex)
@@ -264,21 +266,21 @@ internal sealed class McpDispatcher
         if (p is null || string.IsNullOrEmpty(p.Uri))
             return new JsonRpcResponse
             {
-                Error = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidParams, Message = "Missing resource URI." }
+                Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidParams, Message = "Missing resource URI." }
             };
 
-        var handler = _resources.Match(p.Uri, out var variables);
+        ResourceHandler? handler = _resources.Match(p.Uri, out IReadOnlyDictionary<string, string> variables);
         if (handler is null)
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
                 {
-                    Code = JsonRpcErrorCodes.MethodNotFound,
+                    Code = JsonRpcErrorCode.MethodNotFound,
                     Message = $"No resource matches URI '{p.Uri}'.",
                 }
             };
 
-        var result = await handler.InvokeAsync(p.Uri, variables, services, ct).ConfigureAwait(false);
+        ReadResourceResult result = await handler.InvokeAsync(p.Uri, variables, services, ct).ConfigureAwait(false);
         return new JsonRpcResponse { Result = result };
     }
 
