@@ -27,6 +27,31 @@
       "console": "internalConsole"
     },
     {
+      "name": "Rhino 8 - netcore",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (R8)",
+      "program": "",
+      "osx": {
+        "program": "/Applications/Rhino 8.app/Contents/MacOS/Rhinoceros",
+        "args": ["-runscript=_StartMCP"],
+      },
+      "windows": {
+        "program": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
+        "targetArchitecture": "x86_64",
+        "args": [
+          "/netcore",
+          "/runscript=_StartMCP _Enter"
+        ]
+      },
+      "env": {
+        "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8/Debug"
+      },
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
       "name": "Router - launch",
       "type": "coreclr",
       "request": "launch",

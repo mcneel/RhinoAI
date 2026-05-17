@@ -29,6 +29,9 @@ public static class OpenDocTool
             throw new InvalidOperationException($"Failed to import: {path}");
         var imported = doc.Objects.Count - before;
 
+        foreach (var view in doc.Views)
+            view.ActiveViewport.ZoomExtents();
+
         doc.Views.Redraw();
 
         return JsonSerializer.Serialize(new
