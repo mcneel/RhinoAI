@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="art/logo.svg" alt="Rhino MCP" width="180" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="art/logo-dark.svg">
+  <img alt="Rhino MCP" src="art/logo.svg" width="180">
+</picture>
 
 # Rhino MCP Platform
 
