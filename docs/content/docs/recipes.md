@@ -1,6 +1,6 @@
 ---
 title: Recipes
-weight: 2
+weight: 10
 ---
 
 A growing library of prompts you can copy straight into your AI assistant.

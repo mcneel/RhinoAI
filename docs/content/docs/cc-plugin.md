@@ -1,16 +1,18 @@
 ---
 title: Claude Code
-weight: 5
+weight: 3
+prev: docs/getting-started
+next: docs/try-it-out
+toc: false
 ---
 
 [Claude Code](https://claude.com/claude-code) is Anthropic's
-terminal-based AI assistant. Our Claude Code plugin ships ready-made
-agents for modelling, drafting, Grasshopper, and more &mdash; so you can
-say *"hand this off to the modeller"* and Claude knows what to do.
+terminal-based AI assistant. The Rhino Claude Code plugin ships ready-made
+agents for modelling, drafting, Grasshopper, and more.
 
 Claude Code is a great fit if you're comfortable in a terminal or already
 use it for code. If you're not sure, start with [Claude
-Desktop](../connector) &mdash; it's the gentler entry point.
+Desktop](../connector) it's much more friendly.
 
 ## Before you start
 
@@ -29,7 +31,7 @@ Inside a Claude Code session, run:
 /plugin install mcneel@rhino-mcp
 ```
 
-Restart the session when prompted. You'll see a `rhino-mcp` MCP server
+Restart the session when prompted. You'll see a `rhino` MCP server
 appear in your `/mcp` list.
 
 ## What you get
@@ -64,7 +66,12 @@ explicitly (*"have the modeller build me a chair"*) or let Claude pick.
 
 ## Try it out
 
-In a Claude Code session, ask:
+Start a Claude Code session and follow the prompts on the
+[Try it out](../try-it-out) page.
+
+## Try the agents
+
+Once that's working, see the specialist agents in action. Ask:
 
 > "What's in my Rhino document?"
 
@@ -85,13 +92,3 @@ You should see the bench appear in your Rhino window.
 - **Multiple Rhinos.** Use `/rhino-mcp:launch-rhinos` to spin up several
   windows and have different agents work in each.
 
-## Power-user tip: local development
-
-If you've cloned the repo and want to test changes to the plugin:
-
-```
-/plugin marketplace add /path/to/RhinoMCP/cc-plugin
-/plugin install mcneel@rhino-mcp
-```
-
-See the [Developers](../../developers) section for the rest.

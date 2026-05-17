@@ -42,10 +42,15 @@ menu:
     - name: Docs
       pageRef: /docs
       weight: 1
+    - name: Rhino
+      url: https://www.rhino3d.com
       weight: 2
-    - name: GitHub
+    - name: Support
+      url: https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162
       weight: 3
+    - name: GitHub
       url: https://github.com/mcneel/RhinoMCP
+      weight: 10
       params:
         icon: github
 
@@ -53,7 +58,12 @@ params:
   description: A Rhino MCP Server for AI agents to create and edit in Rhino.
   navbar:
     displayTitle: true
-    displayLogo: false
+    displayLogo: true
+    logo:
+      path: images/logo.svg
+      dark: images/logo-dark.svg
+      width: 32
+      height: 32
   page:
     width: normal
   theme:
