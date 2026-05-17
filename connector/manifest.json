@@ -15,7 +15,7 @@
   "support": "https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162",
   "icon": "icon.png",
   "screenshots": [
-    "screenshots/twisty-gh.png"
+    "screenshots/casa-rhino.png"
   ],
   "server": {
     "type": "node",
@@ -34,8 +34,8 @@
     "rhino_version": {
       "type": "string",
       "title": "Rhino Version",
-      "description": "Which Rhino to launch when a tool needs one. Accepted values: 8, 9, WIP.",
-      "required": true,
+      "description": "Which Rhino Version? Accepted values: 8, 9, WIP.",
+      "required": false,
       "default": "8"
     }
   },
