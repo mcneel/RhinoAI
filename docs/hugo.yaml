@@ -42,8 +42,6 @@ menu:
     - name: Docs
       pageRef: /docs
       weight: 1
-    - name: Developers
-      pageRef: /developers
       weight: 2
     - name: GitHub
       weight: 3
