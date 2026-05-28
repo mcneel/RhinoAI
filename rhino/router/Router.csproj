@@ -92,6 +92,25 @@
   </ItemGroup>
 
   <!--
+    Markdown primers shipped with the router itself (e.g. the slots primer).
+    The ResourceProxy serves these directly without consulting any slot, so
+    they're available even when no Rhino is running.
+  -->
+  <ItemGroup>
+    <None Include="mcp/**/*.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    Compile-link Rhino-free portions of the plug-in's resource code so the
+    router can scan its own `mcp/` folder without a Rhino dependency. Same
+    pattern Server.Tests uses to consume Server/*.cs without a ProjectReference.
+  -->
+  <ItemGroup>
+    <Compile Include="../plugin/Server/PluginResource.cs" LinkBase="SharedSources" />
+    <Compile Include="../plugin/Server/BuiltInResourceScanner.cs" LinkBase="SharedSources" />
+  </ItemGroup>
+
+  <!--
     AOT publish drops native deps like libe_sqlite3.dylib in $(OutDir), but the
     AOT-linked binary lives in $(OutDir)native/. dlopen searches alongside the
     binary, so without this copy the router crashes on startup with a

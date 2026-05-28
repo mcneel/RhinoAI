@@ -51,6 +51,15 @@
   </ItemGroup>
 
   <!--
+    Markdown primers shipped with the plug-in. PluginResourceScanner
+    discovers these at runtime under the assembly's `mcp/` folder and exposes
+    them as `rhino://<relpath>` resources.
+  -->
+  <ItemGroup>
+    <None Include="mcp/**/*.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
     Yak for a net8.0 plugin is built from the parent of the TFM folder, so the
     manifest and icon live in $(YakStagingDir) (sibling to `net8.0/`). We use
     that explicit path rather than $(OutputPath)../ because TargetFrameworks

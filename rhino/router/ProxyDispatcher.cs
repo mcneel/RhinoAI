@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
+using RhMcp.Router.Resources;
+
 namespace RhMcp.Router;
 
 // Forwards MCP tool calls from this router to the specified child Rhino's HTTP MCP endpoint.
@@ -120,7 +122,8 @@ public class ProxyDispatcher(
                         $"Child Rhino at {child.Endpoint} returned HTTP {(int)response.StatusCode}: {responseBody}");
                 }
 
-                JsonElement resultElement = ExtractMcpResult(responseBody, child.SlotId, toolName);
+                JsonElement resultElement = JsonRpcOverHttp.ExtractResult(
+                    responseBody, child.SlotId, $"tool '{toolName}'");
 
                 // Binary content block — pass through verbatim, bypassing the envelope.
                 if (toolName == ViewportImageToolName)
@@ -246,53 +249,6 @@ public class ProxyDispatcher(
                 return true;
         }
         return false;
-    }
-
-    // Unwraps the MCP `result` element from either a bare JSON-RPC body or an SSE stream.
-    private static JsonElement ExtractMcpResult(string responseBody, string slotId, string toolName)
-    {
-        string trimmed = responseBody.TrimStart();
-
-        if (trimmed.StartsWith("event:") || trimmed.StartsWith("data:"))
-        {
-            // Walk SSE lines, find the first `data:` payload, parse that.
-            foreach (string line in responseBody.Split('\n'))
-            {
-                string lineTrimmed = line.TrimEnd('\r');
-                if (lineTrimmed.StartsWith("data:"))
-                {
-                    string jsonPart = lineTrimmed["data:".Length..].TrimStart();
-                    if (!string.IsNullOrEmpty(jsonPart))
-                    {
-                        return ExtractResultFromJsonRpc(jsonPart, slotId, toolName);
-                    }
-                }
-            }
-            throw new InvalidOperationException(
-                $"No `data:` payload in SSE response from slot '{slotId}' for tool '{toolName}': {responseBody}");
-        }
-
-        return ExtractResultFromJsonRpc(responseBody, slotId, toolName);
-    }
-
-    private static JsonElement ExtractResultFromJsonRpc(string rpcJson, string slotId, string toolName)
-    {
-        using JsonDocument doc = JsonDocument.Parse(rpcJson);
-        JsonElement root = doc.RootElement;
-
-        if (root.TryGetProperty("error", out JsonElement err))
-        {
-            throw new InvalidOperationException(
-                $"Slot '{slotId}' tool '{toolName}' returned MCP error: {err.GetRawText()}");
-        }
-
-        if (root.TryGetProperty("result", out JsonElement result))
-        {
-            return result.Clone();
-        }
-
-        throw new InvalidOperationException(
-            $"Unexpected MCP response from slot '{slotId}' tool '{toolName}': {rpcJson}");
     }
 
     // Plugin tool returns are wrapped by the MCP SDK in a text content block.

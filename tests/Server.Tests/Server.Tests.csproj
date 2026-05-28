@@ -31,6 +31,7 @@
     <Compile Include="../../rhino/plugin/Server/SchemaBuilder.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/ParameterBinder.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/ResourceRegistry.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/PluginResource.cs" LinkBase="ServerSources" />
   </ItemGroup>
 
 </Project>

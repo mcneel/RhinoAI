@@ -25,6 +25,9 @@ public static class McpEndpointExtensions
         this IEndpointRouteBuilder endpoints, string pattern, McpEndpointOptions options)
     {
         McpDispatcher dispatcher = new(options, endpoints.ServiceProvider);
+        // Hand the dispatcher back to the host via the options object so they
+        // can call RescanPluginResources() from a Rhino plug-in-loaded event.
+        options.Dispatcher = dispatcher;
         return endpoints.MapPost(pattern, dispatcher.HandleAsync);
     }
 }
@@ -35,19 +38,54 @@ public sealed class McpEndpointOptions
     public string ServerVersion { get; set; } = "0.1.0";
     public Assembly ToolAssembly { get; set; } = typeof(McpEndpointOptions).Assembly;
     public bool SurfaceExceptionDetailsToClient { get; set; }
+
+    // GUID of the rh-mcp plug-in itself, so the plug-in-folder scanner can
+    // skip our own assembly (our built-in resources are still served via the
+    // attribute-decorated handlers). Leave null to scan everything.
+    public Guid? OwnPluginId { get; set; }
+
+    // Populated by MapMcp once the endpoint is registered. The host reads this
+    // to call RescanPluginResources() when Rhino loads a new plug-in. Null
+    // before MapMcp has been called.
+    public McpDispatcher? Dispatcher { get; internal set; }
 }
 
-internal sealed class McpDispatcher
+public sealed class McpDispatcher
 {
     private readonly McpEndpointOptions _options;
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
 
-    public McpDispatcher(McpEndpointOptions options, IServiceProvider rootServices)
+    internal McpDispatcher(McpEndpointOptions options, IServiceProvider rootServices)
     {
         _options = options;
         _tools = ToolRegistry.Scan(options.ToolAssembly, rootServices);
         _resources = ResourceRegistry.Scan(options.ToolAssembly, rootServices);
+        RescanPluginResources();
+    }
+
+    // Re-walk every installed Rhino plug-in's `mcp/` folder, plus our own
+    // built-in `mcp/` folder. Called once at construction and again whenever
+    // Rhino loads a new plug-in. Cheap enough (tens of directory probes + a
+    // small read per markdown file) to run unconditionally rather than diffing.
+    public void RescanPluginResources()
+    {
+        List<PluginResource> discovered = new();
+        discovered.AddRange(PluginResourceScanner.ScanBuiltInFolder(GetBuiltInMcpFolder()));
+        discovered.AddRange(PluginResourceScanner.Scan(_options.OwnPluginId));
+        _resources.ReplacePluginResources(discovered);
+    }
+
+    // Locate the rh-mcp plug-in's own `mcp/` folder. Sits next to the assembly
+    // (alongside `RhinoMcpPlatform.rhp`); contents are copied there from
+    // `rhino/plugin/mcp/` at build time via a Content item in the csproj.
+    private string GetBuiltInMcpFolder()
+    {
+        string? assemblyPath = _options.ToolAssembly.Location;
+        if (string.IsNullOrEmpty(assemblyPath))
+            return "";
+        string? dir = System.IO.Path.GetDirectoryName(assemblyPath);
+        return dir is null ? "" : System.IO.Path.Combine(dir, "mcp");
     }
 
     public async Task HandleAsync(HttpContext ctx)
@@ -140,7 +178,9 @@ internal sealed class McpDispatcher
                 Capabilities = new ServerCapabilities
                 {
                     Tools = new ToolsCapability(),
-                    Resources = _resources.All.Count > 0 ? new ResourcesCapability() : null,
+                    Resources = (_resources.All.Count > 0 || _resources.PluginResources.Count > 0)
+                        ? new ResourcesCapability()
+                        : null,
                 },
             },
         });
@@ -173,20 +213,34 @@ internal sealed class McpDispatcher
             },
         });
 
-    private Task<JsonRpcResponse> HandleResourcesList() =>
-        Task.FromResult(new JsonRpcResponse
-        {
-            Result = new ListResourcesResult
+    private Task<JsonRpcResponse> HandleResourcesList()
+    {
+        List<ResourceDescriptor> descriptors = _resources.StaticResources
+            .Select(r => new ResourceDescriptor
             {
-                Resources = _resources.StaticResources.Select(r => new ResourceDescriptor
-                {
-                    Uri = r.UriTemplate,
-                    Name = r.Name,
-                    Description = r.Description,
-                    MimeType = r.MimeType,
-                }).ToList(),
-            },
+                Uri = r.UriTemplate,
+                Name = r.Name,
+                Description = r.Description,
+                MimeType = r.MimeType,
+            })
+            .ToList();
+
+        foreach (PluginResource pr in _resources.PluginResources)
+        {
+            descriptors.Add(new ResourceDescriptor
+            {
+                Uri = pr.Uri,
+                Name = pr.Name,
+                Description = pr.Description,
+                MimeType = pr.MimeType,
+            });
+        }
+
+        return Task.FromResult(new JsonRpcResponse
+        {
+            Result = new ListResourcesResult { Resources = descriptors },
         });
+    }
 
     private Task<JsonRpcResponse> HandleResourceTemplatesList() =>
         Task.FromResult(new JsonRpcResponse
@@ -276,18 +330,58 @@ internal sealed class McpDispatcher
             };
 
         ResourceHandler? handler = _resources.Match(p.Uri, out IReadOnlyDictionary<string, string> variables);
-        if (handler is null)
-            return new JsonRpcResponse
-            {
-                Error = new JsonRpcError
-                {
-                    Code = JsonRpcErrorCode.MethodNotFound,
-                    Message = $"No resource matches URI '{p.Uri}'.",
-                }
-            };
+        if (handler is not null)
+        {
+            ReadResourceResult result = await handler.InvokeAsync(p.Uri, variables, services, ct).ConfigureAwait(false);
+            return new JsonRpcResponse { Result = result };
+        }
 
-        ReadResourceResult result = await handler.InvokeAsync(p.Uri, variables, services, ct).ConfigureAwait(false);
-        return new JsonRpcResponse { Result = result };
+        // Fall through to plug-in-folder resources (.md files discovered at
+        // startup / on plug-in-load). These never appear as templated URIs, so
+        // an exact-string match is enough.
+        PluginResource? pluginResource = _resources.MatchPluginResource(p.Uri);
+        if (pluginResource is not null)
+            return new JsonRpcResponse { Result = await ReadPluginResourceAsync(pluginResource, ct).ConfigureAwait(false) };
+
+        return new JsonRpcResponse
+        {
+            Error = new JsonRpcError
+            {
+                Code = JsonRpcErrorCode.MethodNotFound,
+                Message = $"No resource matches URI '{p.Uri}'.",
+            }
+        };
+    }
+
+    private static async Task<ReadResourceResult> ReadPluginResourceAsync(
+        PluginResource resource, CancellationToken ct)
+    {
+        string text;
+        if (resource.IsIndex)
+        {
+            text = resource.IndexBody ?? "";
+        }
+        else if (resource.FilePath is { } path)
+        {
+            // Re-check size at read time — the file may have grown since the
+            // scanner saw it. Scanner enforces the same cap so this is mostly
+            // a guardrail for the rescan-races-with-edit case.
+            FileInfo fi = new(path);
+            if (fi.Length > PluginResourceScanner.MaxFileBytes)
+                throw new InvalidOperationException(
+                    $"Plug-in resource exceeds {PluginResourceScanner.MaxFileBytes}-byte cap: {resource.Uri}");
+
+            text = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            text = "";
+        }
+
+        return new ReadResourceResult
+        {
+            Contents = { new ResourceContent { Uri = resource.Uri, MimeType = resource.MimeType, Text = text } },
+        };
     }
 
     private static async Task WriteResponseAsync(HttpContext ctx, JsonRpcResponse response)

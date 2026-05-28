@@ -16,6 +16,12 @@ internal sealed class ResourceRegistry
 {
     private List<ResourceHandler> Handlers { get; } = new();
 
+    // File-backed resources discovered under installed plug-ins' `mcp/`
+    // folders. Mutable because we rescan when Rhino loads a new plug-in;
+    // guarded by _pluginLock so a read-in-flight can't see a torn list.
+    private readonly object _pluginLock = new();
+    private List<PluginResource> _pluginResources = new();
+
     public IReadOnlyList<ResourceHandler> All => Handlers;
 
     public IReadOnlyList<ResourceHandler> StaticResources =>
@@ -23,6 +29,32 @@ internal sealed class ResourceRegistry
 
     public IReadOnlyList<ResourceHandler> Templated =>
         Handlers.Where(h => h.IsTemplated).ToList();
+
+    public IReadOnlyList<PluginResource> PluginResources
+    {
+        get { lock (_pluginLock) { return _pluginResources.ToList(); } }
+    }
+
+    public void ReplacePluginResources(IEnumerable<PluginResource> resources)
+    {
+        lock (_pluginLock)
+        {
+            _pluginResources = resources.ToList();
+        }
+    }
+
+    public PluginResource? MatchPluginResource(string uri)
+    {
+        lock (_pluginLock)
+        {
+            foreach (PluginResource r in _pluginResources)
+            {
+                if (string.Equals(r.Uri, uri, StringComparison.Ordinal))
+                    return r;
+            }
+            return null;
+        }
+    }
 
     // Exposed for tests that need to control registration order; production
     // code populates the registry via Scan.
