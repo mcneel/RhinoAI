@@ -24,7 +24,7 @@ keywords:
 
 1. Open Rhino 8 (and/or Rhino 9 WIP)
 2. Run the `PackageManager` command
-3. Search for, and install Rhino-MCP-Platform
+3. Search for, and install ai
 
 ## 3. Connect the two
 

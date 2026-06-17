@@ -19,7 +19,7 @@ If you're choosing between assistants and aren't sure, start with [Claude Deskto
 
 ## Before you start
 
-1. The **Rhino-MCP-Platform** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
+1. The **ai** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
 2. **VS Code 1.99** or newer, with the **GitHub Copilot** and **GitHub Copilot Chat** extensions installed and signed in.
 3. Agent mode is available in Copilot Chat. Open the Chat view and switch the mode selector from **Ask** to **Agent**.
 

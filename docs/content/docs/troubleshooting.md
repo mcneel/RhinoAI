@@ -19,7 +19,7 @@ Common issues. If you don't find your problem here, [open an issue on GitHub](ht
 Most often this means the connection wasn't made on startup.
 
 1. Restart **quit and reopen** your AI assistant
-2. Make sure you installed the Rhino plugin via Rhino's `PackageManager` (search for **Rhino-MCP-Platform**).
+2. Make sure you installed the Rhino plugin via Rhino's `PackageManager` (search for **ai**).
 3. In Claude Desktop, check Settings &rarr; Extensions to see if the Rhino3d connector is listed as connected.
 
 ## Rhino just crashed mid-conversation

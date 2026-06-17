@@ -20,7 +20,7 @@ If you're choosing between assistants and aren't sure, start with [Claude Deskto
 
 ## Before you start
 
-1. The **Rhino-MCP-Platform** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
+1. The **ai** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
 2. **Codex** is installed and signed in. See the [Codex install guide](https://github.com/openai/codex#installation) if you need it.
 
 ## Wire up the Rhino MCP server

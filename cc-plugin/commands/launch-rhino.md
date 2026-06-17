@@ -3,7 +3,7 @@ description: Launch a single Rhino MCP session via the router.
 argument-hint: [rhino-version]
 ---
 
-Spawn one Rhino managed by the router. The router (`rhino-mcp-router.exe`, shipped inside the Rhino-MCP-Platform yak) is the single stdio MCP server Claude Code talks to. It owns process lifecycle and port allocation — no port probing, no `/mcp` reconnect, no bash needed.
+Spawn one Rhino managed by the router. The router (`rhino-mcp-router.exe`, shipped inside the ai yak) is the single stdio MCP server Claude Code talks to. It owns process lifecycle and port allocation — no port probing, no `/mcp` reconnect, no bash needed.
 
 ## Argument
 

@@ -26,7 +26,7 @@ Local open-weight models are not as capable as the paid hosted models (Claude, G
 
 ## Before you start
 
-1. The **Rhino-MCP-Platform** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
+1. The **ai** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
 2. **LM Studio** is installed, and you've downloaded a model with strong tool-use support. A good starting point is [Qwen3](https://lmstudio.ai/models/qwen3), which drives MCP tools reliably. Plan on **16 GB of RAM** as a minimum.
 3. **Crank up the context length.** LM Studio defaults to a small context window, which the Rhino tool list alone will blow through. Open the model's load settings and push the max context length as high as your machine will allow.
 

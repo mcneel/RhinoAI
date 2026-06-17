@@ -36,19 +36,19 @@ That's it. The connector is now wired up.
 Paste the following into your AI agent. It will install it for you, so there is no need to open Rhino.
 
 {{< prompt >}}
-Install the `Rhino-MCP-Platform` plugin into Rhino using Yak (Rhino's Package Manager). `$1` is the Rhino major version to target (e.g. `8`). If omitted, default to `8`.
+Install the `ai` plugin into Rhino using Yak (Rhino's Package Manager). `$1` is the Rhino major version to target (e.g. `8`). If omitted, default to `8`.
 
 1. Locate the Yak CLI for Rhino `$1`. It ships with Rhino:
    - macOS: `/Applications/Rhino $1.app/Contents/Resources/bin/yak`
    - Windows: `C:\Program Files\Rhino $1\System\Yak.exe`
 2. Install the plugin from the public package server:
    
-   `yak install Rhino-MCP-Platform`
+   `yak install ai`
    
 3. Restart Rhino `$1` so the newly installed plugin is loaded.
 4. In Rhino, run the `MCPStart` command to confirm the plugin is available.
 
-To upgrade an existing install, run `yak update Rhino-MCP-Platform`. To remove it, run `yak uninstall Rhino-MCP-Platform`.
+To upgrade an existing install, run `yak update ai`. To remove it, run `yak uninstall ai`.
 {{</ prompt >}}
 
 ## Try it out

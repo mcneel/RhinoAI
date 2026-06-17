@@ -19,7 +19,7 @@ If you're choosing between assistants and aren't sure, start with [Claude Deskto
 
 ## Before you start
 
-1. The **Rhino-MCP-Platform** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
+1. The **ai** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
 2. **Gemini CLI** is installed and signed in. See the [Gemini CLI install guide](https://github.com/google-gemini/gemini-cli#installation) if you need it.
 
 ## Wire up the Rhino MCP server

@@ -1,5 +1,5 @@
 ---
-name: Rhino-MCP-Platform
+name: ai
 version: 0.0.0 # overwritten at build time from Directory.Build.props
 authors:
 - Callum Sykes
