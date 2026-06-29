@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -39,8 +40,6 @@ internal sealed class McpServer : IDisposable
             builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(port));
 
             builder.Services.AddSingleton(doc);
-
-            var asm = typeof(McpServer).Assembly;
 
             App = builder.Build();
             App.MapMcp("/");

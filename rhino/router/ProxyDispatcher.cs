@@ -59,7 +59,7 @@ public class ProxyDispatcher(
                 // needs (GH2_* tools pin "WIP"). Short-circuit before forwarding —
                 // the plugin would otherwise return a generic "unknown tool" MCP
                 // error and the agent wouldn't know the cause was a version mismatch.
-                if (defaultVersionOverride is not null && !IsVersionCompatible(child.Version, defaultVersionOverride))
+                if (defaultVersionOverride is not null && !VersionMatch.IsCompatible(child.Version, defaultVersionOverride))
                 {
                     return WrapError(
                         new ErrorInfo(
@@ -69,6 +69,11 @@ public class ProxyDispatcher(
                         autoSpawnedSlot);
                 }
             }
+
+            // Make this the session's active slot so the next slot-less call
+            // sticks to it. Past the version gate, so an incompatible explicit
+            // slot can't become active.
+            manager.SetActiveSlot(child.SlotId);
 
             string requestId = Guid.NewGuid().ToString("N");
             JsonRpcRequest rpc = new(
@@ -99,6 +104,16 @@ public class ProxyDispatcher(
             }
             catch (HttpRequestException ex) when (SpawnDiagnostics.IsConnectionFailure(ex))
             {
+                // A clean shutdown leaves a departure tombstone; a crash doesn't.
+                // Check that first so a user closing the doc/Rhino mid-call isn't
+                // reported as a crash.
+                if (manager.TryConsumeDeparture(child.Pid, child.Port))
+                {
+                    log.LogInformation("Rhino slot '{Slot}' (pid {Pid}) was closed during tool call '{Tool}'",
+                        child.SlotId, child.Pid, toolName);
+                    return WrapClosed(child, toolName, callerSlotArg: slotId, autoSpawnedSlot);
+                }
+
                 // Connection-level failure — Rhino likely crashed. Confirm via
                 // pid + port probe so we don't shout "crashed" on a transient blip.
                 if (manager.TryReapDead(child.SlotId))
@@ -149,6 +164,18 @@ public class ProxyDispatcher(
 
     private static string WrapError(ErrorInfo error, SlotInfo? autoSpawnedSlot) =>
         new ReturnResult(Payload: null, Error: error, AutoSpawnedSlot: autoSpawnedSlot).AsJson;
+
+    private static string WrapClosed(ChildRhino child, string toolName, string? callerSlotArg, SlotInfo? autoSpawnedSlot)
+    {
+        // Auto-spawn path can just retry; an explicit slot needs a fresh spawn_slot.
+        string nextAction = callerSlotArg is null
+            ? "Retry this call to auto-spawn another Rhino."
+            : "Call spawn_slot to start a new one.";
+        string message =
+            $"Rhino slot '{child.SlotId}' (Rhino {child.Version}) was closed (its document or the Rhino window was closed) " +
+            $"during '{toolName}'. The slot has been pruned. " + nextAction;
+        return WrapError(new ErrorInfo(Code: "rhino_closed", Message: message), autoSpawnedSlot);
+    }
 
     private string WrapCrash(ChildRhino child, string toolName, string? callerSlotArg, SlotInfo? autoSpawnedSlot)
     {
@@ -206,18 +233,6 @@ public class ProxyDispatcher(
     private sealed class SlotNotFoundException(string slotId) : Exception($"No slot named '{slotId}'")
     {
         public string SlotId { get; } = slotId;
-    }
-
-    private static bool IsVersionCompatible(string actual, string required)
-    {
-        if (actual == required)
-            return true;
-        return (actual, required) switch
-        {
-            ("9", "WIP") => true,
-            ("WIP", "9") => true,
-            _ => false,
-        };
     }
 
     // Unwraps the MCP `result` element from either a bare JSON-RPC body or an SSE stream.

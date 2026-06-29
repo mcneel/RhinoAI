@@ -11,7 +11,7 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
     [McpServerTool(Name = "spawn_slot", Title = "Spawn Rhino Slot", ReadOnly = false, Destructive = false)]
     [Description("Launch a new Rhino instance and return its slot ID. Pass that ID as the `slot` arg on subsequent tool calls to target this Rhino.")]
     public async Task<string> SpawnAsync(
-        [Description("Rhino version: '8', '9', or 'WIP'. Omit to use the router's configured default.")]
+        [Description("Rhino version: '8', '9', 'BETA', or 'WIP' ('9'/'BETA'/'WIP' are interchangeable). Omit to use the router's configured default.")]
         string? version = null,
         CancellationToken ct = default)
     {

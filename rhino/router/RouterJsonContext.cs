@@ -23,6 +23,7 @@ namespace RhMcp.Router;
 [JsonSerializable(typeof(CloseListenerArgs))]
 [JsonSerializable(typeof(QuitAppArgs))]
 [JsonSerializable(typeof(Announcement))]
+[JsonSerializable(typeof(Departure))]
 [JsonSerializable(typeof(ReturnResult))]
 [JsonSerializable(typeof(ErrorInfo))]
 [JsonSerializable(typeof(SlotInfo))]
@@ -96,6 +97,15 @@ public sealed record QuitAppArgs();
 // `v` is a schema version — bump only if the file shape changes in a
 // non-additive way. Unknown future fields are ignored on read.
 public sealed record Announcement(
+    [property: JsonPropertyName("v")] int V,
+    [property: JsonPropertyName("pid")] int Pid,
+    [property: JsonPropertyName("port")] int Port,
+    [property: JsonPropertyName("version")] string? Version);
+
+// Tombstone the plugin drops when a listener closes cleanly. Lets the router
+// prune the slot and tell a user-initiated close apart from a crash. Sibling to
+// Announcement in the same drop dir, distinguished by a `.gone` extension.
+public sealed record Departure(
     [property: JsonPropertyName("v")] int V,
     [property: JsonPropertyName("pid")] int Pid,
     [property: JsonPropertyName("port")] int Port,

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 using RhMcp.Router;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
@@ -11,19 +11,22 @@ namespace RhMcp.Router.Tests;
 // drops the lock to probe, then takes a fresh transaction only for the final claim. These tests
 // pin both that behaviour (a concurrent write proceeds while a probe is parked) and that the
 // chosen port still respects DB-taken ports and the probe result.
-public sealed class SlotStorePortReservationTests : IDisposable
+[TestFixture]
+public sealed class SlotStorePortReservationTests
 {
-    private string HomeOverride { get; }
-    private string? PreviousHome { get; }
+    private string HomeOverride { get; set; } = "";
+    private string? PreviousHome { get; set; }
 
-    public SlotStorePortReservationTests()
+    [SetUp]
+    public void SetUp()
     {
         PreviousHome = Environment.GetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar);
         HomeOverride = Path.Combine(Path.GetTempPath(), "rhmcp-slotstore-test-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar, HomeOverride);
     }
 
-    public void Dispose()
+    [TearDown]
+    public void TearDown()
     {
         Environment.SetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar, PreviousHome);
         try { Directory.Delete(HomeOverride, recursive: true); }
@@ -32,7 +35,7 @@ public sealed class SlotStorePortReservationTests : IDisposable
 
     private SlotStore NewStore() => new(NullLogger<SlotStore>.Instance);
 
-    [Fact]
+    [Test]
     public async Task ReservePort_does_not_hold_the_write_lock_across_the_probe()
     {
         using SlotStore store = NewStore();
@@ -49,21 +52,21 @@ public sealed class SlotStorePortReservationTests : IDisposable
             return false;
         }));
 
-        Assert.True(probeEntered.Wait(TimeSpan.FromSeconds(5)), "probe was never entered");
+        Assert.That(probeEntered.Wait(TimeSpan.FromSeconds(5)), Is.True, "probe was never entered");
 
         // With the lock held across the probe (the bug), this concurrent write path would block
         // until the probe returned. With the fix it completes promptly while the probe is parked.
         Task write = Task.Run(() => store.Delete("beta"));
         Task completed = await Task.WhenAny(write, Task.Delay(TimeSpan.FromSeconds(2)));
-        Assert.True(ReferenceEquals(completed, write),
+        Assert.That(ReferenceEquals(completed, write), Is.True,
             "a concurrent write path was blocked while ReservePort sat in its probe");
         await write;
 
         releaseProbe.Set();
-        Assert.Equal(5000, await reserve);
+        Assert.That(await reserve, Is.EqualTo(5000));
     }
 
-    [Fact]
+    [Test]
     public void ReservePort_skips_ports_already_taken_in_the_db()
     {
         using SlotStore store = NewStore();
@@ -71,19 +74,19 @@ public sealed class SlotStorePortReservationTests : IDisposable
         store.Reserve("beta", "8", routerPid: 1);
 
         int first = store.ReservePort("alpha", basePort: 6000, isPortListening: _ => false);
-        Assert.Equal(6000, first);
+        Assert.That(first, Is.EqualTo(6000));
 
         int second = store.ReservePort("beta", basePort: 6000, isPortListening: _ => false);
-        Assert.Equal(6001, second);
+        Assert.That(second, Is.EqualTo(6001));
     }
 
-    [Fact]
+    [Test]
     public void ReservePort_skips_ports_the_os_is_listening_on()
     {
         using SlotStore store = NewStore();
         store.Reserve("alpha", "8", routerPid: 1);
 
         int port = store.ReservePort("alpha", basePort: 7000, isPortListening: p => p == 7000);
-        Assert.Equal(7001, port);
+        Assert.That(port, Is.EqualTo(7001));
     }
 }

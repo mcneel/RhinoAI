@@ -108,6 +108,7 @@ Ordered by dependency, not calendar. W0 (the Great Sweep) runs first to establis
 | W8 | Version source-of-truth | - |
 | W9 | Grounding support (steer + get_context) | W2 (soft) |
 | W10 | Conversation resume | W2 |
+| W11 | ask_user redesign (non-blocking, persistent, in-panel-only) | W5, W10 |
 
 ### W0 — Great Sweep (whole-codebase conformance, runs first)
 
@@ -160,6 +161,20 @@ Add an always-on grounding steer to `AgentPrompts` (check selection/view before 
 ### W10 — Conversation resume
 
 Let the user load a past conversation from Prev Convos and keep talking, not just review it. Restore the stored `Conversation`, set the runner's agent session id to the saved one, and launch the CLI with `--resume` so the agent continues with its context. Touch points: `ConversationStore` (load), `AgentHost` / `AgentRegistry` (adopt a saved session id), the runner's session/resume path, the AIPanel Prev Convos action.
+
+### W11 — ask_user redesign (non-blocking, persistent, in-panel-only)
+
+Today ask_user is a blocking MCP tool: it `await`s a TaskCompletionSource until the user answers, which collides with the MCP client's per-tool-call liveness timeout (claude's default 60s; band-aided to 1h in b80131a) and drops the answer when the request is aborted. Decided redesign:
+
+- Non-blocking, ANSWER-AS-NEXT-TURN (in-panel only). `ask_user(question, options, multiSelect)` persists the question, renders BOTH a panel card AND a command-line GetOption picker, and returns immediately with a result that tells the agent to STOP and end its turn; the user's answer is delivered as the agent's NEXT prompt (the same live pooled agent resumes with it). No held HTTP request, so no timeout collision, robust to any wait / panel reload / idle.
+- Command-line channel = GetOption picker (the clickable option UX restored). In the non-blocking model GetOption is an ANSWER AFFORDANCE, not a blocking tool-wait (the tool already returned): it runs on the UI thread presenting clickable options; picking one dispatches that choice as the next prompt; a panel click cancels the running GetOption (first-wins). Caveats to handle: UI-thread invocation, cancel-vs-panel coordination, and GetOption fired outside a command is cross-platform fragile (verify on Mac + Windows live). This replaces the typed-`"..."` CommandInterceptor.AnswerPending path.
+- Hold the pending question on the live Conversation as transient UI state, so it survives a panel dock/undock reload (the panel rebinds to the same live Conversation instance) and is answerable anytime until the answer turn is sent, when the card clears. It is deliberately NOT serialized (a half-asked question must never persist); on an agent/conversation rebuild the agent simply re-poses if it still needs the answer. The live Conversation is the single source of truth: no separate registry.
+- EXTERNAL callers unsupported: exclude ask_user from the external (/) endpoint; an external (router) caller gets a clear "only available to the in-Rhino panel agent" result. External agents (Claude Desktop/Code) use their own client's question UI.
+- Removes the blocking await + TaskCompletionSource race, the AskUserRegistry entirely, and CommandInterceptor.AnswerPending (answers are normal next-turn prompts now); makes the MCP_TOOL_TIMEOUT band-aid unnecessary for ask_user (it stays only as a guard for other genuinely-slow tools).
+- Update AgentPrompts.AskUserSteer to: call ask_user, then STOP and end the turn; the user's answer comes as their next message, then continue.
+- RISK: relies on the agent reliably ending its turn after ask_user. Mitigate with the strong steer + explicit "STOP and wait" tool-result wording; verify with a live in-panel run.
+
+Touch points: rhino/plugin/Tools/AskUserTool.cs, AskUserQuestion.cs, AskUserPicker.cs (command-line answer affordance), rhino/plugin/Agents/CommandInterceptor.cs, AgentPrompts.cs, rhino/plugin/UI/AIPanel.cs (question card render + answer-composes-next-prompt), the in-panel-only endpoint filtering (Server/McpEndpoint.cs / the /agent vs / split), and the pending-question home on the live Conversation (transient UI state, not ConversationStore).
 
 Out-of-band: privacy is a small docs edit (PRIVACY.md + site); transcripts need no work (decision: keep PersistentSettings); multi-agent-per-doc pooling stays as-is unless we choose to simplify later.
 

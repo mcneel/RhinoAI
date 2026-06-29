@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
+using NUnit.Framework;
 using RhMcp.Router;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
@@ -8,9 +8,10 @@ namespace RhMcp.Router.Tests;
 // regress silently. The serializer is RouterJsonContext (AOT source-gen) — the
 // shape these tests assert is exactly what hits the MCP transport, no separate
 // JsonSerializerOptions layer in between.
+[TestFixture]
 public class ReturnResultTests
 {
-    [Fact]
+    [Test]
     public void Success_with_only_payload_omits_error_and_autoSpawnedSlot_fields()
     {
         // The JsonIgnoreCondition.WhenWritingNull policy declared on
@@ -25,15 +26,15 @@ public class ReturnResultTests
 
         string json = result.AsJson;
 
-        Assert.Contains("\"payload\"", json);
-        Assert.DoesNotContain("\"error\"", json);
-        Assert.DoesNotContain("\"autoSpawnedSlot\"", json);
+        Assert.That(json, Does.Contain("\"payload\""));
+        Assert.That(json, Does.Not.Contain("\"error\""));
+        Assert.That(json, Does.Not.Contain("\"autoSpawnedSlot\""));
         // Belt and braces: the literal "null" must not appear in the envelope
         // for the absent fields either, regardless of property-name policy.
-        Assert.DoesNotContain(":null", json);
+        Assert.That(json, Does.Not.Contain(":null"));
     }
 
-    [Fact]
+    [Test]
     public void Failure_with_only_error_omits_payload_and_autoSpawnedSlot_fields()
     {
         ReturnResult result = new(
@@ -43,12 +44,12 @@ public class ReturnResultTests
 
         string json = result.AsJson;
 
-        Assert.Contains("\"error\"", json);
-        Assert.DoesNotContain("\"payload\"", json);
-        Assert.DoesNotContain("\"autoSpawnedSlot\"", json);
+        Assert.That(json, Does.Contain("\"error\""));
+        Assert.That(json, Does.Not.Contain("\"payload\""));
+        Assert.That(json, Does.Not.Contain("\"autoSpawnedSlot\""));
     }
 
-    [Fact]
+    [Test]
     public void ErrorInfo_with_null_crashReportPath_omits_that_field()
     {
         // CrashReportPath is the optional sub-field on ErrorInfo. Same policy
@@ -61,10 +62,10 @@ public class ReturnResultTests
 
         string json = result.AsJson;
 
-        Assert.DoesNotContain("\"crashReportPath\"", json);
+        Assert.That(json, Does.Not.Contain("\"crashReportPath\""));
     }
 
-    [Fact]
+    [Test]
     public void Auto_spawn_side_channel_serializes_alongside_payload()
     {
         // Auto-spawn populates the side channel on success — the dispatcher uses
@@ -81,9 +82,9 @@ public class ReturnResultTests
 
         string json = result.AsJson;
 
-        Assert.Contains("\"payload\"", json);
-        Assert.Contains("\"autoSpawnedSlot\"", json);
-        Assert.Contains("\"slotId\":\"armadillo\"", json);
-        Assert.DoesNotContain("\"error\"", json);
+        Assert.That(json, Does.Contain("\"payload\""));
+        Assert.That(json, Does.Contain("\"autoSpawnedSlot\""));
+        Assert.That(json, Does.Contain("\"slotId\":\"armadillo\""));
+        Assert.That(json, Does.Not.Contain("\"error\""));
     }
 }

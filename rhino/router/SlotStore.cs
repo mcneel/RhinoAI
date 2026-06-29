@@ -22,7 +22,7 @@ namespace RhMcp.Router;
 // is ephemeral runtime registry — wiping is correct on router upgrade.
 public sealed class SlotStore : IDisposable
 {
-    private static string CurrentRouterVersion = typeof(SlotStore).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+    private static string CurrentRouterVersion => typeof(SlotStore).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 
     private SqliteConnection Connection { get; }
     private ILogger<SlotStore> Logger { get; }
@@ -334,6 +334,28 @@ public sealed class SlotStore : IDisposable
         }
     }
 
+    // Prune the slot(s) bound to a specific listener (pid+port). Drives the
+    // graceful-departure path: the plugin tells us a listener closed cleanly, so
+    // we drop its row rather than waiting to probe it dead. Returns removed ids.
+    public IReadOnlyList<string> DeleteByListener(int pid, int port)
+    {
+        lock (_connLock)
+        {
+            List<string> ids = [];
+            using (SqliteCommand cmd = Connection.CreateCommand())
+            {
+                cmd.CommandText = "SELECT slot_id FROM slots WHERE pid=$p AND port=$port;";
+                cmd.Parameters.AddWithValue("$p", pid);
+                cmd.Parameters.AddWithValue("$port", port);
+                using SqliteDataReader r = cmd.ExecuteReader();
+                while (r.Read()) ids.Add(r.GetString(0));
+            }
+            if (ids.Count > 0)
+                Exec("DELETE FROM slots WHERE pid=$p AND port=$port;", ("$p", pid), ("$port", port));
+            return ids;
+        }
+    }
+
     // Drop-file adoption. Atomically:
     //   1. Bail out (return null) if any slot already points at this (pid, port)
     //      — guards against duplicate announcements for a single listener.
@@ -383,11 +405,13 @@ public sealed class SlotStore : IDisposable
         }
     }
 
+    // Oldest-first (rowid breaks ties within the same started_at millisecond) so
+    // "use the first-created slot" resolution is deterministic.
     public IReadOnlyList<ChildRhino> ListReady()
     {
         lock (_connLock)
         {
-            return Query(null, "SELECT * FROM slots WHERE status='ready';");
+            return Query(null, "SELECT * FROM slots WHERE status='ready' ORDER BY started_at ASC, rowid ASC;");
         }
     }
 
@@ -395,7 +419,9 @@ public sealed class SlotStore : IDisposable
     {
         lock (_connLock)
         {
-            return Query(null, "SELECT * FROM slots WHERE router_pid=$r;", ("$r", routerPid));
+            return Query(null,
+                "SELECT * FROM slots WHERE router_pid=$r ORDER BY started_at ASC, rowid ASC;",
+                ("$r", routerPid));
         }
     }
 

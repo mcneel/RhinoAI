@@ -3,8 +3,8 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
+using NUnit.Framework;
 using RhMcp.Router.Codegen;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
@@ -13,9 +13,10 @@ namespace RhMcp.Router.Tests;
 // earlier version only read named attribute args, so every tool's name came
 // back null and zero proxies were emitted. These tests run the generator over
 // synthetic tool files and assert a proxy IS produced.
+[TestFixture]
 public class CodegenTests
 {
-    [Fact]
+    [Test]
     public void Emits_proxy_for_positional_attribute()
     {
         string output = RunGenerator(
@@ -30,16 +31,16 @@ public class CodegenTests
             }
             """);
 
-        Assert.Contains("public class XToolProxy", output);
-        Assert.Contains("Name = \"x\"", output);
-        Assert.Contains("Title = \"X\"", output);
-        Assert.Contains("ReadOnly = true", output);
-        Assert.Contains("Destructive = false", output);
+        Assert.That(output, Does.Contain("public class XToolProxy"));
+        Assert.That(output, Does.Contain("Name = \"x\""));
+        Assert.That(output, Does.Contain("Title = \"X\""));
+        Assert.That(output, Does.Contain("ReadOnly = true"));
+        Assert.That(output, Does.Contain("Destructive = false"));
         // Registrar must wire the proxy up so Program.cs picks it up.
-        Assert.Contains("WithTools<global::RhMcp.Router.Tools.Generated.XToolProxy>", output);
+        Assert.That(output, Does.Contain("WithTools<global::RhMcp.Router.Tools.Generated.XToolProxy>"));
     }
 
-    [Fact]
+    [Test]
     public void Named_argument_overrides_positional_slot()
     {
         string output = RunGenerator(
@@ -54,12 +55,12 @@ public class CodegenTests
             }
             """);
 
-        Assert.Contains("Name = \"real_name\"", output);
-        Assert.DoesNotContain("Name = \"ignored\"", output);
-        Assert.Contains("Destructive = true", output);
+        Assert.That(output, Does.Contain("Name = \"real_name\""));
+        Assert.That(output, Does.Not.Contain("Name = \"ignored\""));
+        Assert.That(output, Does.Contain("Destructive = true"));
     }
 
-    [Fact]
+    [Test]
     public void Folds_concatenated_description_literals()
     {
         // AskUserTool builds its [Description] with + concatenation across lines.
@@ -80,9 +81,9 @@ public class CodegenTests
             }
             """);
 
-        Assert.Contains("Description(\"first part second part third part\")", output);
-        Assert.Contains("Description(\"flag on two lines\")", output);
-        Assert.DoesNotContain("Description(\"\")", output);
+        Assert.That(output, Does.Contain("Description(\"first part second part third part\")"));
+        Assert.That(output, Does.Contain("Description(\"flag on two lines\")"));
+        Assert.That(output, Does.Not.Contain("Description(\"\")"));
     }
 
     private static string RunGenerator(string toolSource)
@@ -104,7 +105,7 @@ public class CodegenTests
             additionalTexts: [toolFile]);
 
         GeneratorDriverRunResult result = driver.RunGenerators(compilation).GetRunResult();
-        Assert.Empty(result.Diagnostics);
+        Assert.That(result.Diagnostics, Is.Empty);
 
         GeneratedSourceResult generated = result.Results
             .Single()

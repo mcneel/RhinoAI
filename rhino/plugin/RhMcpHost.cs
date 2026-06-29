@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Rhino.FileIO;
@@ -11,17 +12,36 @@ public static class RhinoMcpHost
 
     private static Dictionary<uint, McpServer> Servers { get; } = new();
 
+    // UI-thread-only!
+    private static Timer? _heartbeat;
+
+    // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot 
+    // re-adopt on its own instead of staying gone until the user re-runs MCPStart. 
+    // Re-dropping a already-adopted listener is a no-op.
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
+
     static RhinoMcpHost()
     {
         RhinoDoc.CloseDocument += CloseServer;
     }
 
+    // A doc that owned a listener is closing (File>New/Open, or a plain close). 
+    // Stop the server, otherwise the listener is orphaned.
     private static void CloseServer(object? sender, DocumentEventArgs e)
     {
-        Servers.Remove(e.DocumentSerialNumber);
+        if (!Servers.Remove(e.DocumentSerialNumber, out McpServer? server))
+            return;
+        if (server is not null)
+        {
+            WriteDeparture(server.Port);
+            server.Stop();
+        }
+        StopHeartbeatIfIdle();
     }
 
-    public static bool HasStarted(RhinoDoc doc) => Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server) && (server?.HasStarted ?? false);
+    public static bool HasStarted(RhinoDoc doc) =>
+        Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)
+            && (server?.HasStarted ?? false);
 
     public static bool TryGetPortFor(RhinoDoc doc, out int port)
     {
@@ -81,6 +101,7 @@ public static class RhinoMcpHost
         if (ok)
         {
             WriteAnnouncement(port);
+            EnsureHeartbeat();
             return true;
         }
 
@@ -91,17 +112,20 @@ public static class RhinoMcpHost
 
     public static void Stop(RhinoDoc doc)
     {
-        if (!Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server))
+        if (!Servers.Remove(doc.RuntimeSerialNumber, out McpServer? server))
             return;
-        Servers.Remove(doc.RuntimeSerialNumber);
-        server?.Stop();
+        if (server is not null)
+        {
+            WriteDeparture(server.Port);
+            server.Stop();
+        }
+        StopHeartbeatIfIdle();
     }
 
     public static bool RestartOnPort(RhinoDoc doc, int port)
     {
         if (port < 1 || port > 65535)
             return false;
-        // TODO : Check no other server is using the port and report to user
         Stop(doc);
         return Start(doc, port);
     }
@@ -137,6 +161,34 @@ public static class RhinoMcpHost
         return false;
     }
 
+
+    private static void EnsureHeartbeat()
+    {
+        _heartbeat ??= new Timer(static _ => Heartbeat(), null, HeartbeatInterval, HeartbeatInterval);
+    }
+
+    private static void StopHeartbeatIfIdle()
+    {
+        if (Servers.Count == 0)
+        {
+            _heartbeat?.Dispose();
+            _heartbeat = null;
+        }
+    }
+
+    private static void Heartbeat()
+    {
+        // Heartbeat must be touched from UI thread
+        RhinoApp.InvokeOnUiThread(new Action(static () =>
+        {
+            foreach (McpServer server in Servers.Values)
+            {
+                if (server.HasStarted)
+                    WriteAnnouncement(server.Port);
+            }
+        }), null);
+    }
+
     // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
     // running on this machine can discover and adopt this listener without us
     // having to know whether one is up. The router consumes (probes + deletes)
@@ -164,6 +216,33 @@ public static class RhinoMcpHost
         }
     }
 
+    // Inverse of the announcement: when a listener goes down cleanly (doc closed,
+    // MCPStart restart) drop a one-shot tombstone so a running router prunes the
+    // slot promptly and reports a user close as such, not a crash. Best-effort:
+    // if no router ever reads it, the router's own port probe reaps the slot.
+    // Filename MUST match the router's RhinoManager departure handling.
+    private static void WriteDeparture(int port)
+    {
+        try
+        {
+            string dir = ListenerDropDir();
+            Directory.CreateDirectory(dir);
+            int pid = Process.GetCurrentProcess().Id;
+            string version = RhinoApp.Version.Major.ToString();
+            string path = Path.Combine(dir, $"{pid}-{port}.gone");
+            string tmp = path + ".tmp";
+            string json = JsonSerializer.Serialize(new { v = 1, pid, port, version });
+            File.WriteAllText(tmp, json);
+            if (File.Exists(path))
+                File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[Rhino MCP] Failed to write listener departure: {ex.Message}");
+        }
+    }
+
     // Shared with the router via the linked RouterPaths source file, so the
     // drop-dir contract has one owner and can't drift between the two assemblies.
     private static string ListenerDropDir() => RhMcp.Router.RouterPaths.ListenersDir;
@@ -181,12 +260,14 @@ public static class RhinoMcpHost
     // that file once Cocoa's deferred close has run.
     public static bool StopByPort(int port)
     {
-        var entry = Servers.FirstOrDefault(kv => kv.Value.Port == port);
+        KeyValuePair<uint, McpServer> entry = Servers.FirstOrDefault(kv => kv.Value.Port == port);
         if (entry.Value is null)
             return false;
+
+        Servers.Remove(entry.Key);
         var docSerial = entry.Key;
-        Servers.Remove(docSerial);
         entry.Value.Stop();
+        StopHeartbeatIfIdle();
 
         var doc = RhinoDoc.FromRuntimeSerialNumber(docSerial);
         if (doc is null)

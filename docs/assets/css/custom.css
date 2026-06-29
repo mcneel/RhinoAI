@@ -507,6 +507,62 @@ main#content h6 { font-weight: 700; }
   opacity: 0.55;
 }
 
+.yak-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.yak-install:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+.dark .yak-install {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dark .yak-install:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.yak-install-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.yak-install-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.dark .yak-install-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.yak-install-arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
 .dl-asset {
   display: inline-flex;
   align-items: center;

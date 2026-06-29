@@ -18,6 +18,7 @@ public class RhMcpPlugin : PlugIn
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
         RhinoDoc.BeginOpenDocument += Register;
+        RhinoDoc.CloseDocument += DeRegister;
         CommandInterceptors = new CommandInterceptorHost();
 
         // Probe agent install paths once on load so the active agent resolves before the first
@@ -90,6 +91,19 @@ public class RhMcpPlugin : PlugIn
         }
 
         RhinoApp.WriteLine("The Rhino MCP Server failed to start");
+    }
+
+    private void DeRegister(object? sender, DocumentEventArgs e)
+    {
+        RhinoDoc.BeginOpenDocument -= Register;
+
+        try
+        {
+            RhinoMcpHost.Stop(e.Document);
+        }
+        catch
+        {
+        }
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;

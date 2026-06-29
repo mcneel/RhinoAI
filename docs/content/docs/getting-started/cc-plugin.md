@@ -20,9 +20,14 @@ keywords:
 
 [Claude Code](https://claude.com/claude-code)
 
-## 2. Install the Rhino MCP Platform
+## 2. Install the Rhino plugin
 
-1. Open Rhino 8 (and/or Rhino 9 WIP)
+{{< yak package="Rhino-MCP-Platform" version="8" >}}
+{{< yak package="Rhino-MCP-Platform" version="9" >}}
+
+If that doesn't work you can try the below:
+
+1. Open Rhino 8 (and/or Rhino 9 WIP/BETA)
 2. Run the `PackageManager` command
 3. Search for, and install Rhino-MCP-Platform
 
@@ -79,7 +84,7 @@ Each agent is tuned for a different kind of work. You can call them explicitly (
 ## Try it out
 
 <blockquote class="page-note">
-Open Claude Desktop, start a new chat, and follow the prompts on the <a href="../../try-it-out">Try It Out</a> page.
+Open Claude Code and follow the prompts on the <a href="../../try-it-out">Try It Out</a> page.
 </blockquote>
 
 <!--

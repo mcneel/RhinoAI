@@ -116,7 +116,7 @@ jobs:
         id: ver
         shell: bash
         run: |
-          VERSION=$(grep '^version:' rhino/plugin/manifest.yml | awk '{print $2}')
+          VERSION=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' rhino/Directory.Build.props)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=plugin-v$VERSION" >> "$GITHUB_OUTPUT"
           [[ "$VERSION" == *-* ]] && echo "prerelease=true" >> "$GITHUB_OUTPUT" || echo "prerelease=false" >> "$GITHUB_OUTPUT"

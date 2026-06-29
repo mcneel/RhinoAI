@@ -29,7 +29,17 @@ public class RhinoManager(
     private int StartupTimeoutSeconds { get; } = config.StartupTimeoutSeconds;
     private static readonly TimeSpan StaleLaunchingMaxAge = TimeSpan.FromSeconds(90);
 
+    // Liveness-probe connect budget. Generous enough that a healthy localhost listener
+    // answers well inside it, so a slow connect is the exception (and inconclusive).
+    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(1);
+
     private readonly int _routerPid = Environment.ProcessId;
+
+    // The slot this session last used. In-memory is the right scope: the router
+    // process lives and dies with the MCP session.
+    private string? ActiveSlotId { get; set; }
+
+    public void SetActiveSlot(string slotId) => ActiveSlotId = slotId;
 
     public Task<ChildRhino> SpawnAsync(string? version = null, CancellationToken ct = default)
     {
@@ -40,25 +50,53 @@ public class RhinoManager(
         return DispatchReservationAsync(resolved, slotId, reservation, ct);
     }
 
-    // Resolves the Rhino to serve a slot-less tool call. Prefers an adopted
-    // user-started Rhino (any router), else reuses a slot this router already
-    // owns, else spawns a fresh animal-named one. `WasNewlySpawned` lets the
-    // dispatcher tell the agent via ReturnResult.autoSpawnedSlot.
+    // Resolves the Rhino for a slot-less tool call, in priority order: the slot
+    // this session last used (sticky), else the oldest Rhino the user opened,
+    // else the oldest this router spawned, else spawn the configured default.
+    // `requiredVersion` is null for generic tools and "WIP" for GH2 tools, which
+    // restricts every reuse step to a compatible Rhino and spawns "WIP" if none.
     public async Task<(ChildRhino Child, bool WasNewlySpawned)> GetOrCreateDefaultAsync(
-        string? version = null, CancellationToken ct = default)
+        string? requiredVersion = null, CancellationToken ct = default)
     {
         ScanAnnouncements();
-        string resolved = version ?? config.DefaultVersion;
 
-        ChildRhino? adopted = store.ListReady()
-            .FirstOrDefault(c => c.Version == resolved && c.Adopted);
+        // A stale pointer (slot closed/crashed) self-heals: the liveness re-check
+        // drops it and we fall through to the rest of the ladder.
+        string? activeSlotId = ActiveSlotId;
+        if (activeSlotId is not null)
+        {
+            ChildRhino? active = store.Get(activeSlotId);
+            if (active is not null && active.Status == SlotStatus.Ready &&
+                (requiredVersion is null || VersionMatch.IsCompatible(active.Version, requiredVersion)))
+            {
+                return (active, false);
+            }
+        }
+
+        // Pinned: a user-opened WIP announces as "9", so match on compatibility.
+        if (requiredVersion is not null)
+        {
+            ChildRhino? adoptedMatch = store.ListReady()
+                .FirstOrDefault(c => c.Adopted && VersionMatch.IsCompatible(c.Version, requiredVersion));
+            if (adoptedMatch is not null) return (adoptedMatch, false);
+
+            ChildRhino? mineMatch = store.ListAllOwnedBy(_routerPid)
+                .FirstOrDefault(c => c.Status == SlotStatus.Ready && !c.Adopted &&
+                                     VersionMatch.IsCompatible(c.Version, requiredVersion));
+            if (mineMatch is not null) return (mineMatch, false);
+
+            ChildRhino spawnedPinned = await SpawnAsync(requiredVersion, ct).ConfigureAwait(false);
+            return (spawnedPinned, true);
+        }
+
+        ChildRhino? adopted = store.ListReady().FirstOrDefault(c => c.Adopted);
         if (adopted is not null) return (adopted, false);
 
         ChildRhino? mine = store.ListAllOwnedBy(_routerPid)
-            .FirstOrDefault(c => c.Status == SlotStatus.Ready && c.Version == resolved && !c.Adopted);
+            .FirstOrDefault(c => c.Status == SlotStatus.Ready && !c.Adopted);
         if (mine is not null) return (mine, false);
 
-        ChildRhino spawned = await SpawnAsync(resolved, ct).ConfigureAwait(false);
+        ChildRhino spawned = await SpawnAsync(config.DefaultVersion, ct).ConfigureAwait(false);
         return (spawned, true);
     }
 
@@ -342,11 +380,19 @@ public class RhinoManager(
     // slot_not_found for a slot another router is still spawning.
     public bool Has(string slotId) => store.Get(slotId) is not null;
 
+    // Tombstones the plugin drops when a listener closes cleanly. Siblings to the
+    // *.json announcements in the same dir; MUST match RhMcpHost.WriteDeparture.
+    private const string DepartureGlob = "*.gone";
+
     // Adopt any user-started Rhino announced via the drop directory. Each file is a
-    // one-shot doorbell — always deleted, success or not.
+    // one-shot doorbell, always deleted, success or not. Departures are consumed
+    // first so a just-closed listener doesn't get re-adopted from a stale *.json.
     public void ScanAnnouncements()
     {
-        if (!Directory.Exists(RouterPaths.ListenersDir)) return;
+        ConsumeDepartures();
+
+        var dir = RouterPaths.ListenersDir;
+        if (!Directory.Exists(dir)) return;
 
         string[] files;
         try { files = Directory.GetFiles(RouterPaths.ListenersDir, "*.json"); }
@@ -416,28 +462,91 @@ public class RhinoManager(
         }
     }
 
+    // Consume graceful-close tombstones: a listener that went down cleanly (doc
+    // closed, MCPStart restart) drops a *.gone file so we prune its slot here
+    // instead of discovering it dead via a probe and crying crash. One-shot
+    // doorbells, always deleted, success or not.
+    public void ConsumeDepartures()
+    {
+        string dir = RouterPaths.ListenersDir;
+        if (!Directory.Exists(dir)) return;
+
+        string[] files;
+        try { files = Directory.GetFiles(dir, DepartureGlob); }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Failed to enumerate listener-departure dir {Dir}", dir);
+            return;
+        }
+
+        foreach (string file in files)
+        {
+            try
+            {
+                Departure? dep;
+                try
+                {
+                    string json = File.ReadAllText(file);
+                    dep = JsonSerializer.Deserialize(json, RouterJsonContext.Default.Departure);
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "Bad departure file {File}; deleting", file);
+                    TryDelete(file);
+                    continue;
+                }
+
+                if (dep is not null && dep.Port > 0)
+                {
+                    foreach (string slotId in store.DeleteByListener(dep.Pid, dep.Port))
+                    {
+                        log.LogInformation("Pruned slot '{Slot}' (pid {Pid}, port {Port}, Rhino {Version}) after graceful close",
+                            slotId, dep.Pid, dep.Port, dep.Version ?? "?");
+                    }
+                }
+                TryDelete(file);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Unexpected failure processing departure {File}", file);
+                TryDelete(file);
+            }
+        }
+    }
+
+    // Did this listener leave a graceful-close tombstone? If so, consume it and
+    // prune the slot. Lets the dispatcher report a user close as such, rather
+    // than a crash, when a tool call lands on a just-closed slot.
+    public bool TryConsumeDeparture(int pid, int port)
+    {
+        string path = Path.Combine(RouterPaths.ListenersDir, $"{pid}-{port}.gone");
+        if (!File.Exists(path)) return false;
+        TryDelete(path);
+        store.DeleteByListener(pid, port);
+        return true;
+    }
+
     private static void TryDelete(string path)
     {
         try { File.Delete(path); } catch { /* next scan will retry */ }
     }
 
-    // Pid AND port must both be alive: on Mac one listener can die while the shared
-    // app keeps running; on Windows a zombie can leave the socket bound.
-    public bool IsAlive(ChildRhino c)
+    private static bool ShouldReap(ChildRhino c)
     {
-        if (c.Status != SlotStatus.Ready) return true; // launching rows are pending, not dead
+        if (c.Status != SlotStatus.Ready) return false; // launching rows are pending, not dead
         if (c.Pid is not { } pid || c.Port is not { } port)
             throw new InvalidOperationException($"Ready slot '{c.SlotId}' is missing pid/port.");
-        if (!IsProcessAlive(pid)) return false;
-        if (!IsPortListening(port)) return false;
-        return true;
+        if (!IsProcessAlive(pid)) return true;
+        // A refused connection is definitively dead; a timeout/error is inconclusive
+        // and gets the benefit of the doubt (not reaped) until a later probe is sure.
+        return ProbePort(port) == PortProbe.Refused;
     }
 
     public bool TryReapDead(string slotId)
     {
         var c = store.Get(slotId);
         if (c is null) return false;
-        if (IsAlive(c)) return false;
+        if (!ShouldReap(c)) return false;
         store.Delete(slotId);
         log.LogWarning("Reaped dead slot '{Slot}' (pid {Pid}, port {Port}, Rhino {Version})",
             c.SlotId, c.Pid, c.Port, c.Version);
@@ -449,7 +558,7 @@ public class RhinoManager(
         var reaped = new List<ChildRhino>();
         foreach (var c in store.ListReady())
         {
-            if (IsAlive(c)) continue;
+            if (!ShouldReap(c)) continue;
             store.Delete(c.SlotId);
             reaped.Add(c);
         }
@@ -554,17 +663,34 @@ public class RhinoManager(
         return WaitResult.Timeout;
     }
 
-    private static bool IsPortListening(int port)
+    private static bool IsPortListening(int port) => ProbePort(port) == PortProbe.Listening;
+
+    private enum PortProbe { Listening, Refused, Inconclusive }
+
+    // Probe a localhost port, distinguishing an actively-refused connection
+    // (definitively nothing listening) from a timeout/error (inconclusive)
+    private static PortProbe ProbePort(int port)
     {
         try
         {
-            using TcpClient client = new ();
-            Task task = client.ConnectAsync("127.0.0.1", port);
-            return task.Wait(200) && client.Connected;
+            using var client = new TcpClient();
+            using var cts = new CancellationTokenSource(ProbeTimeout);
+            client.ConnectAsync("127.0.0.1", port, cts.Token).AsTask().GetAwaiter().GetResult();
+            return client.Connected ? PortProbe.Listening : PortProbe.Inconclusive;
+        }
+        catch (OperationCanceledException)
+        {
+            return PortProbe.Inconclusive;
+        }
+        catch (SocketException se)
+        {
+            return se.SocketErrorCode == SocketError.ConnectionRefused
+                ? PortProbe.Refused
+                : PortProbe.Inconclusive;
         }
         catch
         {
-            return false;
+            return PortProbe.Inconclusive;
         }
     }
 }

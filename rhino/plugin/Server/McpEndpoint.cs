@@ -80,7 +80,11 @@ internal sealed class McpDispatcher
             JsonRpcResponse response = await DispatchAsync(request, ctx.RequestServices, ctx.RequestAborted)
                 .ConfigureAwait(false);
 
-            if (isNotification && response.Error is null)
+            // JSON-RPC 2.0: a notification gets no reply — not even an error.
+            // Unhandled notification methods fall to DispatchAsync's default arm
+            // and produce a MethodNotFound response; swallow it rather than
+            // sending an illegal reply to a notification.
+            if (isNotification)
             {
                 ctx.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;
@@ -137,9 +141,11 @@ internal sealed class McpDispatcher
             },
         });
 
-    // Notification — no result, no error.
+    // Real notifications are 204'd before serialization, so this empty result is
+    // only emitted if a client wrongly sends one of these methods *with* an id —
+    // then it's a request and the response must carry result|error to be legal.
     private static Task<JsonRpcResponse> HandleNotification() =>
-        Task.FromResult(new JsonRpcResponse());
+        Task.FromResult(new JsonRpcResponse { Result = new { } });
 
     private static Task<JsonRpcResponse> HandlePing() =>
         Task.FromResult(new JsonRpcResponse { Result = new { } });

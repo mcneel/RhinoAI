@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 using RhMcp.Router;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
@@ -8,19 +8,22 @@ namespace RhMcp.Router.Tests;
 // ReadRow used to map the DBNull columns to 0, conflating "not yet assigned" with a real 0
 // and materialising a lying "http://localhost:0" endpoint. Port/Pid are now int?, so a
 // launching row carries genuine absence and Endpoint refuses to address an unbound slot.
-public sealed class SlotStoreLaunchingAbsenceTests : IDisposable
+[TestFixture]
+public sealed class SlotStoreLaunchingAbsenceTests
 {
-    private string HomeOverride { get; }
-    private string? PreviousHome { get; }
+    private string HomeOverride { get; set; } = "";
+    private string? PreviousHome { get; set; }
 
-    public SlotStoreLaunchingAbsenceTests()
+    [SetUp]
+    public void SetUp()
     {
         PreviousHome = Environment.GetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar);
         HomeOverride = Path.Combine(Path.GetTempPath(), "rhmcp-slotstore-launch-test-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar, HomeOverride);
     }
 
-    public void Dispose()
+    [TearDown]
+    public void TearDown()
     {
         Environment.SetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar, PreviousHome);
         try { Directory.Delete(HomeOverride, recursive: true); }
@@ -29,30 +32,30 @@ public sealed class SlotStoreLaunchingAbsenceTests : IDisposable
 
     private SlotStore NewStore() => new(NullLogger<SlotStore>.Instance);
 
-    [Fact]
+    [Test]
     public void Launching_row_has_no_port_or_pid()
     {
         using SlotStore store = NewStore();
         store.Reserve("alpha", "8", routerPid: 1);
 
         ChildRhino? row = store.Get("alpha");
-        Assert.NotNull(row);
-        Assert.Null(row!.Port);
-        Assert.Null(row.Pid);
-        Assert.Equal(SlotStatus.Launching, row.Status);
+        Assert.That(row, Is.Not.Null);
+        Assert.That(row!.Port, Is.Null);
+        Assert.That(row.Pid, Is.Null);
+        Assert.That(row.Status, Is.EqualTo(SlotStatus.Launching));
     }
 
-    [Fact]
+    [Test]
     public void Launching_row_endpoint_is_not_addressable()
     {
         using SlotStore store = NewStore();
         store.Reserve("alpha", "8", routerPid: 1);
 
         ChildRhino row = store.Get("alpha")!;
-        Assert.Throws<InvalidOperationException>(() => row.Endpoint);
+        Assert.Throws<InvalidOperationException>(() => { _ = row.Endpoint; });
     }
 
-    [Fact]
+    [Test]
     public void Ready_row_carries_port_pid_and_addressable_endpoint()
     {
         using SlotStore store = NewStore();
@@ -60,8 +63,8 @@ public sealed class SlotStoreLaunchingAbsenceTests : IDisposable
         store.MarkReady("alpha", port: 10500, pid: 4321);
 
         ChildRhino row = store.Get("alpha")!;
-        Assert.Equal(10500, row.Port);
-        Assert.Equal(4321, row.Pid);
-        Assert.Equal("http://localhost:10500", row.Endpoint);
+        Assert.That(row.Port, Is.EqualTo(10500));
+        Assert.That(row.Pid, Is.EqualTo(4321));
+        Assert.That(row.Endpoint, Is.EqualTo("http://localhost:10500"));
     }
 }

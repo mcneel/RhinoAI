@@ -177,7 +177,7 @@ public class RouterToolGenerator : IIncrementalGenerator
             sb.AppendLine(",");
         }
 
-        sb.AppendLine("        [global::System.ComponentModel.Description(\"Slot ID returned by spawn_slot. Omit to use the router's default Rhino (auto-spawned on first slot-less call).\")] string? slot = null,");
+        sb.AppendLine("        [global::System.ComponentModel.Description(\"Slot ID returned by spawn_slot. Omit to use the Rhino you're already working in (the one you last used, or one you have open); a new Rhino is auto-spawned only if none is running.\")] string? slot = null,");
 
         sb.AppendLine("        global::System.Threading.CancellationToken ct = default)");
         sb.AppendLine("    {");

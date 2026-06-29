@@ -26,10 +26,6 @@ public sealed class CloseSlotAgentTests : AgenticTestBase
         RhinoRouterPaths.TryDeleteDirectory(_isolatedTempDir);
     }
 
-    // Regression: the agent should be able to call close_slot on a slot that
-    // doesn't exist and receive a structured slot_not_found payload (not a
-    // generic failure). This is the user-facing manifestation of the
-    // `manager.Has` fix on this branch.
     [Test]
     public async Task agent_receives_slot_not_found_when_closing_unknown_slot()
     {

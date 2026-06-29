@@ -67,7 +67,3 @@ Briefly tell the user:
 - That all Rhinos are now closed (or which ones couldn't be killed).
 
 The agents already reported their own results in Step 2 — no need to recap each.
-
-## Why this is simpler than the old model
-
-The router speaks **stdio** MCP to Claude Code, so the connection is alive from session start with no `/mcp` reconnect needed. Children live and die under router control on internal ports Claude never sees. One slot in `.mcp.json` (`rhino`), one MCP namespace (`mcp__plugin_rhino-mcp_rhino__*`), `slot` arg routes to the right child Rhino.

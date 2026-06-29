@@ -7,7 +7,7 @@
        (connector/manifest.json) and cc-plugin version independently - do NOT
        couple them to this. -->
   <PropertyGroup>
-    <Version>0.1.3</Version>
+    <Version>0.1.5</Version>
   </PropertyGroup>
 
 </Project>

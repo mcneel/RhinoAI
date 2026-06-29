@@ -1,10 +1,11 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 using RhMcp.Router;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
+[TestFixture]
 public class RhinoCrashReportFinderTests
 {
     // Hand-crafted minidump exercises the Windows parser without needing a real
@@ -12,7 +13,7 @@ public class RhinoCrashReportFinderTests
     // and exception-code → Signal/Termination mapping. Drops the file into the
     // WER LocalDumps path that TryFindWindows scans, so the test also covers
     // the directory-discovery half of the code path.
-    [Fact]
+    [Test]
     public void TryFind_on_windows_parses_synthetic_minidump()
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return;
@@ -33,13 +34,13 @@ public class RhinoCrashReportFinderTests
             var finder = new RhinoCrashReportFinder(NullLogger<RhinoCrashReportFinder>.Instance);
             var report = finder.TryFind(FakePid);
 
-            Assert.NotNull(report);
-            Assert.Equal(dumpPath, report.Path);
-            Assert.Equal("0xC0000005", report.Signal);
-            Assert.Equal("EXCEPTION_ACCESS_VIOLATION", report.Termination);
-            Assert.NotNull(report.CaptureTime);
-            Assert.Empty(report.ManagedFrames);
-            Assert.Empty(report.TopFrames);
+            Assert.That(report, Is.Not.Null);
+            Assert.That(report!.Path, Is.EqualTo(dumpPath));
+            Assert.That(report.Signal, Is.EqualTo("0xC0000005"));
+            Assert.That(report.Termination, Is.EqualTo("EXCEPTION_ACCESS_VIOLATION"));
+            Assert.That(report.CaptureTime, Is.Not.Null);
+            Assert.That(report.ManagedFrames, Is.Empty);
+            Assert.That(report.TopFrames, Is.Empty);
         }
         finally
         {
@@ -51,7 +52,7 @@ public class RhinoCrashReportFinderTests
     // desktop when an SEHException escapes the WPF message loop. Tests the
     // full path: file IO, FATAL UNHANDLED EXCEPTION extraction, frame capture,
     // and Windows-style build-path stripping.
-    [Fact]
+    [Test]
     public void TryParseDotNetCrash_extracts_exception_and_frames()
     {
         const string sample =
@@ -76,29 +77,29 @@ public class RhinoCrashReportFinderTests
             var finder = new RhinoCrashReportFinder(NullLogger<RhinoCrashReportFinder>.Instance);
             var report = finder.TryParseDotNetCrash(path);
 
-            Assert.NotNull(report);
-            Assert.Equal(path, report.Path);
-            Assert.NotNull(report.CaptureTime);
-            Assert.Equal(
-                "ExampleApp.SomeException (0x80004005): External component has thrown an exception.",
-                report.ManagedException);
+            Assert.That(report, Is.Not.Null);
+            Assert.That(report!.Path, Is.EqualTo(path));
+            Assert.That(report.CaptureTime, Is.Not.Null);
+            Assert.That(
+                report.ManagedException,
+                Is.EqualTo("ExampleApp.SomeException (0x80004005): External component has thrown an exception."));
 
             // Frames are capped at 10. Native frames keep no path; frames with
             // " in C:\\..." get rewritten to "(filename:line)".
-            Assert.Equal(10, report.ManagedFrames.Length);
-            Assert.All(report.ManagedFrames, f => Assert.StartsWith("at ", f));
-            Assert.Equal(
-                "at ExampleApp.NativeMethods.DoNativeCall(String token, Boolean flag)",
-                report.ManagedFrames[0]);
-            Assert.Contains("(CommandPanel.cs:572)", report.ManagedFrames[1]);
-            Assert.Contains("(FrameworkElement.cs:794)", report.ManagedFrames[7]);
+            Assert.That(report.ManagedFrames.Length, Is.EqualTo(10));
+            Assert.That(report.ManagedFrames, Is.All.StartWith("at "));
+            Assert.That(
+                report.ManagedFrames[0],
+                Is.EqualTo("at ExampleApp.NativeMethods.DoNativeCall(String token, Boolean flag)"));
+            Assert.That(report.ManagedFrames[1], Does.Contain("(CommandPanel.cs:572)"));
+            Assert.That(report.ManagedFrames[7], Does.Contain("(FrameworkElement.cs:794)"));
             // Build-machine path must be stripped from every frame.
-            Assert.DoesNotContain(report.ManagedFrames, f => f.Contains("C:\\BuildAgent"));
+            Assert.That(report.ManagedFrames, Has.None.Matches<string>(f => f.Contains("C:\\BuildAgent")));
 
             // .txt has no native stack or signal — those fields stay null/empty.
-            Assert.Null(report.Signal);
-            Assert.Null(report.Termination);
-            Assert.Empty(report.TopFrames);
+            Assert.That(report.Signal, Is.Null);
+            Assert.That(report.Termination, Is.Null);
+            Assert.That(report.TopFrames, Is.Empty);
         }
         finally
         {
@@ -163,7 +164,7 @@ public class RhinoCrashReportFinderTests
     // Pid-match path has no time window, so we can verify parsing against any
     // historical .ips by reading its pid from the file directly and asking the
     // finder to look it up.
-    [Fact]
+    [Test]
     public void TryFind_by_pid_parses_real_ips_when_available()
     {
         var dir = Path.Combine(
@@ -185,22 +186,22 @@ public class RhinoCrashReportFinderTests
         var finder = new RhinoCrashReportFinder(NullLogger<RhinoCrashReportFinder>.Instance);
         var report = finder.TryFind(pid);
 
-        Assert.NotNull(report);
-        Assert.Equal(ips, report.Path);
-        Assert.NotEmpty(report.TopFrames);
-        Assert.NotNull(report.Signal); // every macOS crash report has one
+        Assert.That(report, Is.Not.Null);
+        Assert.That(report!.Path, Is.EqualTo(ips));
+        Assert.That(report.TopFrames, Is.Not.Empty);
+        Assert.That(report.Signal, Is.Not.Null); // every macOS crash report has one
 
         // ManagedException is optional (older .ips, non-managed crashes), but
         // when present it must come with at least one managed frame — otherwise
         // we've extracted a header without the stack it belongs to.
         if (report.ManagedException is not null)
         {
-            Assert.NotEmpty(report.ManagedFrames);
+            Assert.That(report.ManagedFrames, Is.Not.Empty);
             // Every managed frame starts with "at " — sanity check the parse.
-            Assert.All(report.ManagedFrames, f => Assert.StartsWith("at ", f));
+            Assert.That(report.ManagedFrames, Is.All.StartWith("at "));
             // Build-server paths must be stripped — the whole point of the
             // post-process step.
-            Assert.DoesNotContain(report.ManagedFrames, f => f.Contains("/Users/bozo/TeamCity"));
+            Assert.That(report.ManagedFrames, Has.None.Matches<string>(f => f.Contains("/Users/bozo/TeamCity")));
         }
     }
 }

@@ -21,12 +21,12 @@ This is different from [upgrading a plugin's compiled components](../developers/
 ## A prompt to start with
 
 {{< prompt >}}
-Using RhinoWIP, open this GH1 script \<path> and rebuild the same definition on a GH2 canvas.
+Using Rhino 9 WIP/BETA, open this GH1 script \<path> and rebuild the same definition on a GH2 canvas.
 {{< /prompt >}}
 
 ## What you should see
 
-The assistant opens Rhino 9 WIP, Grasshopper 1 and 2. It will then remake your GH1 script in GH2. It should solve both canvases and compare the outputs. You can swap slider values on either side and check that they still agree.
+The assistant opens Rhino 9 WIP/BETA, Grasshopper 1 and 2. It will then remake your GH1 script in GH2. It should solve both canvases and compare the outputs. You can swap slider values on either side and check that they still agree.
 
 ## What to review
 

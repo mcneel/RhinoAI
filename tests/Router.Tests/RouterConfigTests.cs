@@ -1,46 +1,46 @@
+using NUnit.Framework;
 using RhMcp.Router;
-using Xunit;
 
 namespace RhMcp.Router.Tests;
 
+[TestFixture]
 public class RouterConfigTests
 {
-    [Fact]
+    [Test]
     public void Defaults_to_rhino_8_when_no_args()
     {
         var config = RouterConfig.FromArgs([]);
-        Assert.Equal("8", config.DefaultVersion);
+        Assert.That(config.DefaultVersion, Is.EqualTo("8"));
     }
 
-    [Theory]
-    [InlineData("WIP")]
-    [InlineData("9")]
-    [InlineData("8")]
+    [TestCase("WIP")]
+    [TestCase("9")]
+    [TestCase("8")]
     public void Parses_default_version_long_form(string version)
     {
         var config = RouterConfig.FromArgs(["--default-version", version]);
-        Assert.Equal(version, config.DefaultVersion);
+        Assert.That(config.DefaultVersion, Is.EqualTo(version));
     }
 
-    [Fact]
+    [Test]
     public void Parses_default_version_short_form()
     {
         var config = RouterConfig.FromArgs(["-v", "WIP"]);
-        Assert.Equal("WIP", config.DefaultVersion);
+        Assert.That(config.DefaultVersion, Is.EqualTo("WIP"));
     }
 
-    [Fact]
+    [Test]
     public void Ignores_unknown_flags()
     {
         var config = RouterConfig.FromArgs(["--garbage", "value", "--default-version", "WIP"]);
-        Assert.Equal("WIP", config.DefaultVersion);
+        Assert.That(config.DefaultVersion, Is.EqualTo("WIP"));
     }
 
-    [Fact]
+    [Test]
     public void Ignores_trailing_unmatched_flag()
     {
         // --default-version without a value should fall back to default.
         var config = RouterConfig.FromArgs(["--default-version"]);
-        Assert.Equal("8", config.DefaultVersion);
+        Assert.That(config.DefaultVersion, Is.EqualTo("8"));
     }
 }

@@ -18,14 +18,24 @@ keywords:
 
 If you're choosing between assistants and aren't sure, start with [Claude Desktop](../connector); it's the gentler entry point.
 
-## Before you start
+## 1. Install Codex
 
-1. The **Rhino-MCP-Platform** plugin is installed in Rhino. See [Getting Started](../) if you haven't done that yet.
-2. **Codex** is installed and signed in. See the [Codex install guide](https://github.com/openai/codex#installation) if you need it.
+[Codex](https://github.com/openai/codex) — install and sign in. See the [Codex install guide](https://github.com/openai/codex#installation) if you need it.
 
-## Wire up the Rhino MCP server
+## 2. Install the Rhino plugin
 
-1. In Rhino, run the `RhinoMCPConnect` command. It prints the command Codex needs to launch the Rhino MCP router.
+{{< yak package="Rhino-MCP-Platform" version="8" >}}
+{{< yak package="Rhino-MCP-Platform" version="9" >}}
+
+If that doesn't work you can try the below:
+
+1. Open Rhino 8 (and/or Rhino 9 WIP)
+2. Run the `PackageManager` command
+3. Search for, and install Rhino-MCP-Platform
+
+## 3. Wire up the Rhino MCP server
+
+1. In Rhino, run the `MCPConnect` command. It prints the command Codex needs to launch the Rhino MCP router.
 2. Open `~/.codex/config.toml` (create it if it doesn't exist).
 3. Add an entry for the Rhino server, pasting the command and args from step 1:
 
@@ -38,8 +48,10 @@ If you're choosing between assistants and aren't sure, start with [Claude Deskto
 4. Restart Codex. The `rhino` server should appear when you list MCP servers from inside a session.
 
 > **Pick the Rhino version** by changing the `--default-version` arg.
-> Use `8` for Rhino 8, `9` for Rhino 9 WIP.
+> Use `8` for Rhino 8, `9` for Rhino 9 WIP/BETA.
 
 ## Try it out
 
-Start a Codex session and follow the prompts on the [Try it out](../../try-it-out) page.
+<blockquote class="page-note">
+Start a Codex session and follow the prompts on the <a href="../../try-it-out">Try It Out</a> page.
+</blockquote>
