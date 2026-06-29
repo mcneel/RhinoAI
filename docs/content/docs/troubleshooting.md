@@ -12,7 +12,7 @@ keywords:
   - connection
 ---
 
-Common issues. If you don't find your problem here, [open an issue on GitHub](https://github.com/mcneel/RhinoMCP/issues) or ask in the [Rhino Discourse AI category](https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162).
+Common issues. If you don't find your problem here, [open an issue on GitHub](https://github.com/mcneel/ai/issues) or ask in the [Rhino Discourse AI category](https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162).
 
 ## My AI Agent doesn't see Rhino at all
 
