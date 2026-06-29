@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,20 +11,21 @@ internal enum TranscriptRole
     User,
     Agent,
     Tool,
-    Usage,   // a completed turn's per-turn token/cost line, rendered small + dim at the turn boundary
 }
 
-// One rendered row in the transcript. Dumb, immutable. Tool rows carry the call's Args/Result for
-// the expander plus a Summary (the human-readable chip header); bubble/system rows leave them empty.
-// Usage rows carry that turn's TokenUsage; every other role leaves it Empty. Record-struct equality
-// (TokenUsage is itself a record struct) keeps ReconcileItems diffing exact.
+// One rendered row in the transcript. Dumb, immutable. Tool rows carry the call's Args/Result for the
+// expander plus a Summary (the human-readable chip header); bubble/system rows leave them empty. A
+// bubble row carries its Timestamp (for the hover meta's "time since") and, on the turn's last bubble,
+// that turn's TokenUsage; every other role leaves Usage Empty. Record-struct equality (TokenUsage is
+// itself a record struct) keeps ReconcileItems diffing exact.
 internal readonly record struct TranscriptItem(
     TranscriptRole Role,
     string Text,
     string ToolArgs = "",
     string ToolResult = "",
     string Summary = "",
-    TokenUsage Usage = default);
+    TokenUsage Usage = default,
+    DateTimeOffset Timestamp = default);
 
 // Flattens a live Conversation or a persisted ConversationDto into the ordered rows the panel
 // renders. Assistant text chunks are coalesced into one bubble per run, and a tool call collapses
@@ -49,10 +51,14 @@ internal sealed class TranscriptViewModel
         bool running = false;
         foreach (Turn turn in convo.Turns)
         {
-            items.Add(new TranscriptItem(TranscriptRole.User, turn.Prompt));
-            Flatten(items, turn.Events.Select(static ev => (ev.Kind, ev.Text, ev.Args, ev.Result)));
+            AppendTurn(
+                items,
+                turn.Prompt,
+                turn.StartedAt,
+                turn.Events.Select(static ev => (ev.Kind, ev.Text, ev.Args, ev.Result, ev.At)),
+                turn.Completed,
+                turn.Usage);
             running = !turn.Completed;
-            AppendUsage(items, turn.Completed, turn.Usage);
         }
         return new TranscriptViewModel(items, running);
     }
@@ -64,41 +70,65 @@ internal sealed class TranscriptViewModel
             items.Add(new TranscriptItem(TranscriptRole.System, ev.Text));
 
         foreach (TurnDto turn in convo.Turns)
-        {
-            items.Add(new TranscriptItem(TranscriptRole.User, turn.Prompt));
-            Flatten(items, turn.Events.Select(static ev => (ev.Kind, ev.Text, ev.Args, ev.Result)));
-            AppendUsage(items, completed: true, turn.Usage);   // persisted turns are always complete
-        }
+            AppendTurn(
+                items,
+                turn.Prompt,
+                turn.StartedAt,
+                turn.Events.Select(static ev => (ev.Kind, ev.Text, ev.Args, ev.Result, ev.At)),
+                completed: true,   // persisted turns are always complete
+                turn.Usage);
         return new TranscriptViewModel(items, running: false);
     }
 
-    // Per-turn usage line at the turn boundary: only for a completed turn the agent actually accounted
-    // for. A running turn (its usage lands with the terminal event) and a turn with no usage emit
-    // nothing, so a still-streaming turn never shows a premature/zero figure.
-    private static void AppendUsage(List<TranscriptItem> items, bool completed, TokenUsage usage)
+    // One turn → its user prompt, the flattened agent/tool rows, and (when the turn completed with a
+    // figure) the turn's token usage folded onto its last bubble. Tokens are per-turn, not per-message,
+    // so they land on the turn's last user/agent bubble (the final reply, or the prompt if the turn
+    // produced no agent text) rather than as a separate row.
+    private static void AppendTurn(
+        List<TranscriptItem> items,
+        string prompt,
+        DateTimeOffset startedAt,
+        IEnumerable<(TurnEventKind Kind, string Text, string Args, string Result, DateTimeOffset At)> events,
+        bool completed,
+        TokenUsage usage)
     {
-        if (completed && !usage.IsEmpty)
-            items.Add(new TranscriptItem(TranscriptRole.Usage, string.Empty, Usage: usage));
+        int from = items.Count;
+        items.Add(new TranscriptItem(TranscriptRole.User, prompt, Timestamp: startedAt));
+        Flatten(items, events);
+
+        if (!completed || usage.IsEmpty)
+            return;
+        for (int i = items.Count - 1; i >= from; i--)
+        {
+            if (items[i].Role is TranscriptRole.User or TranscriptRole.Agent)
+            {
+                items[i] = items[i] with { Usage = usage };
+                return;
+            }
+        }
     }
 
     private static void Flatten(
         List<TranscriptItem> items,
-        IEnumerable<(TurnEventKind Kind, string Text, string Args, string Result)> events)
+        IEnumerable<(TurnEventKind Kind, string Text, string Args, string Result, DateTimeOffset At)> events)
     {
         StringBuilder assistant = new();
+        DateTimeOffset runStart = default;
         void FlushAssistant()
         {
             if (assistant.Length == 0)
                 return;
-            items.Add(new TranscriptItem(TranscriptRole.Agent, assistant.ToString()));
+            items.Add(new TranscriptItem(TranscriptRole.Agent, assistant.ToString(), Timestamp: runStart));
             assistant.Clear();
         }
 
-        foreach ((TurnEventKind Kind, string Text, string Args, string Result) ev in events)
+        foreach ((TurnEventKind Kind, string Text, string Args, string Result, DateTimeOffset At) ev in events)
         {
             switch (ev.Kind)
             {
                 case TurnEventKind.AssistantText:
+                    if (assistant.Length == 0)
+                        runStart = ev.At;   // first chunk stamps the coalesced run, stable across deltas
                     assistant.Append(ev.Text);
                     break;
                 case TurnEventKind.ToolUse:
@@ -108,12 +138,13 @@ internal sealed class TranscriptViewModel
                         ev.Text,
                         ev.Args,
                         ev.Result,
-                        Summary: ToolSummary.Describe(ev.Text, ev.Args, ev.Result)));
+                        Summary: ToolSummary.Describe(ev.Text, ev.Args, ev.Result),
+                        Timestamp: ev.At));
                     break;
                 case TurnEventKind.Result:
                     FlushAssistant();
                     if (!string.IsNullOrWhiteSpace(ev.Text))
-                        items.Add(new TranscriptItem(TranscriptRole.Agent, ev.Text));
+                        items.Add(new TranscriptItem(TranscriptRole.Agent, ev.Text, Timestamp: ev.At));
                     break;
             }
         }

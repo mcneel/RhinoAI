@@ -25,6 +25,11 @@ public class AIPAnel : Panel
     private TextArea PromptBox { get; } = new() { AcceptsReturn = true, AcceptsTab = false, Height = PromptMinHeight };
     private Button SendButton { get; } = new() { Text = "Send" };
 
+    // Thin indeterminate progress strip pinned flush to the bottom of the chat box (below the
+    // transcript, above the input) while a turn runs, so the "thinking" cue reads as part of the
+    // conversation area. Collapses to nothing when idle (Visible toggled in SyncSendButton).
+    private ProgressBar ThinkingBar { get; } = new() { Indeterminate = true, Visible = false, Height = 6 };
+
     // In-panel attention cue, shown above the transcript when agent output arrives or a turn finishes
     // while the panel is not the user's focus, cleared the moment focus returns. Rhino's docked panel
     // tab title is fixed at RegisterPanel and has no reliable cross-platform runtime setter, so the
@@ -68,13 +73,13 @@ public class AIPAnel : Panel
     private int LastBudget { get; set; } = -1;
 
     // A materialized transcript row: the item it renders (for diffing), its top-level Control in the
-    // stack, and the bubble / detail label it owns (for width-pinning and in-place streaming updates).
-    // Bubble is set for User/Agent rows; Detail for an expandable tool chip; both null otherwise.
-    private sealed record RenderedRow(TranscriptItem Item, Control Control, MessageBubble? Bubble, Label? Detail);
+    // stack, and the bubble / hover meta / detail label it owns (for width-pinning and in-place
+    // streaming updates). Bubble + Meta are set for User/Agent rows; Detail for an expandable tool
+    // chip; all null otherwise.
+    private sealed record RenderedRow(TranscriptItem Item, Control Control, MessageBubble? Bubble, MessageMeta? Meta, Label? Detail);
 
     private const int SideMargin = 10;        // left/right breathing room around every row
     private const int ScrollbarGuard = 18;    // reserve the vertical scrollbar so content never x-scrolls
-    private const int MaxBubbleHeight = 320;  // oversized messages cap here and scroll internally
 
     // Auto-grow prompt: the TextArea starts at one line and grows with content up to a cap, beyond
     // which it scrolls internally. The buttons match the min height so they sit flush in the row.
@@ -239,6 +244,18 @@ public class AIPAnel : Panel
             },
         };
 
+        // The transcript with the thinking strip pinned flush to its bottom edge: zero inner spacing
+        // keeps the strip tight to the conversation, and it collapses to nothing when idle.
+        TableLayout chatBox = new()
+        {
+            Spacing = new Size(0, 0),
+            Rows =
+            {
+                new TableRow(TranscriptScroll) { ScaleHeight = true },
+                new TableRow(ThinkingBar),
+            },
+        };
+
         Content = new TableLayout
         {
             Spacing = new Size(0, 8),
@@ -247,7 +264,7 @@ public class AIPAnel : Panel
                 new TableRow(headerTop),
                 new TableRow(headerSub),
                 new TableRow(UnreadBanner),
-                new TableRow(TranscriptScroll) { ScaleHeight = true },
+                new TableRow(chatBox) { ScaleHeight = true },
                 new TableRow(AttachmentStrip),
                 new TableRow(promptRow),
             },
@@ -417,7 +434,7 @@ public class AIPAnel : Panel
         // Resume tears down (disposes) the doc's pooled runner for this agent kind. Disposing it
         // mid-turn would kill the streaming process and silently abandon the in-flight answer (the
         // ObjectDisposedException is swallowed downstream). Guard like every other live-mutation path
-        // (OnSendOrStop, RegeneratePrompt): refuse while a turn is running rather than abort it.
+        // (OnSendOrStop): refuse while a turn is running rather than abort it.
         if (TurnRunning())
         {
             RhinoApp.WriteLine("[rhmcp] cannot resume while a turn is running; stop it first.");
@@ -605,6 +622,9 @@ public class AIPAnel : Panel
                 if (row.Bubble is not { } bubble)
                     return false;
                 bubble.Update(item.Text);
+                // The turn's tokens fold onto its last bubble at completion, so refresh the meta too,
+                // not just the bubble text.
+                row.Meta?.Update(item.Text, item.Timestamp, item.Usage);
                 Rendered[index] = row with { Item = item };
                 return true;
 
@@ -615,7 +635,7 @@ public class AIPAnel : Panel
                 // Replace notification is not a proven trigger for an Eto relayout.
                 TranscriptStack.Items.RemoveAt(index);
                 TranscriptStack.Items.Insert(index, new StackLayoutItem(chip));
-                RenderedRow updated = new(item, chip, null, detail);
+                RenderedRow updated = new(item, chip, null, null, detail);
                 Rendered[index] = updated;
                 if (LastBudget > 0)
                     PinRow(updated, LastBudget);   // the folded-in result spawns a fresh detail label
@@ -690,33 +710,47 @@ public class AIPAnel : Panel
         switch (item.Role)
         {
             case TranscriptRole.System:
-                return new RenderedRow(item, SystemLine(item.Text), null, null);
-            case TranscriptRole.Usage:
-                return new RenderedRow(item, UsageLine(item.Usage), null, null);
+                return new RenderedRow(item, SystemLine(item.Text), null, null, null);
             case TranscriptRole.Tool:
                 Control chip = ToolChip(item, out Label? detail);
-                return new RenderedRow(item, chip, null, detail);
+                return new RenderedRow(item, chip, null, null, detail);
             default:
-                Control row = BubbleRow(item, out MessageBubble bubble);
-                return new RenderedRow(item, row, bubble, null);
+                Control row = BubbleRow(item, out MessageBubble bubble, out MessageMeta meta);
+                return new RenderedRow(item, row, bubble, meta, null);
         }
     }
 
     // A bubble biased left (agent) or right (user) by a stretchable spacer on the open side; the
-    // transcript's side padding plus the spacer give every row left/right breathing room. The bubble
-    // is handed back so the row can width-pin it and grow it in place on a streaming delta. User
-    // bubbles carry a small Regenerate / Edit action row beneath them; both route the prompt back
-    // through the normal Send funnel (Regenerate re-sends as-is, Edit drops it into the prompt box).
-    private Control BubbleRow(TranscriptItem item, out MessageBubble bubble)
+    // transcript's side padding plus the spacer give every row left/right breathing room. Below the
+    // bubble sits a hover-revealed meta line (copy / time / tokens), hidden until the pointer is over
+    // the bubble+meta column. The bubble and meta are handed back so the row can width-pin the bubble
+    // and update both in place on a streaming delta.
+    private Control BubbleRow(TranscriptItem item, out MessageBubble bubble, out MessageMeta meta)
     {
         bool user = item.Role == TranscriptRole.User;
-        bubble = new(item.Text, user, MeasureFont, MaxBubbleHeight, CopyIcon());
+        bubble = new(item.Text, user, MeasureFont);
 
-        Control side = user ? UserBubbleColumn(item.Text, bubble) : bubble;
+        MessageMeta line = new(user, CopyIcon());
+        line.Update(item.Text, item.Timestamp, item.Usage);
+        meta = line;
+
+        // Bubble stacked over its meta, both aligned to the message's biased edge. The meta reserves a
+        // fixed height, so revealing it on hover never moves rows below. Container-level MouseEnter/
+        // MouseLeave is reliable across child controls on both backends (the children sit inside the
+        // column's bounds), so one pair of handlers reveals the line; RefreshTime re-stamps the
+        // relative time at the moment of hover.
+        StackLayout column = new()
+        {
+            Spacing = 2,
+            HorizontalContentAlignment = user ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+            Items = { new StackLayoutItem(bubble, false), new StackLayoutItem(line, false) },
+        };
+        column.MouseEnter += (_, _) => { line.RefreshTime(); line.Show(true); };
+        column.MouseLeave += (_, _) => line.Show(false);
 
         StackLayout row = new() { Orientation = Orientation.Horizontal };
         StackLayoutItem flex = new(null, true);
-        StackLayoutItem fixedSide = new(side, false);
+        StackLayoutItem fixedSide = new(column, false);
         if (user)
         {
             row.Items.Add(flex);
@@ -728,54 +762,6 @@ public class AIPAnel : Panel
             row.Items.Add(flex);
         }
         return row;
-    }
-
-    // The user bubble plus its turn-control action row, stacked right-aligned to match the bubble's
-    // right bias. Regenerate re-runs this prompt verbatim; Edit puts it back in the prompt box to
-    // tweak and re-send. Both funnel through Send, never a parallel dispatch path.
-    private Control UserBubbleColumn(string prompt, MessageBubble bubble)
-    {
-        LinkButton regenerate = new() { Text = "↻ Regenerate", Font = SystemFonts.Default(7) };
-        regenerate.Click += (_, _) => RegeneratePrompt(prompt);
-
-        LinkButton edit = new() { Text = "✎ Edit", Font = SystemFonts.Default(7) };
-        edit.Click += (_, _) => EditPrompt(prompt);
-
-        StackLayout actions = new()
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Items = { new StackLayoutItem(null, true), regenerate, edit },
-        };
-
-        return new StackLayout
-        {
-            Spacing = 2,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Items = { new StackLayoutItem(bubble, false), new StackLayoutItem(actions, false) },
-        };
-    }
-
-    // Re-send a previous user prompt verbatim through the Send funnel, starting a fresh agent turn.
-    // No-op while a turn is in flight (the funnel would otherwise queue behind the live turn) or
-    // while reviewing a persisted transcript.
-    private void RegeneratePrompt(string prompt)
-    {
-        if (Reviewing is not null || TurnRunning())
-            return;
-        PromptBox.Text = prompt;
-        Send();
-    }
-
-    // Drop a previous user prompt back into the box for the user to edit and re-send. Pure UI: it
-    // never dispatches on its own, so it is always safe (even mid-turn).
-    private void EditPrompt(string prompt)
-    {
-        if (Reviewing is not null)
-            return;
-        PromptBox.Text = prompt;
-        PromptBox.Focus();
-        PromptBox.CaretIndex = prompt.Length;
     }
 
     private bool TurnRunning()
@@ -794,7 +780,7 @@ public class AIPAnel : Panel
     private Control QuestionCard(PendingQuestion question)
     {
         StackLayout body = new() { Spacing = 6, Padding = new Padding(8, 6) };
-        body.Items.Add(new Label { Text = $"ask_user: {question.Question}", Font = SystemFonts.Bold() });
+        body.Items.Add(new Label { Text = question.Question, Font = SystemFonts.Bold() });
 
         TextBox otherText = new() { PlaceholderText = "Other…" };
 
@@ -963,18 +949,6 @@ public class AIPAnel : Panel
         Font = SystemFonts.Default(7),
     };
 
-    // The completed turn's per-turn token (and cost, when reported) reading, dropped small + dim and
-    // right-aligned at the turn boundary. Built only for non-empty usage (the view-model never emits a
-    // Usage row otherwise), so it always has a figure to show. The tooltip carries the in/out split.
-    private static Control UsageLine(TokenUsage usage) => new Label
-    {
-        Text = $"⛁ {FormatUsage(usage)}",
-        ToolTip = DescribeUsage(usage),
-        TextAlignment = TextAlignment.Right,
-        TextColor = SystemColors.DisabledText,
-        Font = SystemFonts.Default(7),
-    };
-
     // Compact one-line chip; click toggles an expander showing the tool's args + result. The detail
     // label is handed back (null when there's nothing to expand) so the row can wrap it to the
     // viewport (long JSON otherwise widens the transcript and forces a horizontal scroll).
@@ -1135,7 +1109,12 @@ public class AIPAnel : Panel
         SendButton.Enabled = true;   // re-enable after a read-only review disabled it
         SendButton.Text = running ? "Stop" : "Send";
         SendButton.ToolTip = running ? "Cancel the current turn (Esc)" : "Send (Enter)";
+        // The agent isn't "thinking" while it's blocked on a pending ask_user answer, so drop the cue.
+        ThinkingBar.Visible = running && !QuestionPending();
     }
+
+    private bool QuestionPending() =>
+        TryActiveConversation(out Conversation convo) && convo.TryGetPendingQuestion(out _);
 
     // Raise the unread cue from a live render when the panel isn't focused: a turn finishing is the
     // strongest signal (and supersedes a streaming cue), output arriving mid-turn the lighter one.
@@ -1188,23 +1167,6 @@ public class AIPAnel : Panel
         LastItemCount = 0;
         UpdateUnreadBanner();
     }
-
-    // Compact form for the label: total tokens (k-abbreviated) plus a cost when one is reported.
-    private static string FormatUsage(TokenUsage usage)
-    {
-        string tokens = $"{FormatTokens(usage.TotalTokens)} tok";
-        return usage.CostUsd is decimal cost ? $"{tokens} ${cost:0.00}" : tokens;
-    }
-
-    // Verbose form for the tooltip: the input/output split and the cost when present.
-    private static string DescribeUsage(TokenUsage usage)
-    {
-        string split = $"{FormatTokens(usage.InputTokens)} in / {FormatTokens(usage.OutputTokens)} out ({FormatTokens(usage.TotalTokens)} total)";
-        return usage.CostUsd is decimal cost ? $"{split}, ${cost:0.0000}" : split;
-    }
-
-    private static string FormatTokens(int count) =>
-        count >= 1000 ? $"{count / 1000.0:0.#}k" : count.ToString();
 
     // Eto layout is deferred, so TranscriptStack's size is stale right after a rebuild; defer the
     // scroll until after layout settles so streaming actually reaches the true bottom.
