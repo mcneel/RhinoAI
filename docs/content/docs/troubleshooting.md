@@ -38,7 +38,7 @@ A few things to check:
 - **Use View &rarr; Zoom &rarr; Zoom Extents.** the geometry may be far from the origin.
 - **Check the layers panel.** Geometry may be on a hidden layer.
 
-## I want to use Rhino 9 (WIP) instead of Rhino 8
+## I want to use Rhino 9 (WIP/BETA) instead of Rhino 8
 
 The router defaults to Rhino 8. To target Rhino 9:
 
@@ -47,7 +47,7 @@ The router defaults to Rhino 8. To target Rhino 9:
 
 ## Grasshopper tools aren't working
 
-- Grasshopper 2 tools (`gh2_`) require **Rhino 9 WIP**.
+- Grasshopper 2 tools (`gh2_`) require **Rhino 9 WIP/BETA**.
 - If you want to use Grasshopper 2, specify Rhino WIP to your AI Agent
 
 ## The MCP Plugin doesn't load or show up in the package manager?

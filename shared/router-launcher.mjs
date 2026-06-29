@@ -154,17 +154,30 @@ function resolveYak(version) {
   const override = process.env.RHINO_MCP_FAKE_YAK_PATH;
   if (override != null) return override && isFile(override) ? override : null;
 
+  // "9", "BETA", and "WIP" are the same Rhino 9 family and probe the same
+  // installs in order: prefer the release, then BETA, then WIP.
+  const isRhino9 = version === "9" || version === "BETA" || version === "WIP";
   if (process.platform === "darwin") {
-    const app = { "8": "Rhino 8.app", "9": "Rhino 9.app", WIP: "RhinoWIP.app" }[version];
-    if (!app) return null;
-    const p = `/Applications/${app}/Contents/Resources/bin/yak`;
-    return isFile(p) ? p : null;
+    const apps =
+      version === "8" ? ["Rhino 8.app"]
+      : isRhino9 ? ["Rhino 9.app", "RhinoBETA.app", "RhinoWIP.app"]
+      : [];
+    for (const app of apps) {
+      const p = `/Applications/${app}/Contents/Resources/bin/yak`;
+      if (isFile(p)) return p;
+    }
+    return null;
   }
   if (process.platform === "win32") {
-    const dir = { "8": "Rhino 8", "9": "Rhino 9", WIP: "Rhino 9 WIP" }[version];
-    if (!dir) return null;
-    const p = join("C:\\Program Files", dir, "System", "Yak.exe");
-    return isFile(p) ? p : null;
+    const dirs =
+      version === "8" ? ["Rhino 8"]
+      : isRhino9 ? ["Rhino 9", "Rhino 9 BETA", "Rhino 9 WIP"]
+      : [];
+    for (const dir of dirs) {
+      const p = join("C:\\Program Files", dir, "System", "Yak.exe");
+      if (isFile(p)) return p;
+    }
+    return null;
   }
   return null;
 }

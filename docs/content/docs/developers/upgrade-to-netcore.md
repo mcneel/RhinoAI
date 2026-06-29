@@ -14,7 +14,7 @@ keywords:
 
 ![sel-commands](/developer/sel-arc.png)
 
-If you have a Rhino plugin still targeting `net45` or `net48`, you'll want to move it to `net8.0` (Rhino 8) which will also work for (Rhino 9 WIP). This page showcases how you can use the RhinoMCP to make this upgrade seamless.
+If you have a Rhino plugin still targeting `net45` or `net48`, you'll want to move it to `net8.0` (Rhino 8) which will also work for (Rhino 9 WIP/BETA). This page showcases how you can use the RhinoMCP to make this upgrade seamless.
 
 ## An Example
 

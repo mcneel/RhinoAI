@@ -3,9 +3,13 @@ using System.Runtime.InteropServices;
 namespace RhMcp.Router;
 
 // Resolves a full path to Rhino.exe (Windows) or the Rhinoceros binary (macOS)
-// for a given version string. Versions: "8" | "9" | "WIP".
+// for a given version string. Versions: "8" | "9" | "BETA" | "WIP".
 public class RhinoLocator
 {
+    // Rhino 9 ships concurrently as a release candidate (BETA) and a WIP, and a
+    // user-opened build of any of the three announces itself as "9". So "9",
+    // "BETA", and "WIP" are interchangeable for resolution and all probe the
+    // same dirs in the same order: prefer the release, then BETA, then WIP.
     public string ResolveRhinoExe(string version)
     {
         if (TryResolve(version, out string path))
@@ -22,16 +26,17 @@ public class RhinoLocator
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            // Rhino 9 currently ships only as WIP, so "9" falls back to the
-            // WIP install dir when no released Rhino 9 is present. Once a
-            // real Rhino 9 ships, the first lookup will hit and the fallback
-            // becomes dead code we can drop.
             // TODO: also try registry-based lookup if Program Files paths miss.
+            string[] rhino9 =
+            {
+                @"C:\Program Files\Rhino 9",
+                @"C:\Program Files\Rhino 9 BETA",
+                @"C:\Program Files\Rhino 9 WIP",
+            };
             string[] dirs = version switch
             {
                 "8" => new[] { @"C:\Program Files\Rhino 8" },
-                "9" => new[] { @"C:\Program Files\Rhino 9", @"C:\Program Files\Rhino 9 WIP" },
-                "WIP" => new[] { @"C:\Program Files\Rhino 9 WIP" },
+                "9" or "BETA" or "WIP" => rhino9,
                 _ => Array.Empty<string>()
             };
             foreach (string dir in dirs)
@@ -48,13 +53,12 @@ public class RhinoLocator
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            // See Windows branch — "9" falls back to RhinoWIP.app while Rhino 9
-            // is still shipping as WIP.
+            // See Windows branch — "9", "BETA", "WIP" all probe the same apps.
+            string[] rhino9 = { "Rhino 9.app", "RhinoBETA.app", "RhinoWIP.app" };
             string[] appNames = version switch
             {
                 "8" => new[] { "Rhino 8.app" },
-                "9" => new[] { "Rhino 9.app", "RhinoWIP.app" },
-                "WIP" => new[] { "RhinoWIP.app" },
+                "9" or "BETA" or "WIP" => rhino9,
                 _ => Array.Empty<string>()
             };
             // Without this guard an unknown version resolves to "/Applications/",
@@ -78,7 +82,9 @@ public class RhinoLocator
 
     public IEnumerable<string> ListInstalledVersions()
     {
-        foreach (string v in new[] { "8", "9", "WIP" })
+        // "9" stands in for the whole 9-family (release / BETA / WIP), which all
+        // resolve identically — listing them separately would just duplicate.
+        foreach (string v in new[] { "8", "9" })
         {
             if (TryResolve(v, out _))
                 yield return v;

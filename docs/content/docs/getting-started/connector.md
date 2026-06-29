@@ -31,6 +31,13 @@ That's it. The connector is now wired up.
 
 ## 3. Install the Rhino plugin
 
+{{< yak package="Rhino-MCP-Platform" version="8" >}}
+{{< yak package="Rhino-MCP-Platform" version="9" >}}
+
+If that doesn't work you can try the below:
+
+## 3.b Install the Rhino plugin (with Claude)
+
 > The desktop connector can also install the plugin for you if you ask it to.
 
 Paste the following into your AI agent. It will install it for you, so there is no need to open Rhino.
