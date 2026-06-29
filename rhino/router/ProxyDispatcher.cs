@@ -107,7 +107,7 @@ public class ProxyDispatcher(
                 // A clean shutdown leaves a departure tombstone; a crash doesn't.
                 // Check that first so a user closing the doc/Rhino mid-call isn't
                 // reported as a crash.
-                if (manager.TryConsumeDeparture(child.Pid, child.Port))
+                if (child.Pid is { } pid && child.Port is { } port && manager.TryConsumeDeparture(pid, port))
                 {
                     log.LogInformation("Rhino slot '{Slot}' (pid {Pid}) was closed during tool call '{Tool}'",
                         child.SlotId, child.Pid, toolName);
