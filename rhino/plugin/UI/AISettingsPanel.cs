@@ -31,6 +31,10 @@ internal sealed class AISettingsPanel : Panel
     private static JsonSerializerOptions IndentedJson { get; } = new() { WriteIndented = true };
     private const string EmptyMcpJson = "{\n  \"mcpServers\": {}\n}";
 
+    // Sentinel shown in the Model dropdown (and grid column) for an empty model. Picking it stores an
+    // empty string, i.e. "pass no --model, let the CLI choose its own default".
+    private const string DefaultModelLabel = "(default)";
+
     // Suppresses the editor->row write-back while we are programmatically loading
     // the editor from a freshly selected row.
     private bool Loading { get; set; }
@@ -145,28 +149,37 @@ internal sealed class AISettingsPanel : Panel
             Editable = false,
             Width = 160,
         });
+        AgentGrid.Columns.Add(new GridColumn
+        {
+            HeaderText = "Model",
+            DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.ModelDisplay) },
+            Editable = false,
+            Width = 120,
+        });
 
         AgentGrid.SelectionChanged += (_, _) => LoadEditor();
+        AgentGrid.ContextMenu = BuildGridContextMenu();
 
         Button addButton = new() { Text = "Add Custom..." };
         addButton.Click += (_, _) => AddCustom();
         RemoveButton.Click += (_, _) => RemoveSelected();
-        UpButton.Click += (_, _) => MoveSelected(-1);
-        DownButton.Click += (_, _) => MoveSelected(1);
         SetDefaultButton.Click += (_, _) => SetSelectedDefault();
 
         StackLayout rowButtons = new()
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            Items = { addButton, RemoveButton, UpButton, DownButton, SetDefaultButton },
+            Items = { addButton, RemoveButton, SetDefaultButton },
         };
 
         SearchPathsBox.TextChanged += (_, _) => WriteEditor(row => row.SearchPathsText = SearchPathsBox.Text);
         // Typing fires TextChanged; picking from the dropdown fires SelectedIndexChanged on some
         // platforms without a TextChanged, so wire both. The Loading guard keeps refills quiet.
-        ModelBox.TextChanged += (_, _) => WriteEditor(row => row.Model = ModelBox.Text);
-        ModelBox.SelectedIndexChanged += (_, _) => WriteEditor(row => row.Model = ModelBox.Text);
+        // The grid's read-only Model column mirrors this field; refresh it when editing settles
+        // (dropdown pick or focus leaving) rather than per keystroke to avoid cursor churn.
+        ModelBox.TextChanged += (_, _) => WriteEditor(row => row.Model = ModelFromBox());
+        ModelBox.SelectedIndexChanged += (_, _) => WriteEditor(row => { row.Model = ModelFromBox(); RefreshSelectedRow(); });
+        ModelBox.LostFocus += (_, _) => RefreshSelectedRow();
         ExtraArgsBox.TextChanged += (_, _) => WriteEditor(row => row.ExtraArgsText = ExtraArgsBox.Text);
         SystemPromptBox.TextChanged += (_, _) => WriteEditor(row => row.SystemPrompt = SystemPromptBox.Text);
 
@@ -175,10 +188,11 @@ internal sealed class AISettingsPanel : Panel
             Spacing = new Size(8, 6),
             Rows =
             {
-                LabeledRow("Search paths (one per line):", SearchPathsBox),
-                LabeledRow("Model:", ModelBox),
-                LabeledRow("Extra args (one per line):", ExtraArgsBox),
-                LabeledRow("Default prompt:", SystemPromptBox),
+                new TableRow(LabeledColumn("Search paths (one per line):", SearchPathsBox)),
+                new TableRow(LabeledColumn("Model:", ModelBox)),
+                new TableRow(SideBySide(
+                    LabeledColumn("Extra args (one per line):", ExtraArgsBox),
+                    LabeledColumn("Default prompt:", SystemPromptBox))),
             },
         };
 
@@ -206,6 +220,104 @@ internal sealed class AISettingsPanel : Panel
     private static TableRow LabeledRow(string label, Control control) =>
         new(new TableCell(new Label { Text = label }), new TableCell(control, true));
 
+    // Label stacked above its control. Used by the agent editor so the two multi-line boxes can sit
+    // side by side without left-hand labels eating their width.
+    private static Control LabeledColumn(string label, Control control) =>
+        new TableLayout
+        {
+            Spacing = new Size(0, 3),
+            Rows = { new TableRow(new Label { Text = label }), new TableRow(new TableCell(control, true)) },
+        };
+
+    private static Control SideBySide(Control left, Control right) =>
+        new TableLayout
+        {
+            Spacing = new Size(12, 0),
+            Rows = { new TableRow(new TableCell(left, true), new TableCell(right, true)) },
+        };
+
+    // Right-click menu on the grid: the row actions (Add / Set Default / Reset / Remove) plus
+    // reordering (Up / Down) that has no button. Enabled state is recomputed on open so Remove stays
+    // disabled for built-ins, Up/Down disable at the ends, and nothing is actionable without a selection.
+    private ContextMenu BuildGridContextMenu()
+    {
+        ButtonMenuItem add = new() { Text = "Add Custom..." };
+        add.Click += (_, _) => AddCustom();
+        ButtonMenuItem setDefault = new() { Text = "Set Default" };
+        setDefault.Click += (_, _) => SetSelectedDefault();
+        ButtonMenuItem reset = new() { Text = "Restore Defaults" };
+        reset.Click += (_, _) => ResetSelected();
+        ButtonMenuItem remove = new() { Text = "Remove" };
+        remove.Click += (_, _) => RemoveSelected();
+        ButtonMenuItem moveUp = new() { Text = "Move Up" };
+        moveUp.Click += (_, _) => MoveSelected(-1);
+        ButtonMenuItem moveDown = new() { Text = "Move Down" };
+        moveDown.Click += (_, _) => MoveSelected(1);
+
+        ContextMenu menu = new()
+        {
+            Items = { add, setDefault, reset, remove, new SeparatorMenuItem(), moveUp, moveDown },
+        };
+        menu.Opening += (_, _) =>
+        {
+            bool hasSelection = TryGetSelected(out AgentRow row);
+            int index = hasSelection ? Rows.IndexOf(row) : -1;
+            setDefault.Enabled = hasSelection;
+            reset.Enabled = hasSelection;
+            remove.Enabled = hasSelection && !row.IsBuiltin;
+            moveUp.Enabled = index > 0;
+            moveDown.Enabled = index >= 0 && index < Rows.Count - 1;
+        };
+        return menu;
+    }
+
+    // Restores the selected agent's editable fields to their out-of-the-box defaults: default search
+    // paths for its command, and an empty model/args/prompt (so the CLI defaults apply). Name, adapter,
+    // command, and the default-agent flag are identity, not settings, so they are left untouched.
+    private void ResetSelected()
+    {
+        if (!TryGetSelected(out AgentRow row))
+            return;
+
+        DialogResult confirm = MessageBox.Show(
+            this,
+            $"Reset \"{row.Name}\" to its default settings? This clears its model, extra args, prompt, "
+                + "and search paths, and re-enables it.",
+            "Reset Agent",
+            MessageBoxButtons.YesNo,
+            MessageBoxType.Question);
+        if (confirm != DialogResult.Yes)
+            return;
+
+        row.SearchPathsText = string.Join(Environment.NewLine, AgentRegistry.DefaultSearchPaths(row.Command));
+        row.Model = string.Empty;
+        row.ExtraArgsText = string.Empty;
+        row.SystemPrompt = string.Empty;
+        row.Enabled = true;
+
+        ReloadGrid();
+        LoadEditor();
+    }
+
+    private void MoveSelected(int delta)
+    {
+        if (!TryGetSelected(out AgentRow row))
+            return;
+        int index = Rows.IndexOf(row);
+        int target = index + delta;
+        if (target < 0 || target >= Rows.Count)
+            return;
+        Rows.Move(index, target);
+        AgentGrid.SelectedRow = target;
+    }
+
+    private void RefreshSelectedRow()
+    {
+        int index = AgentGrid.SelectedRow;
+        if (index >= 0)
+            AgentGrid.ReloadData(new Eto.Forms.Range<int>(index, index));
+    }
+
     private void LoadEditor()
     {
         Loading = true;
@@ -215,7 +327,7 @@ internal sealed class AISettingsPanel : Panel
             {
                 SearchPathsBox.Text = row.SearchPathsText;
                 PopulateModelChoices(row.Adapter);
-                ModelBox.Text = row.Model;
+                ModelBox.Text = row.Model.Length > 0 ? row.Model : DefaultModelLabel;
                 ExtraArgsBox.Text = row.ExtraArgsText;
                 SystemPromptBox.Text = row.SystemPrompt;
                 EnableEditor(true);
@@ -234,18 +346,24 @@ internal sealed class AISettingsPanel : Panel
         finally { Loading = false; }
     }
 
-    // The Model dropdown choices for an adapter: its built-in seeds first, then any models the user
-    // typed before (remembered per adapter). The box stays editable, so a model not in the list can
-    // still be typed and is remembered on save. Runs under the Loading guard so refilling Items does
-    // not write back to the row.
+    // The Model dropdown choices for an adapter: the "(default)" sentinel first, then its built-in
+    // seeds, then any models the user typed before (remembered per adapter). The box stays editable,
+    // so a model not in the list can still be typed and is remembered on save. Runs under the Loading
+    // guard so refilling Items does not write back to the row.
     private void PopulateModelChoices(AgentAdapter adapter)
     {
         ModelBox.Items.Clear();
+        ModelBox.Items.Add(DefaultModelLabel);
         foreach (string model in KnownModels.For(adapter)
                      .Concat(AISettings.GetCustomModels(adapter))
                      .Distinct(StringComparer.OrdinalIgnoreCase))
             ModelBox.Items.Add(model);
     }
+
+    // The model string a row should store for the current box text, collapsing the "(default)"
+    // sentinel back to empty so it is never persisted or passed as a literal --model value.
+    private string ModelFromBox() =>
+        string.Equals(ModelBox.Text, DefaultModelLabel, StringComparison.Ordinal) ? string.Empty : ModelBox.Text;
 
     private void EnableEditor(bool enabled)
     {
@@ -253,8 +371,6 @@ internal sealed class AISettingsPanel : Panel
         ModelBox.Enabled = enabled;
         ExtraArgsBox.Enabled = enabled;
         SystemPromptBox.Enabled = enabled;
-        UpButton.Enabled = enabled;
-        DownButton.Enabled = enabled;
         SetDefaultButton.Enabled = enabled;
     }
 
@@ -292,18 +408,6 @@ internal sealed class AISettingsPanel : Panel
         if (Rows.Count == 0)
             return;
         AgentGrid.ReloadData(new Eto.Forms.Range<int>(0, Rows.Count - 1));
-    }
-
-    private void MoveSelected(int delta)
-    {
-        if (!TryGetSelected(out AgentRow row))
-            return;
-        int index = Rows.IndexOf(row);
-        int target = index + delta;
-        if (target < 0 || target >= Rows.Count)
-            return;
-        Rows.Move(index, target);
-        AgentGrid.SelectedRow = target;
     }
 
     private void AddCustom()
@@ -659,6 +763,10 @@ internal sealed class AISettingsPanel : Panel
 
         public string StatusGlyph => Available ? "✓" : "✗";
         public string DefaultGlyph => IsDefault ? "★" : string.Empty;
+
+        // Empty Model means "no --model passed; let the CLI choose its own default"; surface that as
+        // a placeholder so the column is never blank without pinning a model we don't actually force.
+        public string ModelDisplay => Model.Length > 0 ? Model : DefaultModelLabel;
 
         public AgentRow(
             string name, AgentAdapter adapter, string command, string searchPathsText, string model,
