@@ -91,8 +91,7 @@ public class AIPAnel : Panel
         "Describe the selected objects",
     ];
 
-    private static Image? CopyIconBacking { get; set; }
-    private static bool CopyIconLoaded { get; set; }
+    private static Dictionary<string, Image?> IconCache { get; } = new();
 
     private List<Attachment> Pending { get; } = new();
 
@@ -160,7 +159,13 @@ public class AIPAnel : Panel
         Button newConvo = new() { Text = "New", ToolTip = "New conversation (Ctrl+Shift+N)" };
         newConvo.Click += (_, _) => OnNewConversation();
 
-        Button attachButton = new() { Text = "+", ToolTip = "Attach a file", Width = 24 };
+        Rhino.UI.Controls.ImageButton attachButton = new()
+        {
+            ToolTip = "Attach a file",
+            Width = 32,
+            Image = PaperclipIcon()
+        };
+
         attachButton.Click += (_, _) => OnPickFile();
 
         PromptBox.KeyDown += OnPromptKeyDown;
@@ -228,9 +233,9 @@ public class AIPAnel : Panel
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Items =
             {
-                attachButton,
+                new StackLayoutItem(attachButton, false),
                 new StackLayoutItem(promptFrame, true),
-                SendButton,
+                new StackLayoutItem(SendButton, false),
             },
         };
 
@@ -1021,34 +1026,46 @@ public class AIPAnel : Panel
         return sb.ToString();
     }
 
-    // The embedded copy.svg rendered once to an Eto bitmap (via Rhino's SVG rasterizer, dark-mode
-    // aware) and shared across every bubble's copy button. Null falls back to a text "Copy" button.
-    private static Image? CopyIcon()
-    {
-        if (CopyIconLoaded)
-            return CopyIconBacking;
-        CopyIconLoaded = true;
+    private static Image? CopyIcon() => LoadIcon("RhMcp.copy.svg", 14);
 
+    private static Image? PaperclipIcon() => LoadIcon("RhMcp.paperclip.svg", 18);
+
+    // An embedded single-color SVG recolored to the current theme's foreground (so the glyph reads in
+    // both light and dark mode) and rasterized to an Eto bitmap. Cached by resource/size/color, so a
+    // theme switch re-renders rather than serving a stale bitmap. Null on any failure (text fallback).
+    private static Image? LoadIcon(string resourceName, int size)
+    {
+        string hex = HexColor(SystemColors.ControlText);
+        string cacheKey = $"{resourceName}@{size}@{hex}";
+        if (IconCache.TryGetValue(cacheKey, out Image? cached))
+            return cached;
+
+        Image? icon = null;
         try
         {
             Assembly assembly = typeof(AIPAnel).Assembly;
-            using Stream? stream = assembly.GetManifestResourceStream("RhMcp.copy.svg");
-            if (stream is null)
-                return CopyIconBacking;
-
-            using StreamReader reader = new(stream);
-            string svg = reader.ReadToEnd();
-            using System.Drawing.Bitmap rendered = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, 14, 14, adjustForDarkMode: true);
-            using MemoryStream png = new();
-            rendered.Save(png, System.Drawing.Imaging.ImageFormat.Png);
-            CopyIconBacking = new Bitmap(png.ToArray());
+            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is not null)
+            {
+                using StreamReader reader = new(stream);
+                string svg = reader.ReadToEnd().Replace("#1A1A1A", hex);
+                using System.Drawing.Bitmap rendered = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, size, size, adjustForDarkMode: false);
+                using MemoryStream png = new();
+                rendered.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+                icon = new Bitmap(png.ToArray());
+            }
         }
         catch
         {
-            CopyIconBacking = null;
+            icon = null;
         }
-        return CopyIconBacking;
+
+        IconCache[cacheKey] = icon;
+        return icon;
     }
+
+    private static string HexColor(Color c) =>
+        $"#{(int)(c.R * 255 + 0.5f):X2}{(int)(c.G * 255 + 0.5f):X2}{(int)(c.B * 255 + 0.5f):X2}";
 
     // Empty-conversation discoverability: a stacked column of clickable starters. Clicking one drops
     // the text into the prompt box and routes through the normal Send path, so the chips disappear on

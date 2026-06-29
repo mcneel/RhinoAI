@@ -40,6 +40,7 @@
   <ItemGroup>
     <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhMcp.logo.svg" />
     <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhMcp.copy.svg" />
+    <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhMcp.paperclip.svg" />
   </ItemGroup>
 
   <PropertyGroup>

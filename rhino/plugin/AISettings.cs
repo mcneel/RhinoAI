@@ -70,6 +70,29 @@ internal static class AISettings
         }
     }
 
+    // Model identifiers the user has typed into the Model dropdown, remembered per adapter so they
+    // reappear as choices. Kept separate from KnownModels (the built-in seeds) and merged on read.
+    public static IReadOnlyList<string> GetCustomModels(AgentAdapter adapter) =>
+        Settings.GetStringList(CustomModelsKey(adapter), []);
+
+    // Remembers a user-typed model for its adapter. No-ops for blanks, built-in seeds, and
+    // already-remembered values so the stored list stays a clean set of genuinely custom entries.
+    public static void RememberCustomModel(AgentAdapter adapter, string model)
+    {
+        string trimmed = model.Trim();
+        if (trimmed.Length == 0 || KnownModels.For(adapter).Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        string[] existing = Settings.GetStringList(CustomModelsKey(adapter), []);
+        if (existing.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        string[] updated = [.. existing, trimmed];
+        Settings.SetStringList(CustomModelsKey(adapter), updated);
+    }
+
+    private static string CustomModelsKey(AgentAdapter adapter) => $"CustomModels_{adapter}";
+
     public static int StartingPort
     {
         get => Settings.GetInteger(nameof(StartingPort), 10500);

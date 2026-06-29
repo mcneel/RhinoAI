@@ -33,6 +33,13 @@ public class RhMcpPlugin : PlugIn
         return base.OnLoad(ref errorMessage);
     }
 
+    // Adds the "AI" settings page to the Rhino Options dialog. Called each time Options is opened, so a
+    // fresh page (and panel) is built per open and its state reflects the current settings.
+    protected override void OptionsDialogPages(List<Rhino.UI.OptionsDialogPage> pages)
+    {
+        pages.Add(new AIOptionsPage());
+    }
+
     // GetHicon isn't guaranteed on every platform, so fall back to no icon rather than fail OnLoad.
     private static System.Drawing.Icon? LoadPanelIcon()
     {
