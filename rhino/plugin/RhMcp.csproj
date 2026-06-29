@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Title>Rhino MCP Platform</Title>
+    <Title>AI</Title>
     <Company>McNeel</Company>
     <Description>MCP server plugin for Rhino</Description>
   </PropertyGroup>

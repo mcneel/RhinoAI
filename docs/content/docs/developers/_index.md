@@ -35,5 +35,5 @@ These pages are **not** tutorials on how to do the conversion by hand. The goal 
 {{< /cards >}}
 
 <blockquote class="page-note">
-If you're here to hack on <strong>Rhino MCP itself</strong>, see the <a href="https://github.com/mcneel/RhinoMCP#building--debugging">contributing notes on GitHub</a>.
+If you're here to hack on <strong>Rhino MCP itself</strong>, see the <a href="https://github.com/mcneel/ai#building--debugging">contributing notes on GitHub</a>.
 </blockquote>

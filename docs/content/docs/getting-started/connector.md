@@ -22,7 +22,7 @@ keywords:
 
 ## 2. Install the Claude connector
 
-1. Download [`connector.mcpb`](https://github.com/mcneel/RhinoMCP/releases/download/connector-v0.1.3/connector.mcpb).
+1. Download [`connector.mcpb`](https://github.com/mcneel/ai/releases/download/connector-v0.1.3/connector.mcpb).
 2. Open Claude Desktop and go to `Settings` &rarr; `Extensions` &rarr; `Advanced settings`.
 3. Click `Install Extension` and select the downloaded `connector.mcpb`.
 4. Click `Install` to confirm.

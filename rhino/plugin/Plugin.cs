@@ -24,7 +24,7 @@ public class RhMcpPlugin : PlugIn
             int port = RhinoMcpHost.GetNextPort();
             if (RhinoMcpHost.StartOrRestart(e.Document, port, true))
             {
-                RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
+                RhinoApp.WriteLine("The Rhino MCP connection is ready.");
                 return;
             }
         }

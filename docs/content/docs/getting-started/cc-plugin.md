@@ -44,7 +44,7 @@ If that doesn't work you can try the below:
 Inside a Claude Code session, run:
 
 ```
-/plugin marketplace add mcneel/RhinoMCP
+/plugin marketplace add mcneel/ai
 /plugin install mcneel@rhino-mcp
 ```
 

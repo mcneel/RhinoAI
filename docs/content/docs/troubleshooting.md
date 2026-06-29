@@ -60,7 +60,7 @@ The router defaults to Rhino 8. To target Rhino 9:
 
 <blockquote class="page-note">
 <ul>
-<li><a href="https://github.com/mcneel/RhinoMCP/issues">GitHub issues</a> for bugs or documentation errors.</li>
+<li><a href="https://github.com/mcneel/ai/issues">GitHub issues</a> for bugs or documentation errors.</li>
 <li><a href="https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162">Rhino Discourse AI category</a> for questions and ideas.</li>
 </ul>
 </blockquote>
