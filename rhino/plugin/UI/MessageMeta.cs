@@ -7,7 +7,7 @@ namespace RhMcp;
 // The hover-revealed line under a chat message: a copy button, a vague "time since", and the turn's
 // token count (only when the turn reported usage). The control itself stays laid out at a fixed height
 // (Height + MinimumSize) and only its children toggle on hover, so revealing it never reflows the
-// transcript — an Eto control set Visible=false collapses to zero height, so the toggle lives on the
+// transcript: an Eto control set Visible=false collapses to zero height, so the toggle lives on the
 // children, never the whole row. VerticalContentAlignment centres those children in the reserved
 // height. Built once per bubble and updated in place as a streaming agent reply grows and its turn
 // finally accounts for tokens. RefreshTime re-stamps the relative time on each hover so it stays

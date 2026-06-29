@@ -7,7 +7,7 @@ namespace RhMcp;
 
 // Spawns Gemini in its native ACP mode (`gemini --experimental-acp`) and returns a started
 // ClientSideConnection driving it. This is the proof that the rhino/acp library works against a
-// real ACP peer — no translator needed, since Gemini speaks ACP directly.
+// real ACP peer, no translator needed, since Gemini speaks ACP directly.
 internal static class GeminiConnection
 {
     public static IAcpAgent Connect(AgentDefinition def, IAcpClient client, string cwd)

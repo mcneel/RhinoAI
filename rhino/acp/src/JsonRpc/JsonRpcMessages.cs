@@ -5,7 +5,7 @@ namespace Acp;
 
 // The three JSON-RPC 2.0 frame shapes ACP uses over stdio. Requests carry an id + method;
 // notifications carry a method but no id; responses carry an id + (result xor error). These are
-// (de)serialized directly — the read loop discriminates by which fields are present.
+// (de)serialized directly: the read loop discriminates by which fields are present.
 
 /// <summary>A JSON-RPC 2.0 request: a method invocation that expects a matching response.</summary>
 public sealed record JsonRpcRequest

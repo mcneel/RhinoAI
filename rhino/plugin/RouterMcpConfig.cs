@@ -5,7 +5,7 @@ namespace RhMcp;
 
 // One source of truth for the MCP-server entry every host hands its agent: launch the
 // bundled rhino-mcp-router over stdio. The router then discovers this session's HTTP
-// listener via the on-disk announcement — see RhinoMcpHost.WriteAnnouncement.
+// listener via the on-disk announcement (see RhinoMcpHost.WriteAnnouncement).
 internal static class RouterMcpConfig
 {
     // The MCP server id; also the tool-name prefix (mcp__rhino__*).

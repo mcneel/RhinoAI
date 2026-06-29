@@ -389,7 +389,7 @@ public class AIPAnel : Panel
             return;
 
         // Disabled / not-installed agents are listed for context but can't be driven, and Eto has no
-        // per-item disable — so snap the selection back to the last usable pick instead.
+        // per-item disable, so snap the selection back to the last usable pick instead.
         if (AgentRegistry.Chain.FirstOrDefault(r => r.Definition.Name == name) is not { Definition.Enabled: true, Available: true })
         {
             Populating = true;
@@ -568,13 +568,13 @@ public class AIPAnel : Panel
         // Incremental: diff vm.Items against the materialized rows and touch only what changed (a
         // streaming assistant delta grows the last bubble; a new chip appends; a tool result folds
         // into its chip). The prior special-state branches each reset, so a stale non-item layout
-        // can't survive into here — but guard anyway and rebuild from scratch if it does.
+        // can't survive into here, but guard anyway and rebuild from scratch if it does.
         if (!Reconcilable)
             ResetTranscript();
         Reconcilable = true;
 
         // The trailing ask_user card is rebuilt fresh each render (it captures the live question), so
-        // drop it before reconciling — otherwise a newly appended item row would land after it.
+        // drop it before reconciling, otherwise a newly appended item row would land after it.
         ClearQuestionCard();
         ReconcileItems(vm.Items);
         SyncQuestionCard(convo);
@@ -943,7 +943,7 @@ public class AIPAnel : Panel
 
     private static Control SystemLine(string text) => new Label
     {
-        Text = $"— {text} —",
+        Text = text,
         TextAlignment = TextAlignment.Center,
         TextColor = SystemColors.DisabledText,
         Font = SystemFonts.Default(7),
@@ -1346,7 +1346,7 @@ public class AIPAnel : Panel
 
         // Drop the pooled agent so the next prompt rebuilds it with a fresh session id +
         // Conversation. Disposal also kills any in-flight process. Stop() also forgets the pinned
-        // active agent, so re-pin the dropdown's selection — otherwise New silently snaps back to
+        // active agent, so re-pin the dropdown's selection, otherwise New silently snaps back to
         // the configured default while the picker still shows the old choice.
         if (TryDoc(out RhinoDoc doc))
         {

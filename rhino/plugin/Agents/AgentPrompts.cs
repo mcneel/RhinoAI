@@ -20,7 +20,7 @@ internal static class AgentPrompts
         + "call get_context once: it returns the current selection, the active viewport, and a doc/"
         + "Grasshopper summary in a single round-trip. Use the focused tools (get_selection, list_objects) "
         + "when you need more detail than the snapshot gives. Never assume which objects are selected, "
-        + "which document is open, or what already exists — pull the state and confirm before you act on it.";
+        + "which document is open, or what already exists. Pull the state and confirm before you act on it.";
 
     // The GH2 authoring loop is the headline flow: read the canvas, edit, solve, then act on the
     // structured per-component diagnostics that solve returns rather than assuming the graph is fine.
@@ -37,7 +37,7 @@ internal static class AgentPrompts
         + "fix the offending components by Id and solve again; repeat until it solves clean, then report "
         + "what you built and any remaining warnings. "
         + "Prefer small incremental edits followed by a re-solve over assembling one large graph in a "
-        + "single shot — it is far easier to localise a fault when each step is solved and checked.";
+        + "single shot. It is far easier to localise a fault when each step is solved and checked.";
 
     // The always-on steers plus this agent's own prompt; the steers are never dropped.
     public static string Compose(string systemPrompt)

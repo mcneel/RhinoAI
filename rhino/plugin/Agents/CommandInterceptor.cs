@@ -3,7 +3,7 @@ namespace RhMcp;
 /// <summary>
 /// Routes command-line entries that start with <c>"</c> to this document's agent. Rhino rejects
 /// <c>"</c> as a command name and exposes no pre-parse hook, so we read the command history *after*
-/// the parser handles the entry — a leading-<c>"</c> entry only ever shows up as a <c>Command: "..."</c>
+/// the parser handles the entry: a leading-<c>"</c> entry only ever shows up as a <c>Command: "..."</c>
 /// line for real command-line submissions, never from other text inputs.
 /// </summary>
 internal sealed class CommandInterceptor : IDisposable

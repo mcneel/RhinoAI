@@ -1,6 +1,6 @@
 ---
 name: Rhino-MCP-Platform
-version: 0.0.0 # overwritten at build time from Directory.Build.props
+version: 0.1.5
 authors:
 - Callum Sykes
 - Dan Cascaval

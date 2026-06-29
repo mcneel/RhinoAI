@@ -29,7 +29,7 @@ internal readonly record struct TranscriptItem(
 
 // Flattens a live Conversation or a persisted ConversationDto into the ordered rows the panel
 // renders. Assistant text chunks are coalesced into one bubble per run, and a tool call collapses
-// into a single chip carrying its args + result — so raw tool JSON never lands in a bubble. The
+// into a single chip carrying its args + result, so raw tool JSON never lands in a bubble. The
 // same shaping serves both the live and read-only views.
 internal sealed class TranscriptViewModel
 {

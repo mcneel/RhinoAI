@@ -215,7 +215,7 @@ public class ProxyDispatcher(
                 Message: $"No slot named '{snf.SlotId}'. Call spawn_slot to create one, or list_slots to see what's running."),
 
             // Non-connection HttpRequestException (HTTP 5xx from the plugin, etc.)
-            // — Rhino is alive but the request failed. Surface the message.
+            // Rhino is alive but the request failed. Surface the message.
             HttpRequestException hre => new(
                 Code: "plugin_http_error",
                 Message: hre.Message),

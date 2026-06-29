@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace RhMcp;
 
-// Serialized transcript shapes. Dumb, immutable, behavior-free — the persisted mirror of the
+// Serialized transcript shapes. Dumb, immutable, behavior-free: the persisted mirror of the
 // live Conversation/Turn/TurnEvent graph, flattened for PersistentSettings + JSON.
 internal sealed record TurnEventDto(
     TurnEventKind Kind,

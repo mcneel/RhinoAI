@@ -11,7 +11,7 @@ namespace RhMcp;
 //
 // Width/height are pinned explicitly via Apply(): a wrapping Label reports its full single-line width
 // if left unconstrained, which forces the row to grow sideways. A tall message simply makes a tall
-// bubble that the transcript scrolls — the body is not independently scrollable, so the mouse wheel
+// bubble that the transcript scrolls: the body is not independently scrollable, so the mouse wheel
 // always scrolls the transcript rather than a nested viewport. Apply re-runs on viewport resize.
 internal sealed class MessageBubble : Drawable
 {
@@ -114,7 +114,7 @@ internal sealed class MessageBubble : Drawable
         return path;
     }
 
-    // Longest hard line at the body font — the width the bubble would take unwrapped.
+    // Longest hard line at the body font: the width the bubble would take unwrapped.
     private int NaturalWidth()
     {
         float max = 0;
@@ -124,7 +124,7 @@ internal sealed class MessageBubble : Drawable
     }
 
     // Height for the wrapped body at `width`. Uses the shared line-count measure but, unlike the
-    // prompt's WrappedHeight, adds no spare line — the bubble hugs its text so a short message carries
+    // prompt's WrappedHeight, adds no spare line: the bubble hugs its text so a short message carries
     // no empty trailing line of padding. The slightly-narrow wrap width biases the count toward over-
     // not under-counting, so dropping the spare line still won't clip the last line.
     private int MeasuredHeight(int width)

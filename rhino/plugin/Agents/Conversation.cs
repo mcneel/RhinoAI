@@ -76,7 +76,7 @@ internal sealed class Turn
 }
 
 // One lock guards the whole graph (shared with each Turn): reader thread writes, PromptAsync
-// prompts, UI reads. Lifecycle events sit outside turns — a "session started" can arrive
+// prompts, UI reads. Lifecycle events sit outside turns: a "session started" can arrive
 // before the first turn exists.
 internal sealed class Conversation
 {
@@ -136,7 +136,7 @@ internal sealed class Conversation
     // marshal to the UI thread and read the graph, which would deadlock if we still held Sync.
     public event Action? Changed;
 
-    // Live references, not a snapshot — the current turn may still be appending.
+    // Live references, not a snapshot: the current turn may still be appending.
     public IReadOnlyList<Turn> Turns { get { lock (Sync) return TurnList.ToArray(); } }
     public IReadOnlyList<TurnEvent> Lifecycle { get { lock (Sync) return LifecycleList.ToArray(); } }
 
@@ -253,7 +253,7 @@ internal sealed class Conversation
         lock (Sync)
         {
             foreach (TurnEvent ev in LifecycleList)
-                sb.AppendLine($"— {ev.Text} —");
+                sb.AppendLine($"[{ev.Text}]");
 
             foreach (Turn turn in TurnList)
             {

@@ -21,7 +21,7 @@ internal sealed class JsonRpcEndpoint
     private Func<JsonRpcRequest, CancellationToken, ValueTask<JsonRpcResponse>>? DefaultRequestHandler { get; set; }
     private Func<JsonRpcNotification, CancellationToken, ValueTask>? DefaultNotificationHandler { get; set; }
 
-    private long _nextId;
+    private long nextId;
 
     public JsonRpcEndpoint(IAcpTransport transport) => Transport = transport;
 
@@ -117,7 +117,7 @@ internal sealed class JsonRpcEndpoint
                     return;
                 }
                 Func<JsonRpcNotification, CancellationToken, ValueTask>? handler =
-                    NotificationHandlers.TryGetValue(notification.Method, out var h) ? h : DefaultNotificationHandler;
+                    NotificationHandlers.TryGetValue(notification.Method, out Func<JsonRpcNotification, CancellationToken, ValueTask>? h) ? h : DefaultNotificationHandler;
                 if (handler is not null)
                     await handler(notification, ct).ConfigureAwait(false);
             }
@@ -144,7 +144,7 @@ internal sealed class JsonRpcEndpoint
         try
         {
             Func<JsonRpcRequest, CancellationToken, ValueTask<JsonRpcResponse>>? handler =
-                RequestHandlers.TryGetValue(request.Method, out var h) ? h : DefaultRequestHandler;
+                RequestHandlers.TryGetValue(request.Method, out Func<JsonRpcRequest, CancellationToken, ValueTask<JsonRpcResponse>>? h) ? h : DefaultRequestHandler;
             response = handler is not null
                 ? await handler(request, ct).ConfigureAwait(false)
                 : Error(request.Id, JsonRpcErrorCode.MethodNotFound, $"Method '{request.Method}' is not available");
@@ -163,7 +163,7 @@ internal sealed class JsonRpcEndpoint
 
     public async ValueTask<JsonRpcResponse> SendRequestAsync(string method, JsonElement? @params, CancellationToken ct)
     {
-        RequestId id = RequestId.Of(Interlocked.Increment(ref _nextId));
+        RequestId id = RequestId.Of(Interlocked.Increment(ref nextId));
         TaskCompletionSource<JsonRpcResponse> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Pending[id] = tcs;
 

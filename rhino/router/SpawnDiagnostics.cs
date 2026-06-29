@@ -24,7 +24,7 @@ public static class SpawnDiagnostics
             case TimeoutException te:
                 diagnosis = new(
                     "startup_timeout",
-                    te.Message + " The Rhino window may be showing a license, EULA, or update dialog — check it. " +
+                    te.Message + " The Rhino window may be showing a license, EULA, or update dialog. Check it. " +
                     "If the rh-mcp plugin isn't loaded, install it and retry.");
                 return true;
 

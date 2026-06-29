@@ -29,7 +29,7 @@ public static class GH2_Diagnostics
     //      messages", which is exactly the case the self-correct loop must catch.
     //      A faulted object keeps its PREVIOUS solve's Data (Fault() carries the
     //      old Data, not the exception), so we report only the fault and skip its
-    //      stale Messages — otherwise old remarks/warnings bleed into the report.
+    //      stale Messages, otherwise old remarks/warnings bleed into the report.
     //   3. State.Phase == Cancelled - when one object faults, the scheduler cancels
     //      the document solution token and every still-pending object throws
     //      OperationCanceledException, landing in Cancelled with stale Data and

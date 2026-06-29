@@ -49,7 +49,7 @@ public sealed class AgentRegistryOverlayTests
 
         IReadOnlyList<AgentDefinition> chain = AgentRegistry.Overlay(builtins, [customCodex]);
 
-        // Order is untouched: claude, codex, gemini — the override lands in codex's existing slot.
+        // Order is untouched: claude, codex, gemini. The override lands in codex's existing slot.
         Assert.That(chain.Select(static a => a.Name), Is.EqualTo(new[] { "claude", "codex", "gemini" }));
         Assert.That(chain[1].Command, Is.EqualTo("/opt/my/codex"));
     }

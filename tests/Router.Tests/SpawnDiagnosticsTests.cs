@@ -8,7 +8,7 @@ namespace RhMcp.Router.Tests;
 
 // Locks in the single-source-of-truth seam both spawn callers (SpawnSlotTool and
 // ProxyDispatcher) now share. If the spawn-pipeline exception->code map drifts,
-// these break — they previously couldn't, because each caller had its own copy.
+// these break, they previously couldn't, because each caller had its own copy.
 [TestFixture]
 public class SpawnDiagnosticsTests
 {

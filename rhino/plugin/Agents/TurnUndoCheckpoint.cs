@@ -46,7 +46,7 @@ internal sealed class TurnUndoCheckpoint
             // Resolve by serial only to learn whether the doc still exists; end against the captured
             // reference so we never end a record on a different doc that reused the serial. A gone
             // doc means a real record can't be ended (its undo stack is disposed with it), so say so
-            // rather than silently dropping it — absence here is a leak, not "nothing to do".
+            // rather than silently dropping it: absence here is a leak, not "nothing to do".
             uint serial = Doc.RuntimeSerialNumber;
             if (RhinoDoc.FromRuntimeSerialNumber(serial) is null)
             {

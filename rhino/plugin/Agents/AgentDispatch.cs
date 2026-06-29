@@ -119,12 +119,12 @@ internal static class AgentDispatch
     // agent + listener, then makes the gate decision and the pending-slot bookkeeping in ONE critical
     // section under PendingLock so they are atomic with each other:
     //
-    //   asAnswer:false (fresh prompt) — a parked answer for this doc has PRIORITY: reject the fresh
+    //   asAnswer:false (fresh prompt), a parked answer for this doc has PRIORITY: reject the fresh
     //     prompt (announce busy) so the answer flushes first and the conversation isn't reordered (the
     //     agent must see [answer to Q] before any unrelated newer prompt). Otherwise try Wait(0): free
     //     fires the turn, busy announces 'a turn is already running'.
     //
-    //   asAnswer:true (answer flush) — try Wait(0): on a win, REMOVE the pending slot in the same
+    //   asAnswer:true (answer flush), try Wait(0): on a win, REMOVE the pending slot in the same
     //     locked section that won the gate (atomic consume-and-fire, so the slot is never read here and
     //     stale-cleared after RunTurnAsync, and never double-dispatched), then fire. A busy gate leaves
     //     the answer parked and is silent (it flushes on the next turn completion).
@@ -136,7 +136,7 @@ internal static class AgentDispatch
     {
         if (!AgentHost.TryFor(doc, out IAgentRunner agent))
         {
-            RhinoApp.WriteLine("No agent available — open AI Settings to configure one.");
+            RhinoApp.WriteLine("No agent available. Open AI Settings to configure one.");
             return false;
         }
 
@@ -163,14 +163,14 @@ internal static class AgentDispatch
             if (!asAnswer && PendingAnswers.ContainsKey(docSerial))
             {
                 if (announceBusy)
-                    RhinoApp.WriteLine($"[{agent.Name}] a turn is already running for this document — wait for it to finish or Stop it.");
+                    RhinoApp.WriteLine($"[{agent.Name}] a turn is already running for this document. Wait for it to finish or Stop it.");
                 return false;
             }
 
             if (!gate.Wait(0))
             {
                 if (announceBusy)
-                    RhinoApp.WriteLine($"[{agent.Name}] a turn is already running for this document — wait for it to finish or Stop it.");
+                    RhinoApp.WriteLine($"[{agent.Name}] a turn is already running for this document. Wait for it to finish or Stop it.");
                 return false;
             }
 

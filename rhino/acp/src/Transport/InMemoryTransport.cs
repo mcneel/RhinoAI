@@ -6,7 +6,7 @@ namespace Acp;
 
 /// <summary>
 /// An in-process transport pair joined by two channels. <see cref="CreatePair"/> returns the two
-/// ends of one connection — used to wire a <c>ClientSideConnection</c> directly to an
+/// ends of one connection, used to wire a <c>ClientSideConnection</c> directly to an
 /// <c>AgentSideConnection</c> with no subprocess (tests, in-proc agents).
 /// </summary>
 public sealed class InMemoryTransport : IAcpTransport
