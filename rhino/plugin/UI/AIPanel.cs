@@ -160,9 +160,8 @@ public class AIPAnel : Panel
         Button newConvo = new() { Text = "New", ToolTip = "New conversation (Ctrl+Shift+N)" };
         newConvo.Click += (_, _) => OnNewConversation();
 
-        Button attachButton = new() { Text = "+", ToolTip = "Attach a file", Height = PromptMinHeight };
+        Button attachButton = new() { Text = "+", ToolTip = "Attach a file", Width = 24 };
         attachButton.Click += (_, _) => OnPickFile();
-        SendButton.Height = PromptMinHeight;
 
         PromptBox.KeyDown += OnPromptKeyDown;
         PromptBox.TextChanged += (_, _) => GrowPromptToFit();
@@ -189,7 +188,7 @@ public class AIPAnel : Panel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            VerticalContentAlignment = VerticalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Stretch,
             Items =
             {
                 new StackLayoutItem(settingsGear, false),
@@ -202,7 +201,7 @@ public class AIPAnel : Panel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            VerticalContentAlignment = VerticalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Stretch,
             Items =
             {
                 new StackLayoutItem(ModelLabel, false),
@@ -221,15 +220,12 @@ public class AIPAnel : Panel
             Content = PromptBox,
         };
 
-        // Bottom (not stretch) so the attach/send buttons keep their fixed PromptMinHeight instead of
-        // growing as tall as a multi-line prompt box (which read as oversized square boxes), and sit
-        // flush at the bottom edge of a grown prompt where a chat composer's buttons belong rather
-        // than floating mid-row (which Center would do as the box grows).
         StackLayout promptRow = new()
         {
             Orientation = Orientation.Horizontal,
             Spacing = 6,
-            VerticalContentAlignment = VerticalAlignment.Bottom,
+            VerticalContentAlignment = VerticalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Items =
             {
                 attachButton,
