@@ -27,7 +27,7 @@ public class RhMcpPlugin : PlugIn
 
         // Wire the bundled rhino MCP server into any MCP-aware tools the user already has, so
         // external agents work out of the box. Background: never block or fail OnLoad.
-        // McpClientConfigInstaller.InstallInBackground(Shutdown.Token);
+        McpClientConfigInstaller.InstallInBackground(Shutdown.Token);
 
         Rhino.UI.Panels.RegisterPanel(this, typeof(AIPAnel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
         return base.OnLoad(ref errorMessage);

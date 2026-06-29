@@ -137,14 +137,14 @@ public class RhinoManager(
     {
         try
         {
-            var rhinoExe = RhinoLocator.ResolveRhinoExe(version);
+            string rhinoExe = RhinoLocator.ResolveRhinoExe(version);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
+                int port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
                 log.LogInformation("Spawning Rhino {Version} as slot '{Slot}' on port {Port} (exe: {Exe})",
                     version, slotId, port, rhinoExe);
-                var proc = LaunchWindows(rhinoExe, port);
+                Process proc = LaunchWindows(rhinoExe, port);
                 switch (WaitForPort(port, TimeSpan.FromSeconds(StartupTimeoutSeconds), proc))
                 {
                     case WaitResult.Bound:
@@ -174,7 +174,7 @@ public class RhinoManager(
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                var port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
+                int port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
                 log.LogInformation("Launching Rhino {Version} as slot '{Slot}' on port {Port} (app: {App})",
                     version, slotId, port, rhinoExe);
                 LaunchMac(rhinoExe, port);
@@ -184,7 +184,7 @@ public class RhinoManager(
                         $"Rhino {version} did not bind port {port} within {StartupTimeoutSeconds}s. " +
                         $"Possible causes: plugin missing, plugin failed to init, license dialog, slow disk.");
                 }
-                var pid = FindPidListeningOnPort(port);
+                int pid = FindPidListeningOnPort(port);
                 if (pid == 0)
                 {
                     throw new InvalidOperationException(
@@ -347,8 +347,8 @@ public class RhinoManager(
     public void CloseAll()
     {
         var owned = store.ListAllOwnedBy(_routerPid);
-        var killed = new HashSet<int>();
-        foreach (var c in owned)
+        HashSet<int> killed = new ();
+        foreach (ChildRhino? c in owned)
         {
             if (c.Adopted) { store.Delete(c.SlotId); continue; }
             store.Delete(c.SlotId);

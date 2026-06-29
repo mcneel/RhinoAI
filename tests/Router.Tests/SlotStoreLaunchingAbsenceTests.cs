@@ -52,7 +52,7 @@ public sealed class SlotStoreLaunchingAbsenceTests
         store.Reserve("alpha", "8", routerPid: 1);
 
         ChildRhino row = store.Get("alpha")!;
-        Assert.Throws<InvalidOperationException>((TestDelegate)(() => { _ = row.Endpoint; }));
+        Assert.Throws<InvalidOperationException>((Action)(() => { _ = row.Endpoint; }));
     }
 
     [Test]
