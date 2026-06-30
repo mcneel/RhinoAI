@@ -1,5 +1,5 @@
 ---
-description: Install the RhinoMCP plugin
+description: Install the ai plugin
 argument-hint: [rhino-version]
 ---
 

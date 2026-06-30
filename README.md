@@ -17,7 +17,7 @@
 
 # Documentation
 
-Full guides live at **[mcneel.github.io/RhinoMCP](https://mcneel.github.io/ai/docs/)**:
+Full guides live at **[mcneel.github.io/ai](https://mcneel.github.io/ai/docs/)**:
 
 - [Getting Started](https://mcneel.github.io/ai/docs/getting-started/) - Install the plugin and wire up an AI assistant (Claude Desktop, Claude Code, GitHub Copilot, OpenAI Codex, Gemini CLI, or a local model).
 - [Try It Out](https://mcneel.github.io/ai/docs/try-it-out/) - Confirm everything works with a first prompt, then browse the recipes and examples.

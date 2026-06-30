@@ -53,4 +53,3 @@ Even for a throwaway prototype, glance at:
 ## Related
 
 - [Upgrade a plugin to .NET Core](../upgrade-to-netcore): once the prototype proves the idea, you'll want it on a modern target.
-- [Upgrade to a newer Rhino](../upgrade-rhino-version): same idea, different axis.
