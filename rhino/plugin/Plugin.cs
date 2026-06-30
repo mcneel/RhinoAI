@@ -89,7 +89,7 @@ public class RhMcpPlugin : PlugIn
         {
             if (RhinoMcpHost.StartOrRestart(e.Document, port, true))
             {
-                RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
+                RhinoApp.WriteLine("The Rhino MCP connection is ready.");
                 return;
             }
         }

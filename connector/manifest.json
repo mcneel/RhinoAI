@@ -1,18 +1,18 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/schemas/mcpb-manifest-v0.3.schema.json",
   "manifest_version": "0.3",
-  "name": "rhino-mcp-platform",
-  "display_name": "Rhino MCP Platform",
+  "name": "rhino",
+  "display_name": "Rhino MCP Connector",
   "version": "0.1.3",
   "description": "Desktop Connector for Rhino3d and Grasshopper",
-  "long_description": "An MCP bridge between Rhino3D, Grasshopper and Claude. You can use it as a modelling, scripting or plugin development assistant.\n\nRequires the Rhino-MCP-Platform plugin, installable from Rhino's PackageManager.",
+  "long_description": "An MCP bridge between Rhino3D, Grasshopper and Claude. You can use it as a modelling, scripting or plugin development assistant.\n\nRequires the ai plugin, installable from Rhino's PackageManager.",
   "author": {
     "name": "McNeel",
     "email": "callum@mcneel.com",
     "url": "https://github.com/mcneel/"
   },
   "homepage": "https://www.mcneel.com",
-  "documentation": "https://github.com/mcneel/RhinoMCP#readme",
+  "documentation": "https://github.com/mcneel/ai#readme",
   "support": "https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162",
   "icon": "icon-light.png",
   "icons": [
@@ -23,7 +23,7 @@
     "screenshots/casa-rhino.png"
   ],
   "privacy_policies": [
-    "https://github.com/mcneel/RhinoMCP/blob/main/PRIVACY.md"
+    "https://github.com/mcneel/ai/blob/main/PRIVACY.md"
   ],
   "server": {
     "type": "node",
@@ -74,6 +74,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mcneel/RhinoMCP"
+    "url": "https://github.com/mcneel/ai"
   }
 }

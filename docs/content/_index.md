@@ -1,5 +1,5 @@
 ---
-title: Rhino MCP Platform
+title: Rhino AI
 toc: false
 author: Callum
 editor: SteveF
@@ -39,7 +39,7 @@ keywords:
 
 <div class="lead">
 
-The **Rhino MCP Platform** is a free MCP from McNeel, the makers of Rhino & Grasshopper, that connects our software to AI assistants like {{< icon "claude" >}} **Claude**, {{< icon "github" >}} **GitHub Copilot**, {{< icon "chatgpt" >}} **Codex**, {{< icon "gemini" >}} **Gemini**, and {{< icon "lmstudio" >}} **Local LLMs**. Once **Rhino MCP** is installed, your assistant can see what's in your Rhino & Grasshopper files, create geometry, run commands, write & edit scripts, and build Grasshopper definitions.
+**Rhino AI** is a free plugin by McNeel, the makers of Rhino & Grasshopper, that connects our software to AI assistants like {{< icon "claude" >}} **Claude**, {{< icon "github" >}} **GitHub Copilot**, {{< icon "chatgpt" >}} **Codex**, {{< icon "gemini" >}} **Gemini**, and {{< icon "lmstudio" >}} **Local LLMs**. Once **Rhino MCP** is installed, your assistant can see what's in your Rhino & Grasshopper files, create geometry, run commands, write & edit scripts, and build Grasshopper definitions.
 
 </div>
 

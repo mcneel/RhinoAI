@@ -2,7 +2,7 @@
 
 _Last updated: 2026-05-19_
 
-This document describes how the Rhino MCP Platform connector handles user data. The connector is a local desktop extension that bridges Claude to an installed copy of Rhino 3D and Grasshopper on the user's own machine.
+This document describes how the Rhino Connector handles user data. The connector is a local desktop extension that bridges Claude to an installed copy of Rhino 3D and Grasshopper on the user's own machine.
 
 ## Data collection
 
@@ -28,4 +28,4 @@ Questions or concerns about this policy:
 
 - Email: support@mcneel.com
 - Support forum: https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162
-- Issues: https://github.com/mcneel/RhinoMCP/issues
+- Issues: https://github.com/mcneel/ai/issues

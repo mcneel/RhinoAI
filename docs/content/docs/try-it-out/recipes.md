@@ -174,5 +174,5 @@ the document and tell me what probably went wrong.
 ---
 
 <blockquote class="page-note">
-Got a good prompt? <a href="https://github.com/mcneel/RhinoMCP/edit/main/docs/content/docs/try-it-out/recipes.md">Send us a PR</a> and we'll add it here.
+Got a good prompt? <a href="https://github.com/mcneel/ai/edit/main/docs/content/docs/try-it-out/recipes.md">Send us a PR</a> and we'll add it here.
 </blockquote>

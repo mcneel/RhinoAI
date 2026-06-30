@@ -94,7 +94,7 @@ jobs:
       - name: Upload yak artifact
         uses: actions/upload-artifact@v7
         with:
-          name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.plugin.os }}
+          name: ai-${{ matrix.rhino_target }}-${{ matrix.plugin.os }}
           path: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release/*.yak
           if-no-files-found: error
           retention-days: 7
@@ -138,7 +138,7 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         uses: actions/download-artifact@v8
         with:
-          # No name → grabs every rhino-mcp-platform-{R8,R9}-{win,osx} artifact,
+          # No name → grabs every ai-{R8,R9}-{win,osx} artifact,
           # each into its own subdir under dist/.
           path: dist
 

@@ -1,5 +1,5 @@
-baseURL: https://mcneel.github.io/RhinoMCP/
-title: Rhino MCP Platform
+baseURL: https://mcneel.github.io/ai/
+title: Rhino AI
 languageCode: en-us
 
 enableRobotsTXT: true
@@ -21,7 +21,7 @@ languages:
   en:
     languageName: English
     weight: 1
-    title: Rhino MCP Platform
+    title: Rhino AI
 
 module:
   hugoVersion:
@@ -49,7 +49,7 @@ menu:
       url: https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162
       weight: 3
     - name: GitHub
-      url: https://github.com/mcneel/RhinoMCP
+      url: https://github.com/mcneel/ai
       weight: 10
       params:
         icon: github
@@ -75,4 +75,4 @@ params:
     displayPoweredBy: false
   editURL:
     enable: true
-    base: https://github.com/mcneel/RhinoMCP/edit/main/docs/content
+    base: https://github.com/mcneel/ai/edit/main/docs/content
