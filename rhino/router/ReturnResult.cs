@@ -10,8 +10,7 @@ public sealed record ReturnResult(
     [property: JsonPropertyName("error")] ErrorInfo? Error = null,
     [property: JsonPropertyName("autoSpawnedSlot")] SlotInfo? AutoSpawnedSlot = null)
 {
-    // Without [JsonIgnore], source-gen treats AsJson as a property and recurses
-    // through Serialize until the stack overflows.
+    // Prevents a fun stack overflow
     [JsonIgnore]
     public string AsJson => JsonSerializer.Serialize(this, RouterJsonContext.Default.ReturnResult);
 }

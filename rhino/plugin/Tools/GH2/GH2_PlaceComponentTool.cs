@@ -13,8 +13,9 @@ public static class GH2_PlaceComponentTool
     public record struct PlacedInfo(Guid Id, string Name, string Category, string SubCategory, float X, float Y);
     public record struct Candidate(Guid Guid, string Name, string Category, string SubCategory);
     public record struct AmbiguousResult(string Error, Candidate[] Candidates);
+    public record struct ErrResult(bool Ok, string Error);
 
-    [McpServerTool(Name = "g2_place_component", Title = "Place GH2 Component", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g2_place_component", "Place GH2 Component", false, false)]
     [Description("Place a GH2 component onto the active canvas. 'selector' may be a Guid (proxy id) or a component name. If multiple components share the name, returns an ambiguity payload listing candidates.")]
     public static string Place(
         RhinoDoc rhDoc,
@@ -24,16 +25,16 @@ public static class GH2_PlaceComponentTool
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return "Could not get or create GH2 document";
+            return Err("Could not get or create GH2 document");
 
         IDocumentObject? obj;
 
         if (Guid.TryParse(selector, out Guid guid))
         {
             var proxy = ObjectProxies.FindById(guid);
-            if (proxy is null) return $"No component with guid '{guid}' found";
+            if (proxy is null) return Err($"No component with guid '{guid}' found");
             obj = proxy.Emit();
-            if (obj is null) return $"Failed to emit object for guid '{guid}'";
+            if (obj is null) return Err($"Failed to emit object for guid '{guid}'");
         }
         else
         {
@@ -44,7 +45,7 @@ public static class GH2_PlaceComponentTool
                     matches.Add(p);
             }
 
-            if (matches.Count == 0) return $"No component named '{selector}' found";
+            if (matches.Count == 0) return Err($"No component named '{selector}' found");
 
             if (matches.Count > 1)
             {
@@ -55,7 +56,7 @@ public static class GH2_PlaceComponentTool
             }
 
             obj = matches[0].Emit();
-            if (obj is null) return $"Failed to instantiate '{selector}'";
+            if (obj is null) return Err($"Failed to instantiate '{selector}'");
         }
 
         doc.Objects.Add(obj, new PointF(x, y));
@@ -70,4 +71,6 @@ public static class GH2_PlaceComponentTool
             x,
             y));
     }
+
+    private static string Err(string msg) => JsonSerializer.Serialize(new ErrResult(false, msg));
 }

@@ -10,7 +10,9 @@ namespace RhMcp.Server;
 
 internal sealed class JsonRpcRequest
 {
-    public string Jsonrpc { get; set; } = "2.0";
+    // init-settable so the deserializer binds the wire value rather than the
+    // initializer; lets a malformed `jsonrpc` survive to where it can be checked.
+    public string Jsonrpc { get; init; } = "2.0";
     public JsonElement? Id { get; set; }
     public string Method { get; set; } = "";
     public JsonElement? Params { get; set; }
@@ -18,7 +20,8 @@ internal sealed class JsonRpcRequest
 
 internal sealed class JsonRpcResponse
 {
-    public string Jsonrpc { get; set; } = "2.0";
+    [JsonInclude]
+    public string Jsonrpc { get; } = "2.0";
 
     // JSON-RPC 2.0 §5: when the server can't recover the request id (parse
     // error, invalid request), the response must include `id: null` rather
@@ -56,7 +59,8 @@ internal enum JsonRpcErrorCode
 
 internal sealed class InitializeResult
 {
-    public string ProtocolVersion { get; set; } = "2024-11-05";
+    [JsonInclude]
+    public string ProtocolVersion { get; } = "2024-11-05";
     public ServerInfo ServerInfo { get; set; } = new();
     public ServerCapabilities Capabilities { get; set; } = new();
 }
@@ -89,11 +93,15 @@ internal sealed class ResourcesCapability
 internal sealed class ToolDescriptor
 {
     public string Name { get; set; } = "";
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Title { get; set; }
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
+
     public JsonElement InputSchema { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ToolAnnotations? Annotations { get; set; }
 }
@@ -132,10 +140,13 @@ internal sealed class CallToolResult
 public sealed class ContentBlock
 {
     public string Type { get; set; } = "text";
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Text { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Data { get; set; }
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MimeType { get; set; }
 
@@ -152,9 +163,12 @@ public sealed class ContentBlock
 internal sealed class ResourceDescriptor
 {
     public string Uri { get; set; } = "";
+
     public string Name { get; set; } = "";
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MimeType { get; set; }
 }
@@ -162,9 +176,12 @@ internal sealed class ResourceDescriptor
 internal sealed class ResourceTemplateDescriptor
 {
     public string UriTemplate { get; set; } = "";
+    
     public string Name { get; set; } = "";
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MimeType { get; set; }
 }

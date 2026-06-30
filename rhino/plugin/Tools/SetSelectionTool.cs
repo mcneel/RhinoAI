@@ -5,7 +5,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class SetSelectionTool
 {
-    [McpServerTool(Name = "set_selection", Title = "Set Selection", ReadOnly = false, Destructive = false)]
+    [McpServerTool("set_selection", "Set Selection", false, false)]
     [Description("Select objects by filter (IDs, names, layer, geometry type). Clears existing selection.")]
     public static string SetSelection(
         RhinoDoc doc,
@@ -57,10 +57,21 @@ public static class SetSelectionTool
                 IncludeGrips = false,
             };
 
+            bool typeResolved = true;
             if (!string.IsNullOrEmpty(geometryType))
-                settings.ObjectTypeFilter = ParseObjectType(geometryType);
+            {
+                if (TryParseObjectType(geometryType, out ObjectType objectType))
+                {
+                    settings.ObjectTypeFilter = objectType;
+                }
+                else
+                {
+                    warnings.Add($"Unknown geometry type: {geometryType}");
+                    typeResolved = false;
+                }
+            }
 
-            var layerResolved = true;
+            bool layerResolved = true;
             if (!string.IsNullOrEmpty(layer))
             {
                 var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
@@ -77,10 +88,10 @@ public static class SetSelectionTool
 
             var nameSet = names.ToHashSet(StringComparer.Ordinal);
 
-            // If layer was the only filter the caller specified and it didn't
+            // If a layer or geometry-type filter was specified but failed to
             // resolve, fall through with zero matches rather than selecting
             // every object in the document.
-            if (layerResolved)
+            if (layerResolved && typeResolved)
             {
                 foreach (var obj in doc.Objects.GetObjectList(settings))
                 {
@@ -99,17 +110,20 @@ public static class SetSelectionTool
             : $"Selected {selected} object(s). Warning: {string.Join("; ", warnings)}";
     }
 
-    private static ObjectType ParseObjectType(string s) => s.ToLowerInvariant() switch
+    private static bool TryParseObjectType(string s, out ObjectType objectType)
     {
-        "point" => ObjectType.Point,
-        "pointset" => ObjectType.PointSet,
-        "curve" => ObjectType.Curve,
-        "surface" => ObjectType.Surface,
-        "brep" => ObjectType.Brep,
-        "mesh" => ObjectType.Mesh,
-        "annotation" => ObjectType.Annotation,
-        "light" => ObjectType.Light,
-        "block" => ObjectType.InstanceReference,
-        _ => ObjectType.AnyObject,
-    };
+        switch (s.ToLowerInvariant())
+        {
+            case "point": objectType = ObjectType.Point; return true;
+            case "pointset": objectType = ObjectType.PointSet; return true;
+            case "curve": objectType = ObjectType.Curve; return true;
+            case "surface": objectType = ObjectType.Surface; return true;
+            case "brep": objectType = ObjectType.Brep; return true;
+            case "mesh": objectType = ObjectType.Mesh; return true;
+            case "annotation": objectType = ObjectType.Annotation; return true;
+            case "light": objectType = ObjectType.Light; return true;
+            case "block": objectType = ObjectType.InstanceReference; return true;
+            default: objectType = ObjectType.None; return false;
+        }
+    }
 }

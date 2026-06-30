@@ -8,7 +8,7 @@ namespace RhMcp.Tools;
 public static class GH1_StartTool
 {
 
-    [McpServerTool(Name = "g1_start", Title = "Start Grasshopper 1", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_start", "Start Grasshopper 1", false, false)]
     [Description("Starts Grasshopper")]
     public static string Launch(RhinoDoc doc)
     {

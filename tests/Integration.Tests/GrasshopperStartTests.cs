@@ -39,7 +39,9 @@ public sealed class GrasshopperStartTests : RouterFixture
         ReturnResult list = await _router.CallToolAsync("list_slots");
         Assert.That(list.Payload?.GetArrayLength(), Is.EqualTo(1));
 
-        // TODO : Assert that current slot is Rhino WIP
+        JsonElement slot = list.Payload!.Value.EnumerateArray().Single();
+        Assert.That(slot.GetProperty("version").GetString(), Is.EqualTo("WIP"),
+            "g2_start with no host auto-spawns Rhino WIP");
     }
 
     [TestCase("8")]

@@ -23,7 +23,7 @@ internal sealed class RhinoLoggerProvider : ILoggerProvider
             Exception? exception, Func<TState, Exception?, string> formatter)
         {
             if (!IsEnabled(logLevel)) return;
-            var msg = formatter(state, exception);
+            string msg = formatter(state, exception);
             RhinoApp.WriteLine($"[Rhino MCP][{logLevel}] {Category}: {msg}");
             if (exception is not null)
                 RhinoApp.WriteLine($"[Rhino MCP]   {exception.GetType().Name}: {exception.Message}\n{exception.StackTrace}");

@@ -102,12 +102,12 @@ public class ProxyDispatcher(
             {
                 response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
             }
-            catch (HttpRequestException ex) when (IsConnectionFailure(ex))
+            catch (HttpRequestException ex) when (SpawnDiagnostics.IsConnectionFailure(ex))
             {
                 // A clean shutdown leaves a departure tombstone; a crash doesn't.
                 // Check that first so a user closing the doc/Rhino mid-call isn't
                 // reported as a crash.
-                if (manager.TryConsumeDeparture(child.Pid, child.Port))
+                if (child.Pid is { } pid && child.Port is { } port && manager.TryConsumeDeparture(pid, port))
                 {
                     log.LogInformation("Rhino slot '{Slot}' (pid {Pid}) was closed during tool call '{Tool}'",
                         child.SlotId, child.Pid, toolName);
@@ -192,75 +192,47 @@ public class ProxyDispatcher(
             autoSpawnedSlot);
     }
 
-    // Map exception → ErrorInfo. Each message ends with the next action.
-    private ErrorInfo DiagnoseFailure(Exception ex, string toolName) => ex switch
+    // Shared spawn-pipeline shapes route through SpawnDiagnostics (the default
+    // auto-spawn can fail before we ever talk to a child); this caller appends its
+    // tool-call next-action suffix. The arms below are tool-call-specific.
+    private ErrorInfo DiagnoseFailure(Exception ex, string toolName)
     {
-        SlotNotFoundException snf => new(
-            Code: "slot_not_found",
-            Message: $"No slot named '{snf.SlotId}'. Call spawn_slot to create one, or list_slots to see what's running."),
+        if (SpawnDiagnostics.TryClassify(ex, crashFinder, out SpawnDiagnostics.SpawnDiagnosis diag))
+        {
+            string suffix = diag.Code switch
+            {
+                "rhino_not_installed" => $" Tool call '{toolName}' aborted because the default Rhino couldn't be auto-spawned.",
+                "existing_rhino_unreachable" => " Retry the call.",
+                _ => "",
+            };
+            return new(diag.Code, diag.BaseMessage + suffix, diag.CrashReportPath);
+        }
 
-        // The default-Rhino auto-spawn can fail before we ever talk to a child.
-        // Same exception shapes SpawnSlotTool handles; keep the messages in sync.
-        FileNotFoundException fnf => new(
-            Code: "rhino_not_installed",
-            Message: fnf.Message + " Tool call '" + toolName + "' aborted because the default Rhino couldn't be auto-spawned."),
+        return ex switch
+        {
+            SlotNotFoundException snf => new(
+                Code: "slot_not_found",
+                Message: $"No slot named '{snf.SlotId}'. Call spawn_slot to create one, or list_slots to see what's running."),
 
-        TimeoutException te => new(
-            Code: "startup_timeout",
-            Message: te.Message + " The Rhino window may be showing a license, EULA, or update dialog — check it. " +
-            "If the rh-mcp plugin isn't loaded, install it and retry."),
+            // Non-connection HttpRequestException (HTTP 5xx from the plugin, etc.)
+            // Rhino is alive but the request failed. Surface the message.
+            HttpRequestException hre => new(
+                Code: "plugin_http_error",
+                Message: hre.Message),
 
-        PlatformNotSupportedException pne => new(
-            Code: "unsupported_platform",
-            Message: pne.Message),
+            InvalidOperationException ioe => new(
+                Code: "tool_call_failed",
+                Message: ioe.Message),
 
-        // HttpRequestException with a connection error here means an *existing*
-        // Rhino we were trying to reuse stopped responding (typically during the
-        // Mac _router_spawn_listener call inside GetOrCreateDefaultAsync).
-        HttpRequestException hre when IsConnectionFailure(hre) => new(
-            Code: "existing_rhino_unreachable",
-            Message: $"Tried to reach an existing Rhino to handle tool call '{toolName}' but it didn't respond " +
-                $"({hre.Message}). The Rhino likely crashed. Stale slot pruned — retry the call.",
-            CrashReportPath: crashFinder.TryFindMostRecent()?.Path),
-
-        // Non-connection HttpRequestException (HTTP 5xx from the plugin, etc.)
-        // — Rhino is alive but the request failed. Surface the message.
-        HttpRequestException hre => new(
-            Code: "plugin_http_error",
-            Message: hre.Message),
-
-        InvalidOperationException ioe => new(
-            Code: "tool_call_failed",
-            Message: ioe.Message),
-
-        _ => new(
-            Code: "unexpected",
-            Message: $"{ex.GetType().Name}: {ex.Message}"),
-    };
+            _ => new(
+                Code: "unexpected",
+                Message: $"{ex.GetType().Name}: {ex.Message}"),
+        };
+    }
 
     private sealed class SlotNotFoundException(string slotId) : Exception($"No slot named '{slotId}'")
     {
         public string SlotId { get; } = slotId;
-    }
-
-    // Detect transport-level failures (DNS, refused, reset, timeout) — these mean
-    // Rhino's listener isn't there to respond, not that Rhino responded with an
-    // error. .NET 8 exposes HttpRequestError; older causes (SocketException) are
-    // also unwrapped here for belt-and-braces.
-    private static bool IsConnectionFailure(HttpRequestException ex)
-    {
-        if (ex.HttpRequestError == HttpRequestError.ConnectionError)
-            return true;
-        if (ex.HttpRequestError == HttpRequestError.SecureConnectionError)
-            return true;
-        for (var inner = ex.InnerException; inner is not null; inner = inner.InnerException)
-        {
-            if (inner is System.Net.Sockets.SocketException)
-                return true;
-            if (inner is IOException)
-                return true;
-        }
-        return false;
     }
 
     // Unwraps the MCP `result` element from either a bare JSON-RPC body or an SSE stream.

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,16 @@ using RhMcp.Router.Tools.Generated;
 
 RouterConfig config = RouterConfig.FromArgs(args);
 
+// Derived from the single source <Version> in rhino/Directory.Build.props (via
+// the assembly's informational version). Strip any SourceLink "+<git-hash>"
+// build-metadata suffix so ServerInfo reports a clean "0.1.3". The attribute is
+// always emitted for a normally-built assembly; its absence is a broken build, so
+// fail fast rather than advertise a fake version.
+string informationalVersion =
+    Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? throw new InvalidOperationException("router assembly missing InformationalVersion; check build config");
+string routerVersion = informationalVersion.Split('+')[0];
+
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Stdio MCP servers must not log to stdout — that's the JSON-RPC channel.
@@ -16,7 +27,6 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
 builder.Services.AddSingleton(config);
-builder.Services.AddSingleton<RhinoLocator>();
 builder.Services.AddSingleton<RhinoControlClient>();
 builder.Services.AddSingleton<RhinoCrashReportFinder>();
 builder.Services.AddSingleton<SlotStore>();
@@ -35,7 +45,7 @@ jsonOptions.Converters.Add(new LenientStringConverter());
 var mcpBuilder = builder.Services
     .AddMcpServer(o =>
     {
-        o.ServerInfo = new() { Name = "rhino-mcp-router", Version = typeof(RhinoManager).Assembly.GetName().Version?.ToString() ?? "0.0.0" };
+        o.ServerInfo = new() { Name = "rhino-mcp-router", Version = routerVersion };
     })
     .WithStdioServerTransport();
 

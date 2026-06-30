@@ -5,15 +5,19 @@ namespace RhMcp.Integration.Tests;
 // Exercises the "many tools / many routers share the same slot" behaviour:
 // repeated tool calls (from one router, or from several isolated routers)
 // should not leave duplicate slot entries behind.
+// Fresh router per test (RouterFixture, not SharedRouterFixture): the
+// parameterized "share a single slot" cases assert list_slots count == 1, which
+// is order-dependent if a sibling test (e.g. spawn_slot_across_two_versions)
+// leaks its slots into a router shared across the whole fixture.
 [TestFixture]
-public sealed class MultiRouterTests : SharedRouterFixture
+public sealed class MultiRouterTests : RouterFixture
 {
     private RhinoMcpRouter? _router2;
     private RhinoMcpRouter? _router3;
 
-    // The base fixture disposes _router; here we also need to clean up the
-    // extra routers spawned by the cross-router test cases.
-    [OneTimeTearDown]
+    // The base fixture disposes _router per test; here we also need to clean up
+    // the extra routers spawned by the cross-router test cases.
+    [TearDown]
     public async Task DisposeExtraRouters()
     {
         foreach (RhinoMcpRouter? router in new[] { _router2, _router3 })
@@ -21,6 +25,8 @@ public sealed class MultiRouterTests : SharedRouterFixture
             if (router is null) continue;
             try { await router.DisposeAsync(); } catch { /* best effort */ }
         }
+        _router2 = null;
+        _router3 = null;
     }
 
     [TestCase("8")]

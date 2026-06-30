@@ -100,27 +100,33 @@ public class RouterToolGenerator : IIncrementalGenerator
                 var toolAttr = FindAttribute(method.AttributeLists, "McpServerTool");
                 if (toolAttr is null) continue;
 
-                var toolName = ExtractStringArg(toolAttr, "Name");
+                // McpServerToolAttribute ctor (plugin Server/Attributes.cs):
+                //   (string name, string? title, bool readOnly, bool destructive)
+                // Every plugin site writes these positionally, so match by index and
+                // let a named override (e.g. `Name = "x"`) win if one is present.
+                var toolName = ExtractStringArg(toolAttr, "Name", 0);
                 if (toolName is null) continue;
 
-                var toolTitle = ExtractStringArg(toolAttr, "Title");
-                var readOnly = ExtractBoolArg(toolAttr, "ReadOnly") ?? false;
-                var destructive = ExtractBoolArg(toolAttr, "Destructive") ?? false;
+                var toolTitle = ExtractStringArg(toolAttr, "Title", 1);
+                var readOnly = ExtractBoolArg(toolAttr, "ReadOnly", 2) ?? false;
+                var destructive = ExtractBoolArg(toolAttr, "Destructive", 3) ?? false;
 
                 var descAttr = FindAttribute(method.AttributeLists, "Description");
-                var description = descAttr is null ? "" : ExtractStringArg(descAttr) ?? "";
+                var description = descAttr is null ? "" : ExtractStringArg(descAttr, positionalIndex: 0) ?? "";
 
                 var parameters = new List<ParameterInfo>();
                 foreach (var p in method.ParameterList.Parameters)
                 {
                     var typeText = p.Type?.ToString() ?? "object";
-                    // Skip the auto-injected RhinoDoc parameter — it's not part of the
-                    // MCP arg surface, the plugin's SDK fills it from DI.
-                    if (typeText == "RhinoDoc") continue;
+                    // Skip auto-injected, non-MCP-surface parameters. RhinoDoc and the
+                    // request CancellationToken are filled by the plugin's SDK, never by
+                    // the caller; the proxy supplies its own trailing `ct` regardless, so
+                    // letting a plugin `ct` through would also collide with it.
+                    if (typeText is "RhinoDoc" or "CancellationToken" or "System.Threading.CancellationToken") continue;
 
                     var paramName = p.Identifier.ValueText;
                     var paramDescAttr = FindAttribute(p.AttributeLists, "Description");
-                    var paramDesc = paramDescAttr is null ? "" : ExtractStringArg(paramDescAttr) ?? "";
+                    var paramDesc = paramDescAttr is null ? "" : ExtractStringArg(paramDescAttr, positionalIndex: 0) ?? "";
                     var defaultValue = p.Default?.Value?.ToString();
                     var routerType = MapType(typeText);
 
@@ -282,26 +288,97 @@ public class RouterToolGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Extract a string argument from an attribute. If <paramref name="namedArg"/> is supplied,
-    /// look for `Name = "value"`; otherwise return the first positional string literal.
+    /// Extract a string argument from an attribute, honouring both named and positional
+    /// styles. A named match (`Name = "value"`) always wins if present; otherwise the
+    /// argument at <paramref name="positionalIndex"/> (skipping any named args) is read.
+    /// Pass <paramref name="namedArg"/> = null to match positional only.
     /// </summary>
-    private static string? ExtractStringArg(AttributeSyntax attr, string? namedArg = null)
+    private static string? ExtractStringArg(AttributeSyntax attr, string? namedArg = null, int positionalIndex = -1)
     {
         if (attr.ArgumentList is null) return null;
 
-        foreach (var arg in attr.ArgumentList.Arguments)
+        if (TryFindArg(attr.ArgumentList, namedArg, positionalIndex, out AttributeArgumentSyntax matched)
+            && TryEvaluateConstantString(matched.Expression, out string value))
         {
-            if (namedArg is not null)
-            {
-                if (arg.NameEquals?.Name.Identifier.ValueText != namedArg) continue;
-            }
-
-            if (arg.Expression is LiteralExpressionSyntax lit && lit.IsKind(SyntaxKind.StringLiteralExpression))
-            {
-                return lit.Token.ValueText;
-            }
+            return value;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Fold a compile-time-constant string expression to its text. Handles a bare string
+    /// literal and a `+` chain of string literals (e.g. AskUserTool's multi-line
+    /// `[Description("a" + "b" + ...)]`), so concatenated descriptions don't emit as "".
+    /// </summary>
+    private static bool TryEvaluateConstantString(ExpressionSyntax expr, out string value)
+    {
+        switch (expr)
+        {
+            case LiteralExpressionSyntax lit when lit.IsKind(SyntaxKind.StringLiteralExpression):
+                value = lit.Token.ValueText;
+                return true;
+            case ParenthesizedExpressionSyntax paren:
+                return TryEvaluateConstantString(paren.Expression, out value);
+            case BinaryExpressionSyntax bin when bin.IsKind(SyntaxKind.AddExpression)
+                && TryEvaluateConstantString(bin.Left, out string left)
+                && TryEvaluateConstantString(bin.Right, out string right):
+                value = left + right;
+                return true;
+            default:
+                value = "";
+                return false;
+        }
+    }
+
+    private static bool? ExtractBoolArg(AttributeSyntax attr, string namedArg, int positionalIndex = -1)
+    {
+        if (attr.ArgumentList is null) return null;
+
+        if (TryFindArg(attr.ArgumentList, namedArg, positionalIndex, out AttributeArgumentSyntax matched)
+            && matched.Expression is LiteralExpressionSyntax lit)
+        {
+            if (lit.IsKind(SyntaxKind.TrueLiteralExpression)) return true;
+            if (lit.IsKind(SyntaxKind.FalseLiteralExpression)) return false;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve a single attribute argument by name (preferred) or by positional index.
+    /// Named args are excluded from the positional count so `[Foo("a", Bar = "b")]`
+    /// still treats "a" as positional 0.
+    /// </summary>
+    private static bool TryFindArg(AttributeArgumentListSyntax argList, string? namedArg, int positionalIndex, out AttributeArgumentSyntax matched)
+    {
+        if (namedArg is not null)
+        {
+            foreach (AttributeArgumentSyntax arg in argList.Arguments)
+            {
+                if (arg.NameEquals?.Name.Identifier.ValueText == namedArg)
+                {
+                    matched = arg;
+                    return true;
+                }
+            }
+        }
+
+        if (positionalIndex >= 0)
+        {
+            int seen = 0;
+            foreach (AttributeArgumentSyntax arg in argList.Arguments)
+            {
+                if (arg.NameEquals is not null) continue;
+                if (seen == positionalIndex)
+                {
+                    matched = arg;
+                    return true;
+                }
+                seen++;
+            }
+        }
+
+        matched = null!;
+        return false;
     }
 
     private static string EscapeString(string s)
@@ -321,21 +398,6 @@ public class RouterToolGenerator : IIncrementalGenerator
         bool Destructive,
         string Description,
         ImmutableArray<ParameterInfo> Parameters);
-
-    private static bool? ExtractBoolArg(AttributeSyntax attr, string namedArg)
-    {
-        if (attr.ArgumentList is null) return null;
-        foreach (var arg in attr.ArgumentList.Arguments)
-        {
-            if (arg.NameEquals?.Name.Identifier.ValueText != namedArg) continue;
-            if (arg.Expression is LiteralExpressionSyntax lit)
-            {
-                if (lit.IsKind(SyntaxKind.TrueLiteralExpression)) return true;
-                if (lit.IsKind(SyntaxKind.FalseLiteralExpression)) return false;
-            }
-        }
-        return null;
-    }
 
     private readonly record struct ParameterInfo(
         string Name,

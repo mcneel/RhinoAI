@@ -7,51 +7,36 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class GH2_SolveTool
 {
-    public record struct StatusInfo(string Name, MessageItem[] Messages);
-    public record struct MessageItem(string Level, string Text);
+    public sealed record SolveResult(bool Solved, string Phase, int Errors, int Warnings, GH2Diagnostic[] Diagnostics);
+    public sealed record SolveError(bool Solved, string Error);
 
-    [McpServerTool(Name = "g2_solve_canvas", Title = "Solve GH2 Canvas", ReadOnly = false, Destructive = false)]
-    [Description("Solves the active GH2 canvas. Returns per-object warning/error messages, if any.")]
+    [McpServerTool("g2_solve_canvas", "Solve GH2 Canvas", false, false)]
+    [Description("Solves the active GH2 canvas and reads back per-component diagnostics. Returns {Solved, Phase, Errors, Warnings, Diagnostics[]}. Each diagnostic is {Id, Name, Nickname, Level (Remark|Warning|Error|Fault), Message}. Solved is true only when the solution completed with no Error or Fault. Use this to see exactly which components failed and why, then fix them.")]
     public static string SolveCanvas(RhinoDoc rhDoc)
     {
-        if (!GH2_Utils.TryGetDoc(rhDoc, out Document ghDoc)) return "Could not get GH2 document";
+        if (!GH2_Utils.TryGetDoc(rhDoc, out Document ghDoc))
+            return JsonSerializer.Serialize(new SolveError(false, "Could not get GH2 document"));
 
+        Solution solution;
         try
         {
-            ghDoc.Solution.StartWait();
+            solution = ghDoc.Solution.StartWait();
         }
         catch (Exception ex)
         {
-            return ex.Message;
+            return JsonSerializer.Serialize(new SolveError(false, ex.Message));
         }
 
-        var statuses = CollectStatuses(ghDoc);
-        if (statuses.Count == 0) return "Success";
+        List<GH2Diagnostic> diagnostics = GH2_Diagnostics.Collect(ghDoc);
+        (int errors, int warnings) = GH2_Diagnostics.Count(diagnostics);
 
-        return JsonSerializer.Serialize(new { errMsg = "Solution encountered some errors", statuses });
-    }
+        bool solved = solution.Phase == SolutionPhase.Completed && errors == 0;
 
-    private static List<StatusInfo> CollectStatuses(Document ghDoc)
-    {
-        var statuses = new List<StatusInfo>();
-        foreach (var obj in ghDoc.Objects.ActiveObjects)
-        {
-            var data = obj.State?.Data;
-            if (data is null) continue;
-            var messages = data.Messages;
-            if (messages is null || messages.Count == 0) continue;
-
-            var items = new List<MessageItem>();
-            for (int i = 0; i < messages.Count; i++)
-            {
-                var m = messages[i];
-                if (m.Level == Grasshopper2.Doc.MessageLevel.Remark) continue;
-                items.Add(new MessageItem(m.Level.ToString(), m.Text));
-            }
-            if (items.Count == 0) continue;
-
-            statuses.Add(new StatusInfo(obj.Nomen.Name, items.ToArray()));
-        }
-        return statuses;
+        return JsonSerializer.Serialize(new SolveResult(
+            solved,
+            solution.Phase.ToString(),
+            errors,
+            warnings,
+            diagnostics.ToArray()));
     }
 }

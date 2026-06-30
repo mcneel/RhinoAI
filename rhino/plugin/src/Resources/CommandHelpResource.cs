@@ -23,6 +23,9 @@ public static class CommandHelpResource
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Command name is required.", nameof(name));
 
+        // Rhino.Commands.Command.LookupCommandId()
+        if (!Rhino.Commands.Command.IsCommand(name)) return "invalid command name";
+
         var slug = WebUtility.UrlEncode(name.Trim().ToLowerInvariant());
         var major = RhinoApp.Version.Major;
         var url = $"https://docs.mcneel.com/rhino/{major}/help/en-us/commands/{slug}.htm";
@@ -56,6 +59,7 @@ public static class CommandHelpResource
 
     private static readonly Regex BlankLinesRegex = new(@"\n{3,}", RegexOptions.Compiled);
 
+    // TODO : hmmm...
     private static string ExtractMainText(string html)
     {
         var match = MainContentRegex.Match(html);

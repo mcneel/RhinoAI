@@ -8,7 +8,7 @@
       "preLaunchTask": "build (R9)",
       "program": "",
       "osx": {
-        "program": "/Applications/RhinoWIP.app/Contents/MacOS/Rhinoceros",
+        "program": "/Applications/RhinoBETA.app/Contents/MacOS/Rhinoceros",
         "args": [
           "-nosplash"
         ],

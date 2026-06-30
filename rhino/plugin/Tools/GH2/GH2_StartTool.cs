@@ -8,7 +8,7 @@ public static class GH2_StartTool
     
     private static Guid GH2_PlugInId { get; } = new("8307876d-a461-4daa-bb77-eb3715925513");
 
-    [McpServerTool(Name = "g2_start", Title = "Start Grasshopper 2", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g2_start", "Start Grasshopper 2", false, false)]
     [Description("Starts GH2")]
     public static string Launch(RhinoDoc doc)
     {

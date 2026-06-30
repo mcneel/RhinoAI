@@ -15,7 +15,7 @@ public static class GH2_SearchComponentsTool
         string Kind,
         string Description);
 
-    [McpServerTool(Name = "g2_search_components", Title = "Search GH2 Components", ReadOnly = true, Destructive = false)]
+    [McpServerTool("g2_search_components", "Search GH2 Components", true, false)]
     [Description("Search the GH2 component library by substring. Matches Name and Info (case-insensitive). Optional exact-match chapter/section filters. Returns up to 'limit' matches.")]
     public static string Search(
         RhinoDoc _,

@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>RhMcp.StreamJson.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../rhino/acp/Acp.csproj" />
+  </ItemGroup>
+
+  <!--
+    Compile the agent layer's PURE sources straight into the test assembly (mirrors
+    Server.Tests pulling in Protocol.cs). That keeps the assembly RhinoCommon- and
+    AspNetCore-free and side-steps internals-visibility. The two RhinoCommon touch points
+    in this closure (RhinoApp.WriteLine and the AISettings/PersistentSettings persistence
+    surface) plus RouterMcpConfig are satisfied by the tiny headless shims in Shims.cs, so
+    the code under test runs unchanged.
+  -->
+  <ItemGroup>
+    <Compile Include="../../rhino/plugin/Server/Protocol.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentAdapter.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentDefinition.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentRegistry.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentPrompts.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Attachment.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/UserMessage.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AcpMessageMapper.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/IStreamJsonParser.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ParsedLine.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/TokenUsage.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ClaudeStreamJsonParser.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/CodexStreamJsonParser.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/StreamJsonAgent.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/IAgentRunner.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/AgentRunner.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/RhinoAcpClient.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/Conversation.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ConversationDto.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Agents/ConversationStore.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.cs" LinkBase="PluginSources" />
+  </ItemGroup>
+
+</Project>

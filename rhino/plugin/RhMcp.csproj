@@ -28,6 +28,20 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../acp/Acp.csproj" />
+    <!-- Link (not copy) the router's on-disk path contract so the plugin and
+         router share one definition of the listeners drop dir. Separate
+         assemblies, single source file: the consts cannot drift. -->
+    <Compile Include="../router/RouterPaths.cs" Link="RouterPaths.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhMcp.logo.svg" />
+    <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhMcp.copy.svg" />
+    <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhMcp.paperclip.svg" />
+  </ItemGroup>
+
   <PropertyGroup>
     <AspNetCoreRuntimeVersion>8.0.*</AspNetCoreRuntimeVersion>
   </PropertyGroup>
@@ -52,6 +66,47 @@
     <Compile Remove="Tools/GH2/**/*.cs" />
     <Compile Remove="Resources/GH2/**/*.cs" />
   </ItemGroup>
+
+  <!-- Rewrite the manifest's `version:` line from $(Version) so the yak manifest
+       can never drift from the single source in Directory.Build.props. Runs as a
+       build dependency (keeps the checked-in file in sync) and before the yak
+       copy (so the staged package picks up the rewritten value). -->
+  <UsingTask TaskName="SyncManifestVersion"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ManifestPath ParameterType="System.String" Required="true" />
+      <Version ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        string[] lines = System.IO.File.ReadAllLines(ManifestPath);
+        bool changed = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(lines[i], @"^\s*version\s*:"))
+            {
+                string updated = "version: " + Version;
+                if (lines[i] != updated)
+                {
+                    lines[i] = updated;
+                    changed = true;
+                }
+            }
+        }
+        if (changed)
+        {
+            System.IO.File.WriteAllLines(ManifestPath, lines);
+            Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High,
+                "[Rhino MCP] Synced manifest.yml version to " + Version);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="SyncManifestVersion" BeforeTargets="Build;BuildYakPackage">
+    <SyncManifestVersion ManifestPath="$(MSBuildProjectDirectory)/manifest.yml" Version="$(Version)" />
+  </Target>
 
   <Target Name="BuildYakPackage" AfterTargets="Build">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(YakStagingDir)/" SkipUnchangedFiles="true" />

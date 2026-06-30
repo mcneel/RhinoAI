@@ -5,7 +5,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class SetCameraTool
 {
-    [McpServerTool(Name = "set_camera", Title = "Set Camera", ReadOnly = false, Destructive = false)]
+    [McpServerTool("set_camera", "Set Camera", false, false)]
     [Description("Set the active viewport camera. Any subset of position, target, up vector, lens length, projection, or framing bounding-box may be supplied.")]
     public static string SetCamera(
         RhinoDoc doc,

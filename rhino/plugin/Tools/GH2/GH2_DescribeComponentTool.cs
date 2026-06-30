@@ -23,7 +23,7 @@ public static class GH2_DescribeComponentTool
         ParamInfo[] Inputs,
         ParamInfo[] Outputs);
 
-    [McpServerTool(Name = "g2_describe_component", Title = "Describe GH2 Component", ReadOnly = true, Destructive = false)]
+    [McpServerTool("g2_describe_component", "Describe GH2 Component", true, false)]
     [Description("Look up a GH2 component by name and return its chapter, info, and input/output parameter list. Useful before placing or wiring components.")]
     public static string Describe(
         RhinoDoc _,
@@ -43,23 +43,22 @@ public static class GH2_DescribeComponentTool
         var obj = proxy.Emit();
         if (obj is null) return $"Failed to instantiate '{name}'";
 
-        var inputs = Array.Empty<ParamInfo>();
-        var outputs = Array.Empty<ParamInfo>();
-        string kind;
+        // Kind comes from the canonical classifier so g2_describe_component and
+        // g2_search_components agree (a NumberSliderObject is "Slider", not "Param").
+        // The switch only decides how to populate Inputs/Outputs.
+        string kind = GH2_Utils.ClassifyKind(obj.GetType());
+
+        ParamInfo[] inputs = Array.Empty<ParamInfo>();
+        ParamInfo[] outputs = Array.Empty<ParamInfo>();
 
         switch (obj)
         {
             case GH2Component comp:
-                kind = "Component";
                 inputs = comp.Parameters.Inputs.Select(ToInfo).ToArray();
                 outputs = comp.Parameters.Outputs.Select(ToInfo).ToArray();
                 break;
             case IParameter param:
-                kind = "Param";
                 inputs = [ToInfo(param)];
-                break;
-            default:
-                kind = obj.GetType().Name;
                 break;
         }
 

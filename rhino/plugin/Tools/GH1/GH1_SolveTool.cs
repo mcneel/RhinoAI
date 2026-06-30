@@ -8,7 +8,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class GH1_SolveTool
 {
-    [McpServerTool(Name = "g1_solve_graph", Title = "Solve GH1 Graph", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_solve_graph", "Solve GH1 Graph", false, false)]
     [Description("Solves the active GH canvas. zoom_views controls whether Rhino viewports zoom to the new preview: true=always, false=never, null=auto (zoom only when nothing was previewed before the solve).")]
     public static string Solve(
         RhinoDoc rhinoDoc,

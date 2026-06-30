@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,32 +18,26 @@ namespace RhMcp.Server;
 public static class McpEndpointExtensions
 {
     public static IEndpointConventionBuilder MapMcp(
-        this IEndpointRouteBuilder endpoints, string pattern, McpEndpointOptions options)
+        this IEndpointRouteBuilder endpoints, string pattern, bool filtered = false)
     {
-        McpDispatcher dispatcher = new(options, endpoints.ServiceProvider);
+        McpDispatcher dispatcher = new(endpoints.ServiceProvider, filtered);
         return endpoints.MapPost(pattern, dispatcher.HandleAsync);
     }
 }
 
-public sealed class McpEndpointOptions
-{
-    public string ServerName { get; set; } = "rhino-mcp";
-    public string ServerVersion { get; } = typeof(McpEndpointOptions).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-    public Assembly ToolAssembly { get; set; } = typeof(McpEndpointOptions).Assembly;
-    public bool SurfaceExceptionDetailsToClient { get; set; }
-}
-
 internal sealed class McpDispatcher
 {
-    private readonly McpEndpointOptions _options;
+    
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
 
-    public McpDispatcher(McpEndpointOptions options, IServiceProvider rootServices)
+    private bool Filtered { get; }
+
+    public McpDispatcher(IServiceProvider rootServices, bool filtered)
     {
-        _options = options;
-        _tools = ToolRegistry.Scan(options.ToolAssembly, rootServices);
-        _resources = ResourceRegistry.Scan(options.ToolAssembly, rootServices);
+        _tools = ToolRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
+        _resources = ResourceRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
+        Filtered = filtered;
     }
 
     public async Task HandleAsync(HttpContext ctx)
@@ -112,9 +102,11 @@ internal sealed class McpDispatcher
                 Error = new JsonRpcError
                 {
                     Code = JsonRpcErrorCode.InternalError,
-                    Message = _options.SurfaceExceptionDetailsToClient
-                        ? $"{ex.GetType().FullName}: {ex.Message}"
-                        : "Internal error.",
+#if DEBUG
+                    Message = $"{ex.GetType().FullName}: {ex.Message}"
+#else
+                    Message = "Internal error."
+#endif
                 }
             }).ConfigureAwait(false);
         }
@@ -140,7 +132,7 @@ internal sealed class McpDispatcher
         {
             Result = new InitializeResult
             {
-                ServerInfo = new ServerInfo { Name = _options.ServerName, Version = _options.ServerVersion },
+                ServerInfo = new ServerInfo { Name = "rhino-mcp", Version = typeof(McpDispatcher).Assembly.GetName().Version?.ToString() ?? "0.0.0" },
                 Capabilities = new ServerCapabilities
                 {
                     Tools = new ToolsCapability(),
@@ -158,12 +150,21 @@ internal sealed class McpDispatcher
     private static Task<JsonRpcResponse> HandlePing() =>
         Task.FromResult(new JsonRpcResponse { Result = new { } });
 
-    private Task<JsonRpcResponse> HandleToolsList() =>
-        Task.FromResult(new JsonRpcResponse
+    private Task<JsonRpcResponse> HandleToolsList()
+    {
+        HashSet<string> disabled = Filtered
+            ? new HashSet<string>(RhMcp.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
+            : [];
+        // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
+        // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
+        return Task.FromResult(new JsonRpcResponse
         {
             Result = new ListToolsResult
             {
-                Tools = _tools.All.Select(t => new ToolDescriptor
+                Tools = _tools.All
+                    .Where(t => Filtered || !t.InPanelOnly)
+                    .Where(t => !disabled.Contains(t.Name))
+                    .Select(t => new ToolDescriptor
                 {
                     Name = t.Name,
                     Title = t.Title,
@@ -178,6 +179,7 @@ internal sealed class McpDispatcher
                 }).ToList(),
             },
         });
+    }
 
     private Task<JsonRpcResponse> HandleResourcesList() =>
         Task.FromResult(new JsonRpcResponse
@@ -242,6 +244,33 @@ internal sealed class McpDispatcher
                 }
             };
 
+        // In-panel-only tools refuse external (`/`) callers with a plain result
+        // rather than a transport error: the call "ran" and told the caller why
+        // it cannot help, so an external agent can recover instead of erroring.
+        if (!Filtered && tool.InPanelOnly)
+            return new JsonRpcResponse
+            {
+                Result = new CallToolResult
+                {
+                    Content =
+                    {
+                        ContentBlock.CreateText(
+                            $"'{p.Name}' is only available to the in-Rhino AI panel agent; "
+                            + "use your own client's question UI."),
+                    },
+                }
+            };
+
+        if (Filtered && RhMcp.AISettings.DisabledTools.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+            return new JsonRpcResponse
+            {
+                Error = new JsonRpcError
+                {
+                    Code = JsonRpcErrorCode.MethodNotFound,
+                    Message = $"Tool '{p.Name}' is not available.",
+                }
+            };
+
         try
         {
             CallToolResult result = await tool.InvokeAsync(p.Arguments, services, ct).ConfigureAwait(false);
@@ -264,9 +293,11 @@ internal sealed class McpDispatcher
     }
 
     private string FormatToolError(Exception ex) =>
-        _options.SurfaceExceptionDetailsToClient
-            ? $"{ex.GetType().FullName}: {ex.Message}\n{ex.StackTrace}"
-            : $"{ex.GetType().Name}: {ex.Message}";
+#if DEBUG
+            $"{ex.GetType().FullName}: {ex.Message}\n{ex.StackTrace}";
+#else
+            $"{ex.GetType().Name}: {ex.Message}";
+#endif
 
     private async Task<JsonRpcResponse> HandleResourceReadAsync(
         JsonRpcRequest request, IServiceProvider services, CancellationToken ct)

@@ -1,5 +1,3 @@
-using System.IO;
-using System.Runtime.InteropServices;
 using Eto.Drawing;
 using Eto.Forms;
 using RhinoCommand = Rhino.Commands.Command;
@@ -14,7 +12,7 @@ public class MCPConnectCommand : RhinoCommand
 
     protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
     {
-        var dialog = new ConnectDialog();
+        ConnectDialog dialog = new();
         dialog.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow);
         return Rhino.Commands.Result.Success;
     }
@@ -96,42 +94,10 @@ internal sealed class ConnectDialog : Dialog
     private static string Prompt() =>
 $@"Install the Rhino MCP server. The entry is:
 
-""rhino"": {{ ""command"": ""{RouterPath()}"" }}
+""{RouterMcpConfig.ServerName}"": {{ ""command"": ""{RouterMcpConfig.RouterPath}"" }}
 
 Then tell the user to reload";
 
-    private static string McpJson()
-    {
-        string escapedPath = RouterPath().Replace("\\", "\\\\");
-        return
-$@"{{
-  ""mcpServers"": {{
-    ""rhino"": {{
-      ""command"": ""{escapedPath}""
-    }}
-  }}
-}}";
-    }
-
-    private static string RouterPath()
-    {
-        string pluginDir = Path.GetDirectoryName(typeof(RhMcpPlugin).Assembly.Location) ?? string.Empty;
-        string routerRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", "router"));
-        string rid = GetRid();
-        string exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "rhino-mcp-router.exe" : "rhino-mcp-router";
-        return Path.Combine(routerRoot, rid, exe);
-    }
-
-    private static string GetRid()
-    {
-        string arch = RuntimeInformation.ProcessArchitecture switch
-        {
-            Architecture.Arm64 => "arm64",
-            _ => "x64",
-        };
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return $"win-{arch}";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return $"osx-{arch}";
-        return $"linux-{arch}";
-    }
+    private static string McpJson() => RouterMcpConfig.Json;
 
 }

@@ -12,8 +12,9 @@ namespace RhMcp.Tools;
 public static class GH2_PlaceSliderTool
 {
     public record struct SliderInfo(Guid Id, double Min, double Value, double Max, int Decimals, float X, float Y);
+    public record struct ErrResult(bool Ok, string Error);
 
-    [McpServerTool(Name = "g2_place_slider", Title = "Place GH2 Number Slider", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g2_place_slider", "Place GH2 Number Slider", false, false)]
     [Description("Place a Number Slider on the active GH2 canvas with the given range and current value.")]
     public static string Place(
         RhinoDoc rhDoc,
@@ -27,10 +28,10 @@ public static class GH2_PlaceSliderTool
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {
         if (decimals < 0 || decimals > 12)
-            return $"Invalid decimals '{decimals}'. Valid range: 0..12.";
+            return Err($"Invalid decimals '{decimals}'. Valid range: 0..12.");
 
         if (!GH2_Utils.TryGetDoc(rhDoc, out Document doc))
-            return "Could not get or create GH2 document";
+            return Err("Could not get or create GH2 document");
 
         var number = new UiNumber(decimals, (decimal)value, (decimal)min, (decimal)max);
         var slider = new NumberSliderObject(name ?? "num", number);
@@ -49,4 +50,6 @@ public static class GH2_PlaceSliderTool
             x,
             y));
     }
+
+    private static string Err(string msg) => JsonSerializer.Serialize(new ErrResult(false, msg));
 }

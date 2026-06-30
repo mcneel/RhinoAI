@@ -16,10 +16,16 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.4.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <!-- Drives RouterToolGenerator directly in CodegenTests. The codegen project
+         marks its Roslyn package PrivateAssets=all, so reference it here too. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../rhino/router/Router.csproj" />
+    <!-- ReferenceOutputAssembly=true (not as an Analyzer) so tests can instantiate
+         the generator type and run it through a CSharpGeneratorDriver. -->
+    <ProjectReference Include="../../rhino/router/codegen/Router.Codegen.csproj" />
   </ItemGroup>
 
 </Project>

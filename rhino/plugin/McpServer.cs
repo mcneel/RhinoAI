@@ -15,22 +15,21 @@ namespace RhMcp;
 
 internal sealed class McpServer : IDisposable
 {
-    // Needs to be volatile so main thread sees the write from ContinueWith, which runs on a background thread.
-    private volatile WebApplication? _app;
-    private CancellationTokenSource? _cts;
-    private Task? _runTask;
+    private WebApplication? App { get; set; }
+    private CancellationTokenSource Cts { get; } = new CancellationTokenSource();
 
-    public bool HasStarted => _app is not null;
+    public bool HasStarted => App is not null;
 
     public int Port { get; private set; }
 
     public bool Start(RhinoDoc doc, int port)
     {
-        if (HasStarted) return true;
+        if (HasStarted)
+            return true;
         Port = port;
         try
         {
-            var builder = WebApplication.CreateSlimBuilder();
+            WebApplicationBuilder builder = WebApplication.CreateSlimBuilder();
             builder.Logging.ClearProviders();
             builder.Logging.AddProvider(new RhinoLoggerProvider());
 #if DEBUG
@@ -42,42 +41,19 @@ internal sealed class McpServer : IDisposable
 
             builder.Services.AddSingleton(doc);
 
-            var asm = typeof(McpServer).Assembly;
+            App = builder.Build();
+            App.MapMcp("/");
+            App.MapMcp("/agent", filtered: true);
 
-            _app = builder.Build();
+            _ = App.RunAsync(Cts.Token);
 
-            McpEndpointOptions endpointOptions = new ()
-            {
-                ServerName = "rhino-mcp",
-                ToolAssembly = asm,
-#if DEBUG
-                SurfaceExceptionDetailsToClient = true,
-#endif
-            };
-            _app.MapMcp("/", endpointOptions);
-
-            _cts = new CancellationTokenSource();
-            _runTask = _app.RunAsync(_cts.Token);
-
-            // Observe the host task. If we error after a clean start, or are stopped,
-            // set back to null so that `HasStarted` is false and next StartOrRestart works.
-            _ = _runTask.ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                {
-                    RhinoApp.WriteLine(
-                        $"[Rhino MCP] MCP server on port {port} stopped unexpectedly: {DescribeException(t.Exception!.GetBaseException())}");
-                }
-                _app = null;
-            }, TaskScheduler.Default);
-
-            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{port}/");
+            RhinoApp.WriteLine($"[Rhino MCP] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
             return true;
         }
         catch (Exception ex)
         {
             RhinoApp.WriteLine($"[Rhino MCP] Failed to start: {DescribeException(ex)}");
-            _app = null;
+            App = null;
             return false;
         }
     }
@@ -92,53 +68,13 @@ internal sealed class McpServer : IDisposable
 
     public void Stop()
     {
-        WebApplication? app = _app;
-        _app = null;
         try
-        { _cts?.Cancel(); }
+        { Cts?.Cancel(); }
         catch { }
-        if (app is not null)
-        {
-            // Await graceful shutdown so we release the listening socket BEFORE
-            // any attempted rebind on the same port.
-            try
-            {
-                TaskAwaiter awaiter = app.StopAsync(TimeSpan.FromSeconds(3)).GetAwaiter();
-                
-                // No need to wait if Rhino is exiting
-                if (RhinoApp.IsExiting) return;
-
-                int interval = 50;
-                for (int i = 0; i < 3000; i += interval)
-                {
-                    Thread.Sleep(interval);
-                    try
-                    {
-                        // Use the disposed property in a call that the compiler won't optimise away
-                        Console.WriteLine($"{app.Environment}");
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // App was closed and disposed of
-                        // A bit messy, but it works
-                        return;
-                    }
-                }
-            }
-            catch
-            {
-
-            }
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to stop MCP server gracefully. Recommend restarting Rhino.");
-        }
         try
-        { _cts?.Dispose(); }
-        catch
-        {
-            RhinoApp.WriteLine($"[Rhino MCP] Failed to dispose CancellationTokenSource");
-        }
-        _cts = null;
-        _runTask = null;
+        { App?.StopAsync(); }
+        catch { }
+        App = null;
     }
 
     public void Dispose() => Stop();

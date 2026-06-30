@@ -12,7 +12,7 @@ public static class GH1_ConnectManyTool
     public record struct WireResult(int Index, bool Ok, Endpoint? Src, Endpoint? Dst, string? Error);
     public record struct BatchResult(int Count, int OkCount, WireResult[] Wires);
 
-    [McpServerTool(Name = "g1_connect_many", Title = "Connect GH1 Wires (Batch)", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_connect_many", "Connect GH1 Wires (Batch)", false, false)]
     [Description("Wire multiple output→input connections in one call. Same selector semantics as 'g1_connect' (numeric index or Name/NickName; '' or '0' for pure params). A failed wire does not stop later ones; per-wire results are returned. solve runs once at the end.")]
     public static string ConnectMany(
         RhinoDoc _,

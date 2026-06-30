@@ -8,7 +8,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class SetLayerMaterialTool
 {
-    [McpServerTool(Name = "set_layer_material", Title = "Set Layer Material", ReadOnly = false, Destructive = true)]
+    [McpServerTool("set_layer_material", "Set Layer Material", false, true)]
     [Description("Set the render material on a layer. Accepts diffuse color, transparency, and gloss. Optionally also sets the layer display color.")]
     public static string SetLayerMaterial(
         RhinoDoc doc,

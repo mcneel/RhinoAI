@@ -25,13 +25,13 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
         {
             // MCP SDK would otherwise swallow the message into a generic "An error
             // occurred…". Stack traces stay in the router log.
-            ErrorInfo error = Diagnose(ex);
+            ErrorInfo error = Diagnose(ex, crashFinder);
             return new ReturnResult(Payload: null, Error: error, AutoSpawnedSlot: null).AsJson;
         }
     }
 
     [McpServerTool(Name = "close_slot", Title = "Close Rhino Slot", ReadOnly = false, Destructive = true)]
-    [Description("Close a Rhino slot gracefully. Saves nothing. On success `payload.closed` is true. On failure `error.code` is one of: `slot_not_found` (no slot with that ID is currently running), `cannot_close_adopted` (the slot was a user-started Rhino — the router will not kill it; ask the user to close the Rhino window).")]
+    [Description("Close a Rhino slot gracefully. Saves nothing. On success `payload.closed` is true. On failure `error.code` is one of: `slot_not_found` (no slot with that ID is currently running), `cannot_close_adopted` (the slot was a user-started Rhino, the router will not kill it; ask the user to close the Rhino window), `close_failed` (the router tried to close the slot but the operation did not complete; the slot may still be running).")]
     public async Task<string> CloseAsync(
         [Description("Slot ID returned by spawn_slot, or an animal-name slot adopted from a user-started Rhino")]
         string slot,
@@ -48,7 +48,19 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
         try
         {
             bool closed = await manager.CloseAsync(slot, ct).ConfigureAwait(false);
-            JsonObject payload = new() { ["closed"] = closed };
+            if (!closed)
+            {
+                // A bare false means the close attempt itself failed (e.g. the Mac
+                // sibling control-channel call threw and was logged). Surface a typed
+                // code so the agent has something to branch on, not closed:false with
+                // error:null which matches neither arm of the contract.
+                ErrorInfo error = new(
+                    Code: "close_failed",
+                    Message: $"Slot '{slot}' could not be closed; it may still be running. " +
+                        "Retry close_slot, or ask the user to close the Rhino window.");
+                return new ReturnResult(Payload: null, Error: error, AutoSpawnedSlot: null).AsJson;
+            }
+            JsonObject payload = new() { ["closed"] = true };
             return new ReturnResult(payload, Error: null, AutoSpawnedSlot: null).AsJson;
         }
         catch (AdoptedSlotCloseException ex)
@@ -75,43 +87,45 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
         return new ReturnResult(payload, Error: null, AutoSpawnedSlot: null).AsJson;
     }
 
-    // Map spawn-pipeline exception → ErrorInfo. Each message ends with the next action.
-    private ErrorInfo Diagnose(Exception ex) => ex switch
+    // Shared spawn-pipeline shapes route through SpawnDiagnostics; this caller
+    // appends its spawn_slot next-action suffix. The arms below are spawn-specific.
+    internal static ErrorInfo Diagnose(Exception ex, RhinoCrashReportFinder crashFinder)
     {
-        FileNotFoundException fnf => new(
-            Code: "rhino_not_installed",
-            Message: fnf.Message + " Pass an installed version as the `version` arg, or install the requested Rhino."),
+        if (SpawnDiagnostics.TryClassify(ex, crashFinder, out SpawnDiagnostics.SpawnDiagnosis diag))
+        {
+            string suffix = diag.Code switch
+            {
+                "rhino_not_installed" => " Pass an installed version as the `version` arg, or install the requested Rhino.",
+                "existing_rhino_unreachable" => " Call spawn_slot again to launch a fresh Rhino.",
+                _ => "",
+            };
+            return new(diag.Code, diag.BaseMessage + suffix, diag.CrashReportPath);
+        }
 
-        TimeoutException te => new(
-            Code: "startup_timeout",
-            Message: te.Message + " The Rhino window may be showing a license, EULA, or update dialog — check it. " +
-            "If the rh-mcp plugin isn't loaded, install it and retry."),
+        return ex switch
+        {
+            OperationCanceledException => new(
+                Code: "cancelled",
+                Message: "Spawn was cancelled before Rhino finished starting."),
 
-        PlatformNotSupportedException pne => new(
-            Code: "unsupported_platform",
-            Message: pne.Message),
+            InvalidOperationException ioe => new(
+                Code: "spawn_failed",
+                Message: ioe.Message),
 
-        OperationCanceledException => new(
-            Code: "cancelled",
-            Message: "Spawn was cancelled before Rhino finished starting."),
+            // Non-connection HttpRequestException (a non-2xx from the Mac control
+            // endpoint during the listener fan-out, RhinoControlClient.SpawnListenerAsync).
+            // SpawnDiagnostics only owns the connection-level shape; this status-code
+            // case is spawn_slot-specific. The Rhino we tried to reuse answered but
+            // refused, so treat it as unreachable: surface a crash report if one
+            // exists and steer the agent to spawn a fresh Rhino.
+            HttpRequestException hre => new(
+                Code: "existing_rhino_unreachable",
+                Message: hre.Message + " Call spawn_slot again to launch a fresh Rhino.",
+                CrashReportPath: crashFinder.TryFindMostRecent()?.Path),
 
-        // HttpRequestException from the spawn chain only originates inside
-        // RhinoControlClient when fanning out a new listener on Mac. That means
-        // we tried to reuse an existing Rhino and its control endpoint didn't
-        // answer — the Rhino likely crashed between probe and call.
-        HttpRequestException hre => new(
-            Code: "existing_rhino_unreachable",
-            Message: "Tried to add a listener to a previously-spawned Rhino but its control endpoint didn't respond " +
-                $"({hre.Message}). The Rhino likely crashed between the liveness probe and this call. " +
-                "The stale slot has been pruned — call spawn_slot again to launch a fresh Rhino.",
-            CrashReportPath: crashFinder.TryFindMostRecent()?.Path),
-
-        InvalidOperationException ioe => new(
-            Code: "spawn_failed",
-            Message: ioe.Message),
-
-        _ => new(
-            Code: "unexpected",
-            Message: $"{ex.GetType().Name}: {ex.Message}"),
-    };
+            _ => new(
+                Code: "unexpected",
+                Message: $"{ex.GetType().Name}: {ex.Message}"),
+        };
+    }
 }

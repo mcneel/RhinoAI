@@ -14,7 +14,7 @@ public static class GH1_PlaceComponentTool
     public record struct Candidate(Guid Guid, string Name, string Category, string SubCategory);
     public record struct AmbiguousResult(string Error, Candidate[] Candidates);
 
-    [McpServerTool(Name = "g1_place_component", Title = "Place GH1 Component", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_place_component", "Place GH1 Component", false, false)]
     [Description("Place a Grasshopper component onto the active GH1 canvas. 'selector' may be a Guid (proxy id) or a component name. If multiple components share the name, returns an ambiguity payload listing candidates.")]
     public static string Place(
         RhinoDoc rhDoc,

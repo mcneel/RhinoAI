@@ -26,7 +26,7 @@ public static class GH1_ApplyGraphTool
         WireResult[] Wires,
         int WiresOk);
 
-    [McpServerTool(Name = "g1_apply_graph", Title = "Apply GH1 Graph", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_apply_graph", "Apply GH1 Graph", false, false)]
     [Description("Place sliders + components and wire them in one call. References between objects use caller-supplied 'key' strings; the tool returns the key→Guid map. Failures in any step do not abort the rest; results report per-step status. Wire src/dst use the same selector semantics as 'g1_connect'.")]
     public static string Apply(
         RhinoDoc rhDoc,
@@ -47,7 +47,11 @@ public static class GH1_ApplyGraphTool
         {
             foreach (var s in sliders)
             {
-                if (TryPlaceSlider(doc, s, out var slider, out var err))
+                if (keyToObj.ContainsKey(s.Key))
+                {
+                    placeErrors.Add(new PlaceError(s.Key, "duplicate key"));
+                }
+                else if (TryPlaceSlider(doc, s, out var slider, out var err))
                 {
                     keyToObj[s.Key] = slider!;
                     placed.Add(new PlacedRef(s.Key, slider!.InstanceGuid, "Slider"));
@@ -63,7 +67,11 @@ public static class GH1_ApplyGraphTool
         {
             foreach (var c in components)
             {
-                if (TryPlaceComponent(doc, c, out var obj, out var err))
+                if (keyToObj.ContainsKey(c.Key))
+                {
+                    placeErrors.Add(new PlaceError(c.Key, "duplicate key"));
+                }
+                else if (TryPlaceComponent(doc, c, out var obj, out var err))
                 {
                     keyToObj[c.Key] = obj!;
                     placed.Add(new PlacedRef(c.Key, obj!.InstanceGuid, GH1_Utils.ClassifyKind(obj.GetType())));

@@ -11,7 +11,7 @@ public static class GH1_ConnectTool
     public record struct OkResult(bool Ok, Endpoint Src, Endpoint Dst);
     public record struct ErrResult(bool Ok, string Error);
 
-    [McpServerTool(Name = "g1_connect", Title = "Connect GH1 Wire", ReadOnly = false, Destructive = false)]
+    [McpServerTool("g1_connect", "Connect GH1 Wire", false, false)]
     [Description("Wire an output parameter to an input parameter on the active GH1 canvas. 'src' and 'dst' may be a numeric index or a Name/NickName. For pure params (e.g. a slider) pass '' or '0'.")]
     public static string Connect(
         RhinoDoc _,

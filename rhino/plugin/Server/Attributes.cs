@@ -9,16 +9,15 @@ namespace RhMcp.Server;
 public sealed class McpServerToolTypeAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-public sealed class McpServerToolAttribute : Attribute
+public sealed class McpServerToolAttribute(string name, string? title = null, bool readOnly = false, bool destructive = false) : Attribute
 {
-    public string? Name { get; set; }
-    public string? Title { get; set; }
+    public string? Name { get; } = name;
+    public string? Title { get; } = title;
 
-    // MCP tool annotations. Names match the SDK's McpServerToolAttribute
-    // properties so the router's source generator can pass these through to the
-    // SDK attribute on its proxy without translation.
-    public bool ReadOnly { get; set; }
-    public bool Destructive { get; set; }
+    // Below is required for the Claude Connector
+
+    public bool ReadOnly { get; } = readOnly;
+    public bool Destructive { get; } = destructive;
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

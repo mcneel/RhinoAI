@@ -5,7 +5,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class ListObjectsTool
 {
-    [McpServerTool(Name = "list_objects", Title = "List Document Objects", ReadOnly = true, Destructive = false)]
+    [McpServerTool("list_objects", "List Document Objects", true, false)]
     [Description("List objects in the active document. Filter by name, layer, or geometry type. Pure query — does not change selection or viewport.")]
     public static string ListObjects(
         RhinoDoc doc,
@@ -26,17 +26,22 @@ public static class ListObjectsTool
             IncludeGrips = false,
         };
 
-        if (!string.IsNullOrEmpty(geometryType))
-            settings.ObjectTypeFilter = ParseObjectType(geometryType);
-
         string? warning = null;
+        if (!string.IsNullOrEmpty(geometryType))
+        {
+            if (TryParseObjectType(geometryType, out ObjectType filter))
+                settings.ObjectTypeFilter = filter;
+            else
+                warning = $"Unknown geometryType: {geometryType}. Returning all object types unfiltered.";
+        }
+
         if (!string.IsNullOrEmpty(layer))
         {
             var idx = doc.Layers.FindByFullPath(layer, RhinoMath.UnsetIntIndex);
             if (idx >= 0)
                 settings.LayerIndexFilter = idx;
             else
-                warning = $"Layer not found: {layer}";
+                warning = warning is null ? $"Layer not found: {layer}" : $"{warning} Layer not found: {layer}";
         }
 
         var nameSet = (names ?? []).ToHashSet(StringComparer.Ordinal);
@@ -71,17 +76,20 @@ public static class ListObjectsTool
         });
     }
 
-    private static ObjectType ParseObjectType(string s) => s.ToLowerInvariant() switch
+    private static bool TryParseObjectType(string s, out ObjectType type)
     {
-        "point" => ObjectType.Point,
-        "pointset" => ObjectType.PointSet,
-        "curve" => ObjectType.Curve,
-        "surface" => ObjectType.Surface,
-        "brep" => ObjectType.Brep,
-        "mesh" => ObjectType.Mesh,
-        "annotation" => ObjectType.Annotation,
-        "light" => ObjectType.Light,
-        "block" => ObjectType.InstanceReference,
-        _ => ObjectType.AnyObject,
-    };
+        switch (s.ToLowerInvariant())
+        {
+            case "point": type = ObjectType.Point; return true;
+            case "pointset": type = ObjectType.PointSet; return true;
+            case "curve": type = ObjectType.Curve; return true;
+            case "surface": type = ObjectType.Surface; return true;
+            case "brep": type = ObjectType.Brep; return true;
+            case "mesh": type = ObjectType.Mesh; return true;
+            case "annotation": type = ObjectType.Annotation; return true;
+            case "light": type = ObjectType.Light; return true;
+            case "block": type = ObjectType.InstanceReference; return true;
+            default: type = ObjectType.None; return false;
+        }
+    }
 }

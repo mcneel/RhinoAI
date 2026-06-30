@@ -2,6 +2,13 @@
   <Folder Name="/plugin/">
     <Project Path="rhino/plugin/RhMcp.csproj" />
   </Folder>
+  <Folder Name="/rhino/" />
+  <Folder Name="/rhino/acp/">
+    <Project Path="rhino/acp/Acp.csproj" />
+  </Folder>
+  <Folder Name="/rhino/acp/codegen/">
+    <Project Path="rhino/acp/codegen/Acp.Codegen.csproj" />
+  </Folder>
   <Folder Name="/router/">
     <Project Path="rhino/router/Router.csproj" />
     <Folder Name="/router/codegen/">
@@ -10,7 +17,9 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Router.Tests/Router.Tests.csproj" />
+    <Project Path="tests/Acp.Tests/Acp.Tests.csproj" />
     <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
+    <Project Path="tests/StreamJson.Tests/StreamJson.Tests.csproj" />
   </Folder>
   <Folder Name="/ngentic/">
     <Project Path="tests/ngentic/src/Ngentic.Core/Ngentic.Core.csproj" />

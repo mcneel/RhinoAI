@@ -90,6 +90,20 @@ public class ProtocolTests
         Assert.That(request.Id!.Value.GetInt32(), Is.EqualTo(7));
     }
 
+    // Guards against the property reverting to get-only (initializer-bound): a
+    // get-only Jsonrpc would silently report "2.0" no matter what the wire said,
+    // making the roundtrip assertion above tautological.
+    [Test]
+    public void Request_binds_wire_jsonrpc_version_not_the_initializer()
+    {
+        const string wire = """
+        { "jsonrpc": "9.9", "id": 1, "method": "tools/list" }
+        """;
+        JsonRpcRequest? request = JsonSerializer.Deserialize<JsonRpcRequest>(wire, McpSerializer.Options);
+        Assert.That(request, Is.Not.Null);
+        Assert.That(request!.Jsonrpc, Is.EqualTo("9.9"));
+    }
+
     [Test]
     public void Notification_has_null_id_after_deserialise()
     {

@@ -2,15 +2,35 @@ using System.Runtime.InteropServices;
 
 namespace RhMcp.Router;
 
-// Resolves a full path to Rhino.exe (Windows) or the Rhinoceros binary (macOS)
-// for a given version string. Versions: "8" | "9" | "BETA" | "WIP".
-public class RhinoLocator
+// Resolves a full path to Rhino.exe (Windows) or the Rhinoceros app bundle (macOS)
+// for a given version token. Accepted tokens are exactly the keys of VersionMap
+// below: "8" | "9" | "WIP". "9" and "WIP" are aliases for the Rhino 9 family; both
+// probe the release, then BETA, then WIP install dirs in that preference order.
+// Rhino 9 ships concurrently as release candidate, BETA, and WIP, and a user-opened
+// build of any of them announces itself as "9", so all three resolve identically.
+public static class RhinoLocator
 {
-    // Rhino 9 ships concurrently as a release candidate (BETA) and a WIP, and a
-    // user-opened build of any of the three announces itself as "9". So "9",
-    // "BETA", and "WIP" are interchangeable for resolution and all probe the
-    // same dirs in the same order: prefer the release, then BETA, then WIP.
-    public string ResolveRhinoExe(string version)
+    // The single canonical version-token-to-install mapping, shared by both the
+    // platform resolve branches and ListInstalledVersions so a token can never
+    // mean one thing on disk and another in the advertised list. Each token lists
+    // the install folder names to probe, in preference order: the Windows entries
+    // are subfolders of C:\Program Files, the macOS entries app bundles under
+    // /Applications.
+    private sealed record VersionInstall(string[] WindowsFolders, string[] MacBundles);
+
+    // The Rhino 9 family probes release -> BETA -> WIP, preferring the most stable.
+    private static readonly string[] Rhino9WindowsFolders = ["Rhino 9", "Rhino 9 BETA", "Rhino 9 WIP"];
+    private static readonly string[] Rhino9MacBundles = ["Rhino 9.app", "RhinoBETA.app", "RhinoWIP.app"];
+
+    private static IReadOnlyDictionary<string, VersionInstall> VersionMap { get; } =
+        new Dictionary<string, VersionInstall>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["8"] = new VersionInstall(["Rhino 8"], ["Rhino 8.app"]),
+            ["9"] = new VersionInstall(Rhino9WindowsFolders, Rhino9MacBundles),
+            ["WIP"] = new VersionInstall(Rhino9WindowsFolders, Rhino9MacBundles),
+        };
+
+    public static string ResolveRhinoExe(string version)
     {
         if (TryResolve(version, out string path))
             return path;
@@ -20,28 +40,18 @@ public class RhinoLocator
             $"Installed versions found: {string.Join(", ", ListInstalledVersions())}");
     }
 
-    private bool TryResolve(string version, out string path)
+    private static bool TryResolve(string version, out string path)
     {
         path = string.Empty;
 
+        if (!VersionMap.TryGetValue(version, out VersionInstall? install))
+            return false;
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            // TODO: also try registry-based lookup if Program Files paths miss.
-            string[] rhino9 =
+            foreach (string folder in install.WindowsFolders)
             {
-                @"C:\Program Files\Rhino 9",
-                @"C:\Program Files\Rhino 9 BETA",
-                @"C:\Program Files\Rhino 9 WIP",
-            };
-            string[] dirs = version switch
-            {
-                "8" => new[] { @"C:\Program Files\Rhino 8" },
-                "9" or "BETA" or "WIP" => rhino9,
-                _ => Array.Empty<string>()
-            };
-            foreach (string dir in dirs)
-            {
-                string candidate = Path.Combine(dir, "System", "Rhino.exe");
+                string candidate = Path.Combine(@"C:\Program Files", folder, "System", "Rhino.exe");
                 if (File.Exists(candidate))
                 {
                     path = candidate;
@@ -53,21 +63,13 @@ public class RhinoLocator
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            // See Windows branch — "9", "BETA", "WIP" all probe the same apps.
-            string[] rhino9 = { "Rhino 9.app", "RhinoBETA.app", "RhinoWIP.app" };
-            string[] appNames = version switch
+            // Each candidate is a concrete bundle name, so an unknown version can't
+            // resolve to a bare "/Applications/" (the VersionMap miss above already
+            // bailed) and trigger a doomed `open -a /Applications/` that burns the
+            // full spawn timeout before failing.
+            foreach (string bundle in install.MacBundles)
             {
-                "8" => new[] { "Rhino 8.app" },
-                "9" or "BETA" or "WIP" => rhino9,
-                _ => Array.Empty<string>()
-            };
-            // Without this guard an unknown version resolves to "/Applications/",
-            // which Directory.Exists trivially confirms — spawn then attempts
-            // `open -a /Applications/` and we burn the full startup timeout
-            // before reporting failure. Fail fast with rhino_not_installed instead.
-            foreach (string appName in appNames)
-            {
-                string candidate = $"/Applications/{appName}";
+                string candidate = Path.Combine("/Applications", bundle);
                 if (Directory.Exists(candidate))
                 {
                     path = candidate;
@@ -80,14 +82,18 @@ public class RhinoLocator
         return false;
     }
 
-    public IEnumerable<string> ListInstalledVersions()
+    // The version tokens this locator understands, in advertised order. Kept as a
+    // pure, internal seam so the token set (the source of a past mismatch between
+    // the documented tokens and what was actually advertised) is unit-testable
+    // without a real Rhino install on disk.
+    internal static IReadOnlyList<string> KnownVersionTokens => [.. VersionMap.Keys];
+
+    public static IEnumerable<string> ListInstalledVersions()
     {
-        // "9" stands in for the whole 9-family (release / BETA / WIP), which all
-        // resolve identically — listing them separately would just duplicate.
-        foreach (string v in new[] { "8", "9" })
+        foreach (string version in KnownVersionTokens)
         {
-            if (TryResolve(v, out _))
-                yield return v;
+            if (TryResolve(version, out _))
+                yield return version;
         }
     }
 }

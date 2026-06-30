@@ -7,7 +7,7 @@ public static class GetCommandsTool
 {
     private const int MaxResults = 200;
 
-    [McpServerTool(Name = "get_commands", Title = "List Rhino Commands", ReadOnly = true, Destructive = false)]
+    [McpServerTool("get_commands", "List Rhino Commands", true, false)]
     [Description("Discover Rhino command names available to run_command. Returns English names from all registered plugins (including those not yet loaded; invoking such a command may trigger plugin load). Test commands are excluded. Use filter to narrow the list before calling run_command.")]
     public static string GetCommands(
         RhinoDoc doc,

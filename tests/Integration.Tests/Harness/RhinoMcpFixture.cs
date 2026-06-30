@@ -50,17 +50,19 @@ internal sealed class RhinoMcpFixture : IAsyncDisposable
         Dictionary<string, object?>? args = version is null
             ? null
             : new Dictionary<string, object?> { ["version"] = version };
-        string text = await _router.CallToolTextAsync("spawn_slot", args, ct).ConfigureAwait(false);
-        using JsonDocument doc = JsonDocument.Parse(text);
-        if (doc.RootElement.TryGetProperty("error", out JsonElement err))
+        ReturnResult result = await _router.CallToolAsync("spawn_slot", args, ct).ConfigureAwait(false);
+        if (result.Error is { } error)
         {
-            string code = err.GetString() ?? "unknown";
-            string? message = doc.RootElement.TryGetProperty("message", out JsonElement m) ? m.GetString() : null;
             throw new InvalidOperationException(
-                $"spawn_slot returned error '{code}': {message}\nFull payload: {text}");
+                $"spawn_slot returned error '{error.Code}': {error.Message}\nFull payload: {result.Payload}");
         }
-        return doc.RootElement.GetProperty("slotId").GetString()
-            ?? throw new InvalidOperationException("spawn_slot returned no slotId");
+        if (result.Payload is not { } payload
+            || !payload.TryGetProperty("slotId", out JsonElement slotIdEl)
+            || slotIdEl.GetString() is not string slotId)
+        {
+            throw new InvalidOperationException($"spawn_slot returned no slotId: {result.Payload}");
+        }
+        return slotId;
     }
 
     public async Task CloseSlotAsync(string slotId, CancellationToken ct = default)

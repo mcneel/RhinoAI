@@ -21,7 +21,7 @@ internal static class WinSpawn
     public static Process Start(string exePath, string arguments, IDictionary<string, string> extraEnv)
     {
         // CreateProcess can write into lpCommandLine; pre-size to Windows' 32k limit.
-        var cmdLine = new StringBuilder(32768);
+        StringBuilder cmdLine = new (32768);
         cmdLine.Append('"').Append(exePath).Append('"').Append(' ').Append(arguments);
 
         var startup = new STARTUPINFOW { cb = (uint)Marshal.SizeOf<STARTUPINFOW>() };

@@ -47,6 +47,7 @@ public sealed class SlotReapingTests : RouterFixture
         {
             await Task.Delay(100);
         }
+        Assert.That(IsProcessAlive(pid), Is.False, "Test could not kill the first Rhino; reap-then-respawn cannot be verified.");
 
         ReturnResult respawn = await _router.CallToolAsync("spawn_slot", Args.Of(("version", "8")));
         Assert.That(respawn.Error, Is.Null,

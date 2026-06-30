@@ -31,7 +31,7 @@ public static class GH2_GetCanvasGraphTool
     public record struct Wire(Endpoint From, Endpoint To);
     public record struct Graph(ObjectInfo[] Objects, Wire[] Wires);
 
-    [McpServerTool(Name = "g2_get_canvas_graph", Title = "Get GH2 Canvas Graph", ReadOnly = true, Destructive = false)]
+    [McpServerTool("g2_get_canvas_graph", "Get GH2 Canvas Graph", true, false)]
     [Description("Return a structured snapshot of the active GH2 canvas: objects (with messages, inputs/outputs and optional volatile data summaries) and wires between them.")]
     public static string GetGraph(
         RhinoDoc rhDoc,
@@ -61,7 +61,10 @@ public static class GH2_GetCanvasGraphTool
             }
             else if (obj is IParameter param)
             {
-                inputs = Array.Empty<InputInfo>();
+                // A top-level standalone param is itself a real wire destination
+                // (GH2_ConnectTool wires into dstParam.Inputs), so walk its own
+                // sources rather than dropping incoming wires.
+                inputs = new[] { MakeInput(doc, param, include_data, sample_size, wires, obj.InstanceId) };
                 outputs = new[] { MakeOutput(param, include_data, sample_size, displaySource: obj) };
             }
             else

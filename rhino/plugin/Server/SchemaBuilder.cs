@@ -59,6 +59,7 @@ internal static class SchemaBuilder
             _ when u == typeof(byte) || u == typeof(sbyte) || u == typeof(short) || u == typeof(ushort) ||
                    u == typeof(int) || u == typeof(uint) || u == typeof(long) || u == typeof(ulong) => "integer",
             _ when u == typeof(float) || u == typeof(double) || u == typeof(decimal) => "number",
+            
             // Advertise as integer to match the binder: McpSerializer.Options
             // doesn't register JsonStringEnumConverter, so STJ only reads
             // enums from numbers. Switch this to "string" if/when the binder

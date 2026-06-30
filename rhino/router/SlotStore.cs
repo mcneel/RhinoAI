@@ -24,29 +24,26 @@ public sealed class SlotStore : IDisposable
 {
     private static string CurrentRouterVersion => typeof(SlotStore).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 
-    private readonly SqliteConnection _conn;
-    private readonly ILogger<SlotStore> _log;
+    private SqliteConnection Connection { get; }
+    private ILogger<SlotStore> Logger { get; }
     private readonly object _connLock = new();
 
     public SlotStore(ILogger<SlotStore> log)
-        : this(RouterPaths.StateDbPath, log) { }
-
-    public SlotStore(string dbPath, ILogger<SlotStore> log)
     {
-        _log = log;
+        Logger = log;
         RouterPaths.EnsureDirectories();
 
         // Cache=Shared lets multiple connections within this process share a
         // page cache; multi-process concurrency comes from WAL + busy_timeout.
-        var cs = new SqliteConnectionStringBuilder
+        SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = dbPath,
+            DataSource = RouterPaths.StateDbPath,
             Cache = SqliteCacheMode.Shared,
             Pooling = false,
-        }.ToString();
+        };
 
-        _conn = new SqliteConnection(cs);
-        _conn.Open();
+        Connection = new SqliteConnection(builder.ToString());
+        Connection.Open();
 
         // WAL gives readers + writers concurrency; busy_timeout makes the
         // driver auto-retry on SQLITE_BUSY for up to 5s before throwing.
@@ -72,7 +69,7 @@ public sealed class SlotStore : IDisposable
         {
             if (stored is not null)
             {
-                _log.LogInformation("SlotStore: router version changed ({Old} -> {New}); wiping slot table.",
+                Logger.LogInformation("SlotStore: router version changed ({Old} -> {New}); wiping slot table.",
                     stored, CurrentRouterVersion);
             }
             Exec("DROP TABLE IF EXISTS slots;");
@@ -138,7 +135,7 @@ public sealed class SlotStore : IDisposable
     {
         lock (_connLock)
         {
-            using var tx = _conn.BeginTransaction(deferred: false); // BEGIN IMMEDIATE
+            using var tx = Connection.BeginTransaction(deferred: false); // BEGIN IMMEDIATE
 
             var existing = QueryOne(tx, "SELECT * FROM slots WHERE slot_id=$s;", ("$s", slotId));
             if (existing is not null)
@@ -173,10 +170,10 @@ public sealed class SlotStore : IDisposable
     {
         lock (_connLock)
         {
-            using var tx = _conn.BeginTransaction(deferred: false);
+            using var tx = Connection.BeginTransaction(deferred: false);
 
             string? picked;
-            using (var cmd = _conn.CreateCommand())
+            using (var cmd = Connection.CreateCommand())
             {
                 cmd.Transaction = tx;
                 cmd.CommandText = @"SELECT name FROM name_pool
@@ -212,14 +209,15 @@ public sealed class SlotStore : IDisposable
     private string FallbackNumberedSlot(SqliteTransaction tx)
     {
         int max = 0;
-        using var cmd = _conn.CreateCommand();
+        using SqliteCommand cmd = Connection.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = "SELECT slot_id FROM slots WHERE slot_id LIKE 'slot-%';";
-        using var r = cmd.ExecuteReader();
+        using SqliteDataReader r = cmd.ExecuteReader();
         while (r.Read())
         {
-            var id = r.GetString(0);
-            if (int.TryParse(id.AsSpan("slot-".Length), out var n) && n > max) max = n;
+            string id = r.GetString(0);
+            if (int.TryParse(id.AsSpan("slot-".Length), out int n) && n > max)
+                max = n;
         }
         return $"slot-{max + 1}";
     }
@@ -230,43 +228,81 @@ public sealed class SlotStore : IDisposable
     // only excludes ports already claimed in the DB.
     public int ReservePort(string slotId, int basePort, Func<int, bool> isPortListening)
     {
-        lock (_connLock)
+        // The OS probe (TcpClient.ConnectAsync with a ~200ms timeout per port) is slow blocking
+        // I/O. Holding _connLock and an open BEGIN IMMEDIATE write transaction across the whole
+        // scan would pin the cross-process SQLite write lock for the duration, serialising every
+        // other router's write path behind this scan. So: snapshot the DB-taken ports in a short
+        // read, drop the lock, probe with nothing held, then take a fresh BEGIN IMMEDIATE only for
+        // the final claim (re-checking the port wasn't taken by a peer while we probed).
+        int candidate = basePort - 1;
+        while (true)
         {
-            using var tx = _conn.BeginTransaction(deferred: false);
+            HashSet<int> taken = SnapshotTakenPorts();
 
-            var taken = new HashSet<int>();
-            using (var cmd = _conn.CreateCommand())
+            int picked = -1;
+            for (int p = candidate + 1; p < 65000; p++)
             {
-                cmd.Transaction = tx;
-                cmd.CommandText = "SELECT port FROM slots WHERE port IS NOT NULL;";
-                using var r = cmd.ExecuteReader();
-                while (r.Read()) taken.Add(r.GetInt32(0));
+                if (taken.Contains(p))
+                    continue;
+                if (isPortListening(p))
+                    continue;
+                picked = p;
+                break;
             }
 
-            for (int p = basePort; p < 65000; p++)
+            if (picked < 0)
+                throw new InvalidOperationException("No free ports available in spawn range.");
+
+            candidate = picked;
+
+            lock (_connLock)
             {
-                if (taken.Contains(p)) continue;
-                if (isPortListening(p)) continue;
-                Exec(tx, "UPDATE slots SET port=$p WHERE slot_id=$s;", ("$p", p), ("$s", slotId));
+                using SqliteTransaction tx = Connection.BeginTransaction(deferred: false);
+
+                bool stolen = ScalarLong(tx,
+                    "SELECT COUNT(*) FROM slots WHERE port=$p;", ("$p", picked)) > 0;
+                if (stolen)
+                {
+                    // A peer claimed this port between our probe and now; resume scanning above it.
+                    tx.Rollback();
+                    continue;
+                }
+
+                Exec(tx, "UPDATE slots SET port=$p WHERE slot_id=$s;", ("$p", picked), ("$s", slotId));
                 tx.Commit();
-                return p;
+                return picked;
             }
-
-            tx.Rollback();
-            throw new InvalidOperationException("No free ports available in spawn range.");
         }
     }
 
-    public ChildRhino? WaitForReady(string slotId, TimeSpan timeout, CancellationToken ct = default)
+    private HashSet<int> SnapshotTakenPorts()
     {
-        var deadline = DateTime.UtcNow + timeout;
+        lock (_connLock)
+        {
+            HashSet<int> taken = new();
+            using SqliteCommand cmd = Connection.CreateCommand();
+            cmd.CommandText = "SELECT port FROM slots WHERE port IS NOT NULL;";
+            using SqliteDataReader r = cmd.ExecuteReader();
+            while (r.Read())
+                taken.Add(r.GetInt32(0));
+            return taken;
+        }
+    }
+
+    // Async so the poll wait doesn't block the async router thread and honours cancellation
+    // promptly (Task.Delay observes ct, Thread.Sleep does not).
+    public async Task<ChildRhino?> WaitForReadyAsync(string slotId, TimeSpan timeout, CancellationToken ct = default)
+    {
+        DateTime deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
         {
             ct.ThrowIfCancellationRequested();
-            var row = Get(slotId);
-            if (row is null) return null;
-            if (row.Status == SlotStatus.Ready) return row;
-            Thread.Sleep(200);
+            ChildRhino? row = Get(slotId);
+            if (row is null)
+                return null;
+            if (row.Status == SlotStatus.Ready)
+                return row;
+            await Task.Delay(200, ct).ConfigureAwait(false);
         }
         return null;
     }
@@ -306,7 +342,7 @@ public sealed class SlotStore : IDisposable
         lock (_connLock)
         {
             List<string> ids = [];
-            using (SqliteCommand cmd = _conn.CreateCommand())
+            using (SqliteCommand cmd = Connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT slot_id FROM slots WHERE pid=$p AND port=$port;";
                 cmd.Parameters.AddWithValue("$p", pid);
@@ -331,15 +367,16 @@ public sealed class SlotStore : IDisposable
     {
         lock (_connLock)
         {
-            using var tx = _conn.BeginTransaction(deferred: false);
+            using var tx = Connection.BeginTransaction(deferred: false);
 
             var dup = ScalarLong(tx,
                 "SELECT COUNT(*) FROM slots WHERE pid=$p AND port=$port;",
                 ("$p", pid), ("$port", port)) > 0;
-            if (dup) { tx.Commit(); return null; }
+            if (dup)
+            { tx.Commit(); return null; }
 
             string? picked;
-            using (var cmd = _conn.CreateCommand())
+            using (var cmd = Connection.CreateCommand())
             {
                 cmd.Transaction = tx;
                 cmd.CommandText = @"SELECT name FROM name_pool
@@ -415,8 +452,10 @@ public sealed class SlotStore : IDisposable
 
     public void Dispose()
     {
-        try { _conn.Close(); } catch { }
-        _conn.Dispose();
+        try
+        { Connection.Close(); }
+        catch { }
+        Connection.Dispose();
     }
 
     // ----- helpers -----------------------------------------------------------
@@ -425,37 +464,44 @@ public sealed class SlotStore : IDisposable
 
     private int Exec(SqliteTransaction? tx, string sql, params (string, object)[] args)
     {
-        using var cmd = _conn.CreateCommand();
-        if (tx is not null) cmd.Transaction = tx;
+        using var cmd = Connection.CreateCommand();
+        if (tx is not null)
+            cmd.Transaction = tx;
         cmd.CommandText = sql;
-        foreach (var (k, v) in args) cmd.Parameters.AddWithValue(k, v);
+        foreach (var (k, v) in args)
+            cmd.Parameters.AddWithValue(k, v);
         return cmd.ExecuteNonQuery();
     }
 
     private string? Scalar(string sql, params (string, object)[] args)
     {
-        using var cmd = _conn.CreateCommand();
+        using var cmd = Connection.CreateCommand();
         cmd.CommandText = sql;
-        foreach (var (k, v) in args) cmd.Parameters.AddWithValue(k, v);
+        foreach (var (k, v) in args)
+            cmd.Parameters.AddWithValue(k, v);
         return cmd.ExecuteScalar() as string;
     }
 
     private long ScalarLong(SqliteTransaction? tx, string sql, params (string, object)[] args)
     {
-        using var cmd = _conn.CreateCommand();
-        if (tx is not null) cmd.Transaction = tx;
+        using var cmd = Connection.CreateCommand();
+        if (tx is not null)
+            cmd.Transaction = tx;
         cmd.CommandText = sql;
-        foreach (var (k, v) in args) cmd.Parameters.AddWithValue(k, v);
+        foreach (var (k, v) in args)
+            cmd.Parameters.AddWithValue(k, v);
         var v2 = cmd.ExecuteScalar();
         return v2 is long l ? l : Convert.ToInt64(v2);
     }
 
     private ChildRhino? QueryOne(SqliteTransaction? tx, string sql, params (string, object)[] args)
     {
-        using var cmd = _conn.CreateCommand();
-        if (tx is not null) cmd.Transaction = tx;
+        using var cmd = Connection.CreateCommand();
+        if (tx is not null)
+            cmd.Transaction = tx;
         cmd.CommandText = sql;
-        foreach (var (k, v) in args) cmd.Parameters.AddWithValue(k, v);
+        foreach (var (k, v) in args)
+            cmd.Parameters.AddWithValue(k, v);
         using var r = cmd.ExecuteReader();
         return r.Read() ? ReadRow(r) : null;
     }
@@ -463,28 +509,31 @@ public sealed class SlotStore : IDisposable
     private IReadOnlyList<ChildRhino> Query(SqliteTransaction? tx, string sql, params (string, object)[] args)
     {
         var result = new List<ChildRhino>();
-        using var cmd = _conn.CreateCommand();
-        if (tx is not null) cmd.Transaction = tx;
+        using var cmd = Connection.CreateCommand();
+        if (tx is not null)
+            cmd.Transaction = tx;
         cmd.CommandText = sql;
-        foreach (var (k, v) in args) cmd.Parameters.AddWithValue(k, v);
+        foreach (var (k, v) in args)
+            cmd.Parameters.AddWithValue(k, v);
         using var r = cmd.ExecuteReader();
-        while (r.Read()) result.Add(ReadRow(r));
+        while (r.Read())
+            result.Add(ReadRow(r));
         return result;
     }
 
     private static ChildRhino ReadRow(IDataReader r) => new(
         SlotId: r.GetString(r.GetOrdinal("slot_id")),
-        Port:   r.IsDBNull(r.GetOrdinal("port")) ? 0 : r.GetInt32(r.GetOrdinal("port")),
-        Pid:    r.IsDBNull(r.GetOrdinal("pid")) ? 0 : r.GetInt32(r.GetOrdinal("pid")),
+        Port: r.IsDBNull(r.GetOrdinal("port")) ? null : r.GetInt32(r.GetOrdinal("port")),
+        Pid: r.IsDBNull(r.GetOrdinal("pid")) ? null : r.GetInt32(r.GetOrdinal("pid")),
         Version: r.GetString(r.GetOrdinal("version")),
         Adopted: r.GetInt32(r.GetOrdinal("adopted")) != 0,
-        Status:  r.GetString(r.GetOrdinal("status")));
+        Status: Enum.Parse<SlotStatus>(r.GetString(r.GetOrdinal("status")), true));
 }
 
-public static class SlotStatus
+public enum SlotStatus
 {
-    public const string Launching = "launching";
-    public const string Ready     = "ready";
+    Launching = 0,
+    Ready = 1
 }
 
 // Tagged union shape via static factories. Concrete callsite branches on Kind.

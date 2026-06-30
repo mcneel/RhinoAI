@@ -5,6 +5,8 @@ namespace RhMcp.Resources;
 [McpServerResourceType]
 public static class InstalledPluginsResource
 {
+    // TODO : Can GH be a flag or a separate endpoint?
+
     [McpServerResource(
         UriTemplate = "rhino://host/plugins",
         Name = "installed_plugins",
@@ -24,12 +26,10 @@ public static class InstalledPluginsResource
         foreach (KeyValuePair<Guid, string> kv in installed)
         {
             PlugInInfo? info = SafeGetInfo(kv.Key);
-            if (info is null)
-                continue;
-            if (info.ShipsWithRhino)
-                continue;
-            if (IsMcNeel(info.Organization))
-                continue;
+            if (info is null) continue;
+            if (info.ShipsWithRhino) continue;
+            if (IsMcNeel(info.Organization)) continue;
+            // TODO : Filter GH plugins?
 
             entries.Add(new PluginEntry
             {

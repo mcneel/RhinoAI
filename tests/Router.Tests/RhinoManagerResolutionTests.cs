@@ -30,10 +30,12 @@ public sealed class RhinoManagerResolutionTests
         _previousHome = Environment.GetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar);
         Environment.SetEnvironmentVariable(RouterPaths.HomeOverrideEnvVar, _homeDir);
 
-        _store = new SlotStore(Path.Combine(_homeDir, "state.db"), NullLogger<SlotStore>.Instance);
+        // SlotStore + RhinoManager read their on-disk paths from RHINO_MCP_HOME
+        // (set above), and RhinoLocator is a static resolver, so neither is injected.
+        _store = new SlotStore(NullLogger<SlotStore>.Instance);
         RhinoControlClient control = new(new StubHttpClientFactory(), NullLogger<RhinoControlClient>.Instance);
         _manager = new RhinoManager(
-            new RhinoLocator(), RouterConfig.FromArgs([]), control, _store, NullLogger<RhinoManager>.Instance);
+            RouterConfig.FromArgs([]), control, _store, NullLogger<RhinoManager>.Instance);
     }
 
     [Test]

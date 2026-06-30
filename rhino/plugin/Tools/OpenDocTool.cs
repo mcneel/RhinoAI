@@ -3,7 +3,7 @@ namespace RhMcp.Tools;
 [McpServerToolType]
 public static class OpenDocTool
 {
-    [McpServerTool(Name = "open_doc", Title = "Open / Import Document", ReadOnly = false, Destructive = true)]
+    [McpServerTool("open_doc", "Open / Import Document", false, true)]
     [Description("Import a .3dm (or other supported) file into the current document. Headless — no dialogs. Optionally clear the document first to make this behave like an open-in-place.")]
     public static string OpenDoc(
         RhinoDoc doc,
