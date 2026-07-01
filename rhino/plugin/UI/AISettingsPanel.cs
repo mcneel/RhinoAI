@@ -30,6 +30,14 @@ internal sealed class AISettingsPanel : Panel
     // without re-walking the grouped tree.
     private List<ToolNode> ToolLeaves { get; } = [];
 
+    private CheckBox AskBeforeScriptsBox { get; } = new() { Text = "Ask before running scripts" };
+    private CheckBox BlockDestructiveBox { get; } = new() { Text = "Block destructive tools" };
+    private CheckBox FileFenceBox { get; } = new() { Text = "Block file access outside the document's folder" };
+    private CheckBox ScriptFileWritesBox { get; } = new() { Text = "Block file writes and deletes in scripts" };
+    private CheckBox ScriptNetworkBox { get; } = new() { Text = "Block network access in scripts" };
+    private CheckBox ScriptProcessBox { get; } = new() { Text = "Block launching programs in scripts" };
+    private CheckBox ScriptEnvironmentBox { get; } = new() { Text = "Block reading environment variables in scripts" };
+
     private static JsonSerializerOptions IndentedJson { get; } = new() { WriteIndented = true };
     private const string EmptyMcpJson = "{\n  \"mcpServers\": {}\n}";
 
@@ -52,6 +60,7 @@ internal sealed class AISettingsPanel : Panel
         tabs.Pages.Add(new TabPage { Text = "AI Agents", Content = AgentsTab() });
         tabs.Pages.Add(new TabPage { Text = "MCP Servers", Content = McpServersTab() });
         tabs.Pages.Add(new TabPage { Text = "Tools", Content = ToolsTab() });
+        tabs.Pages.Add(new TabPage { Text = "Safety", Content = SafetyTab() });
 
         Content = tabs;
     }
@@ -93,6 +102,14 @@ internal sealed class AISettingsPanel : Panel
             .Concat(preservedUnderscore)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        AISettings.AskBeforeScripts = AskBeforeScriptsBox.Checked == true;
+        AISettings.BlockDestructiveTools = BlockDestructiveBox.Checked == true;
+        AISettings.BlockFileAccessOutsideDoc = FileFenceBox.Checked == true;
+        AISettings.BlockScriptFileWrites = ScriptFileWritesBox.Checked == true;
+        AISettings.BlockScriptNetwork = ScriptNetworkBox.Checked == true;
+        AISettings.BlockScriptProcessLaunch = ScriptProcessBox.Checked == true;
+        AISettings.BlockScriptEnvironmentReads = ScriptEnvironmentBox.Checked == true;
 
         AgentRegistry.Refresh();
         return true;
@@ -490,6 +507,52 @@ internal sealed class AISettingsPanel : Panel
             return;
         Rows.Remove(row);
         LoadEditor();
+    }
+
+    private Control SafetyTab()
+    {
+        AskBeforeScriptsBox.Checked = AISettings.AskBeforeScripts;
+        BlockDestructiveBox.Checked = AISettings.BlockDestructiveTools;
+        FileFenceBox.Checked = AISettings.BlockFileAccessOutsideDoc;
+        ScriptFileWritesBox.Checked = AISettings.BlockScriptFileWrites;
+        ScriptNetworkBox.Checked = AISettings.BlockScriptNetwork;
+        ScriptProcessBox.Checked = AISettings.BlockScriptProcessLaunch;
+        ScriptEnvironmentBox.Checked = AISettings.BlockScriptEnvironmentReads;
+
+        Label help = new()
+        {
+            Wrap = WrapMode.Word,
+            TextColor = Colors.Gray,
+            Text = "Guardrails for in-Rhino AI agents. Blocked calls return the reason to the AI so it "
+                + "can explain itself and adjust. Every AI turn can also be reverted with a single undo.",
+        };
+
+        Label scanHelp = new()
+        {
+            Wrap = WrapMode.Word,
+            TextColor = Colors.Gray,
+            Text = "Script checks scan code before it runs. They guide the AI rather than sandbox it; "
+                + "for a hard guarantee, use \"Ask before running scripts\".",
+        };
+
+        return new TableLayout
+        {
+            Padding = new Padding(8),
+            Spacing = new Size(0, 8),
+            Rows =
+            {
+                new TableRow(help),
+                new TableRow(AskBeforeScriptsBox),
+                new TableRow(BlockDestructiveBox),
+                new TableRow(FileFenceBox),
+                new TableRow(scanHelp),
+                new TableRow(ScriptFileWritesBox),
+                new TableRow(ScriptNetworkBox),
+                new TableRow(ScriptProcessBox),
+                new TableRow(ScriptEnvironmentBox),
+                new TableRow { ScaleHeight = true },
+            },
+        };
     }
 
     private Control McpServersTab()

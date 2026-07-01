@@ -33,4 +33,8 @@
     <Compile Include="../../rhino/plugin/Server/ResourceRegistry.cs" LinkBase="ServerSources" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../../rhino/plugin/Safety/ScriptGuard.cs" LinkBase="PluginSources" />
+  </ItemGroup>
+
 </Project>

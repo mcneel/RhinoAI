@@ -61,7 +61,7 @@ internal sealed class ConnectDialog : Dialog
         tabs.Pages.Add(jsonTab);
         tabs.Pages.Add(new TabPage { Text = "Advanced", Content = BuildAdvanced() });
 
-        Button copyButton = new() { Text = "Copy" };
+        Button copyButton = new() { Text = "Copy", Enabled = false };
         copyButton.Click += (_, _) =>
         {
             TextArea active = tabs.SelectedPage == jsonTab ? _jsonTextArea : _promptTextArea;
