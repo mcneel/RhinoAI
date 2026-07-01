@@ -47,7 +47,8 @@ If that doesn't work you can try the below:
 3. Add an entry for the Rhino server, pasting the mcp.json tab.
 4. Save the file. LM Studio picks up the change without a restart; the `rhino` server should appear in the MCP tool list for any new chat.
 
-> **Pick the Rhino version** by running `MCPConnect` from the Rhino you want the model to drive (Rhino 8, or Rhino 9 WIP/BETA). The mcp.json tab includes it automatically.
+> **Pick the Rhino version** by changing the `--default-version` arg.
+> Use `8` for Rhino 8, `9` for Rhino 9 WIP/BETA.
 
 ## Try it out
 

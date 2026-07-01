@@ -32,17 +32,27 @@ If that doesn't work you can try the below:
 2. Run the `PackageManager` command
 3. Search for, and install Rhino-MCP-Platform
 
-## 3. Connect the two
+## 3. Wire up the Rhino MCP server
 
-1. In Rhino, run the `MCPConnect` command.
-2. On the **Install** tab, find **Gemini CLI** and click **Install**.
-3. Restart Gemini CLI so it picks up the new server.
+1. In Rhino, run the `MCPConnect` command. It prints the command Gemini CLI needs to launch the Rhino MCP router.
+2. Open `~/.gemini/settings.json` (create it if it doesn't exist).
+3. Add an `mcpServers` entry for the Rhino server, pasting the command and args from step 1:
 
-![The MCPConnect dialog's Install tab, with an Install button beside each detected agent](/images/install-mcp.png)
+   ```json
+   {
+     "mcpServers": {
+       "rhino": {
+         "command": "rhino-mcp-router",
+         "args": ["--default-version", "8"]
+       }
+     }
+   }
+   ```
 
-<blockquote class="page-note">
-Run <code>MCPConnect</code> from the Rhino you want the agent to drive (Rhino 8, or Rhino 9 WIP/BETA); the version is wired in automatically. If Gemini CLI isn't listed (for example you haven't started it yet), open the <strong>Prompt</strong> tab and paste it into a Gemini CLI session, it'll connect itself.
-</blockquote>
+4. Restart Gemini CLI. The `rhino` server should appear when you list MCP servers from inside a session.
+
+> **Pick the Rhino version** by changing the `--default-version` arg.
+> Use `8` for Rhino 8, `9` for Rhino 9 WIP/BETA.
 
 ## Try it out
 

@@ -33,15 +33,9 @@ If that doesn't work you can try the below:
 
 ## 3. Connect the two
 
-1. In Rhino, run the `MCPConnect` command.
-2. On the **Install** tab, find **Claude Code** and click **Install**.
-3. Restart Claude Code if it's already running.
-
-![The MCPConnect dialog's Install tab, with an Install button beside each detected agent](/images/install-mcp.png)
-
-<blockquote class="page-note">
-Run <code>MCPConnect</code> from the Rhino you want the agent to drive (Rhino 8, or Rhino 9 WIP/BETA); the version is wired in automatically. If Claude Code isn't listed, open the <strong>Prompt</strong> tab and paste it into a Claude Code session, it'll connect itself.
-</blockquote>
+1. Run the `MCPConnect` command
+2. Copy and Paste the prompt into a new Claude Code session
+3. Restart Claude Code if prompted to
 
 <!--
 

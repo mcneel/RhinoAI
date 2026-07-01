@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Safety/ScriptGuard.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/McpConfigEdit.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>

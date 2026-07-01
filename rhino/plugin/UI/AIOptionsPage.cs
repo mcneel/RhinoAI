@@ -16,6 +16,7 @@ internal sealed class AIOptionsPage : OptionsDialogPage
 
     public AIOptionsPage() : base("AI")
     {
+        Panel.Width = 800;
     }
 
     public override object PageControl => Panel;
