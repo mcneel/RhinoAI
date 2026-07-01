@@ -603,9 +603,9 @@ internal sealed class AISettingsPanel : Panel
         }
 
         TreeGridView tree = new() { ShowHeader = true, DataStore = roots };
-        tree.Columns.Add(new GridColumn { HeaderText = "On", DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
-        tree.Columns.Add(new GridColumn { HeaderText = "Tool", DataCell = new TextBoxCell(1), Width = 210 });
-        tree.Columns.Add(new GridColumn { HeaderText = "Description", DataCell = new TextBoxCell(2), Width = 380 });
+        tree.Columns.Add(new GridColumn { HeaderText = "On", DataCell = new CheckBoxCell(0), Editable = true, Width = 50 });
+        tree.Columns.Add(new GridColumn { HeaderText = "Tool", DataCell = new TextBoxCell(1), AutoSize = true, Resizable = true });
+        tree.Columns.Add(new GridColumn { HeaderText = "Description", DataCell = new TextBoxCell(2), Resizable = true, AutoSize = true });
         tree.CellEdited += (_, e) =>
         {
             if (e.Column != 0 || e.Item is not ToolNode node)
