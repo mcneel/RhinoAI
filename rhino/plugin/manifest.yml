@@ -1,10 +1,10 @@
 ---
-name: Rhino-MCP-Platform
-version: 0.1.5
+name: ai
+version: 0.0.0 # overwritten at build time from Directory.Build.props
 authors:
 - Callum Sykes
 - Dan Cascaval
 - Claude
 description: An MCP Server for Rhino made by McNeel
 icon: icon.png
-url: https://mcneel.github.io/RhinoMCP/
+url: https://mcneel.github.io/ai/

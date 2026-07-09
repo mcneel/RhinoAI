@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Locate the rhino-mcp-router binary inside an installed Rhino-MCP-Platform yak
+// Locate the rhino-mcp-router binary inside an installed ai yak
 // and spawn it with our stdio passed through. Yak layout:
-//   <packages>/<rhino-ver>/Rhino-MCP-Platform/<pkg-ver>/router/<rid>/rhino-mcp-router[.exe]
+//   <packages>/<rhino-ver>/ai/<pkg-ver>/router/<rid>/rhino-mcp-router[.exe]
 // Canonical copy lives here in shared/; the packaging paths each stage their own
 // copy of this file at build time.
 
@@ -47,7 +47,7 @@ function findRouter() {
 
   const considered = [];
   for (const ver of ["9.0", "8.0"]) {
-    const base = join(root, ver, "Rhino-MCP-Platform");
+    const base = join(root, ver, "ai");
     if (!isDir(base)) continue;
     for (const pkgver of listDirs(base).sort(byVersionDesc)) {
       considered.push({ ver, pkgver, path: join(base, pkgver, "router", rid, exe) });
@@ -79,13 +79,13 @@ function spawnFailed(err) {
 
 let child;
 if (r.considered.length === 0) {
-  process.stderr.write(`rhino-mcp-launcher: no Rhino-MCP-Platform yak installed under ${r.root}\n`);
-  runInstallFallback("no Rhino-MCP-Platform yak is installed");
+  process.stderr.write(`rhino-mcp-launcher: no ai yak installed under ${r.root}\n`);
+  runInstallFallback("no ai yak is installed");
 } else if (!r.picked) {
   const summary = r.considered.map(c => `${c.ver}/${c.pkgver}`).join(", ");
   process.stderr.write(`rhino-mcp-launcher: candidates [${summary}]\n`);
   process.stderr.write(`rhino-mcp-launcher: no ${r.exe} found for ${r.rid} in any installed yak\n`);
-  runInstallFallback(`installed Rhino-MCP-Platform yak has no router/${r.rid}/${r.exe}`);
+  runInstallFallback(`installed ai yak has no router/${r.rid}/${r.exe}`);
 } else {
   const summary = r.considered.map(c => `${c.ver}/${c.pkgver}${c === r.picked ? "*" : ""}`).join(", ");
   process.stderr.write(`rhino-mcp-launcher: candidates [${summary}] (* = picked)\n`);
@@ -196,7 +196,7 @@ function runInstallFallback(reason) {
   const tool = {
     name: "install_rhino_mcp_platform",
     description:
-      `The Rhino-MCP-Platform plugin is not installed in Rhino ${version} (reason: ${reason}). ` +
+      `The ai plugin is not installed in Rhino ${version} (reason: ${reason}). ` +
       `Ask the user whether to install it now via yak. If they agree, call this tool with no arguments. ` +
       `After install the user must reload this connector (or restart Claude Desktop) so the real router takes over.`,
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -210,7 +210,7 @@ function runInstallFallback(reason) {
         content: [{ type: "text", text: `Cannot find yak for Rhino ${version}. Expected it under the Rhino install directory; is Rhino ${version} installed?` }],
       };
     }
-    const args = ["install", "Rhino-MCP-Platform"];
+    const args = ["install", "ai"];
     process.stderr.write(`rhino-mcp-launcher: running ${yak} ${args.join(" ")}\n`);
     const res = spawnSync(yak, args, { encoding: "utf8" });
     const stdout = (res.stdout ?? "").trim();

@@ -22,14 +22,14 @@ keywords:
 
 ## 2. Install the Rhino plugin
 
-{{< yak package="Rhino-MCP-Platform" version="8" >}}
-{{< yak package="Rhino-MCP-Platform" version="9" >}}
+{{< yak package="ai" version="8" >}}
+{{< yak package="ai" version="9" >}}
 
 If that doesn't work you can try the below:
 
 1. Open Rhino 8 (and/or Rhino 9 WIP/BETA)
 2. Run the `PackageManager` command
-3. Search for, and install Rhino-MCP-Platform
+3. Search for, and install ai
 
 ## 3. Connect the two
 
@@ -44,7 +44,7 @@ If that doesn't work you can try the below:
 Inside a Claude Code session, run:
 
 ```
-/plugin marketplace add mcneel/RhinoMCP
+/plugin marketplace add mcneel/ai
 /plugin install mcneel@rhino-mcp
 ```
 

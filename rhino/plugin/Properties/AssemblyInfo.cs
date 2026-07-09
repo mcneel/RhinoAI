@@ -10,7 +10,7 @@ using Rhino.PlugIns;
 [assembly: PlugInDescription(DescriptionType.Phone, "206-545-7000")]
 [assembly: PlugInDescription(DescriptionType.Organization, "Robert McNeel & Associates")]
 [assembly: PlugInDescription(DescriptionType.UpdateUrl, "http://www.updates.mcneel.com")]
-[assembly: PlugInDescription(DescriptionType.WebSite, "https://mcneel.github.io/RhinoMCP/")]
+[assembly: PlugInDescription(DescriptionType.WebSite, "https://mcneel.github.io/ai/")]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 // This will also be the Guid of the Rhino plug-in

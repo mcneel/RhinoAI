@@ -19,8 +19,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Version is inherited from rhino/Directory.Build.props (single source). -->
-    <Title>Rhino MCP Platform</Title>
+    <Title>AI</Title>
     <Company>McNeel</Company>
     <Description>MCP server plugin for Rhino</Description>
   </PropertyGroup>

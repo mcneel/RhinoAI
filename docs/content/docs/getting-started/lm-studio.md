@@ -31,14 +31,14 @@ Local open-weight models are not as capable as the paid hosted models (Claude, G
 
 ## 2. Install the Rhino plugin
 
-{{< yak package="Rhino-MCP-Platform" version="8" >}}
-{{< yak package="Rhino-MCP-Platform" version="9" >}}
+{{< yak package="ai" version="8" >}}
+{{< yak package="ai" version="9" >}}
 
 If that doesn't work you can try the below:
 
 1. Open Rhino 8 (and/or Rhino 9 WIP)
 2. Run the `PackageManager` command
-3. Search for, and install Rhino-MCP-Platform
+3. Search for, and install ai
 
 ## 3. Wire up the Rhino server
 

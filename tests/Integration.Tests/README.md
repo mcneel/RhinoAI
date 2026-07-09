@@ -26,10 +26,11 @@ dotnet test tests/Integration.Tests
 
 ## How it works
 
-The harness under `Harness/` spawns the local `claude` CLI in headless mode
-(`-p --output-format stream-json`), hands it an inline MCP config that points
-at a freshly-built router binary in an isolated TMPDIR, and parses the
-stream-json output into a trajectory of tool calls + results.
+The agent harness (the `ngentic` submodule under `tests/ngentic/`) spawns the
+local `claude` CLI in headless mode (`-p --output-format stream-json`), hands it
+an inline MCP config that points at a freshly-built router binary in an isolated
+TMPDIR, and parses the stream-json output into a trajectory of tool calls +
+results. The plumbing under `Harness/` wires that up to the router binary.
 
-See [Harness/ClaudeAgent.cs](Harness/ClaudeAgent.cs) and
+See [ClaudeAgent.cs](../ngentic/src/Ngentic.NUnit/ClaudeAgent.cs) and
 [CloseSlotAgentTests.cs](CloseSlotAgentTests.cs) for the canonical pattern.

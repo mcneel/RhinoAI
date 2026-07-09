@@ -49,7 +49,7 @@ function makeFakeRoot(layout) {
 
   for (const [rhinoVer, pkgVers] of Object.entries(layout)) {
     for (const [pkgVer, opts] of Object.entries(pkgVers)) {
-      const routerDir = join(pkgRoot, rhinoVer, "Rhino-MCP-Platform", pkgVer, "router", RID ?? "x");
+      const routerDir = join(pkgRoot, rhinoVer, "ai", pkgVer, "router", RID ?? "x");
       mkdirSync(routerDir, { recursive: true });
       const dst = join(routerDir, EXE);
       if (opts.binary === "exec") {
@@ -126,7 +126,7 @@ test("no yak installed → enters install-fallback (exit 0 on stdin EOF)", { ski
   const fake = makeFakeRoot({});
   const r = runLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED });
   assert.equal(r.status, 0);
-  assert.match(r.stderr, /no Rhino-MCP-Platform yak installed/);
+  assert.match(r.stderr, /no ai yak installed/);
   assert.match(r.stderr, /entering install-fallback mode/);
 });
 
@@ -198,7 +198,7 @@ test("integration: real router answers initialize over stdio", { skip: !isSuppor
     pkgRoot = join(tmp, "McNeel", "Rhinoceros", "packages");
     env = { APPDATA: tmp };
   }
-  const routerDir = join(pkgRoot, "9.0", "Rhino-MCP-Platform", "0.0.1-test", "router", RID);
+  const routerDir = join(pkgRoot, "9.0", "ai", "0.0.1-test", "router", RID);
   mkdirSync(routerDir, { recursive: true });
   // Copy the whole publish output: .NET single-file/AOT still ships sidecar
   // files (.pdb, *.deps.json on framework-dependent, etc.) we don't care to
@@ -309,7 +309,7 @@ test("fallback: no yak → initialize advertises rhino-mcp-installer", { skip: !
     const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
     assert.equal(r.result?.serverInfo?.name, "rhino-mcp-installer");
     assert.match(l.getStderr(), /entering install-fallback mode/);
-    assert.match(l.getStderr(), /no Rhino-MCP-Platform yak is installed/);
+    assert.match(l.getStderr(), /no ai yak is installed/);
   } finally {
     const { code } = await l.close();
     assert.equal(code, 0, "fallback should exit 0 on stdin EOF");
@@ -322,7 +322,7 @@ test("fallback: yak-but-no-binary path also enters fallback (different reason)",
   try {
     const r = await l.request("initialize", { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } }, 0);
     assert.equal(r.result?.serverInfo?.name, "rhino-mcp-installer");
-    assert.match(l.getStderr(), new RegExp(`installed Rhino-MCP-Platform yak has no router/${RID}/${EXE.replace(/\./g, "\\.")}`));
+    assert.match(l.getStderr(), new RegExp(`installed ai yak has no router/${RID}/${EXE.replace(/\./g, "\\.")}`));
   } finally {
     await l.close();
   }
