@@ -1,0 +1,39 @@
+{
+  "name": "@mcneel/RhinoMCP",
+  "version": "0.0.0",
+  "description": "An MCP to connect Rhino and Grasshopper to your development tools and more.",
+  "mcpName": "io.github.mcneel/rhino-mcp",
+  "type": "module",
+  "bin": {
+    "rhino-mcp": "router-launcher.mjs"
+  },
+  "files": [
+    "router-launcher.mjs"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "prepack": "node -e \"require('fs').copyFileSync('../shared/router-launcher.mjs','router-launcher.mjs')\""
+  },
+  "keywords": [
+    "rhino",
+    "rhino3d",
+    "grasshopper",
+    "mcneel",
+    "cad",
+    "mcp"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "McNeel",
+    "email": "support@mcneel.com",
+    "url": "https://rhino3d.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcneel/RhinoMCP",
+    "directory": "mcp-registry"
+  },
+  "homepage": "https://mcneel.github.io/RhinoMCP/"
+}

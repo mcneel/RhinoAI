@@ -16,6 +16,34 @@
       "transport": {
         "type": "stdio"
       }
+    },
+    {
+      "registryType": "npm",
+      "identifier": "@mcneel/rhino-mcp",
+      "version": "0.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "RHINO_MCP_RHINO_EXE_8",
+          "description": "Advanced. Absolute path to a specific Rhino 8 to launch (Rhino.exe on Windows, or the Rhino 8.app bundle on macOS). Leave unset to use the installed Rhino 8.",
+          "isRequired": false,
+          "format": "filepath"
+        },
+        {
+          "name": "RHINO_MCP_RHINO_EXE_9",
+          "description": "Advanced. Absolute path to a specific Rhino 9 to launch. Also serves WIP tool calls. Leave unset to use the installed Rhino 9.",
+          "isRequired": false,
+          "format": "filepath"
+        },
+        {
+          "name": "RHINO_MCP_RHINO_EXE_WIP",
+          "description": "Advanced. Absolute path to a specific Rhino WIP to launch. Leave unset to use the installed Rhino WIP.",
+          "isRequired": false,
+          "format": "filepath"
+        }
+      ]
     }
   ]
 }

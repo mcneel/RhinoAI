@@ -22,6 +22,8 @@ memory/*
 
 # MCP Registry publisher CLI (downloaded during CI, never committed)
 mcp-registry/mcp-publisher
+# npm launcher, staged from shared/ at pack time
+mcp-registry/router-launcher.mjs
 
 # Yak
 manifest.yml
