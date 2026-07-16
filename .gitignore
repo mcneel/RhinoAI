@@ -20,6 +20,9 @@
 .claude
 memory/*
 
+# MCP Registry publisher CLI (downloaded during CI, never committed)
+mcp-registry/mcp-publisher
+
 # Yak
 manifest.yml
 

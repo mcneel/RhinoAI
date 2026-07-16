@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write   # create tags + releases
+  id-token: write   # OIDC auth for mcp-publisher
 
 concurrency:
   group: connector-release
@@ -78,3 +79,33 @@ jobs:
             --target "${{ github.sha }}" \
             --generate-notes \
             ${{ steps.ver.outputs.prerelease == 'true' && '--prerelease' || '' }}
+
+      # --- Publish to the official MCP Registry (feeds github.com/mcp) ---
+
+      - name: Install mcp-publisher
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Stamp server.json with release URL and hash
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          HASH=$(openssl dgst -sha256 ../connector/connector.mcpb | awk '{print $2}')
+          URL="https://github.com/${REPO}/releases/download/${TAG}/connector.mcpb"
+          jq --arg v "$VERSION" --arg url "$URL" --arg hash "$HASH" \
+            '.version = $v | .packages[0].identifier = $url | .packages[0].fileSha256 = $hash' \
+            server.json > server.tmp && mv server.tmp server.json
+          cat server.json
+
+      - name: Publish to MCP Registry
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
