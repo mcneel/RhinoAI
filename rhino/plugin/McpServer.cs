@@ -41,6 +41,9 @@ internal sealed class McpServer : IDisposable
 
             builder.Services.AddSingleton(doc);
 
+            // Bridge seam: dynamic Grasshopper-definition tools (GrasshopperAITools bundles).
+            builder.Services.AddSingleton(new GhToolSource(GhToolSource.ResolveDefaultDirectory()));
+
             App = builder.Build();
             App.MapMcp("/");
             App.MapMcp("/agent", filtered: true);

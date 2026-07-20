@@ -31,12 +31,16 @@ internal sealed class McpDispatcher
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
 
+    // Bridge seam: dynamic Grasshopper-definition tools, resolved from DI when registered.
+    private readonly GhToolSource? _ghTools;
+
     private bool Filtered { get; }
 
     public McpDispatcher(IServiceProvider rootServices, bool filtered)
     {
         _tools = ToolRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
         _resources = ResourceRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
+        _ghTools = rootServices.GetService<GhToolSource>();
         Filtered = filtered;
     }
 
@@ -157,27 +161,43 @@ internal sealed class McpDispatcher
             : [];
         // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
         // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
+        List<ToolDescriptor> tools = _tools.All
+            .Where(t => Filtered || !t.InPanelOnly)
+            .Where(t => !disabled.Contains(t.Name))
+            .Select(t => new ToolDescriptor
+            {
+                Name = t.Name,
+                Title = t.Title,
+                Description = t.Description,
+                InputSchema = t.InputSchema,
+                Annotations = new ToolAnnotations
+                {
+                    Title = t.Title,
+                    ReadOnlyHint = t.ReadOnly,
+                    DestructiveHint = t.Destructive,
+                },
+            }).ToList();
+
+        // Bridge seam: append dynamic Grasshopper-definition tools. Re-scan on each
+        // list so freshly exported bundles appear without a plugin reload.
+        if (_ghTools is not null)
+        {
+            _ghTools.Refresh();
+            tools.AddRange(_ghTools.All
+                .Where(d => !disabled.Contains(d.Name))
+                .Select(d => new ToolDescriptor
+                {
+                    Name = d.Name,
+                    Title = d.Name,
+                    Description = d.Description,
+                    InputSchema = d.InputSchema,
+                    Annotations = new ToolAnnotations { Title = d.Name },
+                }));
+        }
+
         return Task.FromResult(new JsonRpcResponse
         {
-            Result = new ListToolsResult
-            {
-                Tools = _tools.All
-                    .Where(t => Filtered || !t.InPanelOnly)
-                    .Where(t => !disabled.Contains(t.Name))
-                    .Select(t => new ToolDescriptor
-                {
-                    Name = t.Name,
-                    Title = t.Title,
-                    Description = t.Description,
-                    InputSchema = t.InputSchema,
-                    Annotations = new ToolAnnotations
-                    {
-                        Title = t.Title,
-                        ReadOnlyHint = t.ReadOnly,
-                        DestructiveHint = t.Destructive,
-                    },
-                }).ToList(),
-            },
+            Result = new ListToolsResult { Tools = tools },
         });
     }
 
@@ -235,6 +255,32 @@ internal sealed class McpDispatcher
             };
 
         if (!_tools.TryGet(p.Name, out ToolHandler tool))
+        {
+            // Bridge seam: dynamic Grasshopper-definition tools live outside the static
+            // registry, so fall through to them before declaring the tool unknown.
+            if (_ghTools is not null && _ghTools.TryGet(p.Name, out GhTool ghTool))
+            {
+                try
+                {
+                    string json = await _ghTools.ExecuteAsync(ghTool, p.Arguments).ConfigureAwait(false);
+                    return new JsonRpcResponse
+                    {
+                        Result = new CallToolResult { Content = { ContentBlock.CreateText(json) } }
+                    };
+                }
+                catch (Exception ex)
+                {
+                    return new JsonRpcResponse
+                    {
+                        Result = new CallToolResult
+                        {
+                            IsError = true,
+                            Content = { ContentBlock.CreateText(FormatToolError(ex)) },
+                        }
+                    };
+                }
+            }
+
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
@@ -243,6 +289,7 @@ internal sealed class McpDispatcher
                     Message = $"Tool '{p.Name}' is not registered.",
                 }
             };
+        }
 
         // In-panel-only tools refuse external (`/`) callers with a plain result
         // rather than a transport error: the call "ran" and told the caller why
