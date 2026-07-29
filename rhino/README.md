@@ -52,7 +52,10 @@ other string, which is wrapped as a single text block.
 `RegisteredMcpToolNames`, and `RegisterMcpResultTransform` — a hook that can rewrite the
 result of *any* tool call this server serves, including tools compiled into this plug-in.
 
-### Three rules that are not style preferences
+### Developer advice
+
+A few things are worth knowing before you write against this, because they are easy to
+get wrong and the failures are quiet.
 
 1. **Only strings and corelib delegates cross the boundary.** This plug-in is built with
    `EnableDynamicLoading=true`, so it loads into its own `AssemblyLoadContext` with its
@@ -61,11 +64,11 @@ result of *any* tool call this server serves, including tools compiled into this
    type with the same name — the cast fails silently and the tool simply never appears.
    `string`, `Func<>`, `Task<>` and `CancellationToken` live in System.Private.CoreLib,
    which can never be loaded twice, so they are the same type everywhere.
-2. **Do not register from `OnLoad`.** `RhinoApp.GetPlugInObject` loads the target plug-in,
-   and reaching for another plug-in during your own load is a reentrant plug-in load
-   inside Rhino's plug-in manager. Defer to idle. Load order then stops mattering: this
-   plug-in is loaded on demand by the call, and registering before the MCP server starts
-   is fine because the dispatcher reads the registry live.
+2. **Register from idle rather than `OnLoad`.** `RhinoApp.GetPlugInObject` loads the target
+   plug-in, so reaching for another plug-in during your own load means a reentrant plug-in
+   load inside Rhino's plug-in manager. From idle, load order stops mattering: this plug-in
+   is loaded on demand by the call, and registering before the MCP server starts is fine
+   because the dispatcher reads the registry live.
 3. **Contributed tools run on a background thread by default** — the inverse of the
    default for tools compiled into this plug-in. A contributing plug-in does its own
    UI-thread marshalling and knows what it touches, and its work may run for minutes;

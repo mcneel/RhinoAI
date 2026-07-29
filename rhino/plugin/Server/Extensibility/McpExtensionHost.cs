@@ -34,8 +34,31 @@ namespace RhMcp.Server.Extensibility;
 /// </remarks>
 public sealed class McpExtensionHost
 {
-    /// <summary>Contract version. A caller should check this before registering.</summary>
+    /// <summary>
+    /// Contract version. A caller should check this before registering.
+    /// </summary>
     public int McpExtensionProtocol => ExtensionProtocol.Version;
+
+    /// <summary>
+    /// Removes a previously registered tool. Returns true if it was there.
+    /// </summary>
+    public bool UnregisterMcpTool(string name) => McpExtensionRegistry.Current.Unregister(name);
+
+    /// <summary>
+    /// Removes every tool registered under the given <c>owner</c>.
+    /// </summary>
+    public int UnregisterMcpToolsByOwner(string owner) => McpExtensionRegistry.Current.UnregisterByOwner(owner);
+
+    /// <summary>
+    /// The names of every tool currently contributed by other plug-ins.
+    /// </summary>
+    public string[] RegisteredMcpToolNames() => McpExtensionRegistry.Current.Names();
+
+    /// <summary>
+    /// Removes the transformer registered by <paramref name="owner"/>.
+    /// </summary>
+    public bool UnregisterMcpResultTransform(string owner) =>
+        McpExtensionRegistry.Current.UnregisterTransform(owner);
 
     /// <summary>
     /// Registers one tool. <paramref name="descriptorJson"/> describes it:
@@ -73,15 +96,7 @@ public sealed class McpExtensionHost
         return McpExtensionRegistry.Current.Register(descriptor, handler);
     }
 
-    /// <summary>Removes a previously registered tool. Returns true if it was there.</summary>
-    public bool UnregisterMcpTool(string name) => McpExtensionRegistry.Current.Unregister(name);
-
-    /// <summary>Removes every tool registered under the given <c>owner</c>.</summary>
-    public int UnregisterMcpToolsByOwner(string owner) => McpExtensionRegistry.Current.UnregisterByOwner(owner);
-
-    /// <summary>The names of every tool currently contributed by other plug-ins.</summary>
-    public string[] RegisteredMcpToolNames() => McpExtensionRegistry.Current.Names();
-
+ 
     /// <summary>
     /// Registers a transformer that may rewrite the result of <em>any</em> tool call this
     /// server serves, including tools compiled into this plug-in. It receives a context JSON
@@ -106,8 +121,4 @@ public sealed class McpExtensionHost
 
         return McpExtensionRegistry.Current.RegisterTransform(owner, order, transform);
     }
-
-    /// <summary>Removes the transformer registered by <paramref name="owner"/>.</summary>
-    public bool UnregisterMcpResultTransform(string owner) =>
-        McpExtensionRegistry.Current.UnregisterTransform(owner);
 }

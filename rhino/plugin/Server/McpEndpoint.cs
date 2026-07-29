@@ -229,8 +229,33 @@ internal sealed class McpDispatcher
             },
         });
 
-    // Compiled tools win over runtime-contributed ones on a name collision, so they
-    // are consulted first.
+    /// <summary>
+    /// Finds the handler for a tool name, looking first among the compiled tools and then
+    /// among those contributed at run time by other Rhino plug-ins.
+    /// </summary>
+    /// <param name="name">
+    /// The tool name exactly as the client sent it. Compiled tools match by whatever rule
+    /// <c>ToolRegistry</c> applies; contributed ones match case-insensitively.
+    /// </param>
+    /// <param name="tool">
+    /// The resolved handler, or null when the name is unknown. Only meaningful when this
+    /// method returns true.
+    /// </param>
+    /// <returns>True when a tool of that name exists in either source.</returns>
+    /// <remarks>
+    /// <para>
+    /// Order matters: compiled tools win over runtime-contributed ones on a name collision.
+    /// A contributing plug-in therefore cannot shadow a built-in tool, whether by accident or
+    /// deliberately — it can only add names the host does not already use. The reserved
+    /// <see cref="Extensibility.ExtensionProtocol.ReservedToolPrefix"/> namespace closes the
+    /// other half of that gap, by stopping a contributed tool from *looking* built-in.
+    /// </para>
+    /// <para>
+    /// The registry is read live on every call rather than cached, which is what lets a tool
+    /// registered after this server started be callable without a restart. The cost is one
+    /// dictionary lookup per miss, which is not worth optimising away.
+    /// </para>
+    /// </remarks>
     private bool TryResolveTool(string name, out ToolHandler tool)
     {
         if (_tools.TryGet(name, out tool))

@@ -2,130 +2,60 @@ using System.Text.RegularExpressions;
 
 namespace RhMcp.Server.Extensibility;
 
-// The contract other Rhino plug-ins use to contribute MCP tools to this server.
-// See McpExtensionHost for the entry point and docs/EXTENSIBILITY.md for the
-// provider-facing spec.
-//
-// This file is pure -- no Rhino types, no reflection -- so it is compiled into
-// tests/Server.Tests and unit-tested there.
+/// <summary>
+/// Constants and name rules for the contract other Rhino plug-ins use to contribute MCP
+/// tools to this server. See <see cref="McpExtensionHost"/> for the entry point, and the
+/// "Extending the tool set from another Rhino plug-in" section of <c>rhino/README.md</c>
+/// for the provider-facing description.
+/// </summary>
+/// <remarks>
+/// Pure -- no Rhino types, no reflection -- so it can be compiled into
+/// <c>tests/Server.Tests</c> and unit-tested there without a running Rhino.
+/// </remarks>
 internal static class ExtensionProtocol
 {
-    // Bumped only for a breaking change to McpExtensionHost's members or to the
-    // descriptor shape. Exposed to callers as McpExtensionHost.McpExtensionProtocol.
+    /// <summary>
+    /// The contract version, surfaced to callers as
+    /// <see cref="McpExtensionHost.McpExtensionProtocol"/>.
+    /// </summary>
+    /// <remarks>
+    /// Bumped only for a breaking change to <see cref="McpExtensionHost"/>'s members or to
+    /// the descriptor shape. Additive changes -- a new optional descriptor field, a new
+    /// method -- leave it alone, since an older caller keeps working against them.
+    /// </remarks>
     public const int Version = 1;
 
-    // Reserved for the host's own gateway tools (ext_list_tools / ext_call_tool);
-    // a contributing plug-in may not register into it.
+    /// <summary>
+    /// Tool-name prefix reserved for this server's own tools. A contributing plug-in may
+    /// not register a name beginning <c>ext_</c>.
+    /// </summary>
+    /// <remarks>
+    /// Reserving it keeps a namespace in which the host can add tools later without
+    /// colliding with anyone, and stops a contributed tool impersonating a built-in one.
+    /// </remarks>
     public const string ReservedToolPrefix = "ext";
 
+    // Deliberately narrow: MCP clients and the router's generated proxies both key on
+    // tool names, so anything exotic risks being mangled somewhere downstream rather
+    // than rejected here, where the plug-in author can still see why.
     private static readonly Regex ToolNamePattern =
         new("^[A-Za-z][A-Za-z0-9_.-]{0,127}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Whether <paramref name="name"/> is usable as an MCP tool name: an ASCII letter
+    /// followed by up to 127 letters, digits, underscores, dots or hyphens.
+    /// </summary>
+    /// <param name="name">The candidate name. Null and empty are both invalid.</param>
+    /// <returns>True when the name is acceptable.</returns>
     public static bool IsValidToolName(string? name) =>
         !string.IsNullOrEmpty(name) && ToolNamePattern.IsMatch(name);
 
+    /// <summary>
+    /// Whether <paramref name="name"/> falls inside the host's reserved
+    /// <see cref="ReservedToolPrefix"/> namespace.
+    /// </summary>
+    /// <param name="name">The candidate name, already known to be well formed.</param>
+    /// <returns>True when a contributing plug-in must not be allowed to register it.</returns>
     public static bool IsReservedName(string name) =>
         name.StartsWith(ReservedToolPrefix + "_", StringComparison.OrdinalIgnoreCase);
-}
-
-// One tool as declared by a contributing plug-in.
-internal sealed class ProviderToolDescriptor
-{
-    public string Owner { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string? Title { get; set; }
-    public string Description { get; set; } = "";
-    public JsonElement InputSchema { get; set; }
-    public bool ReadOnly { get; set; }
-    public bool Destructive { get; set; }
-
-    // Opt IN to UI-thread marshalling. The default is background, the inverse of the
-    // compiled-tool default: a contributing plug-in does its own marshalling and its
-    // work may run for minutes, and holding the Rhino message pump for that is a
-    // frozen application.
-    public bool RequiresUiThread { get; set; }
-
-    // Rejection is by message rather than exception: a bad descriptor is the
-    // registering plug-in's problem to report, not grounds for taking down a call
-    // that is happening inside someone else's plug-in load path.
-    public static bool TryParse(string? json, out ProviderToolDescriptor descriptor, out string failure)
-    {
-        descriptor = new ProviderToolDescriptor();
-        failure = "";
-
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            failure = "descriptor is empty";
-            return false;
-        }
-
-        JsonElement root;
-        try
-        {
-            using JsonDocument doc = JsonDocument.Parse(json!);
-            root = doc.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            failure = $"descriptor is not valid JSON: {ex.Message}";
-            return false;
-        }
-
-        if (root.ValueKind != JsonValueKind.Object)
-        {
-            failure = "descriptor must be a JSON object";
-            return false;
-        }
-
-        descriptor.Owner = ReadString(root, "owner") ?? "";
-        if (string.IsNullOrWhiteSpace(descriptor.Owner))
-        {
-            failure = "descriptor is missing a non-empty \"owner\"";
-            return false;
-        }
-
-        string? name = ReadString(root, "name");
-        if (!ExtensionProtocol.IsValidToolName(name))
-        {
-            failure = $"\"name\" '{name ?? "(missing)"}' is not a valid tool name";
-            return false;
-        }
-        descriptor.Name = name!;
-
-        string? description = ReadString(root, "description");
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            // Not pedantry: an LLM cannot decide to call a tool it has no description
-            // for, so an undescribed tool is dead weight in every client's context.
-            failure = $"'{descriptor.Name}' has no \"description\"";
-            return false;
-        }
-        descriptor.Description = description!;
-
-        if (!root.TryGetProperty("inputSchema", out JsonElement schema) || schema.ValueKind != JsonValueKind.Object)
-        {
-            failure = $"'{descriptor.Name}' is missing an \"inputSchema\" object";
-            return false;
-        }
-        descriptor.InputSchema = schema.Clone();
-
-        descriptor.Title = ReadString(root, "title");
-
-        if (root.TryGetProperty("annotations", out JsonElement annotations) && annotations.ValueKind == JsonValueKind.Object)
-        {
-            descriptor.ReadOnly = ReadBool(annotations, "readOnlyHint");
-            descriptor.Destructive = ReadBool(annotations, "destructiveHint");
-        }
-
-        descriptor.RequiresUiThread = ReadBool(root, "requiresUiThread");
-        return true;
-    }
-
-    private static string? ReadString(JsonElement obj, string name) =>
-        obj.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
-
-    private static bool ReadBool(JsonElement obj, string name) =>
-        obj.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.True;
 }
