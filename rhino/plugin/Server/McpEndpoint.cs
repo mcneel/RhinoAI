@@ -31,16 +31,12 @@ internal sealed class McpDispatcher
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
 
-    // Bridge seam: dynamic Grasshopper-definition tools, resolved from DI when registered.
-    private readonly GhToolSource? _ghTools;
-
     private bool Filtered { get; }
 
     public McpDispatcher(IServiceProvider rootServices, bool filtered)
     {
         _tools = ToolRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
         _resources = ResourceRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
-        _ghTools = rootServices.GetService<GhToolSource>();
         Filtered = filtered;
     }
 
@@ -178,22 +174,11 @@ internal sealed class McpDispatcher
                 },
             }).ToList();
 
-        // Bridge seam: append dynamic Grasshopper-definition tools. Re-scan on each
-        // list so freshly exported bundles appear without a plugin reload.
-        if (_ghTools is not null)
-        {
-            _ghTools.Refresh();
-            tools.AddRange(_ghTools.All
-                .Where(d => !disabled.Contains(d.Name))
-                .Select(d => new ToolDescriptor
-                {
-                    Name = d.Name,
-                    Title = d.Name,
-                    Description = d.Description,
-                    InputSchema = d.InputSchema,
-                    Annotations = new ToolAnnotations { Title = d.Name },
-                }));
-        }
+        // Grasshopper AI Tools are NOT listed here. They live behind the two static
+        // gateway tools in Tools/GhBridgeTools.cs (gh_list_tools / gh_run_tool), which
+        // reach them over the named pipe hosted by the GrasshopperAITools Rhino plug-in.
+        // Listing them individually would mean this dispatcher blocking on that pipe on
+        // every tools/list.
 
         return Task.FromResult(new JsonRpcResponse
         {
@@ -256,31 +241,6 @@ internal sealed class McpDispatcher
 
         if (!_tools.TryGet(p.Name, out ToolHandler tool))
         {
-            // Bridge seam: dynamic Grasshopper-definition tools live outside the static
-            // registry, so fall through to them before declaring the tool unknown.
-            if (_ghTools is not null && _ghTools.TryGet(p.Name, out GhTool ghTool))
-            {
-                try
-                {
-                    string json = await _ghTools.ExecuteAsync(ghTool, p.Arguments).ConfigureAwait(false);
-                    return new JsonRpcResponse
-                    {
-                        Result = new CallToolResult { Content = { ContentBlock.CreateText(json) } }
-                    };
-                }
-                catch (Exception ex)
-                {
-                    return new JsonRpcResponse
-                    {
-                        Result = new CallToolResult
-                        {
-                            IsError = true,
-                            Content = { ContentBlock.CreateText(FormatToolError(ex)) },
-                        }
-                    };
-                }
-            }
-
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
