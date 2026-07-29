@@ -52,11 +52,9 @@
     <PackageReference Include="Microsoft.AspNetCore.App.Runtime.osx-arm64" Version="$(AspNetCoreRuntimeVersion)" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" Condition="'$(PluginOS)' == 'osx'" />
   </ItemGroup>
 
-  <!-- Bumped 8.29 -> 8.31 to match the locally installed Rhino 8, resolving CS1705
-       version skew. -->
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
-    <PackageReference Include="RhinoCommon" Version="8.31.26126.13431" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="8.31.26126.13431" />
+    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
