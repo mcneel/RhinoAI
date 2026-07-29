@@ -181,10 +181,32 @@ internal sealed class McpDispatcher
         });
     }
 
-    // Compiled tools, then tools contributed at run time by other Rhino plug-ins.
-    // Compiled names win on a collision. The registry is read live rather than
-    // cached, so a plug-in that registers after this server started shows up on the
-    // next tools/list with no restart.
+    /// <summary>
+    /// Every tool this endpoint can offer: the compiled ones first, then those contributed at
+    /// run time by other Rhino plug-ins.
+    /// </summary>
+    /// <returns>
+    /// A lazily evaluated sequence. Compiled tools keep <c>ToolRegistry</c>'s order; contributed
+    /// ones follow in registry order, with any whose name a compiled tool already uses filtered
+    /// out.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// Compiled names win on a collision, matching
+    /// <see cref="TryResolveTool"/> — so a tool cannot appear in <c>tools/list</c> under a name
+    /// that <c>tools/call</c> would then route somewhere else. Listing and dispatch must agree
+    /// on precedence or a contributed tool becomes visible but uncallable.
+    /// </para>
+    /// <para>
+    /// The registry is read live rather than cached, so a plug-in that registers after this
+    /// server started shows up on the next <c>tools/list</c> with no restart. That matters
+    /// because plug-in load order is not something a contributor controls.
+    /// </para>
+    /// <para>
+    /// Deferred execution means the collision filter runs at enumeration time, so callers should
+    /// enumerate once and materialise if they need the set twice.
+    /// </para>
+    /// </remarks>
     private IEnumerable<ToolHandler> AllTools() =>
         _tools.All.Concat(
             Extensibility.McpExtensionRegistry.Current.Tools.Where(t => !_tools.TryGet(t.Name, out _)));
