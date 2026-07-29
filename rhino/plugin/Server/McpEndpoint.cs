@@ -157,34 +157,37 @@ internal sealed class McpDispatcher
             : [];
         // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
         // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
-        List<ToolDescriptor> tools = _tools.All
-            .Where(t => Filtered || !t.InPanelOnly)
-            .Where(t => !disabled.Contains(t.Name))
-            .Select(t => new ToolDescriptor
-            {
-                Name = t.Name,
-                Title = t.Title,
-                Description = t.Description,
-                InputSchema = t.InputSchema,
-                Annotations = new ToolAnnotations
-                {
-                    Title = t.Title,
-                    ReadOnlyHint = t.ReadOnly,
-                    DestructiveHint = t.Destructive,
-                },
-            }).ToList();
-
-        // Grasshopper AI Tools are NOT listed here. They live behind the two static
-        // gateway tools in Tools/GhBridgeTools.cs (gh_list_tools / gh_run_tool), which
-        // reach them over the named pipe hosted by the GrasshopperAITools Rhino plug-in.
-        // Listing them individually would mean this dispatcher blocking on that pipe on
-        // every tools/list.
-
         return Task.FromResult(new JsonRpcResponse
         {
-            Result = new ListToolsResult { Tools = tools },
+            Result = new ListToolsResult
+            {
+                Tools = AllTools()
+                    .Where(t => Filtered || !t.InPanelOnly)
+                    .Where(t => !disabled.Contains(t.Name))
+                    .Select(t => new ToolDescriptor
+                {
+                    Name = t.Name,
+                    Title = t.Title,
+                    Description = t.Description,
+                    InputSchema = t.InputSchema,
+                    Annotations = new ToolAnnotations
+                    {
+                        Title = t.Title,
+                        ReadOnlyHint = t.ReadOnly,
+                        DestructiveHint = t.Destructive,
+                    },
+                }).ToList(),
+            },
         });
     }
+
+    // Compiled tools, then tools contributed at run time by other Rhino plug-ins.
+    // Compiled names win on a collision. The registry is read live rather than
+    // cached, so a plug-in that registers after this server started shows up on the
+    // next tools/list with no restart.
+    private IEnumerable<ToolHandler> AllTools() =>
+        _tools.All.Concat(
+            Extensibility.McpExtensionRegistry.Current.Tools.Where(t => !_tools.TryGet(t.Name, out _)));
 
     private Task<JsonRpcResponse> HandleResourcesList() =>
         Task.FromResult(new JsonRpcResponse
@@ -226,6 +229,23 @@ internal sealed class McpDispatcher
             },
         });
 
+    // Compiled tools win over runtime-contributed ones on a name collision, so they
+    // are consulted first.
+    private bool TryResolveTool(string name, out ToolHandler tool)
+    {
+        if (_tools.TryGet(name, out tool))
+            return true;
+
+        if (Extensibility.McpExtensionRegistry.Current.TryGet(name, out Extensibility.ProviderToolHandler contributed))
+        {
+            tool = contributed;
+            return true;
+        }
+
+        tool = null!;
+        return false;
+    }
+
     private async Task<JsonRpcResponse> HandleToolCallAsync(
         JsonRpcRequest request, IServiceProvider services, CancellationToken ct)
     {
@@ -239,8 +259,7 @@ internal sealed class McpDispatcher
                 Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidParams, Message = "Missing tool name." }
             };
 
-        if (!_tools.TryGet(p.Name, out ToolHandler tool))
-        {
+        if (!TryResolveTool(p.Name, out ToolHandler tool))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
@@ -249,7 +268,6 @@ internal sealed class McpDispatcher
                     Message = $"Tool '{p.Name}' is not registered.",
                 }
             };
-        }
 
         // In-panel-only tools refuse external (`/`) callers with a plain result
         // rather than a transport error: the call "ran" and told the caller why

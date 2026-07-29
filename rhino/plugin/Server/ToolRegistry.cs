@@ -6,9 +6,14 @@ using System.Threading.Tasks;
 namespace RhMcp.Server;
 
 // Scan an assembly once at startup, build a name->handler map for every method
-// decorated with [McpServerTool] inside a [McpServerToolType] class. ToolHandler
-// owns its bound parameters, its schema, and the per-tool decision about whether
-// to marshal the invocation onto the Rhino UI thread.
+// decorated with [McpServerTool] inside a [McpServerToolType] class.
+//
+// ToolHandler is abstract: a tool is "something with MCP metadata, a schema, and a
+// way to be invoked", not necessarily a MethodInfo on this assembly.
+// ReflectionToolHandler below is the compiled-tool implementation and the only one
+// this registry produces; tools contributed at runtime by other Rhino plug-ins use
+// a different subclass (see Server/Extensibility/). The UI-thread marshalling
+// policy lives on the base so both kinds obey exactly one copy of it.
 internal sealed class ToolRegistry
 {
 
@@ -42,7 +47,7 @@ internal sealed class ToolRegistry
                 bool marshalToUi = method.GetCustomAttribute<BackgroundThreadAttribute>() is null;
                 bool inPanelOnly = method.GetCustomAttribute<InPanelOnlyAttribute>() is not null;
 
-                ToolHandler handler = new(
+                ReflectionToolHandler handler = new(
                     method, name, toolAttr.Title, description,
                     toolAttr.ReadOnly, toolAttr.Destructive,
                     marshalToUi, inPanelOnly, services);
@@ -65,10 +70,10 @@ internal sealed class ToolRegistry
     }
 }
 
-internal sealed class ToolHandler
+// A tool the dispatcher can list and call. Metadata and the UI-thread marshalling
+// policy live here; how the call actually happens is the subclass's business.
+internal abstract class ToolHandler
 {
-    private readonly MethodInfo _method;
-    private readonly ParameterDescriptor[] _parameters;
     private readonly bool _marshalToUi;
 
     public string Name { get; }
@@ -81,14 +86,14 @@ internal sealed class ToolHandler
     // `/agent` endpoint); the external `/` endpoint hides them and refuses calls.
     public bool InPanelOnly { get; }
 
-    public JsonElement InputSchema { get; }
+    // Set by the subclass constructor: compiled tools derive it from their
+    // parameters, runtime-registered ones are handed it by the provider.
+    public JsonElement InputSchema { get; protected set; }
 
-    public ToolHandler(
-        MethodInfo method, string name, string? title, string? description,
-        bool readOnly, bool destructive,
-        bool marshalToUi, bool inPanelOnly, IServiceProvider services)
+    protected ToolHandler(
+        string name, string? title, string? description,
+        bool readOnly, bool destructive, bool marshalToUi, bool inPanelOnly)
     {
-        _method = method;
         Name = name;
         Title = title;
         Description = description;
@@ -96,6 +101,59 @@ internal sealed class ToolHandler
         Destructive = destructive;
         _marshalToUi = marshalToUi;
         InPanelOnly = inPanelOnly;
+    }
+
+    public Task<CallToolResult> InvokeAsync(
+        IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
+    {
+        if (!_marshalToUi)
+            return InvokeCoreAsync(arguments, scope, ct);
+
+        // Default policy for compiled tools: marshal to the Rhino UI thread. macOS's
+        // AppKit aborts the process if any UI/document API is touched off the main
+        // thread, and most tools manipulate RhinoDoc. Tools that opt out via
+        // [BackgroundThread] take the direct path above. Note runtime-registered
+        // tools default the other way — their provider does its own marshalling.
+        TaskCompletionSource<CallToolResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RhinoApp.InvokeOnUiThread(new Action(async () =>
+        {
+            try
+            { tcs.SetResult(await InvokeCoreAsync(arguments, scope, ct).ConfigureAwait(false)); }
+            catch (Exception ex) { tcs.SetException(ex); }
+        }), null);
+        return tcs.Task;
+    }
+
+    protected abstract Task<CallToolResult> InvokeCoreAsync(
+        IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct);
+
+    protected static CallToolResult FormatResult(object? result) => result switch
+    {
+        null => new CallToolResult { Content = { ContentBlock.CreateText("") } },
+        string s => new CallToolResult { Content = { ContentBlock.CreateText(s) } },
+        ContentBlock cb => new CallToolResult { Content = { cb } },
+        IEnumerable<ContentBlock> blocks => new CallToolResult { Content = blocks.ToList() },
+        _ => new CallToolResult
+        {
+            Content = { ContentBlock.CreateText(JsonSerializer.Serialize(result, McpSerializer.Options)) }
+        },
+    };
+}
+
+// A tool compiled into this assembly: a [McpServerTool] method, its bound
+// parameters and the schema derived from them.
+internal sealed class ReflectionToolHandler : ToolHandler
+{
+    private readonly MethodInfo _method;
+    private readonly ParameterDescriptor[] _parameters;
+
+    public ReflectionToolHandler(
+        MethodInfo method, string name, string? title, string? description,
+        bool readOnly, bool destructive,
+        bool marshalToUi, bool inPanelOnly, IServiceProvider services)
+        : base(name, title, description, readOnly, destructive, marshalToUi, inPanelOnly)
+    {
+        _method = method;
 
         _parameters = method.GetParameters()
             .Select(pi => ResolveBinding(pi, services))
@@ -123,27 +181,7 @@ internal sealed class ToolHandler
         return new ParameterDescriptor(pi, ParameterBindingKind.Argument);
     }
 
-    public Task<CallToolResult> InvokeAsync(
-        IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
-    {
-        if (!_marshalToUi)
-            return InvokeCoreAsync(arguments, scope, ct);
-
-        // Default policy: marshal every tool to the Rhino UI thread. macOS's
-        // AppKit aborts the process if any UI/document API is touched off the
-        // main thread, and most tools manipulate RhinoDoc. Tools that opt out
-        // via [BackgroundThread] take the direct path above.
-        TaskCompletionSource<CallToolResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RhinoApp.InvokeOnUiThread(new Action(async () =>
-        {
-            try
-            { tcs.SetResult(await InvokeCoreAsync(arguments, scope, ct).ConfigureAwait(false)); }
-            catch (Exception ex) { tcs.SetException(ex); }
-        }), null);
-        return tcs.Task;
-    }
-
-    private async Task<CallToolResult> InvokeCoreAsync(
+    protected override async Task<CallToolResult> InvokeCoreAsync(
         IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
     {
         object?[] args = new object?[_parameters.Length];
@@ -163,16 +201,4 @@ internal sealed class ToolHandler
         object? result = await ResultUnwrapper.UnwrapAsync(rawResult).ConfigureAwait(false);
         return FormatResult(result);
     }
-
-    private static CallToolResult FormatResult(object? result) => result switch
-    {
-        null => new CallToolResult { Content = { ContentBlock.CreateText("") } },
-        string s => new CallToolResult { Content = { ContentBlock.CreateText(s) } },
-        ContentBlock cb => new CallToolResult { Content = { cb } },
-        IEnumerable<ContentBlock> blocks => new CallToolResult { Content = blocks.ToList() },
-        _ => new CallToolResult
-        {
-            Content = { ContentBlock.CreateText(JsonSerializer.Serialize(result, McpSerializer.Options)) }
-        },
-    };
 }

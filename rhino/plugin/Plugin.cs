@@ -105,4 +105,15 @@ public class RhMcpPlugin : PlugIn
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;
 
+    // The extension point other Rhino plug-ins reach through
+    // RhinoApp.GetPlugInObject(<this plug-in's id>), to contribute MCP tools at run
+    // time. Held as a singleton because the registry behind it is process-global.
+    //
+    // Note this is available as soon as this plug-in is loaded, which is before the
+    // MCP server itself starts (that happens on the first document open). A caller
+    // registering early is fine -- the dispatcher reads the registry live.
+    private readonly Server.Extensibility.McpExtensionHost _extensionHost = new();
+
+    public override object GetPlugInObject() => _extensionHost;
+
 }
