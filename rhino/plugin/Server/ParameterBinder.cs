@@ -97,8 +97,23 @@ internal static class ResultUnwrapper
     private static async ValueTask<object?> UnwrapTaskAsync(Task task)
     {
         await task.ConfigureAwait(false);
-        Type taskType = task.GetType();
-        if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
+
+        // Walk to the Task<T> in the hierarchy rather than testing the runtime type
+        // directly. An `async Task<T>` method does not return a Task<T> instance: the
+        // compiler returns AsyncStateMachineBox<TStateMachine, TResult>, which *derives*
+        // from Task<TResult>. Testing GetGenericTypeDefinition() on the runtime type
+        // therefore fails for every async tool, and the result is silently dropped —
+        // FormatResult turns the null into empty text, so the tool appears to succeed and
+        // return nothing. Synchronous `static T` tools never hit this, which is why it
+        // went unnoticed.
+        Type? taskType = task.GetType();
+        while (taskType is not null
+               && !(taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>)))
+        {
+            taskType = taskType.BaseType;
+        }
+
+        if (taskType is not null)
         {
             // Task.CompletedTask and Task.FromResult(default) are actually
             // Task<VoidTaskResult> at runtime; the sentinel result type is the
