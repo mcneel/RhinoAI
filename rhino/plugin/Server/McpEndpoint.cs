@@ -207,8 +207,8 @@ internal sealed class McpDispatcher
     /// enumerate once and materialise if they need the set twice.
     /// </para>
     /// </remarks>
-    private IEnumerable<ToolHandler> AllTools() =>
-        _tools.All.Concat(
+    private IEnumerable<IMcpTool> AllTools() =>
+        _tools.All.Cast<IMcpTool>().Concat(
             Extensibility.McpExtensionRegistry.Current.Tools.Where(t => !_tools.TryGet(t.Name, out _)));
 
     private Task<JsonRpcResponse> HandleResourcesList() =>
@@ -278,10 +278,13 @@ internal sealed class McpDispatcher
     /// dictionary lookup per miss, which is not worth optimising away.
     /// </para>
     /// </remarks>
-    private bool TryResolveTool(string name, out ToolHandler tool)
+    private bool TryResolveTool(string name, out IMcpTool tool)
     {
-        if (_tools.TryGet(name, out tool))
+        if (_tools.TryGet(name, out ToolHandler compiled))
+        {
+            tool = compiled;
             return true;
+        }
 
         if (Extensibility.McpExtensionRegistry.Current.TryGet(name, out Extensibility.ProviderToolHandler contributed))
         {
@@ -306,7 +309,7 @@ internal sealed class McpDispatcher
                 Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidParams, Message = "Missing tool name." }
             };
 
-        if (!TryResolveTool(p.Name, out ToolHandler tool))
+        if (!TryResolveTool(p.Name, out IMcpTool tool))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError

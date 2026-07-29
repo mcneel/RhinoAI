@@ -4,29 +4,70 @@ using System.Threading.Tasks;
 
 namespace RhMcp.Server.Extensibility;
 
-// A tool contributed at run time by another Rhino plug-in. Same surface to the
-// dispatcher as a compiled tool; the call crosses into the contributing plug-in as
-// a JSON string and comes back as one.
-internal sealed class ProviderToolHandler : ToolHandler
+/// <summary>
+/// A tool contributed at run time by another Rhino plug-in. Presents the same surface to the
+/// dispatcher as a compiled tool; the call crosses into the contributing plug-in as a JSON
+/// string and comes back as one.
+/// </summary>
+internal sealed class ProviderToolHandler : IMcpTool
 {
     private readonly Func<string, CancellationToken, Task<string>> _handler;
+    private readonly bool _marshalToUi;
 
+    /// <summary>
+    /// The contributing plug-in, as it identified itself when registering.
+    /// </summary>
     public string Owner { get; }
 
+    /// <inheritdoc/>
+    public string Name { get; }
+
+    /// <inheritdoc/>
+    public string? Title { get; }
+
+    /// <inheritdoc/>
+    public string? Description { get; }
+
+    /// <inheritdoc/>
+    public bool ReadOnly { get; }
+
+    /// <inheritdoc/>
+    public bool Destructive { get; }
+
+    /// <summary>
+    /// Always false: a contributing plug-in cannot register an in-panel-only tool.
+    /// </summary>
+    public bool InPanelOnly => false;
+
+    /// <inheritdoc/>
+    public JsonElement InputSchema { get; }
+
+    /// <summary>
+    /// Binds a descriptor and its handler into something the dispatcher can call.
+    /// </summary>
+    /// <param name="descriptor">Validated metadata supplied by the contributing plug-in.</param>
+    /// <param name="handler">Receives the arguments as JSON text and returns the result as JSON text.</param>
     public ProviderToolHandler(ProviderToolDescriptor descriptor, Func<string, CancellationToken, Task<string>> handler)
-        : base(
-            descriptor.Name, descriptor.Title, descriptor.Description,
-            descriptor.ReadOnly, descriptor.Destructive,
-            marshalToUi: descriptor.RequiresUiThread,
-            inPanelOnly: false)
     {
         _handler = handler;
+        _marshalToUi = descriptor.RequiresUiThread;
+
         Owner = descriptor.Owner;
+        Name = descriptor.Name;
+        Title = descriptor.Title;
+        Description = descriptor.Description;
+        ReadOnly = descriptor.ReadOnly;
+        Destructive = descriptor.Destructive;
         InputSchema = descriptor.InputSchema;
     }
 
-    protected override async Task<CallToolResult> InvokeCoreAsync(
-        IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
+    /// <inheritdoc/>
+    public Task<CallToolResult> InvokeAsync(
+        IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct) =>
+        UiThreadDispatch.RunAsync(_marshalToUi, () => InvokeCoreAsync(arguments, ct));
+
+    private async Task<CallToolResult> InvokeCoreAsync(
+        IDictionary<string, JsonElement>? arguments, CancellationToken ct)
     {
         string argumentsJson = SerializeArguments(arguments);
 
