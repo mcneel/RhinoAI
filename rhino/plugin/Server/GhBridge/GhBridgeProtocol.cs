@@ -6,12 +6,12 @@ namespace RhMcp.Server.GhBridge;
 // BRIDGE SEAM (added, not upstream).
 //
 // This file and GhBridgePipeClient.cs are a DELIBERATE VENDORED DUPLICATE of the
-// GrasshopperAITools bridge wire contract. The upstream source of truth lives in
-// the GrasshopperAITools repository:
+// ExGhMCP bridge wire contract. The upstream source of truth lives in
+// the ExGhMCP repository:
 //
-//   src/GrasshopperAITools.Protocol/Constants/BridgeProtocolConstants.cs   (this file)
-//   src/GrasshopperAITools.Protocol/Transport/PipeFraming.cs              (the framing)
-//   src/GrasshopperAITools.Protocol/Protocol/*.cs                         (the DTOs)
+//   src/ExGhMCP.Protocol/Constants/BridgeProtocolConstants.cs   (this file)
+//   src/ExGhMCP.Protocol/Transport/PipeFraming.cs              (the framing)
+//   src/ExGhMCP.Protocol/Protocol/*.cs                         (the DTOs)
 //
 // They are copied rather than project-referenced on purpose: this fork must build
 // and ship from a standalone clone, with zero project references and zero shared
@@ -24,14 +24,14 @@ namespace RhMcp.Server.GhBridge;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Constants and DTOs for the GrasshopperAITools named-pipe bridge, hosted by that
+/// Constants and DTOs for the ExGhMCP named-pipe bridge, hosted by that
 /// project's Rhino plug-in (<c>.rhp</c>) and reached by the gateway tools in
 /// <c>Tools/GhBridgeTools.cs</c>.
 /// </summary>
 internal static class GhBridgeProtocol
 {
     /// <summary>The named-pipe identity both ends agree on. The whole coupling.</summary>
-    public const string PipeName = "grasshopper-aitools-bridge";
+    public const string PipeName = "exgh-mcp-bridge";
 
     /// <summary>Length in bytes of the big-endian length-prefix frame header.</summary>
     public const int FrameHeaderBytes = 4;
@@ -62,7 +62,7 @@ internal static class GhBridgeProtocol
 
     /// <summary>What to tell the caller when nothing is listening on the pipe.</summary>
     public const string MissingBridgeHint =
-        "Install/enable the GrasshopperAITools Rhino plug-in — it hosts the tool bridge.";
+        "Install/enable the ExGhMCP Rhino plug-in — it hosts the tool bridge.";
 
     /// <summary>Bridge method names.</summary>
     public static class Methods
