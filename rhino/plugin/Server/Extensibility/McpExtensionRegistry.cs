@@ -96,7 +96,7 @@ internal sealed class McpExtensionRegistry
     /// </remarks>
     public string Register(ProviderToolDescriptor descriptor, Func<string, CancellationToken, Task<string>> handler)
     {
-        if (ExtensionProtocol.IsReservedName(descriptor.Name))
+        if (this.IsReservedName(descriptor.Name))
             return $"'{descriptor.Name}' uses the '{ExtensionProtocol.ReservedToolPrefix}_' prefix, which is reserved by the host";
 
         ProviderToolHandler entry = new(descriptor, handler);
@@ -213,4 +213,13 @@ internal sealed class McpExtensionRegistry
         });
         return ordered;
     }
+    
+    /// <summary>
+    /// Whether <paramref name="name"/> falls inside the host's reserved
+    /// <see cref="ReservedToolPrefix"/> namespace.
+    /// </summary>
+    /// <param name="name">The candidate name, already known to be well formed.</param>
+    /// <returns>True when a contributing plug-in must not be allowed to register it.</returns>
+    private bool IsReservedName(string name) =>
+        name.StartsWith(ExtensionProtocol.ReservedToolPrefix + "_", StringComparison.OrdinalIgnoreCase);
 }

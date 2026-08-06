@@ -121,4 +121,23 @@ public sealed class McpExtensionHost
 
         return McpExtensionRegistry.Current.RegisterTransform(owner, order, transform);
     }
+
+    /// <summary>
+    /// Whether <paramref name="name"/> is usable as an MCP tool name: an ASCII letter
+    /// followed by up to 127 letters, digits, underscores, dots or hyphens.
+    /// </summary>
+    /// <param name="name">The candidate name. Null and empty are both invalid.</param>
+    /// <returns>True when the name is acceptable.</returns>
+    private bool IsValidToolName(string? name) =>
+        !string.IsNullOrEmpty(name) && ExtensionProtocol.ToolNamePattern.IsMatch(name);
+
+    /// <summary>
+    /// Whether <paramref name="name"/> falls inside the host's reserved
+    /// <see cref="ReservedToolPrefix"/> namespace.
+    /// </summary>
+    /// <param name="name">The candidate name, already known to be well formed.</param>
+    /// <returns>True when a contributing plug-in must not be allowed to register it.</returns>
+    private bool IsReservedName(string name) =>
+        name.StartsWith(ExtensionProtocol.ReservedToolPrefix + "_", StringComparison.OrdinalIgnoreCase);
+
 }

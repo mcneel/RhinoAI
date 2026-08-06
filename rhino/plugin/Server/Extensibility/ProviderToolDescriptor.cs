@@ -141,7 +141,7 @@ internal sealed class ProviderToolDescriptor
             return false;
         }
 
-        if (!ExtensionProtocol.IsValidToolName(descriptor.Name))
+        if (!IsValidToolName(descriptor.Name))
         {
             failure = $"\"name\" '{(string.IsNullOrEmpty(descriptor.Name) ? "(missing)" : descriptor.Name)}' "
                       + "is not a valid tool name";
@@ -162,4 +162,13 @@ internal sealed class ProviderToolDescriptor
 
         return true;
     }
+
+    /// <summary>
+    /// Whether <paramref name="name"/> is usable as an MCP tool name: an ASCII letter
+    /// followed by up to 127 letters, digits, underscores, dots or hyphens.
+    /// </summary>
+    /// <param name="name">The candidate name. Null and empty are both invalid.</param>
+    /// <returns>True when the name is acceptable.</returns>
+    private static bool IsValidToolName(string? name) =>
+        !string.IsNullOrEmpty(name) && ExtensionProtocol.ToolNamePattern.IsMatch(name);
 }
