@@ -28,7 +28,7 @@ internal sealed class ProviderToolDescriptor
     /// The tool name an MCP client calls, unique across the whole server. Required.
     /// </summary>
     /// <remarks>
-    /// Validated against <see cref="ExtensionProtocol.IsValidToolName"/>. Names beginning
+    /// Validated against <see cref="ExtensionConstants.IsValidToolName"/>. Names beginning
     /// <c>ext_</c> are reserved for the host's own tools and are refused at registration.
     /// </remarks>
     public string Name { get; set; } = "";
@@ -170,5 +170,5 @@ internal sealed class ProviderToolDescriptor
     /// <param name="name">The candidate name. Null and empty are both invalid.</param>
     /// <returns>True when the name is acceptable.</returns>
     private static bool IsValidToolName(string? name) =>
-        !string.IsNullOrEmpty(name) && ExtensionProtocol.ToolNamePattern.IsMatch(name);
+        !string.IsNullOrEmpty(name) && ExtensionConstants.ToolNamePattern.IsMatch(name);
 }

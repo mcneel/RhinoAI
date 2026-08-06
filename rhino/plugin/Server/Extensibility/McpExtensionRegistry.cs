@@ -92,12 +92,12 @@ internal sealed class McpExtensionRegistry
     /// Re-registering the same name by the same owner is an update, not a clash, so a plug-in
     /// that reloads or refreshes its schema does not have to unregister first. A different owner
     /// claiming a name already in use is refused, as is any name inside the host's reserved
-    /// <see cref="ExtensionProtocol.ReservedToolPrefix"/> namespace.
+    /// <see cref="ExtensionConstants.ReservedToolPrefix"/> namespace.
     /// </remarks>
     public string Register(ProviderToolDescriptor descriptor, Func<string, CancellationToken, Task<string>> handler)
     {
         if (this.IsReservedName(descriptor.Name))
-            return $"'{descriptor.Name}' uses the '{ExtensionProtocol.ReservedToolPrefix}_' prefix, which is reserved by the host";
+            return $"'{descriptor.Name}' uses the '{ExtensionConstants.ReservedToolPrefix}_' prefix, which is reserved by the host";
 
         ProviderToolHandler entry = new(descriptor, handler);
 
@@ -221,5 +221,5 @@ internal sealed class McpExtensionRegistry
     /// <param name="name">The candidate name, already known to be well formed.</param>
     /// <returns>True when a contributing plug-in must not be allowed to register it.</returns>
     private bool IsReservedName(string name) =>
-        name.StartsWith(ExtensionProtocol.ReservedToolPrefix + "_", StringComparison.OrdinalIgnoreCase);
+        name.StartsWith(ExtensionConstants.ReservedToolPrefix + "_", StringComparison.OrdinalIgnoreCase);
 }
