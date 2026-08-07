@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 namespace RhMcp.Server.Extensibility;
 
 /// <summary>
-/// Tools contributed at run time by other Rhino plug-ins, and the result transformers they
-/// register. See <see cref="McpExtensionHost"/> for the entry point contributors call.
+/// Tools contributed at run time by other Rhino plug-ins. See <see cref="McpExtensionHost"/>
+/// for the entry point contributors call.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -44,9 +44,6 @@ internal sealed class McpExtensionRegistry
     public static McpExtensionRegistry Current => Instance;
 
     private readonly ConcurrentDictionary<string, ProviderToolHandler> _tools =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    private readonly ConcurrentDictionary<string, ResultTransformer> _transforms =
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -153,67 +150,6 @@ internal sealed class McpExtensionRegistry
         return removed;
     }
 
-    /// <summary>
-    /// Registers a transformer that post-processes every tool result before it is returned.
-    /// </summary>
-    /// <param name="owner">
-    /// Identifies the contributing plug-in. One transformer per owner: registering again replaces
-    /// the previous one rather than chaining a second copy, so a plug-in that reloads cannot leak
-    /// duplicates.
-    /// </param>
-    /// <param name="order">
-    /// Ascending position in the chain. Ties are broken by owner so the order is stable across
-    /// sessions — see <see cref="Transformers"/>.
-    /// </param>
-    /// <param name="transform">
-    /// Invoked with the tool name and the result JSON produced so far, and returns the JSON to
-    /// pass on. Runs for results from compiled tools as well as contributed ones.
-    /// </param>
-    /// <returns>
-    /// An empty string. Kept as a string for symmetry with <see cref="Register"/>, so a future
-    /// rejection reason is not a breaking signature change.
-    /// </returns>
-    public string RegisterTransform(
-        string owner, int order, Func<string, string, CancellationToken, Task<string>> transform)
-    {
-        _transforms[owner] = new ResultTransformer(owner, order, transform);
-        return "";
-    }
-
-    /// <summary>
-    /// Removes an owner's result transformer.
-    /// </summary>
-    /// <param name="owner">The owner it was registered under. Null and empty do nothing.</param>
-    /// <returns>True when a transformer was removed.</returns>
-    public bool UnregisterTransform(string owner) =>
-        !string.IsNullOrEmpty(owner) && _transforms.TryRemove(owner, out _);
-
-    /// <summary>
-    /// The registered result transformers, in the order they should be applied.
-    /// </summary>
-    /// <returns>
-    /// A snapshot sorted by <see cref="ResultTransformer.Order"/> ascending, ties broken by owner;
-    /// an empty array when none are registered.
-    /// </returns>
-    /// <remarks>
-    /// Sorting by owner on a tie makes the chain deterministic across sessions regardless of the
-    /// order plug-ins happened to register in, which would otherwise vary with Rhino's plug-in
-    /// load order and make a misbehaving transformer hard to reproduce.
-    /// </remarks>
-    public IReadOnlyList<ResultTransformer> Transformers()
-    {
-        if (_transforms.IsEmpty)
-            return Array.Empty<ResultTransformer>();
-
-        List<ResultTransformer> ordered = _transforms.Values.ToList();
-        ordered.Sort(static (a, b) =>
-        {
-            int byOrder = a.Order.CompareTo(b.Order);
-            return byOrder != 0 ? byOrder : string.CompareOrdinal(a.Owner, b.Owner);
-        });
-        return ordered;
-    }
-    
     /// <summary>
     /// Whether <paramref name="name"/> falls inside the host's reserved
     /// <see cref="ReservedToolPrefix"/> namespace.

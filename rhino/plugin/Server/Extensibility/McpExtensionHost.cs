@@ -55,12 +55,6 @@ public sealed class McpExtensionHost
     public string[] RegisteredMcpToolNames() => McpExtensionRegistry.Current.Names();
 
     /// <summary>
-    /// Removes the transformer registered by <paramref name="owner"/>.
-    /// </summary>
-    public bool UnregisterMcpResultTransform(string owner) =>
-        McpExtensionRegistry.Current.UnregisterTransform(owner);
-
-    /// <summary>
     /// Registers one tool. <paramref name="descriptorJson"/> describes it:
     /// <code>
     /// { "owner": "com.example.myplugin",       // required, reverse-DNS, groups your tools
@@ -94,31 +88,5 @@ public sealed class McpExtensionHost
             return failure;
 
         return McpExtensionRegistry.Current.Register(descriptor, handler);
-    }
-
- 
-    /// <summary>
-    /// Registers a transformer that may rewrite the result of <em>any</em> tool call this
-    /// server serves, including tools compiled into this plug-in. It receives a context JSON
-    /// object (<c>{ "tool", "arguments", "endpoint", "source", "owner" }</c>) and the result
-    /// JSON, and returns a replacement result -- or null, empty, or the input unchanged to
-    /// decline.
-    /// </summary>
-    /// <remarks>
-    /// Transformers run in ascending <paramref name="order"/>, ties broken by owner. A
-    /// transformer that throws, hangs, or returns unusable JSON is skipped and the previous
-    /// result is kept: a decorator must never be able to fail a tool call that succeeded.
-    /// </remarks>
-    /// <returns>An empty string on success, otherwise the reason it was rejected.</returns>
-    public string RegisterMcpResultTransform(
-        string owner, int order, Func<string, string, CancellationToken, Task<string>> transform)
-    {
-        if (transform is null)
-            return "transform is null";
-
-        if (string.IsNullOrWhiteSpace(owner))
-            return "owner is required";
-
-        return McpExtensionRegistry.Current.RegisterTransform(owner, order, transform);
     }
 }

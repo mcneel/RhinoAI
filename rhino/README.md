@@ -48,9 +48,8 @@ Your handler receives the call's arguments as a JSON object string and returns e
 MCP result object (`{"content":[{"type":"text","text":"…"}],"isError":false}`) or any
 other string, which is wrapped as a single text block.
 
-`McpExtensionHost` also offers `UnregisterMcpTool`, `UnregisterMcpToolsByOwner`,
-`RegisteredMcpToolNames`, and `RegisterMcpResultTransform` — a hook that can rewrite the
-result of *any* tool call this server serves, including tools compiled into this plug-in.
+`McpExtensionHost` also offers `UnregisterMcpTool`, `UnregisterMcpToolsByOwner` and
+`RegisteredMcpToolNames`.
 
 ### Developer advice
 
