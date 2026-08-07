@@ -8,32 +8,22 @@ using ModelContextProtocol.Server;
 namespace RhMcp.Router;
 
 /// <summary>
-/// Exposes tools contributed to a Rhino plug-in at run time as ordinary MCP tools on this router.
+/// Exposes tools registered with the Rhino plug-in at run time as ordinary MCP tools on this router.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This router's catalogue is generated at build time: RouterToolGenerator Roslyn-parses
-/// <c>../plugin/Tools/**/*.cs</c> as source text and emits one <c>WithTools&lt;T&gt;()</c> proxy
-/// per <c>[McpServerTool]</c>. A tool that only exists at run time is therefore structurally
-/// invisible to it, which used to mean the plugin's whole extensibility host was unreachable
-/// through the transport that ships.
+/// The router's own catalogue is generated at build time from the plug-in's source, so tools
+/// registered only at run time are invisible to it. Two collaborators close that gap:
+/// <see cref="ContributedToolCatalog"/> queries each slot's live registry, and
+/// <see cref="ListenerAnnouncementWatcher"/> re-queries on every listener announcement — a client
+/// sends <c>tools/list</c> only once, so without this a tool registered after connect would never
+/// appear. Late registrations surface within one heartbeat interval (~15s).
 /// </para>
 /// <para>
-/// Two halves fix that, and they are separate classes:
-/// <see cref="ContributedToolCatalog"/> asks each slot's private
-/// <c>_router_list_contributed_tools</c>, which reads the plugin's live registry — so the answer
-/// is authoritative, and a compiled tool this router's build excluded on purpose (GH2_* on an R8
-/// router) can never be mistaken for a contributed one. <see cref="ListenerAnnouncementWatcher"/>
-/// says when to ask: a pull alone can never notice a tool registered after connect, because a
-/// client only sends <c>tools/list</c> once, so every listener announcement the plugin's
-/// fifteen-second heartbeat drops triggers a re-pull — a late registration surfaces within one
-/// heartbeat interval.
-/// </para>
-/// <para>
-/// The SDK concatenates ListToolsHandler results with the statically-registered ToolCollection
-/// rather than replacing it, and only routes a <c>tools/call</c> here when the name is absent
-/// from that collection. So the generated proxies are untouched, and compiled tools win a name
-/// clash on the call side for free; the catalogue mirrors that precedence when listing.
+/// The SDK appends <c>ListToolsHandler</c> results to the statically registered
+/// <c>ToolCollection</c> and only routes a <c>tools/call</c> here when the name is not already in
+/// that collection, so compiled tools win name clashes. The catalogue mirrors that precedence when
+/// listing.
 /// </para>
 /// </remarks>
 internal sealed class ContributedTools : IDisposable

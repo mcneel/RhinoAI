@@ -11,9 +11,7 @@ namespace RhMcp.Router;
 /// live <c>McpExtensionRegistry</c> — so the answer is authoritative, never inferred, and nothing
 /// can go stale.
 /// </remarks>
-internal sealed class ContributedToolCatalog(
-    RhinoManager manager,
-    SlotToolClient client,
+internal sealed class ContributedToolCatalog(RhinoManager manager, SlotToolClient client,
     ILogger<ContributedToolCatalog> log)
 {
     private static readonly IReadOnlyDictionary<string, ContributedTool> Empty =
