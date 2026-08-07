@@ -43,6 +43,13 @@ internal sealed class ProviderToolHandler : IMcpTool
     public JsonElement InputSchema { get; }
 
     /// <summary>
+    /// The descriptor this tool was registered with, retained verbatim so
+    /// <c>_router_list_contributed_tools</c> can serialize it back out — the reply is then the
+    /// contributing plug-in's own declaration, not a re-projection of it.
+    /// </summary>
+    public ProviderToolDescriptor Descriptor { get; }
+
+    /// <summary>
     /// Binds a descriptor and its handler into something the dispatcher can call.
     /// </summary>
     /// <param name="descriptor">Validated metadata supplied by the contributing plug-in.</param>
@@ -52,6 +59,7 @@ internal sealed class ProviderToolHandler : IMcpTool
         _handler = handler;
         _marshalToUi = descriptor.RequiresUiThread;
 
+        Descriptor = descriptor;
         Owner = descriptor.Owner;
         Name = descriptor.Name;
         Title = descriptor.Title;

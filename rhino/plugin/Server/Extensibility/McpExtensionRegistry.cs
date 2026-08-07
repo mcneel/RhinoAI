@@ -23,6 +23,13 @@ namespace RhMcp.Server.Extensibility;
 /// than caching.
 /// </para>
 /// <para>
+/// A running router notices a change to this registry on its own: it re-reads the registry on
+/// every <c>tools/list</c> a client sends, and whenever this Rhino's fifteen-second heartbeat
+/// drops a listener announcement — the file the router already watches for slot discovery. A
+/// tool registered mid-session therefore surfaces within one heartbeat interval at the latest,
+/// without this registry knowing anything about announcements or the host that writes them.
+/// </para>
+/// <para>
 /// The compiled <c>ToolRegistry</c> is deliberately left immutable and separate. Its
 /// <c>ByName.TryAdd</c> throws on a duplicate, which is right for compiled tools — a clash there
 /// is a build defect — and wrong for third-party ones, where a clash must never take the server
@@ -147,6 +154,7 @@ internal sealed class McpExtensionRegistry
                 removed++;
             }
         }
+
         return removed;
     }
 

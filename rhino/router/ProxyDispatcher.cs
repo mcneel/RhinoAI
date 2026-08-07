@@ -236,7 +236,7 @@ public class ProxyDispatcher(
     }
 
     // Unwraps the MCP `result` element from either a bare JSON-RPC body or an SSE stream.
-    private static JsonElement ExtractMcpResult(string responseBody, string slotId, string toolName)
+    internal static JsonElement ExtractMcpResult(string responseBody, string slotId, string toolName)
     {
         string trimmed = responseBody.TrimStart();
 

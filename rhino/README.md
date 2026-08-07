@@ -51,33 +51,28 @@ other string, which is wrapped as a single text block.
 `McpExtensionHost` also offers `UnregisterMcpTool`, `UnregisterMcpToolsByOwner` and
 `RegisteredMcpToolNames`.
 
-### Developer advice
+### Advice
 
-A few things are worth knowing before you write against this, because they are easy to
-get wrong and the failures are quiet.
+1. **Only strings and corelib delegates cross the boundary.** Pass JSON as a `string`,
+   never a `JsonElement` — this plug-in lives in its own `AssemblyLoadContext`, so any
+   other type fails silently and the tool never appears.
+2. **Register from a one-shot `RhinoApp.Idle` handler, not `OnLoad`.** Load order then
+   does not matter in either direction.
+3. **Handlers run on a background thread by default.** Do your own UI-thread marshalling.
+   `"requiresUiThread": true` opts in, but covers only the synchronous prefix of an async
+   handler.
 
-1. **Only strings and corelib delegates cross the boundary.** This plug-in is built with
-   `EnableDynamicLoading=true`, so it loads into its own `AssemblyLoadContext` with its
-   dependencies copied beside the `.rhp`. A caller in the default context binds a
-   *different* `System.Text.Json`, so a `JsonElement` passed across would be a different
-   type with the same name — the cast fails silently and the tool simply never appears.
-   `string`, `Func<>`, `Task<>` and `CancellationToken` live in System.Private.CoreLib,
-   which can never be loaded twice, so they are the same type everywhere.
-2. **Register from idle rather than `OnLoad`.** `RhinoApp.GetPlugInObject` loads the target
-   plug-in, so reaching for another plug-in during your own load means a reentrant plug-in
-   load inside Rhino's plug-in manager. From idle, load order stops mattering: this plug-in
-   is loaded on demand by the call, and registering before the MCP server starts is fine
-   because the dispatcher reads the registry live.
-3. **Contributed tools run on a background thread by default** — the inverse of the
-   default for tools compiled into this plug-in. A contributing plug-in does its own
-   UI-thread marshalling and knows what it touches, and its work may run for minutes;
-   holding the Rhino message pump for that would freeze the application. Set
-   `"requiresUiThread": true` to opt in, which covers only the synchronous prefix of an
-   async handler.
+### Through the router
 
-### Reaching contributed tools through the router
+Contributed tools are listed and callable through the router with their real schemas, the
+same as on a direct HTTP connection. What to expect:
 
-The router advertises a build-time, code-generated catalog (`RouterToolGenerator` scans
-`/plugin/Tools/` for `[McpServerTool]` methods), so runtime-registered tools are not in
-it. A client connected straight to this plug-in's HTTP endpoint sees them as ordinary
-named tools with their real schemas.
+- A tool registered mid-session surfaces within about fifteen seconds — or immediately on
+  the client's next `tools/list` — and the router emits
+  `notifications/tools/list_changed` when the set changes.
+- A name that collides with a tool the router already serves, or begins with `_`, is
+  withheld from the merged list.
+- Calls go to the Rhino that contributed the tool. The router never launches a Rhino to
+  list or to serve a contributed call.
+- An unreachable or misbehaving Rhino contributes nothing rather than breaking the tool
+  list; the `Contributed tools: N from M slot(s)` stderr log line says what happened.

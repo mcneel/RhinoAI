@@ -4,6 +4,7 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Server;
 using RhMcp.Router;
 using RhMcp.Router.Tools.Generated;
 
@@ -54,7 +55,34 @@ var mcpBuilder = builder.Services
 // codegen and chains WithTools<T>() per tool class.
 RouterToolRegistrar.RegisterAll(mcpBuilder, jsonOptions);
 
+// Tools other Rhino plug-ins contribute to the Rhino plug-in at run time. Codegen cannot see
+// these — it scans plugin source text at build time — so we ask each running slot what it has
+// instead. The SDK appends these handlers' results to the generated catalogue above rather than
+// replacing it, and only routes a call here for a name that catalogue does not have.
+builder.Services.AddSingleton<SlotToolClient>();
+builder.Services.AddSingleton<ContributedToolCatalog>();
+builder.Services.AddSingleton<ContributedTools>();
+
+mcpBuilder
+    .WithListToolsHandler((request, ct) =>
+        request.Services!.GetRequiredService<ContributedTools>().ListToolsAsync(request, ct))
+    .WithCallToolHandler((request, ct) =>
+        request.Services!.GetRequiredService<ContributedTools>().CallToolAsync(request, ct));
+
+// Contributed tools appear and disappear while the client is connected, so the catalogue is
+// no longer static. PostConfigure runs after the SDK's own McpServerOptionsSetup, so this wins.
+builder.Services.PostConfigure<McpServerOptions>(o =>
+{
+    o.Capabilities ??= new();
+    o.Capabilities.Tools ??= new();
+    o.Capabilities.Tools.ListChanged = true;
+});
+
 var host = builder.Build();
+
+// Construct eagerly: the watcher over the announcement directory must be live before the
+// client's first tools/list, not lazily on it.
+host.Services.GetRequiredService<ContributedTools>();
 
 // Adopt any user-started Rhinos that announced themselves before the router
 // came up. Cheap one-shot dir scan; later scans happen on every list_slots
