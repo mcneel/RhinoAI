@@ -53,8 +53,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
-    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
+    <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.19.25132.1001" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
