@@ -9,6 +9,17 @@
     <RootNamespace>Acp.Codegen</RootNamespace>
     <AssemblyName>Acp.Codegen</AssemblyName>
     <IsPackable>false</IsPackable>
+
+    <!-- No apphost: emit only Acp.Codegen.dll, so `dotnet run` launches this tool through
+         the installed dotnet.exe host instead of a freshly-built, unsigned
+         bin/Debug/net8.0/Acp.Codegen.exe. Windows Application Control (WDAC / Smart App
+         Control / AppLocker) policies block that unsigned apphost, which fails the
+         GenerateAcpCode Exec in Acp.csproj with 'An Application Control policy has blocked
+         this file' and takes the whole RhinoAI build down with it. -->
+    <UseAppHost>false</UseAppHost>
+    <!-- Tolerate whatever runtime the dev machine has (the repo's SDK is pinned to 10.x in
+         global.json and Rhino now targets net10.0; this tool still targets net8.0). -->
+    <RollForward>Major</RollForward>
   </PropertyGroup>
 
 </Project>
