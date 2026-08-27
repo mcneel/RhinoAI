@@ -23,7 +23,7 @@ internal sealed class MessageMeta : StackLayout
     private string Body { get; set; } = string.Empty;
     private DateTimeOffset Stamp { get; set; }
     private bool HasUsage { get; set; }
-    private bool Shown { get; set; }
+    private new bool Shown { get; set; }
 
     public MessageMeta(bool user, Image? copyIcon)
     {
