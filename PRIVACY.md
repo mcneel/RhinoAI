@@ -28,4 +28,4 @@ Questions or concerns about this policy:
 
 - Email: support@mcneel.com
 - Support forum: https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162
-- Issues: https://github.com/mcneel/RhinoMCP/issues
+- Issues: https://github.com/mcneel/RhinoAI/issues

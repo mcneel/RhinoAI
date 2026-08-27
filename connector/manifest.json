@@ -12,14 +12,14 @@
     "url": "https://github.com/mcneel/"
   },
   "homepage": "https://www.mcneel.com",
-  "documentation": "https://github.com/mcneel/RhinoMCP#readme",
+  "documentation": "https://github.com/mcneel/RhinoAI#readme",
   "support": "https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162",
   "icon": "icon-light.png",
   "screenshots": [
     "screenshots/casa-rhino.png"
   ],
   "privacy_policies": [
-    "https://github.com/mcneel/RhinoMCP/blob/main/PRIVACY.md"
+    "https://github.com/mcneel/RhinoAI/blob/main/PRIVACY.md"
   ],
   "server": {
     "type": "node",
@@ -88,6 +88,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mcneel/RhinoMCP"
+    "url": "https://github.com/mcneel/RhinoAI"
   }
 }
