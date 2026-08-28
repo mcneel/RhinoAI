@@ -24,7 +24,7 @@
           "/nosplash"
         ],
         "env": {
-          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-win/Debug",
+          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/../../../bin/Debug/Plug-ins/RhinoAI",
         }
       },
       "cwd": "${workspaceFolder}",

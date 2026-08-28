@@ -12,6 +12,20 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
+  <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
+       bin/<Config>MacRhino/ on macOS). Guarded so a standalone checkout without the
+       Rhino source tree still builds. -->
+  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props"
+          Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
+
+  <PropertyGroup Condition="'$(RhinoOutputDir)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">
+    <!-- Build straight into the plug-in's staging folder alongside RhinoAI.rhp
+         (src4/bin/<Config>/Plug-ins/RhinoAI/net8.0) instead of a project-local bin,
+         so there is a single copy of Acp.dll. $(TargetFramework) is appended by the
+         SDK. Windows only for now; macOS keeps the project-local bin. -->
+    <OutputPath>$(RhinoOutputDir)Plug-ins\RhinoAI\</OutputPath>
+  </PropertyGroup>
+
   <!-- The codegen tool is its own project; keep its sources out of the library. -->
   <ItemGroup>
     <Compile Remove="codegen/**/*.cs" />

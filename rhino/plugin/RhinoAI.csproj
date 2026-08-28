@@ -14,8 +14,27 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>RhMcp</RootNamespace>
     <AssemblyName>RhinoMcpPlatform</AssemblyName>
-    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/</BaseOutputPath>
-    <YakStagingDir>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</YakStagingDir>
+  </PropertyGroup>
+
+  <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
+       bin/<Config>MacRhino/ on macOS). Guarded so a standalone checkout without the
+       Rhino source tree still builds. -->
+  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props"
+          Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
+
+  <PropertyGroup>
+    <!-- In-tree R9 builds stage into the solution's shared plug-in folder,
+         src4/bin/<Config>/Plug-ins/RhinoAI, so a locally built Rhino loads this
+         plug-in like every other plug-in in Rhino.sln. The layout inside that
+         folder is unchanged (net8.0/ + router/ + manifest.yml + icon.png), so the
+         yak package is still built straight out of it. Windows only for now:
+         every other case (macOS, R8, or a checkout without the property sheets)
+         keeps the project-local bin. -->
+    <RhinoAIStagingDir Condition="'$(RhinoTarget)' == 'R9' AND '$(RhinoOutputDir)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">$(RhinoOutputDir)Plug-ins\RhinoAI</RhinoAIStagingDir>
+    <RhinoAIStagingDir Condition="'$(RhinoAIStagingDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</RhinoAIStagingDir>
+    <!-- $(TargetFramework) is appended by the SDK, giving <staging>/net8.0. -->
+    <OutputPath>$(RhinoAIStagingDir)/</OutputPath>
+    <YakStagingDir>$(RhinoAIStagingDir)</YakStagingDir>
   </PropertyGroup>
 
   <PropertyGroup>

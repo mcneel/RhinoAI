@@ -124,7 +124,7 @@
         "command": "C:/Program Files/Rhino 8/System/Yak.exe",
         "args": ["build", "--platform", "win"],
         "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release"
+          "cwd": "${workspaceFolder}/../../../bin/Release/Plug-ins/RhinoAI"
         }
       },
       "osx": {
@@ -180,7 +180,7 @@
       "windows": {
         "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 WIP/System/Yak.exe' install $_.Name }",
         "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release"
+          "cwd": "${workspaceFolder}/../../../bin/Release/Plug-ins/RhinoAI"
         }
       },
       "osx": {
