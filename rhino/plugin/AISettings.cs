@@ -93,6 +93,48 @@ internal static class AISettings
 
     private static string CustomModelsKey(AgentAdapter adapter) => $"CustomModels_{adapter}";
 
+    public static bool AskBeforeScripts
+    {
+        get => Settings.GetBool(nameof(AskBeforeScripts), false);
+        set => Settings.SetBool(nameof(AskBeforeScripts), value);
+    }
+
+    public static bool BlockDestructiveTools
+    {
+        get => Settings.GetBool(nameof(BlockDestructiveTools), false);
+        set => Settings.SetBool(nameof(BlockDestructiveTools), value);
+    }
+
+    public static bool BlockFileAccessOutsideDoc
+    {
+        get => Settings.GetBool(nameof(BlockFileAccessOutsideDoc), false);
+        set => Settings.SetBool(nameof(BlockFileAccessOutsideDoc), value);
+    }
+
+    public static bool BlockScriptFileWrites
+    {
+        get => Settings.GetBool(nameof(BlockScriptFileWrites), false);
+        set => Settings.SetBool(nameof(BlockScriptFileWrites), value);
+    }
+
+    public static bool BlockScriptNetwork
+    {
+        get => Settings.GetBool(nameof(BlockScriptNetwork), true);
+        set => Settings.SetBool(nameof(BlockScriptNetwork), value);
+    }
+
+    public static bool BlockScriptProcessLaunch
+    {
+        get => Settings.GetBool(nameof(BlockScriptProcessLaunch), true);
+        set => Settings.SetBool(nameof(BlockScriptProcessLaunch), value);
+    }
+
+    public static bool BlockScriptEnvironmentReads
+    {
+        get => Settings.GetBool(nameof(BlockScriptEnvironmentReads), true);
+        set => Settings.SetBool(nameof(BlockScriptEnvironmentReads), value);
+    }
+
     public static int StartingPort
     {
         get => Settings.GetInteger(nameof(StartingPort), 10500);

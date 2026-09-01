@@ -271,6 +271,18 @@ internal sealed class McpDispatcher
                 }
             };
 
+        if (Filtered
+            && await RhMcp.GuardrailGate.CheckAsync(tool, p.Arguments, services, ct).ConfigureAwait(false)
+                is string blocked)
+            return new JsonRpcResponse
+            {
+                Result = new CallToolResult
+                {
+                    IsError = true,
+                    Content = { ContentBlock.CreateText(blocked) },
+                }
+            };
+
         try
         {
             CallToolResult result = await tool.InvokeAsync(p.Arguments, services, ct).ConfigureAwait(false);
