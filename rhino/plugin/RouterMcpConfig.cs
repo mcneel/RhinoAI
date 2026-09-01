@@ -39,7 +39,24 @@ internal static class RouterMcpConfig
             string pluginDir = Path.GetDirectoryName(typeof(RhMcpPlugin).Assembly.Location) ?? string.Empty;
             string routerRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", "router"));
             string exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "rhino-mcp-router.exe" : "rhino-mcp-router";
-            return Path.Combine(routerRoot, Rid, exe);
+            string preferred = Path.Combine(routerRoot, Rid, exe);
+            if (File.Exists(preferred))
+                return preferred;
+
+            // The package ships routers for a subset of RIDs. The agent launches the router,
+            // not Rhino, so any shipped binary the host can run (natively or emulated) beats
+            // handing out a path that does not exist.
+            if (Directory.Exists(routerRoot))
+            {
+                foreach (string dir in Directory.EnumerateDirectories(routerRoot))
+                {
+                    string candidate = Path.Combine(dir, exe);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+            }
+
+            return preferred;
         }
     }
 
@@ -55,7 +72,10 @@ internal static class RouterMcpConfig
     {
         get
         {
-            string arch = RuntimeInformation.ProcessArchitecture switch
+            // OSArchitecture, not ProcessArchitecture: the agent spawns the router on the
+            // host OS, and a Rosetta-translated Rhino would otherwise report x64 on an
+            // arm64 Mac and point at a router the package never ships.
+            string arch = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.Arm64 => "arm64",
                 _ => "x64",
