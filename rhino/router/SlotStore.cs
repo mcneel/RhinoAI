@@ -2,7 +2,7 @@ using System.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Cross-process slot registry backed by SQLite. Replaces the in-memory
 // _children dict + _defaultGate/_macSpawnGate semaphores in earlier RhinoManager

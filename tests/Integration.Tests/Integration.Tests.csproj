@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhMcp.Integration.Tests</RootNamespace>
+    <RootNamespace>RhinoAI.Integration.Tests</RootNamespace>
     <!-- NUnit1032 fires on IAsyncDisposable fields disposed in [OneTimeTearDown];
          the analyzer only recognises per-test [TearDown], which is wrong for
          fixture-scoped resources like the rhino router subprocess. -->

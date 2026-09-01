@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Spawns, tracks, and tears down Rhino "slots". State lives in SlotStore
 // (SQLite) so concurrent router processes can't race on port allocation or
@@ -409,8 +409,7 @@ public class RhinoManager(
     {
         ConsumeDepartures();
 
-        var dir = RouterPaths.ListenersDir;
-        if (!Directory.Exists(dir)) return;
+        if (!Directory.Exists(RouterPaths.ListenersDir)) return;
 
         string[] files;
         try { files = Directory.GetFiles(RouterPaths.ListenersDir, "*.json"); }

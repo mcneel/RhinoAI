@@ -1,7 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // One source of truth for the MCP-server entry every host hands its agent: launch the
 // bundled rhino-mcp-router over stdio. The router then discovers this session's HTTP

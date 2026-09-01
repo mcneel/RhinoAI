@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal interface IAgentRunner : IDisposable
 {

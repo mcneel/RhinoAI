@@ -1,4 +1,4 @@
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 public class RouterId
 {

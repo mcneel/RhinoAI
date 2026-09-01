@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // One undo record spanning a whole agent turn, so a single Ctrl+Z reverts every document mutation
 // the turn made (geometry, scripted edits, GH changes) instead of one record per tool call. Pairs

@@ -1,7 +1,7 @@
 <Project>
 
   <!-- Single source of truth for the coupled router + plugin version. Inherited
-       by every project under rhino/ (RhMcp.csproj, Router.csproj). The plugin
+       by every project under rhino/ (RhinoAI.csproj, Router.csproj). The plugin
        manifest.yml and the router's MCP ServerInfo both derive from this at
        build, so the three values cannot drift. Bump here only. The connector
        (connector/manifest.json) and cc-plugin version independently - do NOT

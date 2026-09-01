@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // The single message type threaded through IAgentRunner.PromptAsync.
 internal sealed record UserMessage(string Text, IReadOnlyList<Attachment> Attachments)

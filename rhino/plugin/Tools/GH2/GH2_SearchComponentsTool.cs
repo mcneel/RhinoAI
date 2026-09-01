@@ -1,9 +1,9 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper2.Framework;
 using Grasshopper2.UI;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH2_SearchComponentsTool

@@ -1,6 +1,6 @@
 using Rhino.PlugIns;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 [McpServerResourceType]
 public static class InstalledPluginsResource

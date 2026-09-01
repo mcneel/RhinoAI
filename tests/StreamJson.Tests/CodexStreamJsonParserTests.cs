@@ -1,7 +1,7 @@
 using Acp;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // Canned-line tests for the Codex (`codex exec --experimental-json`) translation. These pin our
 // internal parser contract; they do NOT prove the contract matches the shipped binary (that is a

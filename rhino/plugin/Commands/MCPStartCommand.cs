@@ -2,7 +2,7 @@ using Rhino.Commands;
 using Rhino.Input;
 using Rhino.Input.Custom;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public class MCPStartCommand : Command
 {

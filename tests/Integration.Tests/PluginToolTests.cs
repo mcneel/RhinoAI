@@ -1,6 +1,6 @@
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Tests that need a live Rhino with the rh-mcp plugin loaded. The fixture
 // spawns Rhino via the router's spawn_slot, so Rhino must be installed and

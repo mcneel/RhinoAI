@@ -1,7 +1,7 @@
 using Grasshopper2.Framework;
 using Grasshopper2.UI;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 public abstract record GH2_ProxyResolution
 {

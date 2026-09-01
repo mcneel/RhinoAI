@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
-namespace RhMcp.Internal;
+namespace RhinoAI.Internal;
 
 // Router-private control tools. The router talks to these over the same MCP
 // HTTP endpoint as a control channel; they are intentionally kept out of

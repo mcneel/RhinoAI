@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhMcp.StreamJson.Tests</RootNamespace>
+    <RootNamespace>RhinoAI.StreamJson.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

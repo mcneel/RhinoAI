@@ -1,6 +1,6 @@
 using System;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal static class AgentFactory
 {

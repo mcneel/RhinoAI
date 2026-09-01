@@ -1,6 +1,6 @@
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Exercises the "many tools / many routers share the same slot" behaviour:
 // repeated tool calls (from one router, or from several isolated routers)

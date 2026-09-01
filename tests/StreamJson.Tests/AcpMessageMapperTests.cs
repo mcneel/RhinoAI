@@ -1,9 +1,9 @@
 using System.Text;
 using Acp;
-using RhMcp;
+using RhinoAI;
 using ContentBlock = Acp.ContentBlock;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // AcpMessageMapper is the UserMessage/attachment <-> ACP ContentBlock seam. The agent has no
 // filesystem access, so every attachment must arrive inline: images base64, text files fenced.

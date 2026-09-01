@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Acp;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // The client half of an ACP connection for an in-Rhino agent: turns the agent's session/update
 // stream into Conversation events, auto-grants tool permission (the only tools are the trusted

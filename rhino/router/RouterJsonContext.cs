@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Source-generated JsonSerializerContext for AOT-safe serialization.
 // Every type the router serializes via `JsonSerializer.Serialize<T>` or returns

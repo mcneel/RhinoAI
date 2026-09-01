@@ -40,7 +40,7 @@ namespace Rhino.PlugIns
     }
 }
 
-namespace RhMcp
+namespace RhinoAI
 {
     // The AISettings members the compiled-in closure reads. Tests assign these directly to script
     // settings-driven behaviour (ResolveMcpServers, registry resolution) and to reset the transcript

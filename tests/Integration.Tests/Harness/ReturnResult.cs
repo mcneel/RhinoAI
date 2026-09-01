@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RhMcp.Integration.Tests.Harness;
+namespace RhinoAI.Integration.Tests.Harness;
 
 // Test-side mirror of the router's ReturnResult envelope. Deliberately a copy,
 // not a reference — Integration.Tests stays decoupled from the router's

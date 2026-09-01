@@ -73,11 +73,11 @@ jobs:
       # ASP.NET Core runtime pack is populated before the build evaluates it.
       - name: Restore plugin
         shell: bash
-        run: dotnet restore rhino/plugin/RhMcp.csproj '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
+        run: dotnet restore rhino/plugin/RhinoAI.csproj '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
       - name: Build plugin (bundles ${{ matrix.plugin.os }} routers + ASP.NET Core)
         shell: bash
-        run: dotnet build rhino/plugin/RhMcp.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
+        run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
       - name: Download yak CLI
         shell: bash

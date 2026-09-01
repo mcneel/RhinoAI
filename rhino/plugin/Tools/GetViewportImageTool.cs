@@ -6,7 +6,7 @@ using Rhino.Display;
 using Rhino.DocObjects;
 using Rhino.Geometry;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GetViewportImageTool

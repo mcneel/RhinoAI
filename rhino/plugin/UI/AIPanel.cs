@@ -7,7 +7,7 @@ using Eto.Drawing;
 using Eto.Forms;
 using RhinoCommand = Rhino.Commands.Command;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // One panel instance per document (PanelType.PerDoc). Renders the active agent's Conversation as
 // chat bubbles + tool chips, sends prompts through the shared AgentDispatch funnel, and re-renders
@@ -1000,9 +1000,9 @@ public class AIPAnel : Panel
         return sb.ToString();
     }
 
-    private static Image? CopyIcon() => LoadIcon("RhMcp.copy.svg", 14);
+    private static Image? CopyIcon() => LoadIcon("RhinoAI.copy.svg", 14);
 
-    private static Image? PaperclipIcon() => LoadIcon("RhMcp.paperclip.svg", 18);
+    private static Image? PaperclipIcon() => LoadIcon("RhinoAI.paperclip.svg", 18);
 
     // An embedded single-color SVG recolored to the current theme's foreground (so the glyph reads in
     // both light and dark mode) and rasterized to an Eto bitmap. Cached by resource/size/color, so a

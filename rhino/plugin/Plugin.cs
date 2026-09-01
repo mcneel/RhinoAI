@@ -3,11 +3,11 @@ using System.Reflection;
 
 using Rhino.PlugIns;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public class RhMcpPlugin : PlugIn
 {
-    private const string IconResourceName = "RhMcp.logo.svg";
+    private const string IconResourceName = "RhinoAI.logo.svg";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 

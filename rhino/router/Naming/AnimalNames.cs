@@ -1,4 +1,4 @@
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Hand-picked list of memorable, short, distinct animal names for slot IDs.
 // Names are seeded into SlotStore's name_pool table on first router startup;

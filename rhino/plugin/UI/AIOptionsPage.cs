@@ -4,11 +4,11 @@ using System.Drawing;
 using Rhino.UI;
 using Rhino.Runtime;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal sealed class AIOptionsPage : OptionsDialogPage
 {
-    private const string IconResourceName = "RhMcp.logo.svg";
+    private const string IconResourceName = "RhinoAI.logo.svg";
 
     private AISettingsPanel Panel { get; } = new();
     private Image? LightCachedImage { get; set; }

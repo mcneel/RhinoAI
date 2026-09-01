@@ -5,8 +5,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <RootNamespace>RhMcp.Router.Codegen</RootNamespace>
-    <AssemblyName>RhMcp.Router.Codegen</AssemblyName>
+    <RootNamespace>RhinoAI.Router.Codegen</RootNamespace>
+    <AssemblyName>RhinoAI.Router.Codegen</AssemblyName>
     <IsRoslynComponent>true</IsRoslynComponent>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>

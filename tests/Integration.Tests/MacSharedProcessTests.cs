@@ -1,7 +1,7 @@
 using System.Text.Json;
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Pins down the Mac-specific shared-process contract:
 //   On macOS, Rhino is single-instance per bundle id, so multiple slots for the

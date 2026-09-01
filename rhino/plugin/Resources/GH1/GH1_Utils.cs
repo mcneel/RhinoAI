@@ -2,7 +2,7 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 public static class GH1_Utils
 {

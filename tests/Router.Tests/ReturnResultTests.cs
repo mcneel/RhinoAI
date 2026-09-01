@@ -1,8 +1,8 @@
 using System.Text.Json.Nodes;
 using NUnit.Framework;
-using RhMcp.Router;
+using RhinoAI.Router;
 
-namespace RhMcp.Router.Tests;
+namespace RhinoAI.Router.Tests;
 
 // Pins the wire shape of the ReturnResult envelope so the agent contract can't
 // regress silently. The serializer is RouterJsonContext (AOT source-gen) — the

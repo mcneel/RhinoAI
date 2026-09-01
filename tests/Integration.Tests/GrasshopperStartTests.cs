@@ -1,7 +1,7 @@
 using System.Text.Json;
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Exercises g1_start / g2_start: starting Grasshopper inside a spawned Rhino
 // should produce its own slot entry alongside the parent Rhino slot.

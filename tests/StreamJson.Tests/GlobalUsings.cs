@@ -5,7 +5,7 @@ global using System.Collections;
 global using System.ComponentModel;
 global using System.Collections.Generic;
 
-global using RhMcp.Server;
+global using RhinoAI.Server;
 
 global using Rhino;
 

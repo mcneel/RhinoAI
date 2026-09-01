@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal enum TranscriptRole
 {

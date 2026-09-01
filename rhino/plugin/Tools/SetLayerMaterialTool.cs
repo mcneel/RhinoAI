@@ -3,7 +3,7 @@ using System.Globalization;
 
 using Rhino.DocObjects;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class SetLayerMaterialTool

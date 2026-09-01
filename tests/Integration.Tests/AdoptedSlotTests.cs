@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Exercises the adoption path: when a user-started Rhino drops an announcement
 // file in the listeners dir, the router should adopt it as a slot with

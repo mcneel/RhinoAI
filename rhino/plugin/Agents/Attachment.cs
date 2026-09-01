@@ -1,4 +1,4 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 internal enum AttachmentKind
 {

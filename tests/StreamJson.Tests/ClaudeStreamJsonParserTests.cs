@@ -1,7 +1,7 @@
 using Acp;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // Canned-line tests for the Claude Code stream-json translation. Each test feeds one real-shaped
 // stdout line and asserts the emitted SessionUpdate kinds/fields, plus the terminal/junk contract.

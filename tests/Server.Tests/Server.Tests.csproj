@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhMcp.Server.Tests</RootNamespace>
+    <RootNamespace>RhinoAI.Server.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +22,7 @@
     Pull only the pure (non-Rhino, non-AspNetCore) Server sources into the test
     assembly. McpEndpoint.cs depends on Microsoft.AspNetCore and ToolRegistry.cs
     depends on RhinoApp; those need a different host to test and live elsewhere.
-    Compiling the sources in (rather than ProjectReference'ing RhMcp.csproj)
+    Compiling the sources in (rather than ProjectReference'ing RhinoAI.csproj)
     keeps the test assembly RhinoCommon-free and side-steps internals-visibility.
   -->
   <ItemGroup>

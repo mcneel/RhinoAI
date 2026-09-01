@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Stream chunk kinds; SessionStarted lives at conversation level, not inside a turn.
 internal enum TurnEventKind

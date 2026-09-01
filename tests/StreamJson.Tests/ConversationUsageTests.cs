@@ -1,6 +1,6 @@
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // RecordUsage lands on the current turn and rolls up into SessionUsage; empty usage and a record
 // arriving after the turn already closed are both ignored rather than mis-filed.

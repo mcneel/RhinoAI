@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Acp;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // A dumb immutable result of parsing one CLI stdout line.
 // Updates: the ACP session/update payloads to forward (may be empty).

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Resolves a full path to Rhino.exe (Windows) or the Rhinoceros app bundle (macOS)
 // for a given version token. Accepted tokens are exactly the keys of VersionMap

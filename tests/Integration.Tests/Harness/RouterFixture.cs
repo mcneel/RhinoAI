@@ -1,6 +1,6 @@
 using NUnit.Framework;
 
-namespace RhMcp.Integration.Tests.Harness;
+namespace RhinoAI.Integration.Tests.Harness;
 
 // Shared boilerplate for fixtures that need an isolated rh-mcp-router child
 // process. Two flavours:

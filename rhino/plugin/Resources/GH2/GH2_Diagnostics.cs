@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 using Grasshopper2.Doc;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum GH2DiagnosticLevel

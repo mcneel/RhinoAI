@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Rhino.PlugIns;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Persists conversation transcripts under the AISettings Conversations child node, one JSON
 // string per session keyed by its session id. Rewritten on every CompleteTurn so a crash never

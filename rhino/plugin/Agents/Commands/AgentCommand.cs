@@ -1,7 +1,7 @@
 using Rhino.Commands;
 using Rhino.Input.Custom;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public abstract class AgentCommand : Command
 {

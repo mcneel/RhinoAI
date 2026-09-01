@@ -1,7 +1,7 @@
 using System;
 using Eto.Drawing;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Shared wrapped-text measurement for the auto-grow prompt (AIPanel) and the chat bubbles
 // (MessageBubble). Both need the same answer (how many rows does this text occupy at this width,

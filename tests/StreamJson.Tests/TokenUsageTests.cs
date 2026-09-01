@@ -1,6 +1,6 @@
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // The session-total arithmetic on TokenUsage: tokens always sum; cost coalesces so a tokens-only
 // session stays null while any reported cost carries through and like-for-like costs add.

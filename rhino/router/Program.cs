@@ -4,16 +4,11 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RhMcp.Router;
-using RhMcp.Router.Tools.Generated;
+using RhinoAI.Router;
+using RhinoAI.Router.Tools.Generated;
 
 RouterConfig config = RouterConfig.FromArgs(args);
 
-// Derived from the single source <Version> in rhino/Directory.Build.props (via
-// the assembly's informational version). Strip any SourceLink "+<git-hash>"
-// build-metadata suffix so ServerInfo reports a clean "0.1.3". The attribute is
-// always emitted for a normally-built assembly; its absence is a broken build, so
-// fail fast rather than advertise a fake version.
 string informationalVersion =
     Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
     ?? throw new InvalidOperationException("router assembly missing InformationalVersion; check build config");
@@ -38,11 +33,11 @@ builder.Services.AddHttpClient();
 // JsonSerializerOptions used by the MCP server for tool arg/return serialization.
 // Source-generated RouterJsonContext is chained first so AOT publish stays clean;
 // MCP layers its own context on top of whatever we pass in.
-var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+JsonSerializerOptions jsonOptions = new (JsonSerializerDefaults.Web);
 jsonOptions.TypeInfoResolverChain.Insert(0, RouterJsonContext.Default);
 jsonOptions.Converters.Add(new LenientStringConverter());
 
-var mcpBuilder = builder.Services
+IMcpServerBuilder mcpBuilder = builder.Services
     .AddMcpServer(o =>
     {
         o.ServerInfo = new() { Name = "rhino-mcp-router", Version = routerVersion };
@@ -54,7 +49,7 @@ var mcpBuilder = builder.Services
 // codegen and chains WithTools<T>() per tool class.
 RouterToolRegistrar.RegisterAll(mcpBuilder, jsonOptions);
 
-var host = builder.Build();
+IHost host = builder.Build();
 
 // Adopt any user-started Rhinos that announced themselves before the router
 // came up. Cheap one-shot dir scan; later scans happen on every list_slots

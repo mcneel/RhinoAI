@@ -1,4 +1,4 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 /// <summary>
 /// Owns a <see cref="CommandInterceptor"/> per open document, wiring them up on construction and

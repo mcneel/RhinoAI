@@ -1,4 +1,4 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper2.Doc;
 using Grasshopper2.Parameters;
@@ -6,7 +6,7 @@ using Grasshopper2.Parameters.Special;
 
 using GH2Component = Grasshopper2.Components.Component;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH2_GetCanvasGraphTool

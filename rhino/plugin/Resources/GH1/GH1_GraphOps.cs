@@ -1,6 +1,6 @@
 using Grasshopper.Kernel;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 public static class GH1_GraphOps
 {

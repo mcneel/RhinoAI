@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Gated on the host RhinoCommon being a Debug build (JIT optimizer disabled), not on install location or Debugger.IsAttached: a release Rhino runs fine from anywhere (Downloads, a mounted volume) and RhinoLocator finds it, whereas only a developer's debug Rhino needs the router pointed back at it instead of the installed release.
 internal static class RunningRhino

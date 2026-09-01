@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace RhMcp.Integration.Tests.Harness;
+namespace RhinoAI.Integration.Tests.Harness;
 
 internal static class RhinoRouterPaths
 {
@@ -13,7 +13,7 @@ internal static class RhinoRouterPaths
         string pluginOS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" : "osx";
         string binRoot = Path.Combine(repoRoot, "rhino", "plugin", "bin", $"{rhinoTarget}-{pluginOS}");
 
-        // Mirrors RhMcp.csproj: bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)/router/$(rid)/.
+        // Mirrors RhinoAI.csproj: bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)/router/$(rid)/.
         // The test runner doesn't know which configuration the plugin was built in, so probe both.
         string[] configurations = ["Release", "Debug"];
         List<string> probed = [];
@@ -29,7 +29,7 @@ internal static class RhinoRouterPaths
 
         throw new FileNotFoundException(
             $"Router binary not found. Probed:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", probed)}{Environment.NewLine}" +
-            $"Build the plugin first: `dotnet build rhino/plugin/RhMcp.csproj -c Release -p:RhinoTarget={rhinoTarget}`.",
+            $"Build the plugin first: `dotnet build rhino/plugin/RhinoAI.csproj -c Release -p:RhinoTarget={rhinoTarget}`.",
             probed[0]);
     }
 

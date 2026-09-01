@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>RhMcp.Router.Tests</RootNamespace>
+    <RootNamespace>RhinoAI.Router.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,6 +1,6 @@
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Exercises the router's close_slot tool directly. No Rhino install required —
 // these tests run against a freshly-spawned router with an isolated state dir.

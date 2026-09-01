@@ -1,9 +1,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using Acp;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // Drives the real StreamJsonAgent over its injected stdin/stdout seam (no process, no CLI). One
 // scripted Claude turn is replayed; we assert the framed prompt reaches stdin, the SessionUpdates

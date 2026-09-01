@@ -2,9 +2,9 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using RhMcp.Server;
+using RhinoAI.Server;
 
-namespace RhMcp.Server.Tests;
+namespace RhinoAI.Server.Tests;
 
 [TestFixture]
 public class SchemaBuilderTests

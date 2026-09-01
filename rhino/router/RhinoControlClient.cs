@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Client for the plugin's router-private control tools (e.g. _router_spawn_listener).
 // Talks to the same MCP HTTP endpoint a slot uses, but for internal tools that

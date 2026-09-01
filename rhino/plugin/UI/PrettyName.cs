@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Display-only proper-casing for agent and model identifiers. These are stored lowercase (CLI command
 // names, registry keys, --model values) and so read as unpolished in the panel; this raises them to
