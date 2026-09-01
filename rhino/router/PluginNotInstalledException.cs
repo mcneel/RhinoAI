@@ -3,7 +3,7 @@ namespace RhMcp.Router;
 public sealed class PluginNotInstalledException(string version, IReadOnlyList<string> versionsWithPlugin)
     : Exception(BuildMessage(version, versionsWithPlugin))
 {
-    private const string SetupDocsUrl = "https://mcneel.github.io/RhinoMCP/docs/getting-started/";
+    private const string SetupDocsUrl = "https://mcneel.github.io/RhinoAI/docs/getting-started/";
 
     public string Version { get; } = version;
 

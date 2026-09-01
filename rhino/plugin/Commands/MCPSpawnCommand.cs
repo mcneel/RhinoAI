@@ -13,7 +13,7 @@ public class MCPSpawnCommand : Command
 
     public override string EnglishName => "MCPSpawn";
 
-    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoMCP";
+    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoAI";
 
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {

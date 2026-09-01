@@ -6,7 +6,7 @@ public class AIPanelCommand : RhinoCommand
 {
     public override string EnglishName => "AIPanel";
 
-    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoMCP";
+    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoAI";
 
     protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
     {

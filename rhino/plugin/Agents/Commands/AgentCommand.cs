@@ -5,7 +5,7 @@ namespace RhMcp;
 
 public abstract class AgentCommand : Command
 {
-    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoMCP";
+    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoAI";
 
     private protected abstract string AgentName { get; }
 

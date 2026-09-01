@@ -9,7 +9,7 @@ public class MCPStartCommand : Command
 
     public override string EnglishName => "MCPStart";
 
-    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoMCP";
+    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoAI";
 
     protected override Result RunCommand(RhinoDoc doc, RunMode mode)
     {
