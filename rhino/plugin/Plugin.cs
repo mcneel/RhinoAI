@@ -1,6 +1,6 @@
-using System.Drawing;
 using System.IO;
 using System.Reflection;
+
 using Rhino.PlugIns;
 
 namespace RhMcp;
@@ -38,17 +38,8 @@ public class RhMcpPlugin : PlugIn
         try
         {
             Assembly assembly = typeof(RhMcpPlugin).Assembly;
-            using Stream? stream = assembly.GetManifestResourceStream(IconResourceName);
-            if (stream is null)
-                return null;
-
-            using StreamReader reader = new(stream);
-            string svg = reader.ReadToEnd();
-
-            Size size = Rhino.UI.Panels.IconSizeInPixels;
-            int pixels = size.Width > 0 ? size.Width : 36;
-            using Bitmap bitmap = Rhino.UI.DrawingUtilities.BitmapFromSvg(svg, pixels, pixels, adjustForDarkMode: true);
-            return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
+            System.Drawing.Icon icon = Rhino.UI.DrawingUtilities.IconFromResource(IconResourceName, assembly);
+            return icon;
         }
         catch
         {
