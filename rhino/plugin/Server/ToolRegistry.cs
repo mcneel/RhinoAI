@@ -65,7 +65,7 @@ internal sealed class ToolRegistry
     }
 }
 
-internal sealed class ToolHandler
+internal sealed class ToolHandler : IMcpTool
 {
     private readonly MethodInfo _method;
     private readonly ParameterDescriptor[] _parameters;

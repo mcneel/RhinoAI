@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
+using RhMcp.Server.Extensibility;
+
 namespace RhMcp.Internal;
 
 // Router-private control tools. The router talks to these over the same MCP
@@ -105,6 +107,17 @@ public static class RouterControlTool
             catch { /* OS temp sweep will get it */ }
         });
     }
+
+    // Exactly what McpExtensionRegistry holds -- runtime-registered tools, never compiled ones.
+    // [BackgroundThread]: the read is thread-safe and the router expects an answer within its
+    // 1500 ms budget even while Rhino's UI thread is busy.
+    [McpServerTool("_router_list_contributed_tools")]
+    [Description("Router-internal: list the tools contributed at run time, as a JSON array.")]
+    [BackgroundThread]
+    public static string ListContributedTools() =>
+        JsonSerializer.Serialize(
+            McpExtensionRegistry.Current.Tools.Select(t => t.Descriptor).ToArray(),
+            McpSerializer.Options);
 
     [McpServerTool("_router_close_listener")]
     [Description("Router-internal: stop the MCP listener on the given port and close its associated doc without saving.")]

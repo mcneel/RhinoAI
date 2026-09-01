@@ -80,9 +80,9 @@
     its assembly doesn't ship with the router.
   -->
   <ItemGroup>
-    <ProjectReference Include="codegen/Router.Codegen.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="codegen/Router.Codegen.csproj"
+	                    OutputItemType="Analyzer"
+	                    ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -101,9 +101,9 @@
   <Target Name="CopyNativeSqliteAlongsideAotBinary"
           AfterTargets="Build"
           Condition="'$(PublishAot)' == 'true' AND Exists('$(OutDir)libe_sqlite3.dylib')">
-    <Copy SourceFiles="$(OutDir)libe_sqlite3.dylib"
-          DestinationFolder="$(OutDir)native"
-          SkipUnchangedFiles="true" />
+	  <Copy SourceFiles="$(OutDir)libe_sqlite3.dylib"
+	        DestinationFolder="$(OutDir)native"
+	        SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
