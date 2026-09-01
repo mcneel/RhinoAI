@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write   # create tags + releases
+  id-token: write   # OIDC auth for mcp-publisher
 
 concurrency:
   group: connector-release
@@ -56,6 +57,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Validate manifest
         if: steps.check.outputs.exists == 'false'
@@ -78,3 +80,68 @@ jobs:
             --target "${{ github.sha }}" \
             --generate-notes \
             ${{ steps.ver.outputs.prerelease == 'true' && '--prerelease' || '' }}
+
+      # --- Publish the npm launcher (widens client reach: VS Code, Cursor, Rider, etc.) ---
+
+      - name: Check for npm token
+        id: npmtok
+        if: steps.check.outputs.exists == 'false'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "NPM_TOKEN secret not set - skipping npm publish and omitting the npm entry from the registry."
+          fi
+
+      - name: Publish npm package
+        if: steps.check.outputs.exists == 'false' && steps.npmtok.outputs.present == 'true'
+        working-directory: mcp-registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          jq --arg v "$VERSION" '.version = $v' package.json > package.tmp && mv package.tmp package.json
+          TAG_ARG=""
+          [ "${{ steps.ver.outputs.prerelease }}" = "true" ] && TAG_ARG="--tag next"
+          npm publish --access public $TAG_ARG
+
+      # --- Publish to the official MCP Registry (feeds github.com/mcp) ---
+
+      - name: Install mcp-publisher
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Stamp server.json with release URL and hash
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          REPO: ${{ github.repository }}
+          NPM_PRESENT: ${{ steps.npmtok.outputs.present }}
+        run: |
+          HASH=$(openssl dgst -sha256 ../connector/connector.mcpb | awk '{print $2}')
+          URL="https://github.com/${REPO}/releases/download/${TAG}/connector.mcpb"
+          jq --arg v "$VERSION" --arg url "$URL" --arg hash "$HASH" '
+            .version = $v
+            | (.packages[] | select(.registryType == "mcpb") | .identifier) = $url
+            | (.packages[] | select(.registryType == "mcpb") | .fileSha256) = $hash
+            | (.packages[] | select(.registryType == "npm") | .version) = $v
+          ' server.json > server.tmp && mv server.tmp server.json
+          if [ "$NPM_PRESENT" != "true" ]; then
+            jq 'del(.packages[] | select(.registryType == "npm"))' server.json > server.tmp && mv server.tmp server.json
+            echo "npm not published this run - omitted the npm entry from server.json"
+          fi
+          cat server.json
+
+      - name: Publish to MCP Registry
+        if: steps.check.outputs.exists == 'false'
+        working-directory: mcp-registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
