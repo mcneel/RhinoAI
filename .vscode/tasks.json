@@ -9,7 +9,7 @@
         "build",
         "-p:RhinoTarget=R8",
         "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -26,7 +26,7 @@
         "build",
         "-p:RhinoTarget=R9",
         "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -60,7 +60,7 @@
         "-c:Release",
         "-p:RhinoTarget=R8",
         "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -78,7 +78,7 @@
         "-c:Release",
         "-p:RhinoTarget=R9",
         "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhMcp.csproj"
+        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
       ],
       "problemMatcher": "$msCompile",
       "presentation": {
