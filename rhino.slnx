@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/plugin/">
-    <Project Path="rhino/plugin/RhMcp.csproj" />
+    <Project Path="rhino/plugin/RhinoAI.csproj" />
   </Folder>
   <Folder Name="/rhino/" />
   <Folder Name="/rhino/acp/">
