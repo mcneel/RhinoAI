@@ -437,7 +437,7 @@ public class AIPAnel : Panel
         // (OnSendOrStop): refuse while a turn is running rather than abort it.
         if (TurnRunning())
         {
-            RhinoApp.WriteLine("[rhmcp] cannot resume while a turn is running; stop it first.");
+            RhinoApp.WriteLine("[rhino-ai] cannot resume while a turn is running; stop it first.");
             return;
         }
 
@@ -446,7 +446,7 @@ public class AIPAnel : Panel
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            RhinoApp.WriteLine($"[rhmcp] cannot resume: agent '{dto.AgentName}' is no longer available.");
+            RhinoApp.WriteLine($"[rhino-ai] cannot resume: agent '{dto.AgentName}' is no longer available.");
             return;
         }
 
@@ -1323,7 +1323,7 @@ public class AIPAnel : Panel
         // no-op dispatch doesn't silently discard the user's typed prompt + attachments.
         if (!AgentHost.TryFor(doc, out IAgentRunner _))
         {
-            RhinoApp.WriteLine("[rhmcp] No AI agent available; open AI Settings to configure one.");
+            RhinoApp.WriteLine("[rhino-ai] No AI agent available; open AI Settings to configure one.");
             return;
         }
         Resubscribe();

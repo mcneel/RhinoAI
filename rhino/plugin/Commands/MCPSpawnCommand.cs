@@ -26,7 +26,7 @@ public class MCPSpawnCommand : Command
 
         try
         {
-            return RhinoMcpHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
+            return RhinoAIHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
         }
         catch (Exception ex)
         {

@@ -17,7 +17,7 @@ public class MCPStartCommand : Command
         go.SetCommandPrompt("MCPStart Port");
         go.AcceptNothing(true);
         go.AcceptEnterWhenDone(true);
-        bool hasDefault = RhinoMcpHost.TryGetNextPort(out int suggestedPort);
+        bool hasDefault = RhinoAIHost.TryGetNextPort(out int suggestedPort);
         if (hasDefault)
             go.SetDefaultInteger(suggestedPort);
         go.SetLowerLimit(1, false);
@@ -28,6 +28,6 @@ public class MCPStartCommand : Command
         if (res is not (GetResult.Number or GetResult.Nothing)) return Result.Cancel;
         int port = go.Number();
 
-        return RhinoMcpHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
+        return RhinoAIHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
     }
 }

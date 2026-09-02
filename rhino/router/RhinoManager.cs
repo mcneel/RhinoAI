@@ -399,7 +399,7 @@ public class RhinoManager(
     public bool Has(string slotId) => store.Get(slotId) is not null;
 
     // Tombstones the plugin drops when a listener closes cleanly. Siblings to the
-    // *.json announcements in the same dir; MUST match RhMcpHost.WriteDeparture.
+    // *.json announcements in the same dir; MUST match RhinoAIHost.WriteDeparture.
     private const string DepartureGlob = "*.gone";
 
     // Adopt any user-started Rhino announced via the drop directory. Each file is a

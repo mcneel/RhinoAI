@@ -84,7 +84,7 @@ namespace RhinoAI
     }
 
     // AgentPrompts.Compose only needs the server-name const; the real RouterMcpConfig also resolves
-    // an on-disk router path through RhMcpPlugin (RhinoCommon), which is out of scope for headless
+    // an on-disk router path through RhinoAIPlugin (RhinoCommon), which is out of scope for headless
     // parser tests. Shimming just the const keeps AgentPrompts pure.
     internal static class RouterMcpConfig
     {

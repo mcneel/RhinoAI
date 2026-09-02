@@ -50,7 +50,7 @@ internal sealed class TurnUndoCheckpoint
             uint serial = Doc.RuntimeSerialNumber;
             if (RhinoDoc.FromRuntimeSerialNumber(serial) is null)
             {
-                RhinoApp.WriteLine($"[rhmcp] undo record {RecordSerial} could not be closed: doc {serial} is gone.");
+                RhinoApp.WriteLine($"[rhino-ai] undo record {RecordSerial} could not be closed: doc {serial} is gone.");
                 return true;
             }
             Doc.EndUndoRecord(RecordSerial);

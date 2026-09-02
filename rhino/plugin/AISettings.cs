@@ -12,7 +12,7 @@ internal static class AISettings
     private static PersistentSettings Settings =>
         PlugIn.Find(PluginId) is PlugIn plugin
             ? plugin.Settings
-            : throw new InvalidOperationException("RhMcp plugin is not loaded; AISettings is unavailable.");
+            : throw new InvalidOperationException("RhinoAI plugin is not loaded; AISettings is unavailable.");
 
     // Name of the agent the registry prefers when resolving the active one.
     public static string DefaultAgentName

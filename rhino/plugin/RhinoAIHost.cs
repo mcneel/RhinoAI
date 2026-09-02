@@ -7,7 +7,7 @@ using Rhino.FileIO;
 
 namespace RhinoAI;
 
-public static class RhinoMcpHost
+public static class RhinoAIHost
 {
 
     private static Dictionary<uint, McpServer> Servers { get; } = new();
@@ -20,7 +20,7 @@ public static class RhinoMcpHost
     // Re-dropping a already-adopted listener is a no-op.
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
 
-    static RhinoMcpHost()
+    static RhinoAIHost()
     {
         RhinoDoc.CloseDocument += CloseServer;
     }
