@@ -2,12 +2,18 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'

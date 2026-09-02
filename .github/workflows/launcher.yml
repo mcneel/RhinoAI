@@ -2,14 +2,20 @@ name: Launcher
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths:
       - 'shared/router-launcher.mjs'
       - 'tests/launcher/**'
       - 'rhino/router/**'
       - '.github/workflows/launcher.yml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths:
       - 'shared/router-launcher.mjs'
       - 'tests/launcher/**'
