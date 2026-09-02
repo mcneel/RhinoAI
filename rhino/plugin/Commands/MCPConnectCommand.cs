@@ -8,7 +8,7 @@ public class MCPConnectCommand : RhinoCommand
 {
     public override string EnglishName => "MCPConnect";
 
-    protected override string CommandContextHelpUrl => "https://mcneel.github.io/RhinoAI";
+    protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 
     protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
     {
