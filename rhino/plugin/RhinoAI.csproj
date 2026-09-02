@@ -55,7 +55,6 @@
   <ItemGroup>
     <ProjectReference Include="../../../../../DotNetSDK/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj" />
     <ProjectReference Include="../../../../../DotNetSDK/RhinoCodePrivate/RhinoCodePlatform.Projects/RhinoCodePlatform.Projects.csproj" />
-    <ProjectReference Include="../../../../../DotNetSDK/RhinoCodePrivate/RhinoCodePlatform.Rhino3D/RhinoCodePlatform.Rhino3D.csproj" />
     <ProjectReference Include="../acp/Acp.csproj" />
     <!-- Link (not copy) the router's on-disk path contract so the plugin and
          router share one definition of the listeners drop dir. Separate

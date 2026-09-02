@@ -27,15 +27,20 @@ internal class ScriptProjectRunner
     private ScriptProjectRunner()
     {
         Paths = ScriptProjectPaths.For(null) ?? throw new NullReferenceException("Paths is NULL");
-        Paths.ProjectDirectory.EnsureDirectory();
+        Paths.Directory.EnsureDirectory();
     }
+
+    private static ScriptProjectRunner? Runner { get; set; }
 
     public static ReturnResult TryCreate(out ScriptProjectRunner runner)
     {
-        runner = default!;
+        runner = Runner!;
+        if (runner is not null)
+            return ReturnResult.Success();
+
         try
         {
-            runner = new();
+            runner = Runner = new();
             return ReturnResult.Success();
         }
         catch (Exception ex)
@@ -50,35 +55,45 @@ internal class ScriptProjectRunner
 
         if (CachedProject is null)
         {
-            IProjectServer? server = RhinoCode.ProjectServers
-                    .WherePasses(new ProjectServerSpec("mcneel.rhino3d.project"))
-                    .FirstOrDefault();
-
-            if (server is null)
-                return ReturnResult.Failure("Could not get Project");
-
-            // Identity and settings
-            project = server.CreateProject();
-            project.Identity.Name = Paths.PluginName;
-            project.Identity.Tags = [Paths.PluginName];
-            project.Identity.Publisher = GetPublisherIdentity();
-            project.Identity.Copyright = project.Identity.Publisher.Name;
-            project.Identity.Version = ProjectVersion.Default;
-            project.Identity.Description = "Rhino commands created by Rhino AI.";
-            if (project.Settings is RhinoCodePlatform.Projects.Rhino3DProjectSettings customSettings)
-            {
-                customSettings.GenerateLayoutFile = false;
-            }
-
-            // Storage and pathing
             Uri projectFilePath = new(Paths.ProjectFile);
-            if (!RhinoCode.StorageSites.TryCreateStorage(projectFilePath, out IStorage storage))
+
+            if (File.Exists(projectFilePath.LocalPath))
             {
-                storage = RhinoCode.StorageSites.CreateStorage(projectFilePath);
+                RhinoCode.ProjectServers.TryCreateProject(projectFilePath, out project);
+            }
+            else
+            {
+                IProjectServer? server = RhinoCode.ProjectServers
+                        .WherePasses(new ProjectServerSpec("mcneel.rhino3d.project"))
+                        .FirstOrDefault();
+
+                if (server is null)
+                    return ReturnResult.Failure("Could not get Project");
+
+                // Identity and settings
+                project = server.CreateProject();
+                project.Identity.Name = Paths.PluginName;
+                project.Identity.Tags = [Paths.PluginName];
+                project.Identity.Publisher = GetPublisherIdentity();
+                project.Identity.Copyright = project.Identity.Publisher.Name;
+                project.Identity.Version = ProjectVersion.Default;
+                project.Identity.Description = "Rhino commands created by Rhino AI.";
+                if (project.Settings is RhinoCodePlatform.Projects.Rhino3DProjectSettings customSettings)
+                {
+                    customSettings.GenerateLayoutFile = false;
+                }
+
+                // Storage and pathing
+                if (!RhinoCode.StorageSites.TryCreateStorage(projectFilePath, out IStorage storage))
+                {
+                    storage = RhinoCode.StorageSites.CreateStorage(projectFilePath);
+                }
+
+                // Write to disk
+                project.Store(storage);
             }
 
-            // Write to disk
-            project.Store(storage);
+            CachedProject = project;
         }
 
         project = CachedProject!;
@@ -113,20 +128,24 @@ internal class ScriptProjectRunner
             if (!result)
                 return result;
 
-            SourceCode source = new(LanguageSpec.Python3, script);
+            Uri scriptUri = new(Path.Combine(Paths.Directory, $"{commandName}.py"));
 
-            if (!source.TryCreateCode(out Code code))
+            SourceCode validate = new(LanguageSpec.Python3, script);
+
+            if (!validate.TryCreateCode(out Code code))
                 return ReturnResult.Failure("Could not create code from script");
 
             if (!code.TryBuild(new BuildContext(BuildKind.Run), out CompileException ex))
                 return ReturnResult.Failure(ex.Message, "Fix compile issues in the script");
 
-            Uri scriptUri = new(Path.Combine(Paths.ProjectDirectory, $"{commandName}.py"));
-
             File.WriteAllText(scriptUri.LocalPath, script);
+
+            SourceCode source = new(LanguageSpec.Python3, commandName, script, scriptUri);
 
             project.Add(source);
             project.Store();
+
+            Reload();
 
             return ReturnResult.Success();
         }
@@ -136,8 +155,37 @@ internal class ScriptProjectRunner
         }
     }
 
+    public ReturnResult RemoveCommandFromProject(string commandName)
+    {
+        try
+        {
+            ReturnResult result = TryGetProject(out IProject project);
+            if (!result)
+                return result;
+
+            foreach (ICode code in project.GetCodes())
+            {
+                if (!string.Equals(code.Title, commandName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                project.Remove(code.Id);
+                project.Store();
+
+                break;
+            }
+
+            Reload();
+        }
+        catch (Exception anyEx)
+        {
+            return ReturnResult.Failure(anyEx.Message);
+        }
+
+        return ReturnResult.Success();
+    }
+
     public ReturnResult Build(bool reloadOnly)
     {
+        ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
         try
         {
             ReturnResult result = TryGetProject(out IProject project);
@@ -159,37 +207,9 @@ internal class ScriptProjectRunner
         return ReturnResult.Success();
     }
 
-    public ReturnResult RemoveCommandFromProject(string commandName)
-    {
-        try
-        {
-            ReturnResult result = TryGetProject(out IProject project);
-            if (!result)
-                return result;
-
-            foreach (ICode code in project.GetCodes())
-            {
-                if (!string.Equals(code.Title, commandName, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                project.Remove(code.Id);
-                break;
-            }
-
-            ProjectPackageBuild build = project.Settings.PackageBuild;
-            project.Preview(Host, build, Reporter);
-        }
-        catch (Exception anyEx)
-        {
-            return ReturnResult.Failure(anyEx.Message);
-        }
-
-        return ReturnResult.Success();
-    }
-
     public static ReturnResult Reload()
     {
-        RhinoApp.WriteLine("Loading Python 3 for Script Server");
-        RhinoCodePlatform.Rhino3D.Registrar.StartScriptingLanguages(LanguageSpec.Python3);
+        ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
 
         ReturnResult result = TryCreate(out ScriptProjectRunner runner);
         if (!result)
@@ -200,6 +220,7 @@ internal class ScriptProjectRunner
             return result;
 
         ProjectPackageBuild build = project.Settings.PackageBuild;
+        project.Package(runner.Host, build, runner.Reporter);
         project.Preview(runner.Host, build, runner.Reporter);
 
         return ReturnResult.Success();

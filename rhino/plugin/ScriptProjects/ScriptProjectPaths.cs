@@ -21,7 +21,6 @@ internal sealed record ScriptProjectPaths(string PluginName, string Directory, s
     }
 
     public string ProjectFile => Path.Combine(Directory, PluginName + ".rhproj");
-    public string ProjectDirectory => Path.Combine(Directory, PluginName + ".rhproj");
 
     public string BuiltPlugin => Path.Combine(BuildDirectory, PluginName + ".rhp");
 
