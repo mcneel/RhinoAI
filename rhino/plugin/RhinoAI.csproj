@@ -71,9 +71,19 @@
     <PackageReference Include="Microsoft.AspNetCore.App.Runtime.osx-arm64" Version="$(AspNetCoreRuntimeVersion)" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" Condition="'$(PluginOS)' == 'osx'" />
   </ItemGroup>
 
+  <!-- The referenced RhinoCommon version becomes the yak rh8_xx tag, so it is the
+       minimum Rhino 8 service release Package Manager will offer this to. 8.19 is
+       the floor: it is the first 8.x package with net7.0 (.NET Core) assets, and
+       everything below is net48-only. Its net7.0 targets add a WindowsForms
+       FrameworkReference unconditionally (fixed in 8.27), which needs
+       EnableWindowsTargeting off Windows. -->
+  <PropertyGroup Condition="'$(RhinoTarget)' == 'R8' AND !$([MSBuild]::IsOSPlatform('Windows'))">
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
-    <PackageReference Include="RhinoCommon" Version="8.29.26063.11001" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="8.29.26063.11001" />
+    <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.19.25132.1001" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
