@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using RhinoAI.Integration.Tests.Harness;
 
 namespace RhinoAI.Integration.Tests;
@@ -111,5 +113,71 @@ internal sealed class PluginToolTests : SharedRouterFixture
         Assert.That(stdout, Does.Contain("first"));
         Assert.That(stdout, Does.Contain("second"));
         Assert.That(stdout, Does.Not.Contain("first\n\nsecond"));
+    }
+
+    private const string ScratchPlugin = "RhinoAIIntegrationTests";
+
+    private async Task<JsonElement?> ManageCommand(string action, string name, string? script = null)
+    {
+        (string, object?)[] args = script is null
+            ? [("slot", _slot), ("action", action), ("name", name), ("plugin", ScratchPlugin)]
+            : [("slot", _slot), ("action", action), ("name", name), ("script", script), ("plugin", ScratchPlugin)];
+
+        ReturnResult result = await _router.CallToolAsync("manage_plugin_commands", Args.Of(args));
+        return result.Payload;
+    }
+
+    [Test]
+    public async Task manage_plugin_commands_rejects_a_name_with_spaces()
+    {
+        JsonElement? payload = await ManageCommand("add", "Make It Blue", "print('hi')");
+
+        Assert.That(payload?.GetProperty("error").GetString(), Does.Contain("not valid"));
+    }
+
+    [Test]
+    public async Task manage_plugin_commands_rejects_an_unknown_action()
+    {
+        JsonElement? payload = await ManageCommand("create", "McpScratch", "print('hi')");
+
+        Assert.That(payload?.GetProperty("error").GetString(), Does.Contain("Unknown action"));
+    }
+
+    [Test]
+    public async Task manage_plugin_commands_requires_a_script_to_add()
+    {
+        JsonElement? payload = await ManageCommand("add", "McpScratch");
+
+        Assert.That(payload?.GetProperty("error").GetString(), Does.Contain("Python script is required"));
+    }
+
+    // Builds and hot-loads a real plugin, so it is the slowest test here by a wide margin.
+    [Test]
+    public async Task manage_plugin_commands_adds_updates_and_deletes_a_command()
+    {
+        const string command = "McpScratchHello";
+        await ManageCommand("delete", command);
+
+        JsonElement? added = await ManageCommand("add", command, "print('scratch one')");
+        Assert.That(added?.GetProperty("error").ValueKind, Is.EqualTo(JsonValueKind.Null),
+            $"add failed: {added?.GetProperty("error")}");
+        Assert.That(added?.GetProperty("built").GetBoolean(), Is.True);
+        Assert.That(added?.GetProperty("loaded").GetBoolean(), Is.True);
+
+        ReturnResult ran = await _router.CallToolAsync("run_command", Args.Of(
+            ("slot", (object?)_slot), ("command", command)));
+        Assert.That(ran.Error, Is.Null);
+
+        JsonElement? updated = await ManageCommand("update", command, "print('scratch two')");
+        Assert.That(updated?.GetProperty("error").ValueKind, Is.EqualTo(JsonValueKind.Null),
+            $"update failed: {updated?.GetProperty("error")}");
+        Assert.That(updated?.GetProperty("built").GetBoolean(), Is.True);
+
+        JsonElement? deleted = await ManageCommand("delete", command);
+        Assert.That(deleted?.GetProperty("error").ValueKind, Is.EqualTo(JsonValueKind.Null),
+            $"delete failed: {deleted?.GetProperty("error")}");
+        Assert.That(
+            deleted?.GetProperty("commands").EnumerateArray().Select(c => c.GetString()),
+            Does.Not.Contain(command));
     }
 }

@@ -12,6 +12,8 @@ public static class RunPythonTool
         RhinoDoc doc,
         [Description("Script")] string script)
     {
+        ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
+
         var tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.py");
         File.WriteAllText(tmp, script);
         RhinoApp.CommandWindowCaptureEnabled = true;
