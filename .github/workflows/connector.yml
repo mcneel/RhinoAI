@@ -2,13 +2,19 @@ name: Connector
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths:
       - 'connector/**'
       - 'shared/router-launcher.mjs'
       - '.github/workflows/connector.yml'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
     paths:
       - 'connector/**'
       - 'shared/router-launcher.mjs'
