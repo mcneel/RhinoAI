@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using RhMcp.Server;
+using RhinoAI.Server;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal enum McpConfigFormat
 {

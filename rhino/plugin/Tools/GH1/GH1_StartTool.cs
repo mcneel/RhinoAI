@@ -1,8 +1,8 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH1_StartTool

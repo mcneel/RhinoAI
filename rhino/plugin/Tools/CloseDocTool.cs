@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 // TODO : Close doc should not spawn a rhino to close it
 [McpServerToolType]

@@ -9,9 +9,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using RhMcp.Server;
+using RhinoAI.Server;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal sealed class McpServer : IDisposable
 {

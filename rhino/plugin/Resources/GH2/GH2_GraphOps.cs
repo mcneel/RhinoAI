@@ -3,7 +3,7 @@ using Grasshopper2.Parameters;
 
 using GH2Component = Grasshopper2.Components.Component;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 public static class GH2_GraphOps
 {

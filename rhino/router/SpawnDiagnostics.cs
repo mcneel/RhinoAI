@@ -1,4 +1,4 @@
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Classifies the exception shapes the spawn pipeline can throw before the router
 // ever talks to a child Rhino. Both spawn_slot (SpawnSlotTool) and the lazy

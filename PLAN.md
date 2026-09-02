@@ -190,7 +190,7 @@ Out-of-band: privacy is a small docs edit (PRIVACY.md + site); transcripts need 
 
 ## Verification
 
-1. Build: `dotnet build rhino/plugin/RhMcp.csproj -p:RhinoTarget=R8 -p:TargetFramework=net8.0` (R9 for the GH2 work).
+1. Build: `dotnet build rhino/plugin/RhinoAI.csproj -p:RhinoTarget=R8 -p:TargetFramework=net8.0` (R9 for the GH2 work).
 2. Convergence: Claude, Gemini, and Codex all stream through the same ACP `RhinoAcpClient` path; the single sealed `StreamJsonAgent` (composed with per-agent parsers) is the only place process lifecycle lives.
 3. Codex: a real turn against the actual Codex CLI streams tool calls and text correctly; no `// verify:` markers remain.
 4. Onboarding: fresh machine with only `claude` installed and authed → open the panel → it just works with zero settings. Remove `claude` → panel shows the docs link, no crash.
@@ -257,7 +257,7 @@ Stage 2 — Integration      sequential
 - `phase()` per stage; `pipeline()` for the sequential architect → maker → review → fix chains; `parallel()` only for the independent worktree lanes.
 - Schemas for the handoffs: design doc (architect), findings (review), verdict (fixer).
 - `isolation: 'worktree'` only on the independent lanes' makers (W4/W6/W8); everything in a review loop runs on the shared tree.
-- Build gate is the maker's done-criteria: R8 `dotnet build rhino/plugin/RhMcp.csproj -p:RhinoTarget=R8 -p:TargetFramework=net8.0`; R9 for the GH2 work (`-p:RhinoTarget=R9`).
+- Build gate is the maker's done-criteria: R8 `dotnet build rhino/plugin/RhinoAI.csproj -p:RhinoTarget=R8 -p:TargetFramework=net8.0`; R9 for the GH2 work (`-p:RhinoTarget=R9`).
 
 ### Kicking it off
 

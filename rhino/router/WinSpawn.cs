@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // CreateProcess + CREATE_BREAKAWAY_FROM_JOB lets the child escape any Job Object
 // the router inherited (e.g. VS Code extension host). Without breakaway, GUI
@@ -24,7 +24,7 @@ internal static class WinSpawn
         StringBuilder cmdLine = new (32768);
         cmdLine.Append('"').Append(exePath).Append('"').Append(' ').Append(arguments);
 
-        var startup = new STARTUPINFOW { cb = (uint)Marshal.SizeOf<STARTUPINFOW>() };
+        STARTUPINFOW startup = new() { cb = (uint)Marshal.SizeOf<STARTUPINFOW>() };
         IntPtr envBlock = BuildEnvBlock(extraEnv);
         try
         {
@@ -59,7 +59,7 @@ internal static class WinSpawn
     // UTF-16 env block (KEY=val\0...\0\0), case-insensitive ordinal sort required by Windows.
     private static IntPtr BuildEnvBlock(IDictionary<string, string> overrides)
     {
-        var merged = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        SortedDictionary<string, string> merged = new (StringComparer.OrdinalIgnoreCase);
         foreach (DictionaryEntry e in Environment.GetEnvironmentVariables())
             merged[(string)e.Key] = (string)(e.Value ?? "");
 
@@ -68,8 +68,8 @@ internal static class WinSpawn
         string winDir = Path.GetDirectoryName(Environment.SystemDirectory) ?? "";
         if (!string.IsNullOrEmpty(winDir))
         {
-            if (!merged.TryGetValue("windir", out var w) || string.IsNullOrEmpty(w)) merged["windir"] = winDir;
-            if (!merged.TryGetValue("SystemRoot", out var s) || string.IsNullOrEmpty(s)) merged["SystemRoot"] = winDir;
+            if (!merged.TryGetValue("windir", out string? w) || string.IsNullOrEmpty(w)) merged["windir"] = winDir;
+            if (!merged.TryGetValue("SystemRoot", out string? s) || string.IsNullOrEmpty(s)) merged["SystemRoot"] = winDir;
         }
 
         foreach (var kv in overrides)

@@ -1,6 +1,6 @@
 using Rhino.Commands;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class RunCommandTool

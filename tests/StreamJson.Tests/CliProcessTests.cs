@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // CliProcess resolves the launch binary from a search-path list (real File.Exists probes over temp
 // files) and configures a ProcessStartInfo. The .cmd/.bat -> cmd.exe wrapping is Windows-only, so

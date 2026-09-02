@@ -2,9 +2,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Acp;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // End-to-end turn orchestration of the real AgentRunner over a classicist FakeAcpAgent (a genuine
 // second IAcpAgent implementation, not a mock) wired to the runner's own RhinoAcpClient. This closes

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Adds the bundled rhino MCP server to the configs of MCP-aware tools the user has (Claude Code,
 // Cursor, Codex, ...) so those external agents can drive Rhino without hand-copying the snippet.

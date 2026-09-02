@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using RhMcp.Server;
+using RhinoAI.Server;
 
-namespace RhMcp.Server.Tests;
+namespace RhinoAI.Server.Tests;
 
 [TestFixture]
 public class ResultUnwrapperTests

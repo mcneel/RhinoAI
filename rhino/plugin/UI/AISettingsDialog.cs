@@ -1,7 +1,7 @@
 using Eto.Drawing;
 using Eto.Forms;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Standalone modal host for the shared AISettingsPanel, opened from the AIPanel gear button and the
 // AISettings command. The same panel is also hosted by AIOptionsPage in the Rhino Options dialog;

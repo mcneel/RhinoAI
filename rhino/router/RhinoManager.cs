@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Spawns, tracks, and tears down Rhino "slots". State lives in SlotStore
 // (SQLite) so concurrent router processes can't race on port allocation or
@@ -399,7 +399,7 @@ public class RhinoManager(
     public bool Has(string slotId) => store.Get(slotId) is not null;
 
     // Tombstones the plugin drops when a listener closes cleanly. Siblings to the
-    // *.json announcements in the same dir; MUST match RhMcpHost.WriteDeparture.
+    // *.json announcements in the same dir; MUST match RhinoAIHost.WriteDeparture.
     private const string DepartureGlob = "*.gone";
 
     // Adopt any user-started Rhino announced via the drop directory. Each file is a
@@ -409,8 +409,7 @@ public class RhinoManager(
     {
         ConsumeDepartures();
 
-        var dir = RouterPaths.ListenersDir;
-        if (!Directory.Exists(dir)) return;
+        if (!Directory.Exists(RouterPaths.ListenersDir)) return;
 
         string[] files;
         try { files = Directory.GetFiles(RouterPaths.ListenersDir, "*.json"); }

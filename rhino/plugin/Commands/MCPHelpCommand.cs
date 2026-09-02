@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using RhinoCommand = Rhino.Commands.Command;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public class MCPHelpCommand : RhinoCommand
 {

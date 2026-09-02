@@ -2,7 +2,7 @@ using System;
 using Eto.Drawing;
 using Eto.Forms;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // A chat row body. The user message paints a rounded filled bubble; the agent reply renders as plain
 // flush text with no background, so only the user side carries a bubble. Eto has no rounded-corner

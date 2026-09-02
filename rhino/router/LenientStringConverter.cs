@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Some MCP connector hosts send a string-typed arg as a JSON number/bool, which
 // the SDK's default string binding rejects before the tool body runs (surfacing

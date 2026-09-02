@@ -4,9 +4,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Acp;
-using ContentBlock = Acp.ContentBlock; // disambiguate from RhMcp.Server.ContentBlock
+using ContentBlock = Acp.ContentBlock; // disambiguate from RhinoAI.Server.ContentBlock
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // The Codex CLI (`codex exec`) stream-json strategy: turns one Codex stdout line into ACP
 // session/update events and frames one user turn for stdin. Owns no process/threads/turn gating (the

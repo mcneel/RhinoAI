@@ -1,8 +1,8 @@
 using Acp;
-using RhMcp;
+using RhinoAI;
 using ContentBlock = Acp.ContentBlock;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // Parser edge cases not pinned by the canned-line happy-path suites: multi-block assistant lines,
 // empty/degenerate content, FormatTurn shaping (Claude's JSON envelope vs Codex's plain text), and

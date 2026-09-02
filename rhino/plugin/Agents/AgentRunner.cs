@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Acp;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Drives any ACP agent (a native connection like Gemini, or a StreamJsonAgent wrapping a stream-json
 // CLI like Claude/Codex) behind the plugin's IAgentRunner seam. One ACP session per agent instance:

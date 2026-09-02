@@ -5,7 +5,7 @@ End-to-end tests that drive a real Claude session against the rhino MCP router.
 ## Pre-requisites
 
 - Login to Claude Code locally: `claude /login`
-- Build the router binary: `dotnet build rhino/plugin/RhMcp.csproj -c Release -p:RhinoTarget=R9`
+- Build the router binary: `dotnet build rhino/plugin/RhinoAI.csproj -c Release -p:RhinoTarget=R9`
 
 ## Running
 

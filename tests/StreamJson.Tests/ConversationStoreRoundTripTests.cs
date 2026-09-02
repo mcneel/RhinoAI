@@ -1,6 +1,6 @@
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // Guards the headline serialization trap of the SessionId -> AgentSessionId rename: the live
 // Conversation property was renamed, but the persisted ConversationDto.SessionId field/key MUST

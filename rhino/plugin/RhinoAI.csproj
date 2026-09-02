@@ -12,7 +12,7 @@
     <NoWarn>NU1701</NoWarn>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <RootNamespace>RhMcp</RootNamespace>
+    <RootNamespace>RhinoAI</RootNamespace>
     <AssemblyName>RhinoMcpPlatform</AssemblyName>
   </PropertyGroup>
 
@@ -57,9 +57,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhMcp.logo.svg" />
-    <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhMcp.copy.svg" />
-    <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhMcp.paperclip.svg" />
+    <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhinoAI.logo.svg" />
+    <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhinoAI.copy.svg" />
+    <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhinoAI.paperclip.svg" />
   </ItemGroup>
 
   <PropertyGroup>

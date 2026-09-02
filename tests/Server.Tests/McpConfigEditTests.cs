@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using NUnit.Framework;
 
-namespace RhMcp.Server.Tests;
+namespace RhinoAI.Server.Tests;
 
 [TestFixture]
 public class McpConfigEditTests

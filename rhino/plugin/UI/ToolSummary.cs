@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Turns a tool call (name + raw input/output JSON) into a short human-readable chip header, e.g.
 // "ran python", "placed Circle", "opened model.3dm". Pure and dumb: no Eto, no state, just string in

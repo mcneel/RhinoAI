@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace RhMcp.Server;
+namespace RhinoAI.Server;
 
 // Builds a JSON Schema (draft-2020-12 flavour, the minimal subset MCP cares
 // about) from a method's parameter list. Skips parameters supplied by the

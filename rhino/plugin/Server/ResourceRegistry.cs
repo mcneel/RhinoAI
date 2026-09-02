@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhMcp.Server;
+namespace RhinoAI.Server;
 
 // Resource side of the dispatcher. Same shape as ToolRegistry, but with two
 // extra wrinkles: each resource has a URI (static literal or RFC-6570-level-1

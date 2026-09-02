@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // When a child Rhino crashes, the router only sees "connection refused" — the
 // HTTP channel went down with the process. The OS (and Rhino itself) writes a

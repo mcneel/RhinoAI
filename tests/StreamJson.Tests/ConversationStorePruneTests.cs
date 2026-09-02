@@ -1,7 +1,7 @@
 using System.Threading;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // ConversationStore beyond the round-trip: the 50-conversation cap prunes the oldest on Save, the
 // list comes back newest-first, and a corrupt on-disk slot is skipped rather than thrown. Backed by

@@ -1,6 +1,6 @@
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // list_slots is the router's window into its own slot registry. With an
 // isolated state dir and no user-started Rhino announcement to adopt, the

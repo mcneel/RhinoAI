@@ -1,4 +1,4 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 /// <summary>
 /// Routes command-line entries that start with <c>"</c> to this document's agent. Rhino rejects

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Resolves a CLI's launch binary from its search paths and points a ProcessStartInfo at it, shared by
 // every agent that spawns a line/ACP CLI so they resolve and launch identically. Two Windows realities

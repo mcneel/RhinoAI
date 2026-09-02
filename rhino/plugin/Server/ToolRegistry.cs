@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhMcp.Server;
+namespace RhinoAI.Server;
 
 // Scan an assembly once at startup, build a name->handler map for every method
 // decorated with [McpServerTool] inside a [McpServerToolType] class. ToolHandler

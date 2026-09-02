@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 internal static class AgentHost
 {

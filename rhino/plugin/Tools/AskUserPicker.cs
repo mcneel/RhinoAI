@@ -4,7 +4,7 @@ using Rhino.Commands;
 using Rhino.Input;
 using Rhino.Input.Custom;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Command-line answer affordance for a posed ask_user question, restored from the old blocking
 // picker but adapted to the non-blocking model. The ask_user tool has ALREADY returned, so this

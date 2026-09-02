@@ -2,7 +2,7 @@ using System;
 using Eto.Drawing;
 using Eto.Forms;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // The hover-revealed line under a chat message: a copy button, a vague "time since", and the turn's
 // token count (only when the turn reported usage). The control itself stays laid out at a fixed height

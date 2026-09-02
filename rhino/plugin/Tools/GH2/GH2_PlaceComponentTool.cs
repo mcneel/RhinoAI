@@ -1,11 +1,11 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Eto.Drawing;
 
 using Grasshopper2.Doc;
 using Grasshopper2.Framework;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH2_PlaceComponentTool

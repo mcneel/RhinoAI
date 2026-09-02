@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Forwards MCP tool calls from this router to the specified child Rhino's HTTP MCP endpoint.
 // Plugin runs its MCP server with `Stateless = true`, so no initialize handshake is required —

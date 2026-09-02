@@ -5,7 +5,7 @@ using Rhino.Geometry;
 using Grasshopper;
 using Grasshopper.Kernel;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 // One-shot grounding snapshot: selection + active viewport + doc/Grasshopper
 // summary in a single round-trip, so the agent can orient before acting without

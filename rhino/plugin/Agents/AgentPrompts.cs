@@ -1,4 +1,4 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 // Shared system-prompt steering for agents whose CLI lets us inject one (Claude, Codex). The
 // built-in AskUserQuestion needs an interactive frontend we don't have in headless stdio mode, so

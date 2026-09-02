@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace RhMcp.Resources;
+namespace RhinoAI.Resources;
 
 [McpServerResourceType]
 public static class CommandHelpResource

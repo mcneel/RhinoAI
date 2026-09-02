@@ -1,6 +1,6 @@
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Pins down slot-routing semantics for plugin-side tool calls:
 //   - An explicit `slot` arg must route to that exact Rhino.

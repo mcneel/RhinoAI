@@ -1,13 +1,13 @@
 using System.Globalization;
 
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH1_GetCanvasGraphTool

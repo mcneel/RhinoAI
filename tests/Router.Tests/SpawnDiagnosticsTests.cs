@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhMcp.Router;
+using RhinoAI.Router;
 
-namespace RhMcp.Router.Tests;
+namespace RhinoAI.Router.Tests;
 
 // Locks in the single-source-of-truth seam both spawn callers (SpawnSlotTool and
 // ProxyDispatcher) now share. If the spawn-pipeline exception->code map drifts,

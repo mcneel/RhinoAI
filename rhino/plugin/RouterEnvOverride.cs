@@ -1,8 +1,8 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 // One router env override the Connect dialog's Advanced tab exposes. The router
 // runs as a separate AOT binary, so its env-var names can't be shared as
-// constants: the EnvVars strings here MUST match what RhMcp.Router.RouterConfig
+// constants: the EnvVars strings here MUST match what RhinoAI.Router.RouterConfig
 // and RouterPaths read.
 internal sealed record RouterEnvOverride(IReadOnlyList<string> EnvVars, string Label, string Default, string Help)
 {

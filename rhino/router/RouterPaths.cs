@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Shared on-disk paths the router and plugin both resolve: state.db + the
 // listeners/*.json announcement drop. This file is linked into the plugin
-// (RhMcp.csproj) so both assemblies compile one definition; the plugin's
+// (RhinoAI.csproj) so both assemblies compile one definition; the plugin's
 // RhinoMcpHost.ListenerDropDir delegates here rather than re-typing the literals.
 public static class RouterPaths
 {

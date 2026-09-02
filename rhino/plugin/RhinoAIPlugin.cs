@@ -3,11 +3,11 @@ using System.Reflection;
 
 using Rhino.PlugIns;
 
-namespace RhMcp;
+namespace RhinoAI;
 
-public class RhMcpPlugin : PlugIn
+public class RhinoAIPlugin : PlugIn
 {
-    private const string IconResourceName = "RhMcp.logo.svg";
+    private const string IconResourceName = "RhinoAI.logo.svg";
 
     private CommandInterceptorHost? CommandInterceptors { get; set; }
 
@@ -37,7 +37,7 @@ public class RhMcpPlugin : PlugIn
     {
         try
         {
-            Assembly assembly = typeof(RhMcpPlugin).Assembly;
+            Assembly assembly = typeof(RhinoAIPlugin).Assembly;
             System.Drawing.Icon icon = Rhino.UI.DrawingUtilities.IconFromResource(IconResourceName, assembly);
             return icon;
         }
@@ -60,7 +60,7 @@ public class RhMcpPlugin : PlugIn
         string? portStr = Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar);
         if (!string.IsNullOrEmpty(portStr)) return;
 
-        if (!RhinoMcpHost.TryGetNextPort(out int port))
+        if (!RhinoAIHost.TryGetNextPort(out int port))
         {
             RhinoApp.WriteLine("The Rhino MCP Server failed to start: no free port available.");
             return;
@@ -68,7 +68,7 @@ public class RhMcpPlugin : PlugIn
 
         try
         {
-            if (RhinoMcpHost.StartOrRestart(e.Document, port, true))
+            if (RhinoAIHost.StartOrRestart(e.Document, port, true))
             {
                 RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
                 return;
@@ -87,7 +87,7 @@ public class RhMcpPlugin : PlugIn
 
         try
         {
-            RhinoMcpHost.Stop(e.Document);
+            RhinoAIHost.Stop(e.Document);
         }
         catch
         {

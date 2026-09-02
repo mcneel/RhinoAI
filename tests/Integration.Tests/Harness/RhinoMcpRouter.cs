@@ -2,7 +2,7 @@ using System.Text.Json;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-namespace RhMcp.Integration.Tests.Harness;
+namespace RhinoAI.Integration.Tests.Harness;
 
 // Spawns the rhino-mcp-router binary as a child process and connects an MCP
 // stdio client to it. Each instance gets its own TMPDIR so the router's

@@ -1,4 +1,4 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Eto.Drawing;
 
@@ -8,7 +8,7 @@ using Grasshopper2.Parameters;
 using Grasshopper2.Parameters.Special;
 using Grasshopper2.UI;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH2_ApplyGraphTool

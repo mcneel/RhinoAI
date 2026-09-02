@@ -1,6 +1,6 @@
 using Rhino.FileIO;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 // TODO : This needs some tweaking
 

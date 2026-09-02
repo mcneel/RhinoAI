@@ -1,4 +1,4 @@
-namespace RhMcp;
+namespace RhinoAI;
 
 /// <summary>
 /// Marks an MCP tool as available only to the in-Rhino AI panel agent (the

@@ -1,8 +1,8 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper.Kernel;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH1_ConnectTool

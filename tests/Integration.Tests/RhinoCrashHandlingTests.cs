@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Verifies the end-to-end crash path: when a Rhino slot dies mid-call, the
 // dispatcher must catch the dropped HTTP connection (ProxyDispatcher.WrapCrash)

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhMcp.Server;
+namespace RhinoAI.Server;
 
 // Resolves a single parameter's value at invocation time. Used by both
 // ToolHandler and ResourceHandler — the binding rules are the same except

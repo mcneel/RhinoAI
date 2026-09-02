@@ -1,6 +1,6 @@
 using RhinoCommand = Rhino.Commands.Command;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public class AIPanelCommand : RhinoCommand
 {

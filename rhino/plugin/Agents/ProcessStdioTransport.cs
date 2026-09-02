@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Acp;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // An ACP transport over a spawned process's stdio. Owns the process: disposing it (which the
 // ClientSideConnection does on its own dispose) kills the process tree, so a closed agent leaves no

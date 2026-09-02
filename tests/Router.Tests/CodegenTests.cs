@@ -4,9 +4,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using NUnit.Framework;
-using RhMcp.Router.Codegen;
+using RhinoAI.Router.Codegen;
 
-namespace RhMcp.Router.Tests;
+namespace RhinoAI.Router.Tests;
 
 // Regression guard for the router source generator. Plugin tool sites write
 // [McpServerTool(...)] positionally (name, title, readOnly, destructive). An
@@ -21,7 +21,7 @@ public class CodegenTests
     {
         string output = RunGenerator(
             """
-            namespace RhMcp.Tools;
+            namespace RhinoAI.Tools;
 
             [McpServerToolType]
             public class XTool
@@ -37,7 +37,7 @@ public class CodegenTests
         Assert.That(output, Does.Contain("ReadOnly = true"));
         Assert.That(output, Does.Contain("Destructive = false"));
         // Registrar must wire the proxy up so Program.cs picks it up.
-        Assert.That(output, Does.Contain("WithTools<global::RhMcp.Router.Tools.Generated.XToolProxy>"));
+        Assert.That(output, Does.Contain("WithTools<global::RhinoAI.Router.Tools.Generated.XToolProxy>"));
     }
 
     [Test]
@@ -45,7 +45,7 @@ public class CodegenTests
     {
         string output = RunGenerator(
             """
-            namespace RhMcp.Tools;
+            namespace RhinoAI.Tools;
 
             [McpServerToolType]
             public class YTool
@@ -68,7 +68,7 @@ public class CodegenTests
         // text, not an empty Description("").
         string output = RunGenerator(
             """
-            namespace RhMcp.Tools;
+            namespace RhinoAI.Tools;
 
             [McpServerToolType]
             public class ZTool
@@ -93,7 +93,7 @@ public class CodegenTests
         // as a JsonArray. It used to map to an open object the plugin couldn't bind.
         string output = RunGenerator(
             """
-            namespace RhMcp.Tools;
+            namespace RhinoAI.Tools;
 
             [McpServerToolType]
             public class WTool

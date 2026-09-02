@@ -1,7 +1,7 @@
 using System.IO;
-using RhMcp;
+using RhinoAI;
 
-namespace RhMcp.StreamJson.Tests;
+namespace RhinoAI.StreamJson.Tests;
 
 // AgentRegistry resolution logic exercised without a loaded plugin: the chain comes from the
 // AISettings shim, availability is a real File.Exists probe over each definition's SearchPaths (so

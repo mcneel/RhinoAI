@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Serialized transcript shapes. Dumb, immutable, behavior-free: the persisted mirror of the
 // live Conversation/Turn/TurnEvent graph, flattened for PersistentSettings + JSON.

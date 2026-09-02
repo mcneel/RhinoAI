@@ -1,7 +1,7 @@
 using System.Text.Json;
-using RhMcp.Integration.Tests.Harness;
+using RhinoAI.Integration.Tests.Harness;
 
-namespace RhMcp.Integration.Tests;
+namespace RhinoAI.Integration.Tests;
 
 // Pins down the JSON shape list_slots returns post-spawn / post-close. The
 // existing ListSlotsTests fixture only asserts the empty case; this one

@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // The single funnel every surface (command, command-line interceptor, panel) routes through,
 // so they all drive one active agent per doc against one shared conversation. Resolves the
@@ -60,14 +60,14 @@ internal static class AgentDispatch
     // listener is reused. Worked-or-not so callers can stay silent on the warm-up path.
     public static bool TryEnsureListener(RhinoDoc doc, out int port)
     {
-        if (RhinoMcpHost.TryGetPortFor(doc, out port))
+        if (RhinoAIHost.TryGetPortFor(doc, out port))
             return true;
 
-        if (!RhinoMcpHost.TryGetNextPort(out int nextPort))
+        if (!RhinoAIHost.TryGetNextPort(out int nextPort))
             return false;
 
-        RhinoMcpHost.StartOrRestart(doc, nextPort);
-        return RhinoMcpHost.TryGetPortFor(doc, out port);
+        RhinoAIHost.StartOrRestart(doc, nextPort);
+        return RhinoAIHost.TryGetPortFor(doc, out port);
     }
 
     // A FRESH user prompt (AgentCommand / CommandInterceptor / panel Send). Returns whether the turn

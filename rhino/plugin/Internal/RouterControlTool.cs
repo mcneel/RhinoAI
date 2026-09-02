@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 using Rhino.FileIO;
 
-namespace RhMcp.Internal;
+namespace RhinoAI.Internal;
 
 // Router-private control tools. The router talks to these over the same MCP
 // HTTP endpoint as a control channel; they are intentionally kept out of
@@ -45,13 +45,13 @@ public static class RouterControlTool
                     return;
                 }
 
-                if (!RhinoMcpHost.TryGetNextPort(out port))
+                if (!RhinoAIHost.TryGetNextPort(out port))
                 {
                     error = "No free port available for new doc; could not start MCP listener.";
                     DiscardDoc(newDoc);
                     return;
                 }
-                if (!RhinoMcpHost.Start(newDoc, port))
+                if (!RhinoAIHost.Start(newDoc, port))
                 {
                     error = $"Failed to start MCP listener on port {port} for new doc.";
                     DiscardDoc(newDoc);
@@ -111,7 +111,7 @@ public static class RouterControlTool
     public static string CloseListener(int port)
     {
         bool ok = false;
-        RhinoApp.InvokeAndWait(() => { ok = RhinoMcpHost.StopByPort(port); });
+        RhinoApp.InvokeAndWait(() => { ok = RhinoAIHost.StopByPort(port); });
         return JsonSerializer.Serialize(new { closed = ok });
     }
 

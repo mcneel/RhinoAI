@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // Token (and optional cost) accounting for one agent turn, surfaced by the stream-json `result`
 // event. Dumb, immutable, behavior-free apart from summing for a session total. CostUsd is a genuine

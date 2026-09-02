@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 // Unified envelope every router tool call returns.
 public sealed record ReturnResult(

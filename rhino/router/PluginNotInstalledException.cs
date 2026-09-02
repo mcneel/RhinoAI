@@ -1,4 +1,4 @@
-namespace RhMcp.Router;
+namespace RhinoAI.Router;
 
 public sealed class PluginNotInstalledException(string version, IReadOnlyList<string> versionsWithPlugin)
     : Exception(BuildMessage(version, versionsWithPlugin))

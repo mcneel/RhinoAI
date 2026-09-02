@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using RhMcp.Router;
+using RhinoAI.Router;
 
-namespace RhMcp.Router.Tests;
+namespace RhinoAI.Router.Tests;
 
 // Regression for the sentinel finding: a launching placeholder INSERT omits port/pid, and
 // ReadRow used to map the DBNull columns to 0, conflating "not yet assigned" with a real 0

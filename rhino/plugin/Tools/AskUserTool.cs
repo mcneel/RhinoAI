@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class AskUserTool

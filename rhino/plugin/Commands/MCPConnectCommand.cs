@@ -2,7 +2,7 @@ using Eto.Drawing;
 using Eto.Forms;
 using RhinoCommand = Rhino.Commands.Command;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 public class MCPConnectCommand : RhinoCommand
 {

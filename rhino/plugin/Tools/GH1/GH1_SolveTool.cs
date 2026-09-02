@@ -1,9 +1,9 @@
-using RhMcp.Resources;
+using RhinoAI.Resources;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-namespace RhMcp.Tools;
+namespace RhinoAI.Tools;
 
 [McpServerToolType]
 public static class GH1_SolveTool

@@ -1,7 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace RhMcp;
+namespace RhinoAI;
 
 // One source of truth for the MCP-server entry every host hands its agent: launch the
 // bundled rhino-mcp-router over stdio. The router then discovers this session's HTTP
@@ -36,7 +36,7 @@ internal static class RouterMcpConfig
     {
         get
         {
-            string pluginDir = Path.GetDirectoryName(typeof(RhMcpPlugin).Assembly.Location) ?? string.Empty;
+            string pluginDir = Path.GetDirectoryName(typeof(RhinoAIPlugin).Assembly.Location) ?? string.Empty;
             string routerRoot = Path.GetFullPath(Path.Combine(pluginDir, "..", "router"));
             string exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "rhino-mcp-router.exe" : "rhino-mcp-router";
             return Path.Combine(routerRoot, Rid, exe);
