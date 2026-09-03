@@ -1,3 +1,4 @@
+#if RHINOCODE
 
 using System.Text.RegularExpressions;
 
@@ -98,3 +99,5 @@ internal static class RhinoCodeProjects
     }
 
 }
+
+#endif

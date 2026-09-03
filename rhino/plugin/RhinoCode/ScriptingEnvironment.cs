@@ -1,9 +1,9 @@
+#if RHINOCODE
 
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
 using Rhino.PlugIns;
-using Rhino.Runtime.Code.Languages;
 
 namespace RhinoAI;
 
@@ -24,16 +24,16 @@ internal static class ScriptingEnvironment
     private static bool StartedPython { get; set; } = false;
     private static bool StartedCsharp { get; set; } = false;
 
-    private static void StartScriptingLanguages(LanguageSpec spec)
+    private static void StartScriptingLanguages(ScriptProjects.Lang spec)
     {
-        if (spec == LanguageSpec.Python3)
+        if (spec == ScriptProjects.Lang.Python3)
         {
             if (StartedPython) return;
             StartedPython = true;
             RhinoApp.WriteLine("Loading Python 3 for Script Server");
         }
 
-        if (spec == LanguageSpec.CSharp)
+        if (spec == ScriptProjects.Lang.CSharp)
         {
             if (StartedCsharp) return;
             StartedCsharp = true;
@@ -71,3 +71,5 @@ internal static class ScriptingEnvironment
         return null;
     }
 }
+
+#endif

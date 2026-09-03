@@ -1,17 +1,18 @@
+#if RHINOCODE
+
 using System.IO;
 using System.Text;
 using Rhino.Runtime.Code;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
+using RhinoAI.ScriptProjects;
 
-namespace RhinoAI.Tools;
+namespace RhinoAI.ScriptProjects;
 
-internal static class RunScriptToolBase
+internal class RhinoCodeRunScript : IRhinoCodeRunner
 {
 
-    public enum Lang { Python3, CSharp }
-
-    public static string RunScript(RhinoDoc doc, Lang lang, string script)
+    public string RunScript(RhinoDoc doc, Lang lang, string script)
     {
         if (lang == Lang.Python3)
             ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
@@ -49,7 +50,7 @@ internal static class RunScriptToolBase
         {
             code.Run(context);
         }
-        catch (ExecuteException ex)
+        catch (Exception ex)
         {
             thrown = ex.Message;
         }
@@ -62,3 +63,5 @@ internal static class RunScriptToolBase
         });
     }
 }
+
+#endif

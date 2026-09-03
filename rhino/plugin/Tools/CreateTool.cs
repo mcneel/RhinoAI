@@ -33,7 +33,7 @@ public static class CreateTool
             return ReturnResult.Failure("Command Name has issues", PluginNaming.Describe(problem, originalName));
         }
 
-        ReturnResult result = ScriptProjectRunner.TryCreate(out ScriptProjectRunner runner);
+        ReturnResult result = ScriptProjectRunner.TryCreate(out IProjectRunner runner);
         if (!result)
             return result;
 

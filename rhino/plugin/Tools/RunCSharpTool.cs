@@ -1,3 +1,5 @@
+using RhinoAI.ScriptProjects;
+
 namespace RhinoAI.Tools;
 
 [McpServerToolType]
@@ -8,6 +10,6 @@ public static class RunCSharpTool
     public static string RunCSharp(
         RhinoDoc doc,
         [Description("Script")] string script)
-        => RunScriptToolBase.RunScript(doc, RunScriptToolBase.Lang.CSharp, script);
+        => ScriptProjectRunner.RunScript(doc, Lang.CSharp, script);
 
 }
