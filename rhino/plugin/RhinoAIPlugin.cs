@@ -71,7 +71,9 @@ public class RhinoAIPlugin : PlugIn
             if (RhinoAIHost.StartOrRestart(e.Document, port, true))
             {
                 RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
+#if RHINOCODE
                 ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
+#endif
                 return;
             }
         }
