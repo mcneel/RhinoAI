@@ -18,6 +18,10 @@ internal static class ScriptingEnvironment
 
     private static MethodInfo? Starter { get; set; }
 
+    private static dynamic? CachedHost { get; set; }
+
+    public static dynamic? Host => CachedHost ??= ResolveHost();
+
     public static void EnsurePythonRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.Python3);
 
     internal static void EnsureCSharpRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.CSharp);
@@ -50,6 +54,19 @@ internal static class ScriptingEnvironment
         {
             ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
         }
+    }
+
+    // Host is only needed to hand back to the project APIs, so we never name its type.
+    private static dynamic? ResolveHost()
+    {
+        try
+        {
+            Type host = typeof(LanguageSpec).Assembly.GetType("Rhino.Runtime.Code.Platform.Host", throwOnError: true)!;
+
+            return Activator.CreateInstance(host, "Rhino3D", RhinoApp.Version);
+        }
+        catch { }
+        return null;
     }
 
     private static MethodInfo? ResolveStarter()

@@ -5,7 +5,6 @@ using System.IO;
 using Rhino.Runtime.Code;
 using Rhino.Runtime.Code.Storage;
 using Rhino.Runtime.Code.Projects;
-using Rhino.Runtime.Code.Platform;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
 using Rhino.Runtime.Code.Diagnostics;
@@ -18,8 +17,6 @@ internal class RhinoCodeProjectRunner : IProjectRunner
     private IProject? CachedProject { get; set; }
 
     public ScriptProjectPaths Paths { get; }
-
-    private Host Host { get; } = new("Rhino3D", new HostVersion(RhinoApp.Version));
 
     private IProgress<ProgressReport> Reporter { get; } = new SilentProgressReporter();
 
@@ -201,12 +198,16 @@ internal class RhinoCodeProjectRunner : IProjectRunner
             if (!result)
                 return result;
 
+            dynamic? host = ScriptingEnvironment.Host;
+            if (host is null)
+                return ReturnResult.Failure("Could not resolve the script host");
+
             ProjectPackageBuild build = project.Settings.PackageBuild;
 
             if (!reloadOnly)
-                project.Package(Host, build, Reporter);
+                project.Package(host, build, Reporter);
 
-            project.Preview(Host, build, Reporter);
+            project.Preview(host, build, Reporter);
         }
         catch (Exception anyEx)
         {

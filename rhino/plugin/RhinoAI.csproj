@@ -54,13 +54,12 @@
 
   <PropertyGroup>
     <RhinoCodeSdkDir>$(MSBuildProjectDirectory)/../../../../../DotNetSDK</RhinoCodeSdkDir>
-    <HasRhinoCode Condition="'$(HasRhinoCode)' == '' AND Exists('$(RhinoCodeSdkDir)/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj') AND Exists('$(RhinoCodeSdkDir)/RhinoCodePrivate/RhinoCodePlatform.Projects/RhinoCodePlatform.Projects.csproj')">true</HasRhinoCode>
+    <HasRhinoCode Condition="'$(HasRhinoCode)' == '' AND Exists('$(RhinoCodeSdkDir)/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj') ">true</HasRhinoCode>
     <DefineConstants Condition="'$(HasRhinoCode)' == 'true'">$(DefineConstants);RHINOCODE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(HasRhinoCode)' == 'true'">
     <ProjectReference Include="$(RhinoCodeSdkDir)/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj" />
-    <ProjectReference Include="$(RhinoCodeSdkDir)/RhinoCodePrivate/RhinoCodePlatform.Projects/RhinoCodePlatform.Projects.csproj" />
   </ItemGroup>
 
   <ItemGroup>
