@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace RhinoAI.ScriptProjects;
 
 // Preview-loaded commands last only for the session, so the previous build is re-previewed once per run.
@@ -9,6 +11,9 @@ internal static class ScriptProjectStartup
     {
         if (Scheduled || !ScriptProjectRunner.IsSupportedRhino)
             return;
+
+        // Ignore if no Project exists
+        if (!File.Exists(ScriptProjectPaths.For(null)?.ProjectFile)) return;
 
         Scheduled = true;
         RhinoApp.Idle += Reload;

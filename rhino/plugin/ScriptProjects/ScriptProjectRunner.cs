@@ -6,6 +6,7 @@ using Rhino.Runtime.Code.Projects;
 using Rhino.Runtime.Code.Platform;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
+using Rhino.Runtime.Code.Diagnostics;
 
 namespace RhinoAI.ScriptProjects;
 
@@ -78,10 +79,6 @@ internal class ScriptProjectRunner
                 project.Identity.Copyright = project.Identity.Publisher.Name;
                 project.Identity.Version = ProjectVersion.Default;
                 project.Identity.Description = "Rhino commands created by Rhino AI.";
-                if (project.Settings is RhinoCodePlatform.Projects.Rhino3DProjectSettings customSettings)
-                {
-                    customSettings.GenerateLayoutFile = false;
-                }
 
                 // Storage and pathing
                 if (!RhinoCode.StorageSites.TryCreateStorage(projectFilePath, out IStorage storage))
@@ -120,7 +117,7 @@ internal class ScriptProjectRunner
         return PublisherIdentity.Empty;
     }
 
-    public ReturnResult AddCommandToProject(string commandName, string script)
+    public ReturnResult AddCommandToProject(string commandName, string script, string? svg)
     {
         try
         {
@@ -130,19 +127,39 @@ internal class ScriptProjectRunner
 
             Uri scriptUri = new(Path.Combine(Paths.Directory, $"{commandName}.py"));
 
+            EnsurePython3Header(ref script);
+
             SourceCode validate = new(LanguageSpec.Python3, script);
 
             if (!validate.TryCreateCode(out Code code))
                 return ReturnResult.Failure("Could not create code from script");
 
             if (!code.TryBuild(new BuildContext(BuildKind.Run), out CompileException ex))
-                return ReturnResult.Failure(ex.Message, "Fix compile issues in the script");
+            {
+                string message = ex.Message;
+                string guidance = "";
+                
+                foreach(Diagnostic? diagnostic in ex.Diagnosis)
+                {
+                    if (diagnostic is null) continue;
+                    guidance += $"DAIG : {diagnostic.Message} @ Line:{diagnostic.Reference.Position.LineNumber}, Col:{diagnostic.Reference.Position.ColumnNumber}.";
+                }
+
+                if (string.IsNullOrEmpty(guidance))
+                {
+                    guidance = $"STACK TRACE : {ex.StackTrace}";
+                }
+
+                return ReturnResult.Failure(message, guidance);
+            }
 
             File.WriteAllText(scriptUri.LocalPath, script);
 
             SourceCode source = new(LanguageSpec.Python3, commandName, script, scriptUri);
 
-            project.Add(source);
+            ProjectCode projectCode = project.Add(source);
+            RhinoCodeProjects.SetIcon(projectCode, svg);
+
             project.Store();
 
             Reload();
@@ -153,6 +170,14 @@ internal class ScriptProjectRunner
         {
             return ReturnResult.Failure(anyEx.Message);
         }
+    }
+
+    private static void EnsurePython3Header(ref string script)
+    {
+        const string HEADER = "#! python 3\n";
+        if (script.Trim().StartsWith(HEADER)) return;
+
+        script = script.Insert(0, HEADER);
     }
 
     public ReturnResult RemoveCommandFromProject(string commandName)

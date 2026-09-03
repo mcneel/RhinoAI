@@ -6,9 +6,9 @@ namespace RhinoAI;
 /// <summary>
 /// Universal Return Result for MCP Tool Calls
 /// </summary>
-/// <param name="Result"></param>
-/// <param name="Message"></param>
-/// <param name="Guidance"></param>
+/// <param name="Result">True for success, false for Failure</param>
+/// <param name="Message">Any relevant message about the success or failure</param>
+/// <param name="Guidance">How can an AI Agent respond to this?</param>
 internal record struct ReturnResult(bool Result, string? Message, string? Guidance)
 {
 
