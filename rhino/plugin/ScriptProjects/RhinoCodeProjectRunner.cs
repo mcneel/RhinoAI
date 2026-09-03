@@ -210,24 +210,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         return ReturnResult.Success();
     }
 
-    public static ReturnResult Reload()
-    {
-        ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
-
-        ReturnResult result = TryCreate(out RhinoCodeProjectRunner runner);
-        if (!result)
-            return result;
-
-        result = runner.TryGetProject(out IProject project);
-        if (!result)
-            return result;
-
-        ProjectPackageBuild build = project.Settings.PackageBuild;
-        project.Package(runner.Host, build, runner.Reporter);
-        project.Preview(runner.Host, build, runner.Reporter);
-
-        return ReturnResult.Success();
-    }
+    public ReturnResult Reload() => Build(true);
 
 }
 
