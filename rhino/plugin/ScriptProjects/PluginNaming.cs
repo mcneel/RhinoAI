@@ -33,8 +33,12 @@ internal static class PluginNaming
         foreach (char character in name)
         {
             char candidate = character == ' ' ? '_' : character;
-            if (IsCommandNameCharacter(candidate))
-                coerced.Append(candidate);
+            if (!IsCommandNameCharacter(candidate)) continue;
+
+            // Ensure first Char is ASCII only
+            if (coerced.Length == 0 && !IsAsciiLetterOrDigit(candidate)) continue;
+            
+            coerced.Append(candidate);
         }
 
         name = coerced.ToString();

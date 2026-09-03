@@ -26,6 +26,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
     public RhinoCodeProjectRunner()
     {
         Paths = ScriptProjectPaths.For(null);
+        Paths.Directory.EnsureDirectory();
     }
 
     private ReturnResult TryGetProject(out IProject project)
@@ -35,6 +36,8 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         if (CachedProject is null)
         {
             Uri projectFilePath = new(Paths.ProjectFile);
+
+            Paths.Directory.EnsureDirectory();
 
             if (File.Exists(projectFilePath.LocalPath))
             {
@@ -135,10 +138,13 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
             SourceCode source = new(LanguageSpec.Python3, commandName, script, scriptUri);
 
+            // Remove before update
+            RemoveCommandFromProject(commandName);
+
             ProjectCode projectCode = project.Add(source);
             RhinoCodeProjects.SetIcon(projectCode, svg);
 
-            project.Store();
+            if (!project.TryStore()) return ReturnResult.Failure($"Could not save script {scriptUri.LocalPath}");
 
             Reload();
 
@@ -210,7 +216,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         return ReturnResult.Success();
     }
 
-    public ReturnResult Reload() => Build(true);
+    public ReturnResult Reload() => Build(false);
 
 }
 
