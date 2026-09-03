@@ -21,7 +21,8 @@ internal sealed record TurnEvent(
     DateTimeOffset At,
     string Args = "",
     string Result = "",
-    string Id = "");
+    string Id = "",
+    bool Failed = false);
 
 // Mutated only while it is the current turn; Complete() freezes it permanently.
 internal sealed class Turn
@@ -56,7 +57,7 @@ internal sealed class Turn
     // Fold a tool's output into its originating ToolUse event (matched by id, most-recent first) so
     // it surfaces in that chip's expander rather than as a stray bubble. A missing id is dropped,
     // not turned into a new event.
-    internal void SetToolResult(string id, string result)
+    internal void SetToolResult(string id, string result, bool failed)
     {
         if (id.Length == 0)
             return;
@@ -67,7 +68,7 @@ internal sealed class Turn
                 TurnEvent ev = EventList[i];
                 if (ev.Kind == TurnEventKind.ToolUse && ev.Id == id)
                 {
-                    EventList[i] = ev with { Result = result };
+                    EventList[i] = ev with { Result = result, Failed = failed };
                     return;
                 }
             }
@@ -113,13 +114,13 @@ internal sealed class Conversation
         };
 
         foreach (TurnEventDto ev in dto.Lifecycle)
-            convo.LifecycleList.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id));
+            convo.LifecycleList.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed));
 
         foreach (TurnDto turnDto in dto.Turns)
         {
             Turn turn = new(turnDto.Prompt, convo.Sync);
             foreach (TurnEventDto ev in turnDto.Events)
-                turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id));
+                turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed));
             turn.SetUsage(turnDto.Usage);
             turn.Complete();
             convo.TurnList.Add(turn);
@@ -165,10 +166,10 @@ internal sealed class Conversation
     }
 
     // Attach a completed tool's output to its originating ToolUse event (see Turn.SetToolResult).
-    public void CompleteToolCall(string id, string result)
+    public void CompleteToolCall(string id, string result, bool failed = false)
     {
         lock (Sync)
-            Current?.SetToolResult(id, result);
+            Current?.SetToolResult(id, result, failed);
         Changed?.Invoke();
     }
 

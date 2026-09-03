@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Acp;
 using RhinoAI;
 
@@ -60,6 +62,57 @@ public sealed class ClaudeStreamJsonParserTests
         Assert.That(update.Status, Is.EqualTo(ToolCallStatus.Completed));
         Assert.That(update.RawOutput, Is.Not.Null);
         Assert.That(update.RawOutput!.Value.GetString(), Is.EqualTo("done"));
+    }
+
+    [Test]
+    public void Tool_result_marked_is_error_emits_a_failed_tool_call_update()
+    {
+        ParsedLine parsed = NewParser().Parse(
+            """{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"InvalidOperationException: no active view","is_error":true}]}}""");
+
+        ToolCallUpdateSessionUpdate update = (ToolCallUpdateSessionUpdate)parsed.Updates[0];
+        Assert.That(update.Status, Is.EqualTo(ToolCallStatus.Failed));
+    }
+
+    // A glob in the server segment is rejected by Claude Code, which leaves no tool approved at all.
+    [Test]
+    public void Allow_rule_anchors_the_glob_after_the_server_name()
+    {
+        ProcessStartInfo psi = Launch([]);
+
+        Assert.That(ValueAfter(psi, "--allowedTools"), Is.EqualTo("mcp__rhino__*"));
+    }
+
+    [Test]
+    public void Every_configured_mcp_server_gets_its_own_allow_rule()
+    {
+        ProcessStartInfo psi = Launch([
+            """{"docs":{"type":"http","url":"http://localhost:2/mcp"},"rhino":{"type":"http","url":"http://elsewhere"}}"""]);
+
+        Assert.That(ValueAfter(psi, "--allowedTools"), Is.EqualTo("mcp__rhino__*,mcp__docs__*"));
+    }
+
+    [Test]
+    public void Claude_built_in_tools_are_switched_off()
+    {
+        ProcessStartInfo psi = Launch([]);
+
+        Assert.That(psi.ArgumentList, Contains.Item("--tools"));
+        Assert.That(ValueAfter(psi, "--tools"), Is.Empty);
+    }
+
+    private static ProcessStartInfo Launch(IReadOnlyList<string> mcpServers)
+    {
+        ProcessStartInfo psi = new();
+        NewParser().ConfigureArguments(psi, "http://localhost:10500/agent", Guid.NewGuid().ToString(), mcpServers, resume: false);
+        return psi;
+    }
+
+    private static string ValueAfter(ProcessStartInfo psi, string flag)
+    {
+        int index = psi.ArgumentList.IndexOf(flag);
+        Assert.That(index, Is.GreaterThanOrEqualTo(0), $"{flag} was never passed");
+        return psi.ArgumentList[index + 1];
     }
 
     [Test]

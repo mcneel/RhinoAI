@@ -111,6 +111,23 @@ public sealed class ConversationFeedTests
         Assert.That(patch.Error, Is.EqualTo("nothing selected"));
     }
 
+    // A plain-text CLI error carries none of the shapes IsFailure looks for, so it used to read "ok".
+    [Test]
+    public void A_result_the_agent_flagged_as_an_error_is_failed_even_without_an_error_shape()
+    {
+        Convo.BeginTurn("hi");
+        Convo.Record(TurnEventKind.ToolUse, "run_python", "{}", string.Empty, "call-1");
+        Feed.Replay();
+        Sent.Clear();
+
+        Convo.CompleteToolCall("call-1", "\"NameError: name 'boom' is not defined\"", failed: true);
+        Feed.Pump();
+
+        PanelToolPatch patch = OfType<TurnToolPatchEvent>().Single().Patch;
+        Assert.That(patch.Status, Is.EqualTo("failed"));
+        Assert.That(patch.Title, Is.EqualTo("python failed"));
+    }
+
     [Test]
     public void Nothing_is_re_emitted_when_nothing_changed()
     {

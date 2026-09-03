@@ -28,11 +28,11 @@ internal static class ToolSummary
     }
 
     // result is empty while the call is still in flight; show the in-progress verb without a verdict.
-    public static string Describe(string rawToolName, string argsJson, string resultJson)
+    public static string Describe(string rawToolName, string argsJson, string resultJson, bool reportedFailure = false)
     {
         string toolName = Bare(rawToolName);
         bool hasResult = !string.IsNullOrWhiteSpace(resultJson);
-        bool failed = hasResult && IsFailure(resultJson);
+        bool failed = hasResult && (reportedFailure || IsFailure(resultJson));
 
         string? phrase = Phrase(toolName, argsJson, resultJson, failed);
         if (phrase is not null)
