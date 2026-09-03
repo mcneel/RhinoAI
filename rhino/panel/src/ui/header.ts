@@ -1,6 +1,5 @@
-import { el, when } from '../core/dom.js';
+import { el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
-import { formatCost, formatTokens } from '../state/format.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
 
@@ -39,22 +38,6 @@ export function header(ctx: PanelContext): Child {
     'header',
     { class: 'header' },
     agentButton,
-    when(
-      () => store.sessionUsage().inputTokens + store.sessionUsage().outputTokens > 0,
-      () => {
-        const usage = () => store.sessionUsage();
-        return el(
-          'div',
-          { class: 'usage', title: 'Session tokens and reported cost' },
-          el('b', { text: () => formatTokens(usage().inputTokens + usage().outputTokens) }),
-          'tok',
-          when(
-            () => formatCost(usage().costUsd) !== null,
-            () => [el('span', { text: '·' }), el('b', { text: () => formatCost(usage().costUsd) ?? '' })],
-          ),
-        );
-      },
-    ),
     el(
       'button',
       {

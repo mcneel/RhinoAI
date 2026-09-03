@@ -54,7 +54,12 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
           ? el('span', { class: 'spinner' })
           : el('span', { class: 'fam' }, icon(iconFor(family), 14)),
       el('span', { class: 'title', text: () => call().title }),
-      el('span', { class: 'wire', text: () => call().name }),
+      // Only worth the space when it says something the phrase does not. An unrecognised tool has
+      // no phrase, so its title already is the wire name.
+      when(
+        () => call().name !== call().title,
+        () => el('span', { class: 'wire', text: () => call().name }),
+      ),
       when(
         () => call().durationMs !== undefined,
         () => el('span', { class: 'dur', text: () => formatDuration(call().durationMs ?? 0) }),

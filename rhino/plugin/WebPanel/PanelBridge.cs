@@ -38,6 +38,14 @@ internal sealed class PanelBridge
         View.MessageReceived += (_, e) => Receive(e.Message);
     }
 
+    // Called when the host reloads the page. Without this, Loaded stays true across the swap and
+    // events posted before the new document exists evaluate against a page being torn down.
+    public void Reset()
+    {
+        Loaded = false;
+        Backlog.Clear();
+    }
+
     public void Post(PanelEvent value)
     {
         // The payload is embedded in JavaScript source, so it has to be valid JS as well as valid

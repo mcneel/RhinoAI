@@ -1,11 +1,12 @@
 import { each, el, onCleanup, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
-import { clockTime, formatCost, formatTokens, relativeTime } from '../state/format.js';
+import { clockTime, formatTokens, relativeTime } from '../state/format.js';
 import type { BlockView, TurnView } from '../state/store.js';
 import type { Attachment, ContextItem, PlanStep } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { emptyState } from './empty.js';
 import { icon } from './icons.js';
+import { notices } from './notices.js';
 import { agentMessage } from './message.js';
 import { questionCard } from './question.js';
 import { toolCard } from './toolCard.js';
@@ -113,12 +114,11 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
       () => [
         el('span', { class: 'sep', text: '·' }),
         el('span', {
+          // Tokens only. A running cost turns every prompt into a purchase decision, which is not
+          // the relationship we want the user to have with the panel.
           text: () => {
             const value = usage();
-            if (!value) return '';
-            const cost = formatCost(value.costUsd);
-            const tokens = `${formatTokens(value.inputTokens + value.outputTokens)} tok`;
-            return cost ? `${tokens} · ${cost}` : tokens;
+            return value ? `${formatTokens(value.inputTokens + value.outputTokens)} tok` : '';
           },
         }),
       ],
@@ -210,16 +210,33 @@ export function transcript(ctx: PanelContext): Child {
     },
   );
 
+  // Scroll events are not a reliable signal of intent. Our own autoscroll produces them, and so
+  // does the browser's scroll anchoring when the composer resizes or content lands above the
+  // viewport, which is what used to unpin the transcript mid-stream and strand the user halfway up.
+  // So unpinning requires a real gesture, while reaching the bottom always re-pins.
+  let intentUntil = 0;
+  const noteIntent = (): void => {
+    intentUntil = Date.now() + 400;
+  };
+
   const scroller = el(
     'div',
     {
       class: 'transcript',
       tabindex: '-1',
       onScroll: () => {
-        const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 28;
-        ui.pinned.set(atBottom);
-        if (atBottom) ui.hasNew.set(false);
+        const gap = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+        if (gap < 28) {
+          ui.pinned.set(true);
+          ui.hasNew.set(false);
+          return;
+        }
+        if (Date.now() < intentUntil) ui.pinned.set(false);
       },
+      onWheel: noteIntent,
+      onPointerDown: noteIntent,
+      onKeyDown: noteIntent,
+      onTouchStart: noteIntent,
     },
     stream,
   );
@@ -244,6 +261,7 @@ export function transcript(ctx: PanelContext): Child {
     'div',
     { class: 'stage' },
     scroller,
+    notices(ctx),
     when(
       () => !ui.pinned() && ui.hasNew(),
       () =>

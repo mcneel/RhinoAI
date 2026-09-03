@@ -12,6 +12,9 @@ namespace RhinoAI.WebPanel;
 // Pump is not thread-safe and must run on the UI thread; the panel marshals Changed before calling.
 internal sealed class ConversationFeed
 {
+    // Conversation.NoteSessionStarted writes exactly this.
+    private const string SessionStartedMarker = "session started";
+
     private Conversation Source { get; }
     private Action<PanelEvent> Emit { get; }
 
@@ -43,8 +46,9 @@ internal sealed class ConversationFeed
     }
 
     // Replay the whole conversation as if it were arriving live. Cheaper than a snapshot type, and
-    // it means the attach path and the streaming path are the same code.
-    public void Replay()
+    // it means the attach path, the streaming path and the read-only review of a saved transcript
+    // are all the same code.
+    public void Replay(bool readOnly = false)
     {
         Cursors.Clear();
         LifecycleSent = 0;
@@ -57,7 +61,7 @@ internal sealed class ConversationFeed
             Source.DocTitle,
             Source.StartedAt.ToString("O"),
             Array.Empty<PanelTurn>(),
-            ReadOnly: false)));
+            readOnly)));
 
         Pump();
     }
@@ -66,7 +70,15 @@ internal sealed class ConversationFeed
     {
         IReadOnlyList<TurnEvent> lifecycle = Source.Lifecycle;
         for (; LifecycleSent < lifecycle.Count; LifecycleSent++)
-            Emit(new NoticeEvent("info", lifecycle[LifecycleSent].Text));
+        {
+            // NoteSessionStarted and NoteSystem share a kind, and the bare "session started" marker
+            // tells the user nothing they cannot see from the panel being open. A NoteSystem line is
+            // a real fail-soft message (a stale resume target, say) and is still surfaced.
+            string text = lifecycle[LifecycleSent].Text;
+            if (text == SessionStartedMarker)
+                continue;
+            Emit(new NoticeEvent("info", text));
+        }
 
         IReadOnlyList<Turn> turns = Source.Turns;
         for (int i = 0; i < turns.Count; i++)
@@ -209,7 +221,7 @@ internal sealed class ConversationFeed
         bool failed = finished && ToolSummary.IsFailure(ev.Result);
         return new PanelToolCall(
             callId,
-            ev.Text,
+            ToolSummary.Bare(ev.Text),
             ToolSummary.Describe(ev.Text, ev.Args, ev.Result),
             Payload(ev.Args),
             finished ? failed ? "failed" : "ok" : "running",

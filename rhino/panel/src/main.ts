@@ -6,6 +6,7 @@ import { inertBridge, resolveNativeBridge, type Bridge } from './protocol/bridge
 import { MockHost } from './protocol/mockHost.js';
 import { Store } from './state/store.js';
 import { UiState } from './state/ui.js';
+import { Zoom } from './state/zoom.js';
 import { app } from './ui/app.js';
 import type { PanelContext } from './ui/context.js';
 import { devFrame } from './dev/frame.js';
@@ -16,10 +17,13 @@ const native = resolveNativeBridge();
 const bridge: Bridge = native ?? (__MOCK__ ? new MockHost() : inertBridge());
 const store = new Store();
 const ui = new UiState();
+const zoom = new Zoom();
 
 const ctx: PanelContext = {
   store,
   ui,
+  zoom,
+  native: native !== null,
   send: (command) => bridge.send(command),
   copy: (text) => {
     // The host owns the clipboard when the webview cannot reach it (older WKWebView, no https).
@@ -51,7 +55,20 @@ const reviewable = __MOCK__ && native === null && window.innerWidth >= 760;
 const host = reviewable ? devFrame(root, store) : root;
 
 function start(): void {
-  bridge.subscribe((event) => store.apply(event));
+  bridge.subscribe((event) => {
+    // Zoom and reload are panel concerns the host merely triggers, so they never reach the store.
+    if (event.type === 'zoom') {
+      if (event.action === 'in') zoom.in();
+      else if (event.action === 'out') zoom.out();
+      else zoom.reset();
+      return;
+    }
+    if (event.type === 'reload') {
+      window.location.reload();
+      return;
+    }
+    store.apply(event);
+  });
   mount(host, () => app(ctx));
   bridge.send({ type: 'ready' });
 }

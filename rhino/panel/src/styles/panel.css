@@ -20,7 +20,7 @@
   --gap: 8px;
   --pad: 10px;
 
-  --bg: #f6f6f7;
+  --bg: #ffffff;
   --surface: #ffffff;
   --surface-2: #eeeef1;
   --surface-3: #e3e3e8;
@@ -42,6 +42,12 @@
   --err: #c1262d;
   --err-soft: #fce9e9;
 
+  --control: #ebebed;
+  --control-hover: #dededf;
+  --field: #ffffff;
+  --link: #0a5ecc;
+  --selection: #b3d4fc;
+  --selection-text: #1b1c1f;
   --rule: #e6e6ea;
   --ok-line: #a9ddb9;
   --warn-line: #e8d3a3;
@@ -84,6 +90,12 @@
     --err: #ff8a86;
     --err-soft: #3a1c1d;
 
+    --control: #2a2b30;
+    --control-hover: #35363b;
+    --field: #1a1b1e;
+    --link: #6fa8ff;
+    --selection: #2f4a76;
+    --selection-text: #e8e9ec;
     --rule: #2a2b30;
     --ok-line: #2c5a3c;
     --warn-line: #5c4820;
@@ -123,6 +135,12 @@
   --warn-soft: #33280f;
   --err: #ff8a86;
   --err-soft: #3a1c1d;
+  --control: #2a2b30;
+  --control-hover: #35363b;
+  --field: #1a1b1e;
+  --link: #6fa8ff;
+  --selection: #2f4a76;
+  --selection-text: #e8e9ec;
   --rule: #2a2b30;
   --ok-line: #2c5a3c;
   --warn-line: #5c4820;
@@ -152,7 +170,6 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 400 var(--fs)/1.5 var(--font);
-  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
@@ -167,7 +184,7 @@ button {
   cursor: pointer;
 }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 :focus-visible {
@@ -176,7 +193,22 @@ a:hover { text-decoration: underline; }
   border-radius: var(--r-sm);
 }
 
+::selection { background: var(--selection); color: var(--selection-text); }
+
 .icon { flex: none; display: block; }
+
+/* Chromium draws its own scrollbars, which look nothing like Rhino's. macOS overlay scrollbars
+   already match and styling them would make them permanently visible, so this is Windows only. */
+:root[data-platform='windows'] ::-webkit-scrollbar { width: 12px; height: 12px; }
+:root[data-platform='windows'] ::-webkit-scrollbar-track { background: transparent; }
+:root[data-platform='windows'] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+:root[data-platform='windows'] ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); background-clip: padding-box; }
+:root[data-platform='windows'] ::-webkit-scrollbar-corner { background: transparent; }
 
 /* ------------------------------------------------------------------ shell */
 
@@ -197,7 +229,7 @@ a:hover { text-decoration: underline; }
   gap: 6px;
   padding: 6px var(--pad);
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--control);
   min-width: 0;
 }
 
@@ -211,8 +243,8 @@ a:hover { text-decoration: underline; }
   border-radius: var(--r);
   border: 1px solid transparent;
 }
-.agent-chip:hover { background: var(--surface-2); border-color: var(--border); }
-.agent-chip[aria-expanded='true'] { background: var(--surface-2); border-color: var(--border-strong); }
+.agent-chip:hover { background: var(--control-hover); border-color: var(--border); }
+.agent-chip[aria-expanded='true'] { background: var(--control-hover); border-color: var(--border-strong); }
 
 .agent-chip .who { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.25; }
 .agent-chip .name { font-weight: 600; font-size: var(--fs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -243,21 +275,10 @@ a:hover { text-decoration: underline; }
   color: var(--text-dim);
   flex: none;
 }
-.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn:hover { background: var(--control-hover); color: var(--text); }
 .icon-btn:disabled { opacity: .35; cursor: default; }
 .icon-btn.on { background: var(--accent-soft); color: var(--accent); }
 
-.usage {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-  padding-inline: 2px;
-  white-space: nowrap;
-}
-.usage b { font-weight: 600; color: var(--text-dim); }
 
 /* ------------------------------------------------------------ status strip */
 
@@ -268,8 +289,8 @@ a:hover { text-decoration: underline; }
   padding: 5px var(--pad);
   font-size: var(--fs-sm);
   color: var(--text-dim);
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
+  background: var(--control);
+  border-top: 1px solid var(--border);
   min-height: 0;
 }
 .status-strip .spark { color: var(--accent); }
@@ -323,6 +344,8 @@ a:hover { text-decoration: underline; }
   min-height: 100%;
   /* Short transcripts hug the composer, the way every other chat surface behaves. */
   justify-content: flex-end;
+  /* The panel drives its own autoscroll; anchoring only fights it and fires phantom scroll events. */
+  overflow-anchor: none;
 }
 
 .turn { display: flex; flex-direction: column; gap: 6px; padding-block: 6px 12px; min-width: 0; }
@@ -649,7 +672,7 @@ a:hover { text-decoration: underline; }
 .question input[type='text'] {
   font: inherit;
   color: inherit;
-  background: var(--bg);
+  background: var(--field);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 4px 7px;
@@ -674,7 +697,7 @@ a:hover { text-decoration: underline; }
 
 .composer {
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--control);
   padding: var(--gap) var(--pad) var(--pad);
   display: flex;
   flex-direction: column;
@@ -686,7 +709,7 @@ a:hover { text-decoration: underline; }
 .composer-box {
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
-  background: var(--bg);
+  background: var(--field);
   padding: 6px 6px 5px;
   display: flex;
   flex-direction: column;
@@ -841,7 +864,7 @@ a:hover { text-decoration: underline; }
   gap: 6px;
   padding: 6px var(--pad);
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--control);
 }
 .drawer-head b { flex: 1; font-size: var(--fs-md); font-weight: 600; }
 
@@ -853,7 +876,7 @@ a:hover { text-decoration: underline; }
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--r);
-  background: var(--surface);
+  background: var(--field);
   color: var(--text-faint);
 }
 .search input {
@@ -920,7 +943,7 @@ a:hover { text-decoration: underline; }
 .notices {
   position: absolute;
   inset-inline: var(--pad);
-  bottom: 6px;
+  top: 6px;
   z-index: 11;
   display: flex;
   flex-direction: column;
@@ -929,6 +952,7 @@ a:hover { text-decoration: underline; }
 }
 .notice {
   pointer-events: auto;
+  animation: notice-in .16s ease;
   display: flex;
   gap: 7px;
   align-items: flex-start;
@@ -967,10 +991,6 @@ a:hover { text-decoration: underline; }
 
 /* -------------------------------------------------- narrow docked layout */
 
-@container panel (max-width: 390px) {
-  .usage { display: none; }
-}
-
 @container panel (max-width: 330px) {
   .tool-head .wire { display: none; }
   .msg-user { max-width: 100%; }
@@ -982,6 +1002,8 @@ a:hover { text-decoration: underline; }
   .agent-chip .model { display: none; }
   .turn-foot .sep, .turn-foot .when { display: none; }
 }
+
+@keyframes notice-in { from { transform: translateY(-6px); opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
@@ -995,7 +1017,7 @@ a:hover { text-decoration: underline; }
   gap: 6px;
   padding: var(--gap) var(--pad);
   border-top: 1px solid var(--border);
-  background: var(--surface-2);
+  background: var(--control);
   font-size: var(--fs-sm);
   color: var(--text-dim);
 }
@@ -1111,3 +1133,11 @@ a:hover { text-decoration: underline; }
 .unsupported p { margin: 0 0 10px; color: var(--text-dim); }
 .unsupported p.quiet { color: var(--text-faint); font-size: var(--fs); }
 .unsupported .btn { margin-top: 8px; }
+
+.menu-item .hint {
+  margin-inline-start: auto;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+  padding-inline-start: 10px;
+}

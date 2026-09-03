@@ -198,6 +198,30 @@ try {
   );
   check('the transcript settles pinned to the tail', pinned !== null, 'never reached the bottom');
 
+  // The counterpart: a real gesture must still unpin, or the user cannot read back mid-turn.
+  const centre = await page.evaluate(() => {
+    const r = document.querySelector('.transcript').getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  });
+  await page.mouse.move(centre.x, centre.y);
+  await page.mouse.wheel({ deltaY: -400 });
+  const unpinned = await until(page, `document.querySelectorAll('.jump button').length === 1 ? { shown: true } : null`, 3000);
+  check('scrolling up unpins and offers a jump back', unpinned !== null);
+
+  if (unpinned) {
+    await page.click('.jump button');
+    const repinned = await until(
+      page,
+      `(() => {
+         const t = document.querySelector('.transcript');
+         return document.querySelectorAll('.jump').length === 0 &&
+           t.scrollHeight - t.scrollTop - t.clientHeight < 30 ? { back: true } : null;
+       })()`,
+      3000,
+    );
+    check('the jump pill returns to the tail and re-pins', repinned !== null);
+  }
+
   // ------------------------------------------------------------------- escape
   await page.click('.composer textarea');
   await page.keyboard.press('Escape');
@@ -259,7 +283,7 @@ try {
     starters: document.querySelectorAll('.starter').length,
     turns: document.querySelectorAll('.turn').length,
   }));
-  check('a new conversation shows the empty state', empty.turns === 0 && empty.starters >= 4, JSON.stringify(empty));
+  check('a new conversation shows the empty state', empty.turns === 0 && empty.starters === 3, JSON.stringify(empty));
 
   await type('audit the selected objects');
   await page.keyboard.press('Enter');
@@ -345,6 +369,97 @@ try {
       .flatMap((sheet) => { try { return [...sheet.cssRules]; } catch { return []; } })
       .some((rule) => rule.cssText.includes('color-mix')))));
 
+  // --------------------------------------------------------- notices / status
+  // The review check above left the panel read-only, which has no composer.
+  await page.evaluate(() => document.querySelector('.review-bar .btn')?.click());
+  await wait(400);
+  await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][2].click());
+  await wait(300);
+  const placement = await page.evaluate(() => {
+    const notice = document.querySelector('.notice');
+    const header = document.querySelector('.header');
+    const transcript = document.querySelector('.transcript');
+    const composer = document.querySelector('.composer');
+    if (!notice || !header || !transcript) return null;
+    return {
+      belowHeader: notice.getBoundingClientRect().top >= header.getBoundingClientRect().bottom,
+      nearTop: notice.getBoundingClientRect().top < transcript.getBoundingClientRect().top + 60,
+      hasComposer: composer !== null,
+    };
+  });
+  check('a notice sits just under the header', placement !== null && placement.belowHeader && placement.nearTop,
+    JSON.stringify(placement));
+
+  const cleared = await until(page, `document.querySelectorAll('.notice').length === 0 ? { gone: true } : null`, 7000);
+  check('a notice clears itself without being dismissed', cleared !== null);
+
+  await type('Build a parametric facade in Grasshopper');
+  await page.keyboard.press('Enter');
+  const strip = await until(
+    page,
+    `(() => {
+       const s = document.querySelector('.status-strip');
+       const t = document.querySelector('.transcript');
+       return s ? { belowTranscript: s.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1 } : null;
+     })()`,
+  );
+  check('the status strip sits below the transcript', strip?.belowTranscript === true, JSON.stringify(strip));
+  await page.click('.composer textarea');
+  await page.keyboard.press('Escape');
+  await wait(300);
+
+  // -------------------------------------------------------- zoom / right click
+  const zoomOf = () => page.evaluate(() => document.querySelector('.panel').style.zoom || '1');
+
+  // Without a host there is nothing to draw a native menu, so the browser must keep its own.
+  const browserMenuKept = await page.evaluate(() => {
+    let prevented = null;
+    const probe = (e) => { prevented = e.defaultPrevented; };
+    window.addEventListener('contextmenu', probe);
+    document.querySelector('.transcript').dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+    );
+    window.removeEventListener('contextmenu', probe);
+    return { prevented, inPageMenus: document.querySelectorAll('.ctx-menu').length };
+  });
+  check('with no host, right click leaves the browser menu alone',
+    browserMenuKept.prevented === false && browserMenuKept.inPageMenus === 0, JSON.stringify(browserMenuKept));
+
+  await page.keyboard.down(process.platform === 'darwin' ? 'Meta' : 'Control');
+  await page.keyboard.press('Equal');
+  await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control');
+  await wait(150);
+  // Level 1 is the design's natural size, which is CSS zoom 0.9; one rung in is 1.1 x 0.9.
+  check('the keyboard shortcut zooms in', (await zoomOf()) === '0.99', await zoomOf());
+
+  await page.keyboard.down(process.platform === 'darwin' ? 'Meta' : 'Control');
+  await page.keyboard.press('Digit0');
+  await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control');
+  await wait(150);
+  check('the reset shortcut returns to 100%', (await zoomOf()) === '0.9', await zoomOf());
+
+  const panelCentre = await page.evaluate(() => {
+    const r = document.querySelector('.panel').getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 3) };
+  });
+  await page.mouse.move(panelCentre.x, panelCentre.y);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel({ deltaY: -120 });
+  await page.keyboard.up('Control');
+  await wait(200);
+  check('ctrl and the wheel zooms', (await zoomOf()) === '0.99', await zoomOf());
+  await page.evaluate(() => { document.querySelector('.panel').style.zoom = '0.9'; });
+
+  await page.click('.composer textarea');
+  const box = await page.evaluate(() => {
+    const r = document.querySelector('.composer textarea').getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  });
+  await page.mouse.click(box.x, box.y, { button: 'right' });
+  await wait(200);
+  check('a text field keeps its native menu so paste still works',
+    (await page.evaluate(() => document.querySelectorAll('.ctx-menu').length)) === 0);
+
   // ------------------------------------------------- the C# contract, replayed
   // host-events.json is written by PanelContractTests in the plug-in's test suite, using the real
   // serialiser. Replaying it here is the only place the two languages are checked against each
@@ -363,6 +478,8 @@ try {
 
     // Stand in for Eto's injected shim, which is what the panel talks to inside Rhino.
     await host.evaluateOnNewDocument(() => {
+      // Both pages are file:// and share a localStorage, so the mock page's zoom would leak in.
+      try { window.localStorage.clear(); } catch { /* opaque origin */ }
       window.__sent = [];
       window.eto = { postMessage: (message) => window.__sent.push(JSON.parse(message)) };
     });
@@ -386,17 +503,162 @@ try {
       code: document.querySelectorAll('.md-code').length,
       tools: document.querySelectorAll('.tool').length,
       toolOk: document.querySelectorAll('.tool.ok, .tool:not(.running):not(.failed)').length,
+      titles: [...document.querySelectorAll('.tool .title')].map((n) => n.textContent),
+      wires: [...document.querySelectorAll('.tool .wire')].map((n) => n.textContent),
       question: document.querySelectorAll('.question label').length,
-      usage: document.querySelector('.usage')?.textContent?.trim(),
+      footerTokens: [...document.querySelectorAll('.turn-foot')].map((n) => n.textContent).join(' '),
     }));
 
     check('C#-serialised events render a turn', rendered.turns === 1 && rendered.prompt?.includes('Facade'), JSON.stringify(rendered));
     check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
-      rendered.tools === 1 && rendered.toolOk === 1, JSON.stringify(rendered));
+      rendered.tools === 2 && rendered.toolOk === 1, JSON.stringify(rendered));
+    check('the mcp__rhino__ prefix never reaches the panel',
+      !JSON.stringify(rendered).includes('mcp__'), JSON.stringify(rendered));
+    check('a namespaced tool gets its real phrase',
+      rendered.titles.includes('listed objects'), JSON.stringify(rendered.titles));
+    check('the wire name shows only when it adds something',
+      rendered.wires.length === 1 && rendered.wires[0] === 'list_objects', JSON.stringify(rendered.wires));
     check('the question posed by the feed renders', rendered.question === 2, JSON.stringify(rendered));
-    check('per-turn usage reaches the header', (rendered.usage ?? '').includes('14k'), JSON.stringify(rendered));
+    check('per-turn tokens land on the turn, not the top bar',
+      rendered.footerTokens.includes('14k tok') && !rendered.footerTokens.includes('$'),
+      JSON.stringify(rendered.footerTokens));
+    check('the top bar carries no token or cost readout',
+      (await host.evaluate(() => document.querySelectorAll('.header .usage').length)) === 0);
+    check('no cost is shown anywhere',
+      (await host.evaluate(() => !document.body.textContent.includes('$0.'))) === true);
+
+    // Switching Rhino's theme sends a second theme event. The panel has to restyle from it, both
+    // the host-supplied tokens and the scheme attribute that drives everything the host does not
+    // send (semantic and syntax colours). The attribute is set by an effect, so each event needs a
+    // turn of the microtask queue before it can be read back.
+    const readTheme = () =>
+      host.evaluate(() => ({
+        scheme: document.documentElement.dataset.scheme,
+        // The transcript is transparent and shows the body's ground.
+        bg: getComputedStyle(document.body).backgroundColor,
+        chrome: getComputedStyle(document.querySelector('.header')).backgroundColor,
+      }));
+
+    await host.evaluate(() =>
+      window.rhinoAI.receive({
+        type: 'theme',
+        scheme: 'light',
+        tokens: { bg: '#ffffff', control: '#ebebed', text: '#111111' },
+      }),
+    );
+    await wait(120);
+    const lightTheme = await readTheme();
+
+    await host.evaluate(() =>
+      window.rhinoAI.receive({
+        type: 'theme',
+        scheme: 'dark',
+        tokens: { bg: '#141417', control: '#1c1c21', text: '#eeeeee' },
+      }),
+    );
+    await wait(120);
+    const darkTheme = await readTheme();
+
+    check('a second theme event restyles the panel',
+      lightTheme.bg === 'rgb(255, 255, 255)' && darkTheme.bg === 'rgb(20, 20, 23)',
+      JSON.stringify({ lightTheme, darkTheme }));
+    check('the chrome and the content restyle independently',
+      darkTheme.chrome === 'rgb(28, 28, 33)' && darkTheme.chrome !== darkTheme.bg,
+      JSON.stringify(darkTheme));
+    check('the scheme attribute follows, so unsent tokens switch too',
+      lightTheme.scheme === 'light' && darkTheme.scheme === 'dark',
+      JSON.stringify({ light: lightTheme.scheme, dark: darkTheme.scheme }));
+
+    // Without any host tokens the stylesheet has to carry a complete theme on its own, or a page
+    // that has not been sent one (a fresh load, a suppressed send) renders half in each theme.
+    const stylesheetThemes = await host.evaluate(() => {
+      const names = ['--bg', '--control', '--control-hover', '--field', '--text', '--link',
+                     '--selection', '--selection-text', '--rule', '--surface', '--border', '--shadow'];
+      const root = document.documentElement;
+      const saved = names.map((n) => [n, root.style.getPropertyValue(n)]);
+      for (const [n] of saved) root.style.removeProperty(n);
+
+      const read = () => Object.fromEntries(
+        names.map((n) => [n, getComputedStyle(root).getPropertyValue(n).trim()]));
+
+      root.dataset.scheme = 'light';
+      const light = read();
+      root.dataset.scheme = 'dark';
+      const dark = read();
+
+      for (const [n, v] of saved) if (v) root.style.setProperty(n, v);
+      return { light, dark, missing: names.filter((n) => !light[n] || !dark[n]),
+               same: names.filter((n) => light[n] === dark[n]) };
+    });
+    check('the stylesheet defines every theme token in both schemes',
+      stylesheetThemes.missing.length === 0, JSON.stringify(stylesheetThemes.missing));
+    check('every theme token actually changes between the schemes',
+      stylesheetThemes.same.length === 0, JSON.stringify(stylesheetThemes.same));
+
+    // A host that re-announces what it already sent must not double the transcript. This is the
+    // receiver half of the guard; the sender half is ConversationFeed keeping its high-water marks.
+    const beforeReplay = await host.evaluate(() => ({
+      turns: document.querySelectorAll('.turn').length,
+      tools: document.querySelectorAll('.tool').length,
+      users: document.querySelectorAll('.msg-user').length,
+    }));
+    await host.evaluate((batch) => { for (const event of batch) window.rhinoAI.receive(event); }, events.filter((e) => e.type.startsWith('turn.')));
+    await wait(400);
+    const afterReplay = await host.evaluate(() => ({
+      turns: document.querySelectorAll('.turn').length,
+      tools: document.querySelectorAll('.tool').length,
+      users: document.querySelectorAll('.msg-user').length,
+    }));
+    check('re-announced turns and tool calls do not duplicate rows',
+      JSON.stringify(beforeReplay) === JSON.stringify(afterReplay),
+      `${JSON.stringify(beforeReplay)} -> ${JSON.stringify(afterReplay)}`);
+
+    // Right click is the host's job now, so the panel must ask rather than draw.
+    await host.evaluate(() => {
+      window.__sent.length = 0;
+      document.querySelector('.transcript').dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 120, clientY: 260 }),
+      );
+    });
+    await wait(150);
+    const menuRequest = await host.evaluate(() => window.__sent.find((m) => m.type === 'menu.open'));
+    check('right click asks the host for a native menu',
+      menuRequest !== undefined && menuRequest.x === 120 && menuRequest.y === 260, JSON.stringify(menuRequest));
+    check('the request carries what the menu items need',
+      menuRequest?.zoomLabel === '100%' && menuRequest.canZoomIn === true && menuRequest.canResetZoom === false,
+      JSON.stringify(menuRequest));
+    check('no in-page menu is drawn',
+      (await host.evaluate(() => document.querySelectorAll('.ctx-menu').length)) === 0);
+
+    // A text field keeps the native field menu, which is the only route to Paste.
+    await host.evaluate(() => {
+      window.__sent.length = 0;
+      document.querySelector('.composer textarea').dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+      );
+    });
+    await wait(120);
+    check('a text field is left to the native field menu',
+      (await host.evaluate(() => window.__sent.some((m) => m.type === 'menu.open'))) === false);
+
+    await host.evaluate(() => {
+      window.__sent.length = 0;
+      document.querySelector('.header').dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+      );
+    });
+    await wait(120);
+    check('the header gets no zoom menu',
+      (await host.evaluate(() => window.__sent.some((m) => m.type === 'menu.open'))) === false);
+
+    // The menu reports an intent; the panel owns the ladder.
+    await host.evaluate(() => window.rhinoAI.receive({ type: 'zoom', action: 'in' }));
+    await wait(150);
+    check('a zoom event from the host moves the panel one rung',
+      (await host.evaluate(() => document.querySelector('.panel').style.zoom)) === '0.99',
+      await host.evaluate(() => document.querySelector('.panel').style.zoom));
 
     // Answering has to travel back in the shape the C# deserialiser accepts.
     // Two steps: Answer stays disabled until the selection has propagated.

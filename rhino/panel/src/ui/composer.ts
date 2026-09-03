@@ -90,6 +90,15 @@ export function composer(ctx: PanelContext): Child {
   });
 
   const menuOpen = computed(() => commandMatches().length > 0 || contextMatches().length > 0);
+
+  // The menu scrolls once it outgrows its box, so arrowing past the edge has to bring the row with
+  // it. Deferred a frame because the selected class is applied by an effect, not synchronously.
+  const revealHighlighted = (): void => {
+    requestAnimationFrame(() => {
+      const rows = document.querySelectorAll('.mention-menu .menu-item');
+      rows[Math.min(highlighted(), rows.length - 1)]?.scrollIntoView({ block: 'nearest' });
+    });
+  };
   bind(() => {
     menuOpen();
     highlighted.set(0);
@@ -141,6 +150,7 @@ export function composer(ctx: PanelContext): Child {
       event.preventDefault();
       const size = Math.max(commandMatches().length, contextMatches().length);
       highlighted.set((current) => (current + (event.key === 'ArrowDown' ? 1 : size - 1)) % size);
+      revealHighlighted();
       return;
     }
     if (event.key === 'Escape') {

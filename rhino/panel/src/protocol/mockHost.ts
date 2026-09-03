@@ -318,33 +318,28 @@ interface Scenario {
   run(host: MockHost, turnId: string, script: Script, prompt: string): Promise<void>;
 }
 
+// Order is significant: the first pattern to match wins, and the starters deliberately overlap
+// ("organise ... in the view into layers" contains "view").
 const SCENARIOS: readonly Scenario[] = [
   {
-    match: /grasshopper|facade|parametric|slider|canvas|panel/i,
+    match: /grasshopper|tower|twist|loft|canvas|\bgh\b/i,
     async run(host, turnId, script) {
-      host.status('Reading the canvas…');
+      host.status('Opening the canvas…');
       host.emit({
         type: 'turn.plan',
         turnId,
         steps: [
           { id: 'p1', text: 'Open the Grasshopper canvas', state: 'active' },
-          { id: 'p2', text: 'Place the panel components', state: 'pending' },
-          { id: 'p3', text: 'Wire and solve', state: 'pending' },
+          { id: 'p2', text: 'Stack and rotate the floor plates', state: 'pending' },
+          { id: 'p3', text: 'Loft and solve', state: 'pending' },
         ],
       });
-      await script.pause(320);
+      await script.pause(300);
 
-      await host.text(
-        turnId,
-        script,
-        lines(
-          'Right, I will build this on the canvas rather than in a script, so you can keep editing it afterwards.',
-          '',
-        ),
-      );
+      await host.text(turnId, script, lines('Building it on the canvas so you can keep twisting it afterwards.', ''));
 
-      await host.tool(turnId, script, 'g2_start', 'opened Grasshopper', { file: 'facade.gh' }, 620, {
-        result: { canvas: 'facade.gh', components: 0 },
+      await host.tool(turnId, script, 'g2_start', 'opened Grasshopper', { file: 'tower.gh' }, 560, {
+        result: { canvas: 'tower.gh', components: 0 },
       });
 
       host.emit({
@@ -352,60 +347,53 @@ const SCENARIOS: readonly Scenario[] = [
         turnId,
         steps: [
           { id: 'p1', text: 'Open the Grasshopper canvas', state: 'done' },
-          { id: 'p2', text: 'Place the panel components', state: 'active' },
-          { id: 'p3', text: 'Wire and solve', state: 'pending' },
+          { id: 'p2', text: 'Stack and rotate the floor plates', state: 'active' },
+          { id: 'p3', text: 'Loft and solve', state: 'pending' },
         ],
       });
-      host.status('Placing components…');
+      host.status('Stacking the floors…');
 
-      await host.tool(
-        turnId,
-        script,
-        'g2_place_component',
-        'placed Divide Domain²',
-        { selector: 'Divide Domain²', at: [180, 240] },
-        380,
-        { mutated: true, result: { guid: '5c1f…', inputs: 3, outputs: 1 } },
-      );
+      await host.tool(turnId, script, 'g2_place_component', 'placed Rectangle', { selector: 'Rectangle', at: [140, 200] }, 320, {
+        mutated: true,
+        result: { guid: '4a2c…', inputs: 3, outputs: 1 },
+      });
       await host.tool(
         turnId,
         script,
         'g2_place_slider',
-        'placed 2 sliders (u, v)',
-        { sliders: [{ name: 'u', min: 2, max: 40, value: 12 }, { name: 'v', min: 2, max: 40, value: 18 }] },
-        260,
+        'placed 3 sliders (floors, height, twist)',
+        {
+          sliders: [
+            { name: 'floors', min: 4, max: 60, value: 24 },
+            { name: 'height', min: 2, max: 6, value: 3.4 },
+            { name: 'twist', min: 0, max: 360, value: 90 },
+          ],
+        },
+        280,
         { mutated: true },
       );
-      await host.tool(
-        turnId,
-        script,
-        'g2_connect_many',
-        'wired 6 connections',
-        { pairs: 6 },
-        300,
-        { mutated: true },
-      );
+      await host.tool(turnId, script, 'g2_connect_many', 'wired 7 connections', { pairs: 7 }, 300, { mutated: true });
 
       host.emit({
         type: 'turn.plan',
         turnId,
         steps: [
           { id: 'p1', text: 'Open the Grasshopper canvas', state: 'done' },
-          { id: 'p2', text: 'Place the panel components', state: 'done' },
-          { id: 'p3', text: 'Wire and solve', state: 'active' },
+          { id: 'p2', text: 'Stack and rotate the floor plates', state: 'done' },
+          { id: 'p3', text: 'Loft and solve', state: 'active' },
         ],
       });
       host.status('Solving…');
 
-      await host.tool(turnId, script, 'g2_solve_canvas', 'solved: 2 warnings', {}, 780, {
+      await host.tool(turnId, script, 'g2_solve_canvas', 'solved the graph', {}, 640, {
         preview: {
           kind: 'graph',
-          components: ['Divide Domain²', 'Isotrim', 'Surface Points', 'Nurbs Curve', 'Boundary Surfaces'],
-          wires: 6,
+          components: ['Rectangle', 'Series', 'Rotate', 'Move', 'Loft'],
+          wires: 7,
           errors: 0,
-          warnings: 2,
+          warnings: 0,
         },
-        result: { solved: true, Errors: 0, Warnings: 2, components: 5, runtimeMs: 214 },
+        result: { solved: true, Errors: 0, Warnings: 0, components: 5, runtimeMs: 96 },
       });
 
       host.status(null);
@@ -414,102 +402,97 @@ const SCENARIOS: readonly Scenario[] = [
         script,
         lines(
           '',
-          'The canvas now has a `u × v` subdivision driving flat quad panels off the surface.',
+          'Twenty-four floors, 3.4 m apart, rotating to **90 degrees** over the full height.',
           '',
-          '- **u** and **v** sliders control the density (12 × 18 at the moment)',
-          '- `Isotrim` gives you the sub-surfaces, `Boundary Surfaces` flattens them to planar quads',
-          '- the two warnings are the corner panels, where the trim leaves a sliver',
+          '- `floors` and `height` set the stack, `twist` sets the total rotation',
+          '- `Series` drives both the vertical `Move` and the `Rotate` angle, so they stay in step',
+          '- `Loft` through the rotated rectangles gives the skin',
           '',
-          'If you want it driven from Python instead, this is the equivalent:',
+          'The same thing as a script, if you would rather have it in the document:',
           '',
           '```python',
+          'import math',
           'import Rhino.Geometry as rg',
           '',
-          'def panels(surface, u_count, v_count):',
-          '    """Planar quad panels from an isotrimmed surface grid."""',
-          '    u_dom = surface.Domain(0)',
-          '    v_dom = surface.Domain(1)',
-          '    for i in range(u_count):',
-          '        for j in range(v_count):',
-          '            u0, u1 = u_dom.ParameterAt(i / u_count), u_dom.ParameterAt((i + 1) / u_count)',
-          '            v0, v1 = v_dom.ParameterAt(j / v_count), v_dom.ParameterAt((j + 1) / v_count)',
-          '            corners = [surface.PointAt(u, v) for u, v in',
-          '                       ((u0, v0), (u1, v0), (u1, v1), (u0, v1))]',
-          '            yield rg.Brep.CreateFromCornerPoints(*corners, 0.001)',
+          'def twisty_tower(floors=24, height=3.4, twist=90.0, width=18.0):',
+          '    """Lofted tower whose floor plates rotate linearly with height."""',
+          '    plates = []',
+          '    for i in range(floors + 1):',
+          '        angle = math.radians(twist * i / floors)',
+          '        plane = rg.Plane(rg.Point3d(0, 0, i * height), rg.Vector3d.ZAxis)',
+          '        plane.Rotate(angle, rg.Vector3d.ZAxis)',
+          '        plates.append(rg.Rectangle3d(plane, width, width).ToNurbsCurve())',
+          '    return rg.Brep.CreateFromLoft(',
+          '        plates, rg.Point3d.Unset, rg.Point3d.Unset, rg.LoftType.Normal, False)',
           '```',
           '',
-          'Nudge the sliders and it re-solves live.',
+          'Drag the twist slider and it re-solves live.',
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(18_240, 2_610, 0.17) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(14_120, 2_180, 0.13) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
   {
-    match: /script|python|c#|rename|layer/i,
+    match: /organis|organiz|layer|sort|tidy|group/i,
     async run(host, turnId, script) {
-      host.status('Looking at the layer table…');
-      await host.text(
-        turnId,
-        script,
-        lines('Let me look at what the layer table actually contains before writing anything.', ''),
-      );
+      host.status('Reading the view…');
+      await host.text(turnId, script, lines('Let me see what is actually in the view before I move anything.', ''));
 
-      await host.tool(
-        turnId,
-        script,
-        'list_objects',
-        'listed 12 layers',
-        { scope: 'layers' },
-        340,
-        {
-          preview: {
-            kind: 'table',
-            columns: ['Layer', 'Parent', 'Objects'],
-            rows: [
-              ['Panels', 'Facade', '312'],
-              ['Mullions', 'Facade', '96'],
-              ['Slabs', 'Structure', '28'],
-              ['Columns', 'Structure', '44'],
-              ['Default', '-', '3'],
-            ],
-          },
+      await host.tool(turnId, script, 'list_objects', 'listed 486 objects in the view', { scope: 'view' }, 380, {
+        preview: {
+          kind: 'table',
+          columns: ['Type', 'Count', 'Current layer'],
+          rows: [
+            ['Brep', '312', 'Default'],
+            ['Extrusion', '96', 'Default'],
+            ['Curve', '54', 'Default'],
+            ['Mesh', '18', 'imported'],
+            ['Text', '6', 'Default'],
+          ],
         },
-      );
+      });
 
-      host.status('Writing the script…');
-      await host.tool(
-        turnId,
-        script,
-        'run_python',
-        'ran python',
-        { code: '# rename child layers to Parent_Child' },
-        1_180,
-        {
-          mutated: true,
-          preview: {
-            kind: 'code',
-            language: 'python',
-            text: lines(
-              'import scriptcontext as sc',
-              '',
-              'renamed = 0',
-              'for layer in sc.doc.Layers:',
-              '    if layer.ParentLayerId == Guid.Empty:',
-              '        continue',
-              '    parent = sc.doc.Layers.FindId(layer.ParentLayerId)',
-              '    wanted = f"{parent.Name}_{layer.Name}"',
-              '    if layer.Name != wanted:',
-              '        layer.Name = wanted   # commits on assignment',
-              '        renamed += 1',
-              '',
-              'print(f"renamed {renamed} layers")',
-            ),
-          },
-          result: { renamed: 9, skipped: 3, stdout: 'renamed 9 layers' },
+      host.status('Sorting into layers…');
+      await host.tool(turnId, script, 'run_python', 'sorted 486 objects into 5 layers', { strategy: 'by-type' }, 1_040, {
+        mutated: true,
+        preview: {
+          kind: 'code',
+          language: 'python',
+          text: lines(
+            'import scriptcontext as sc',
+            'import Rhino',
+            '',
+            'BUCKETS = {',
+            '    Rhino.DocObjects.ObjectType.Brep: "Solids",',
+            '    Rhino.DocObjects.ObjectType.Extrusion: "Solids",',
+            '    Rhino.DocObjects.ObjectType.Curve: "Curves",',
+            '    Rhino.DocObjects.ObjectType.Mesh: "Meshes",',
+            '    Rhino.DocObjects.ObjectType.Annotation: "Annotation",',
+            '}',
+            '',
+            'def layer_for(name):',
+            '    """Find or create a top-level layer and return its index."""',
+            '    found = sc.doc.Layers.FindName(name, -1)',
+            '    if found:',
+            '        return found.Index',
+            '    return sc.doc.Layers.Add(name, System.Drawing.Color.Black)',
+            '',
+            'moved = 0',
+            'for obj in objects_in_view():',
+            '    bucket = BUCKETS.get(obj.ObjectType)',
+            '    if bucket is None:',
+            '        continue',
+            '    obj.Attributes.LayerIndex = layer_for(bucket)',
+            '    obj.CommitChanges()',
+            '    moved += 1',
+            '',
+            'print(f"moved {moved} objects")',
+          ),
         },
-      );
+        result: { moved: 486, layers: ['Solids', 'Curves', 'Meshes', 'Annotation'], skipped: 0 },
+      });
 
       host.status(null);
       await host.text(
@@ -517,49 +500,121 @@ const SCENARIOS: readonly Scenario[] = [
         script,
         lines(
           '',
-          'Nine layers renamed, three skipped because they are top-level.',
+          'Sorted by object type, since that is what the view actually splits along:',
           '',
-          '`Facade::Panels` is now `Facade_Panels` and so on. Two things worth knowing:',
+          '| Layer | Objects |',
+          '| --- | --- |',
+          '| Solids | 408 |',
+          '| Curves | 54 |',
+          '| Meshes | 18 |',
+          '| Annotation | 6 |',
           '',
-          '1. Rhino layer *paths* still use `::` as the separator, so a renamed child is now `Facade::Facade_Panels`. If you wanted flattening rather than renaming, say so and I will move them instead.',
-          '2. The whole turn is one undo record, so a single Ctrl+Z puts every name back.',
+          'Two things worth saying:',
+          '',
+          '1. The 18 meshes were already on `imported`, and I left that layer in place rather than deleting it.',
+          '2. The whole turn is one undo record, so a single Ctrl+Z puts everything back where it was.',
+          '',
+          'If you would rather sort by size, elevation or name instead, say so and I will redo it.',
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(9_640, 1_180, 0.08) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(11_300, 1_640, 0.1) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
   {
-    match: /select|selected|audit|brep|open|tiny|edge|check/i,
+    match: /sphere|command|generate|script|python|c#|random/i,
     async run(host, turnId, script) {
-      host.status('Reading the selection…');
-      await host.tool(
-        turnId,
-        script,
-        'get_selection',
-        'read the selection (4 objects)',
-        {},
-        260,
-        {
-          preview: {
-            kind: 'objects',
-            items: [
-              { id: 'obj-1', label: 'Brep · corner panel L14', layer: 'Facade::Panels' },
-              { id: 'obj-2', label: 'Brep · corner panel L15', layer: 'Facade::Panels' },
-              { id: 'obj-3', label: 'Brep · mullion cap', layer: 'Facade::Mullions' },
-              { id: 'obj-4', label: 'Curve · setting-out line', layer: 'Default' },
-            ],
-          },
-          result: { count: 4, types: { Brep: 3, Curve: 1 } },
-        },
-      );
-
+      host.status('Writing the command…');
       await host.text(
         turnId,
         script,
-        lines('Three breps and a curve. Let me run the bad-object check over them.', ''),
+        lines('I will register it as a real Rhino command so you can type it like any other.', ''),
       );
+
+      await host.tool(turnId, script, 'run_python', 'ran python', { register: 'RandomSpheres' }, 1_180, {
+        mutated: true,
+        preview: {
+          kind: 'code',
+          language: 'python',
+          text: lines(
+            'import random',
+            'import Rhino.Geometry as rg',
+            'import scriptcontext as sc',
+            '',
+            'BOUNDS = rg.BoundingBox(rg.Point3d(-50, -50, 0), rg.Point3d(50, 50, 40))',
+            '',
+            'def random_spheres(count=100, min_radius=0.5, max_radius=4.0):',
+            '    """Scatter `count` spheres through BOUNDS and add them to the document."""',
+            '    added = []',
+            '    for _ in range(count):',
+            '        centre = rg.Point3d(',
+            '            random.uniform(BOUNDS.Min.X, BOUNDS.Max.X),',
+            '            random.uniform(BOUNDS.Min.Y, BOUNDS.Max.Y),',
+            '            random.uniform(BOUNDS.Min.Z, BOUNDS.Max.Z))',
+            '        sphere = rg.Sphere(centre, random.uniform(min_radius, max_radius))',
+            '        added.append(sc.doc.Objects.AddSphere(sphere))',
+            '    sc.doc.Views.Redraw()',
+            '    return added',
+            '',
+            'ids = random_spheres()',
+            'print(f"added {len(ids)} spheres")',
+          ),
+        },
+        result: { command: 'RandomSpheres', added: 100, stdout: 'added 100 spheres' },
+      });
+
+      await host.tool(turnId, script, 'get_selection', 'selected the 100 new spheres', {}, 220, {
+        preview: {
+          kind: 'objects',
+          items: [
+            { id: 'obj-1', label: 'Sphere r=3.42', layer: 'Default' },
+            { id: 'obj-2', label: 'Sphere r=1.08', layer: 'Default' },
+            { id: 'obj-3', label: 'Sphere r=2.71', layer: 'Default' },
+            { id: 'obj-4', label: 'and 97 more', layer: 'Default' },
+          ],
+        },
+        result: { count: 100 },
+      });
+
+      host.status(null);
+      await host.text(
+        turnId,
+        script,
+        lines(
+          '',
+          'Done. Type `RandomSpheres` to run it again.',
+          '',
+          '- radii between 0.5 and 4.0, centres scattered through a 100 × 100 × 40 box',
+          '- the new spheres are selected, so `Delete` undoes the scatter without touching anything else',
+          '- one undo record for the whole run',
+          '',
+          'Want the count, the bounds or the radius range exposed as command options?',
+        ),
+      );
+
+      host.emit({ type: 'turn.usage', turnId, usage: usage(9_800, 1_920, 0.09) });
+      host.emit({ type: 'turn.end', turnId, status: 'ok' });
+    },
+  },
+  {
+    match: /select|audit|brep|bad|problem|tiny|edge|check/i,
+    async run(host, turnId, script) {
+      host.status('Reading the selection…');
+      await host.tool(turnId, script, 'get_selection', 'read the selection (4 objects)', {}, 260, {
+        preview: {
+          kind: 'objects',
+          items: [
+            { id: 'obj-1', label: 'Brep · corner panel L14', layer: 'Facade::Panels' },
+            { id: 'obj-2', label: 'Brep · corner panel L15', layer: 'Facade::Panels' },
+            { id: 'obj-3', label: 'Brep · mullion cap', layer: 'Facade::Mullions' },
+            { id: 'obj-4', label: 'Curve · setting-out line', layer: 'Default' },
+          ],
+        },
+        result: { count: 4, types: { Brep: 3, Curve: 1 } },
+      });
+
+      await host.text(turnId, script, lines('Three breps and a curve. Let me run the bad-object check over them.', ''));
 
       host.status('Running SelBadObjects…');
       await host.failingTool(
@@ -613,15 +668,10 @@ const SCENARIOS: readonly Scenario[] = [
       }
 
       host.status('Applying…');
-      await host.tool(
-        turnId,
-        script,
-        'run_python',
-        `applied: ${answers.join(', ')}`,
-        { strategy: answers },
-        860,
-        { mutated: true, result: { joined: true, nakedEdges: 0, tolerance: 0.01 } },
-      );
+      await host.tool(turnId, script, 'run_python', `applied: ${answers.join(', ')}`, { strategy: answers }, 860, {
+        mutated: true,
+        result: { joined: true, nakedEdges: 0, tolerance: 0.01 },
+      });
 
       host.status(null);
       await host.text(
@@ -694,9 +744,10 @@ const SCENARIOS: readonly Scenario[] = [
           '',
           'Try one of these to see the interesting paths:',
           '',
-          '- something with **grasshopper** in it: plan steps, five tool calls, a solved-graph card',
-          '- something with **python** or **layer**: a script card with highlighted source',
-          '- something with **selected** or **audit**: a failing tool card and an inline question',
+          '- something with **tower** or **grasshopper**: plan steps, five tool calls, a solved-graph card',
+          '- something with **spheres** or **command**: a script card with highlighted source',
+          '- something with **layers** or **organise**: a table result and a summary',
+          '- something with **selected** or **problems**: a failing tool card and an inline question',
           '- something with **capture** or **view**: an image result rendered in place',
           '',
           'Or press `/` for commands and `@` to attach document context.',
@@ -871,7 +922,7 @@ export class MockHost implements Bridge {
       status: 'running',
       startedAt: new Date().toISOString(),
     };
-    this.emit({ type: 'turn.tool', turnId, call: { ...call, title: `${name}…` } });
+    this.emit({ type: 'turn.tool', turnId, call });
     await script.pause(workMs);
     this.emit({
       type: 'turn.tool.patch',
@@ -894,7 +945,7 @@ export class MockHost implements Bridge {
     this.emit({
       type: 'turn.tool',
       turnId,
-      call: { id, name, title: `${name}…`, args, status: 'running', startedAt: new Date().toISOString() },
+      call: { id, name, title, args, status: 'running', startedAt: new Date().toISOString() },
     });
     await script.pause(workMs);
     this.emit({

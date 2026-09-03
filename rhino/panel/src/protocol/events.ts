@@ -174,7 +174,11 @@ export type HostEvent =
   | { type: 'question'; question: PendingQuestion }
   | { type: 'question.clear'; id: string }
   | { type: 'notice'; level: NoticeLevel; text: string }
-  | { type: 'status'; text: string | null };
+  | { type: 'status'; text: string | null }
+  // The host owns the right-click menu, but the panel owns the zoom ladder, so the menu sends back
+  // an intent rather than a level.
+  | { type: 'zoom'; action: 'in' | 'out' | 'reset' }
+  | { type: 'reload' };
 
 // ---------------------------------------------------------------- panel -> host
 
@@ -203,4 +207,14 @@ export type PanelCommand =
   | { type: 'attachments.drop'; files: { name: string; mediaType: string; dataUrl: string }[] }
   | { type: 'settings.open' }
   | { type: 'url.open'; url: string }
-  | { type: 'clipboard.write'; text: string };
+  | { type: 'clipboard.write'; text: string }
+  | {
+      type: 'menu.open';
+      x: number;
+      y: number;
+      canZoomIn: boolean;
+      canZoomOut: boolean;
+      canResetZoom: boolean;
+      zoomLabel: string;
+      selection: string;
+    };

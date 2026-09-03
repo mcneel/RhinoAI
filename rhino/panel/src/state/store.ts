@@ -6,7 +6,6 @@
 
 import { computed, signal, type ReadSignal, type Signal } from '../core/signal.js';
 import {
-  NO_USAGE,
   type AgentInfo,
   type Attachment,
   type BlockSnapshot,
@@ -116,27 +115,14 @@ export class Store {
   /** The agent is not thinking while it is blocked on an unanswered question. */
   readonly thinking: ReadSignal<boolean> = computed(() => this.running() && this.question() === null);
 
-  readonly sessionUsage: ReadSignal<TokenUsage> = computed(() =>
-    this.turns().reduce<TokenUsage>((total, turn) => {
-      const usage = turn.usage();
-      if (!usage) return total;
-      return {
-        inputTokens: total.inputTokens + usage.inputTokens,
-        outputTokens: total.outputTokens + usage.outputTokens,
-        costUsd:
-          usage.costUsd === null && total.costUsd === null
-            ? null
-            : (total.costUsd ?? 0) + (usage.costUsd ?? 0),
-      };
-    }, NO_USAGE),
-  );
-
   readonly readOnly: ReadSignal<boolean> = computed(() => this.session()?.readOnly === true);
 
   apply(event: HostEvent): void {
     switch (event.type) {
       case 'hello':
         this.host.set(event.host);
+        // Scrollbar styling is Windows-only; see panel.css.
+        document.documentElement.dataset['platform'] = event.host.platform;
         return;
 
       case 'theme':
@@ -171,7 +157,11 @@ export class Store {
         this.question.set(null);
         return;
 
+      // Idempotent on id. A host that re-announces a turn or a call must not be able to put two
+      // rows with the same key into the transcript: the keyed list would track one and orphan the
+      // other in the DOM, where nothing can ever remove it.
       case 'turn.begin':
+        if (this.turns().some((turn) => turn.id === event.turn.id)) return;
         this.turns.set((turns) => [...turns, turnFrom(event.turn)]);
         return;
 
@@ -197,6 +187,7 @@ export class Store {
       case 'turn.tool': {
         const turn = this.turn(event.turnId);
         if (!turn) return;
+        if (turn.blocks().some((block) => block.id === event.call.id)) return;
         turn.blocks.set((blocks) => [
           ...blocks,
           { kind: 'tool', id: event.call.id, call: signal(event.call) },

@@ -24,12 +24,6 @@ export function formatTokens(count: number): string {
   return String(count);
 }
 
-export function formatCost(usd: number | null): string | null {
-  if (usd === null) return null;
-  if (usd < 0.01) return '<$0.01';
-  return `$${usd.toFixed(2)}`;
-}
-
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`;

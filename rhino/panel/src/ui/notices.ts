@@ -7,12 +7,13 @@ import { icon } from './icons.js';
 const GLYPH = { info: 'bolt', warn: 'alert', error: 'alert' } as const;
 
 export function notices(ctx: PanelContext): Child {
+  // Everything clears itself. A notice that has to be dismissed turns a passing remark into a
+  // chore, and the transcript already carries anything worth keeping.
+  const LIFETIME = { info: 4000, warn: 5500, error: 9000 } as const;
+
   const row = (notice: Notice): Child => {
-    // Errors stay until dismissed; anything lighter clears itself.
-    if (notice.level !== 'error') {
-      const timer = setTimeout(() => ctx.store.dismissNotice(notice.id), 6000);
-      bind(() => () => clearTimeout(timer));
-    }
+    const timer = setTimeout(() => ctx.store.dismissNotice(notice.id), LIFETIME[notice.level]);
+    bind(() => () => clearTimeout(timer));
     return el(
       'div',
       { class: `notice ${notice.level}`, role: notice.level === 'error' ? 'alert' : 'status' },

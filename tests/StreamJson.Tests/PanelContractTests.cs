@@ -26,7 +26,17 @@ public sealed class PanelContractTests
         sent.Add(new HelloEvent(new PanelHost(
             "Rhinoceros", "9.0.0", "macos", "tower-study.3dm",
             new PanelCapabilities(Attachments: false, ViewportCapture: true, UndoTurn: false, Grasshopper: true))));
-        sent.Add(new ThemeEvent("dark"));
+        sent.Add(new ThemeEvent("dark", PanelTheme.Tokens(new PanelTheme.Palette(
+            Chrome: new PanelTheme.Rgb(0.14f, 0.15f, 0.16f),
+            Field: new PanelTheme.Rgb(0.10f, 0.11f, 0.12f),
+            Text: new PanelTheme.Rgb(0.91f, 0.92f, 0.93f),
+            Dim: new PanelTheme.Rgb(0.64f, 0.65f, 0.68f),
+            Border: new PanelTheme.Rgb(0.30f, 0.30f, 0.32f),
+            Accent: new PanelTheme.Rgb(0.28f, 0.55f, 0.90f),
+            AccentText: new PanelTheme.Rgb(1f, 1f, 1f),
+            Link: new PanelTheme.Rgb(0.44f, 0.66f, 1f),
+            Selection: new PanelTheme.Rgb(0.18f, 0.29f, 0.46f),
+            SelectionText: new PanelTheme.Rgb(1f, 1f, 1f)))));
         sent.Add(new AgentsEvent(
             [new PanelAgent("claude", "Claude Code", "claude-opus-5", "Opus 5", "ready", null, true),
              new PanelAgent("gemini", "Gemini CLI", "gemini-3-pro", "Gemini 3 Pro", "missing", "'gemini' was not found", true)],
@@ -39,10 +49,15 @@ public sealed class PanelContractTests
         convo.Record(TurnEventKind.AssistantText, "layer now.\n\n");
         feed.Pump();
 
-        convo.Record(TurnEventKind.ToolUse, "list_objects", "{\"layer\":\"Facade\"}", string.Empty, "call-1");
+        convo.Record(TurnEventKind.ToolUse, "mcp__rhino__list_objects", "{\"layer\":\"Facade\"}", string.Empty, "call-1");
         feed.Pump();
 
         convo.CompleteToolCall("call-1", "{\"Ok\":true,\"count\":312}");
+        feed.Pump();
+
+        // Left running and unrecognised on purpose: its phrase is its own name, which is the case
+        // where the panel should stop printing the name twice.
+        convo.Record(TurnEventKind.ToolUse, "mcp__rhino__probe_intersection", "{}", string.Empty, "call-2");
         feed.Pump();
 
         convo.Record(TurnEventKind.AssistantText, "**312 objects**, mostly planar breps.\n\n```python\nprint(312)\n```");

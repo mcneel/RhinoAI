@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatBytes, formatCost, formatDuration, formatTokens, prettyJson, relativeTime, summarize } from './format.ts';
+import { formatBytes, formatDuration, formatTokens, prettyJson, relativeTime, summarize } from './format.ts';
 
 test('relative time buckets', () => {
   const now = Date.parse('2026-09-03T12:00:00Z');
@@ -20,12 +20,6 @@ test('token formatting', () => {
   assert.equal(formatTokens(1_500), '1.5k');
   assert.equal(formatTokens(41_200), '41k');
   assert.equal(formatTokens(2_400_000), '2.4M');
-});
-
-test('cost keeps null distinct from zero', () => {
-  assert.equal(formatCost(null), null, 'tokens-only turns must not claim a cost');
-  assert.equal(formatCost(0), '<$0.01');
-  assert.equal(formatCost(0.624), '$0.62');
 });
 
 test('duration formatting', () => {

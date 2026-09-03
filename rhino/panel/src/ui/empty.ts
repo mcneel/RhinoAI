@@ -4,11 +4,9 @@ import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
 
 const STARTERS: readonly { icon: IconName; text: string }[] = [
-  { icon: 'cube', text: 'What is selected, and what would you change about it?' },
-  { icon: 'graph', text: 'Build a parametric facade panel in Grasshopper' },
-  { icon: 'terminal', text: 'Write a script that renames layers to match their parent' },
-  { icon: 'camera', text: 'Set up a three-quarter view and capture it' },
-  { icon: 'document', text: 'Audit this model for open breps and tiny edges' },
+  { icon: 'terminal', text: 'Create me a command that generates 100 random spheres' },
+  { icon: 'graph', text: 'Build a twisty tower in Grasshopper' },
+  { icon: 'layers', text: 'Organise the objects in the view into layers' },
 ];
 
 export function emptyState(ctx: PanelContext): Child {

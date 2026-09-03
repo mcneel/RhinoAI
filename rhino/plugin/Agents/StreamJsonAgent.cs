@@ -68,7 +68,10 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         Client = client;
         Conversation = conversation;
         Cwd = cwd;
-        AgentSessionId = resumeSessionId ?? Guid.NewGuid();
+        // The conversation's id IS the CLI session id. Generating a second one here is what broke
+        // resume: the session was opened under this agent's private Guid while the transcript was
+        // saved under the conversation's, so --resume named a session the CLI had never created.
+        AgentSessionId = resumeSessionId ?? conversation.AgentSessionId;
         HasEverStarted = resumeSessionId is not null;   // first spawn resumes when a saved id is supplied
         ResumePending = resumeSessionId is not null;
     }
@@ -318,7 +321,14 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                         resumeRejected = true;
                         ResumePending = false;
                         HasEverStarted = false;
+
+                        // Keep the saved transcript pointing at the session that will actually
+                        // exist, and drop the entry under the dead id: it is this same conversation,
+                        // and leaving it behind puts an unresumable duplicate in the history.
+                        Guid stale = Conversation.AgentSessionId;
                         AgentSessionId = Guid.NewGuid();
+                        Conversation.AdoptSessionId(AgentSessionId);
+                        ConversationStore.Delete(stale.ToString());
                     }
                 }
             }

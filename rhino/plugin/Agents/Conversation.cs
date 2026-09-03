@@ -127,7 +127,11 @@ internal sealed class Conversation
         return convo;
     }
 
-    public Guid AgentSessionId { get; }
+    // This is the CLI's own session id, not a plugin-internal handle: it is passed as --session-id
+    // on the first spawn and as --resume afterwards, and persisted as ConversationDto.SessionId.
+    // Mutable because a rejected resume forces the agent to open a fresh session, and the saved id
+    // has to follow or the next resume names a session the CLI has never heard of.
+    public Guid AgentSessionId { get; private set; }
     public string AgentName { get; }
     public string DocTitle { get; }
     public DateTimeOffset StartedAt { get; private init; }
@@ -192,6 +196,13 @@ internal sealed class Conversation
                     total += turn.Usage;
             return total;
         }
+    }
+
+    // Called when the agent had to open a session under a different id than the one it was given.
+    internal void AdoptSessionId(Guid sessionId)
+    {
+        lock (Sync)
+            AgentSessionId = sessionId;
     }
 
     public void NoteSessionStarted()
