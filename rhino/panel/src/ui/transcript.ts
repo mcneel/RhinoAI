@@ -1,0 +1,262 @@
+import { each, el, onCleanup, when } from '../core/dom.js';
+import type { Child } from '../core/dom.js';
+import { clockTime, formatCost, formatTokens, relativeTime } from '../state/format.js';
+import type { BlockView, TurnView } from '../state/store.js';
+import type { Attachment, ContextItem, PlanStep } from '../protocol/events.js';
+import type { PanelContext } from './context.js';
+import { emptyState } from './empty.js';
+import { icon } from './icons.js';
+import { agentMessage } from './message.js';
+import { questionCard } from './question.js';
+import { toolCard } from './toolCard.js';
+
+const CONTEXT_ICON = {
+  selection: 'cube',
+  layer: 'layers',
+  view: 'camera',
+  document: 'document',
+  block: 'cube',
+  grasshopper: 'graph',
+  file: 'document',
+} as const;
+
+function contextChip(ctx: PanelContext, item: ContextItem, removable?: () => void): Child {
+  return el(
+    'span',
+    { class: 'chip', title: item.detail ?? item.label },
+    icon(CONTEXT_ICON[item.kind], 12),
+    el('span', { text: item.count !== undefined ? `${item.label} (${item.count})` : item.label }),
+    removable
+      ? el('button', { type: 'button', 'aria-label': `Remove ${item.label}`, onClick: removable }, icon('close', 11))
+      : el(
+          'button',
+          {
+            type: 'button',
+            'aria-label': `Show ${item.label} in Rhino`,
+            onClick: () => ctx.send({ type: 'context.reveal', id: item.id }),
+          },
+          icon('reveal', 11),
+        ),
+  );
+}
+
+function attachmentChip(attachment: Attachment): Child {
+  return el(
+    'span',
+    { class: 'chip', title: attachment.name },
+    attachment.kind === 'image' ? icon('camera', 12) : icon('document', 12),
+    el('span', { text: attachment.name }),
+  );
+}
+
+const PLAN_MARKER: Record<PlanStep['state'], string> = {
+  pending: '○',
+  active: '▸',
+  done: '✓',
+  skipped: '-',
+};
+
+function planStrip(turn: TurnView): Child {
+  return when(
+    () => turn.plan().length > 0,
+    () =>
+      el(
+        'div',
+        { class: 'plan' },
+        el('div', { class: 'plan-head', text: 'Plan' }),
+        each(
+          () => turn.plan(),
+          (step) => step.id,
+          (step) =>
+            el(
+              'div',
+              { class: `plan-step ${step.state}` },
+              el('span', { class: 'marker', text: PLAN_MARKER[step.state] }),
+              el('span', { class: 'label', text: step.text }),
+            ),
+        ),
+      ),
+  );
+}
+
+function block(ctx: PanelContext, turn: TurnView, view: BlockView): Child {
+  switch (view.kind) {
+    case 'text':
+      return agentMessage(ctx, view.text, () => {
+        const blocks = turn.blocks();
+        return turn.status() === 'running' && blocks[blocks.length - 1]?.id === view.id;
+      });
+    case 'tool':
+      return toolCard(ctx, view.call);
+    case 'notice':
+      return el('div', { class: 'lifecycle', text: view.text });
+  }
+}
+
+function plainText(turn: TurnView): string {
+  const parts = [`> ${turn.prompt}`];
+  for (const view of turn.blocks()) {
+    if (view.kind === 'text') parts.push(view.text.peek());
+    else if (view.kind === 'tool') parts.push(`[${view.call.peek().title}]`);
+  }
+  return parts.join('\n\n');
+}
+
+function turnFooter(ctx: PanelContext, turn: TurnView): Child {
+  const usage = () => turn.usage();
+  return el(
+    'footer',
+    { class: 'turn-foot' },
+    el('span', { class: 'when', title: () => clockTime(turn.startedAt), text: () => relativeTime(turn.startedAt) }),
+    when(
+      () => usage() !== null,
+      () => [
+        el('span', { class: 'sep', text: '·' }),
+        el('span', {
+          text: () => {
+            const value = usage();
+            if (!value) return '';
+            const cost = formatCost(value.costUsd);
+            const tokens = `${formatTokens(value.inputTokens + value.outputTokens)} tok`;
+            return cost ? `${tokens} · ${cost}` : tokens;
+          },
+        }),
+      ],
+    ),
+    el('span', { class: 'spacer' }),
+    el(
+      'button',
+      { type: 'button', title: 'Copy this exchange', onClick: () => ctx.copy(plainText(turn)) },
+      icon('copy', 13),
+    ),
+    when(
+      () => turn.status() !== 'running',
+      () =>
+        el(
+          'button',
+          { type: 'button', title: 'Ask again', onClick: () => ctx.send({ type: 'turn.retry', turnId: turn.id }) },
+          icon('retry', 13),
+        ),
+    ),
+    when(
+      () => turn.undoable() && turn.status() !== 'running',
+      () =>
+        el(
+          'button',
+          {
+            type: 'button',
+            title: 'Revert every document change this turn made',
+            onClick: () => ctx.send({ type: 'turn.undo', turnId: turn.id }),
+          },
+          icon('undo', 13),
+          el('span', { text: 'Revert' }),
+        ),
+    ),
+  );
+}
+
+function turnView(ctx: PanelContext, turn: TurnView): Child {
+  return el(
+    'article',
+    { class: () => `turn ${turn.status()}` },
+    when(
+      () => turn.context.length > 0 || turn.attachments.length > 0,
+      () =>
+        el(
+          'div',
+          { class: 'chip-row', style: { 'justify-content': 'flex-end' } },
+          ...turn.context.map((item) => contextChip(ctx, item)),
+          ...turn.attachments.map(attachmentChip),
+        ),
+    ),
+    turn.prompt ? el('div', { class: 'msg-user', text: turn.prompt }) : null,
+    planStrip(turn),
+    each(
+      () => turn.blocks(),
+      (view) => view.id,
+      (view) => block(ctx, turn, view),
+    ),
+    when(
+      () => turn.status() === 'error' && turn.error !== undefined,
+      () => el('div', { class: 'turn-error' }, icon('alert', 14), el('span', { text: () => turn.error() ?? '' })),
+    ),
+    when(
+      () => turn.status() === 'cancelled',
+      () => el('div', { class: 'lifecycle', text: 'stopped' }),
+    ),
+    turnFooter(ctx, turn),
+  );
+}
+
+export function transcript(ctx: PanelContext): Child {
+  const { store, ui } = ctx;
+
+  const stream = el(
+    'div',
+    { class: 'stream' },
+    when(
+      () => store.turns().length === 0,
+      () => emptyState(ctx),
+      () =>
+        each(
+          () => store.turns(),
+          (turn) => turn.id,
+          (turn) => turnView(ctx, turn),
+        ),
+    ),
+    () => {
+      const pending = store.question();
+      return pending ? questionCard(ctx, pending) : null;
+    },
+  );
+
+  const scroller = el(
+    'div',
+    {
+      class: 'transcript',
+      tabindex: '-1',
+      onScroll: () => {
+        const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 28;
+        ui.pinned.set(atBottom);
+        if (atBottom) ui.hasNew.set(false);
+      },
+    },
+    stream,
+  );
+
+  // Content height is the only signal that matters for autoscroll, and the browser already knows
+  // it. No deferred layout pass, no AsyncInvoke, no "scroll after Eto settles".
+  const observer = new ResizeObserver(() => {
+    if (ui.pinned.peek()) scroller.scrollTop = scroller.scrollHeight;
+    // Only agent output counts as unread: the user expanding a card grew the content too.
+    else if (store.running.peek()) ui.hasNew.set(true);
+  });
+  observer.observe(stream);
+  onCleanup(() => observer.disconnect());
+
+  const jumpToLatest = () => {
+    ui.pinned.set(true);
+    ui.hasNew.set(false);
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+  };
+
+  return el(
+    'div',
+    { class: 'stage' },
+    scroller,
+    when(
+      () => !ui.pinned() && ui.hasNew(),
+      () =>
+        el(
+          'div',
+          { class: 'jump' },
+          el(
+            'button',
+            { type: 'button', onClick: jumpToLatest },
+            icon('arrowDown', 13),
+            el('span', { text: 'New output' }),
+          ),
+        ),
+    ),
+  );
+}

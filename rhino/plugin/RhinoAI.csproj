@@ -75,7 +75,17 @@
     <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhinoAI.logo.svg" />
     <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhinoAI.copy.svg" />
     <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhinoAI.paperclip.svg" />
+    <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
+         RebuildAIPanel target below refreshes it when one is present. -->
+    <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="RhinoAI.panel.html" />
   </ItemGroup>
+
+  <!-- Best effort: rebuild the panel bundle when the developer has already run `npm install` in
+       rhino/panel. ContinueOnError means a machine without Node simply embeds the committed file. -->
+  <Target Name="RebuildAIPanel" BeforeTargets="BeforeBuild"
+          Condition="'$(SkipPanelBuild)' != 'true' AND Exists('$(MSBuildProjectDirectory)/../panel/node_modules/esbuild')">
+    <Exec Command="node build.mjs" WorkingDirectory="$(MSBuildProjectDirectory)/../panel" ContinueOnError="true" />
+  </Target>
 
   <PropertyGroup>
     <AspNetCoreRuntimeVersion>8.0.*</AspNetCoreRuntimeVersion>

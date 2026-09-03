@@ -1,0 +1,21 @@
+{
+  "name": "rhino-ai-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Rhino AI panel reimagined as a webview-hosted TypeScript app. Zero runtime dependencies.",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --serve",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+    "verify": "node tools/verify.mjs",
+    "verify:shots": "node tools/verify.mjs --shots"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "esbuild": "^0.25.10",
+    "typescript": "^5.9.3",
+    "puppeteer-core": "^24.0.0"
+  }
+}

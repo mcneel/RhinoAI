@@ -1,0 +1,15 @@
+[
+  {"type":"hello","host":{"product":"Rhinoceros","version":"9.0.0","platform":"macos","docTitle":"tower-study.3dm","capabilities":{"attachments":false,"viewportCapture":true,"undoTurn":false,"grasshopper":true}}},
+  {"type":"theme","scheme":"dark"},
+  {"type":"agents","agents":[{"name":"claude","label":"Claude Code","model":"claude-opus-5","modelLabel":"Opus 5","availability":"ready","builtin":true},{"name":"gemini","label":"Gemini CLI","model":"gemini-3-pro","modelLabel":"Gemini 3 Pro","availability":"missing","detail":"\u0027gemini\u0027 was not found","builtin":true}],"active":"claude"},
+  {"type":"conversation","snapshot":{"sessionId":"2f8b1c40-5d3e-4a91-9c62-7f0a8e14d5b3","agent":"claude","docTitle":"tower-study.3dm","startedAt":"2026-01-01T09:00:00.0000000+00:00","turns":[],"readOnly":false}},
+  {"type":"turn.begin","turn":{"id":"turn-0","prompt":"What is on the Facade layer?","attachments":[],"context":[],"startedAt":"2026-01-01T09:00:00.0000000+00:00","status":"running","blocks":[],"plan":[],"undoable":true}},
+  {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b1","delta":"Checking the "},
+  {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b1","delta":"layer now.\n\n"},
+  {"type":"turn.tool","turnId":"turn-0","call":{"id":"call-1","name":"list_objects","title":"listed objects","args":{"layer":"Facade"},"status":"running","startedAt":"2026-01-01T09:00:00.0000000+00:00"}},
+  {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-1","patch":{"status":"ok","title":"listed objects","result":{"Ok":true,"count":312}}},
+  {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b2","delta":"**312 objects**, mostly planar breps.\n\n\u0060\u0060\u0060python\nprint(312)\n\u0060\u0060\u0060"},
+  {"type":"turn.usage","turnId":"turn-0","usage":{"inputTokens":12480,"outputTokens":1120,"costUsd":0.09}},
+  {"type":"turn.end","turnId":"turn-0","status":"ok"},
+  {"type":"question","question":{"id":"question-1","question":"Split the worst panels?","options":["Yes","No"],"mode":"single","allowOther":true}}
+]

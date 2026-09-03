@@ -22,6 +22,8 @@ public class RhinoAIPlugin : PlugIn
         AgentRegistry.Refresh();
 
         Rhino.UI.Panels.RegisterPanel(this, typeof(AIPAnel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
+        // Registered alongside the Eto panel so the two can be compared in one session. AIPanelWeb opens it.
+        Rhino.UI.Panels.RegisterPanel(this, typeof(WebAIPanel), "AI (web)", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
         return base.OnLoad(ref errorMessage);
     }
 

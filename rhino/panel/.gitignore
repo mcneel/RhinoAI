@@ -1,0 +1,4 @@
+node_modules/
+dist/*
+# The host build is committed so the plug-in builds without a Node toolchain.
+!dist/panel.host.html

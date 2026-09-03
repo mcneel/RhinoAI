@@ -123,7 +123,7 @@ internal static class ToolSummary
 
     // Common shapes for a failed result: an { Ok: false } flag or a non-empty error/Error string. A
     // malformed or non-object payload counts as success here; the verdict only flips on a clear signal.
-    private static bool IsFailure(string resultJson)
+    internal static bool IsFailure(string resultJson)
     {
         if (Parse(resultJson) is not { } doc)
             return false;
