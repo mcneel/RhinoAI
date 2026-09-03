@@ -13,7 +13,7 @@ internal static class ScriptProjectStartup
             return;
 
         // Ignore if no Project exists
-        if (!File.Exists(ScriptProjectPaths.For(null)?.ProjectFile)) return;
+        if (!File.Exists(ScriptProjectPaths.For(null).ProjectFile)) return;
 
         Scheduled = true;
         RhinoApp.Idle += Reload;

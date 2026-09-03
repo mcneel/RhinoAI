@@ -4,10 +4,9 @@ namespace RhinoAI.ScriptProjects;
 
 internal sealed record ScriptProjectPaths(string PluginName, string Directory, string BuildDirectory)
 {
-    public static ScriptProjectPaths? For(string? requestedPluginName)
+    public static ScriptProjectPaths For(string? requestedPluginName)
     {
-        string? pluginName = PluginNaming.GetPlugInName(requestedPluginName);
-        if (string.IsNullOrEmpty(pluginName)) return null;
+        string pluginName = PluginNameResolver.Resolve(requestedPluginName);
 
         string root = RhinoApp.GetDataDirectory(
             localUser: true,

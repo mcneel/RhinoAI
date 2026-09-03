@@ -9,7 +9,7 @@ internal class RhinoAppProjectRunner : IProjectRunner
 
     public RhinoAppProjectRunner()
     {
-        Paths = ScriptProjectPaths.For(null) ?? throw new NullReferenceException("Paths is NULL");
+        Paths = ScriptProjectPaths.For(null);
     }
 
     private const string NOT_AVAILABLE = "Feature not available in this build";

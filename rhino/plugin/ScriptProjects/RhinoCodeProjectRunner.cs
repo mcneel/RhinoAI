@@ -25,7 +25,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
     public RhinoCodeProjectRunner()
     {
-        Paths = ScriptProjectPaths.For(null) ?? throw new NullReferenceException("Paths is NULL");
+        Paths = ScriptProjectPaths.For(null);
     }
 
     private ReturnResult TryGetProject(out IProject project)

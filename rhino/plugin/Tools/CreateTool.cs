@@ -20,8 +20,7 @@ public static class CreateTool
             return ReturnResult.Failure($"This needs Rhino 9 or later; this is Rhino {RhinoApp.Version.Major}.");
         }
 
-        PluginCommandAction parsedAction = PluginNaming.TryParseAction(action);
-        if (parsedAction is PluginCommandAction.None)
+        if (!PluginNaming.TryParseAction(action, out PluginCommandAction parsedAction))
         {
             return ReturnResult.Failure($"Unknown action \"{action}\"", "Use add, update or delete.");
         }

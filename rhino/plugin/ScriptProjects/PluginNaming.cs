@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace RhinoAI.ScriptProjects;
 
@@ -12,8 +11,9 @@ internal static class PluginNaming
 
     private const int MaxCommandNameLength = 64;
 
-    public static PluginCommandAction TryParseAction(string? action)
-        => action?.Trim().ToLowerInvariant() switch
+    public static bool TryParseAction(string? action, out PluginCommandAction parsed)
+    {
+        parsed = action?.Trim().ToLowerInvariant() switch
         {
             "add" => PluginCommandAction.Add,
             "update" => PluginCommandAction.Update,
@@ -21,27 +21,25 @@ internal static class PluginNaming
             _ => PluginCommandAction.None
         };
 
+        return parsed is not PluginCommandAction.None;
+    }
+
     public static CommandNameProblem TryCoerceCommandName(ref string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             return CommandNameProblem.Empty;
 
-        name = name.Replace(" ", "_");
-
-        string tempName = string.Empty;
+        StringBuilder coerced = new(name.Length);
         foreach (char character in name)
         {
-            if (!IsCommandNameCharacter(character))
-                continue;
-            tempName += character;
+            char candidate = character == ' ' ? '_' : character;
+            if (IsCommandNameCharacter(candidate))
+                coerced.Append(candidate);
         }
 
-        name = tempName;
+        name = coerced.ToString();
 
-        if (name!.Length > MaxCommandNameLength)
-            return CommandNameProblem.TooLong;
-
-        return CommandNameProblem.None;
+        return ValidateCommandName(name);
     }
 
     public static CommandNameProblem ValidateCommandName(string? name)
@@ -66,41 +64,23 @@ internal static class PluginNaming
         CommandNameProblem.Empty => "Command name is required.",
         CommandNameProblem.InvalidCharacters => $"Command name \"{name}\" is not valid. Use letters, digits and underscores only, with no spaces.",
         CommandNameProblem.TooLong => $"Command name \"{name}\" is longer than {MaxCommandNameLength} characters.",
-
-        _ => $"Unknown problem. {nameof(problem)}",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(problem), problem, "A usable command name has no problem to describe."),
     };
 
-    public static string? GetPlugInName(string? requested)
-    {
-        List<string?> possibilities = [requested, AISettings.ScriptPluginName];
-
-        try
-        {
-            Match match = Regex.Match(RhinoApp.LoggedInUserName, @"([\S\s]+) - [\S]+@");
-            string userName = match.Groups[1].Value.Replace(" ", "");
-            possibilities.Add(userName);
-        }
-        catch { }
-
-        possibilities.Add(Environment.UserName);
-
-        foreach(string? possibility in possibilities)
-        {
-            string santised = SanitisePluginName(possibility);
-            if (string.IsNullOrEmpty(santised)) continue;
-            return santised;
-        }
-
-        return string.Empty;
-    }
-
+    // An explicit override is taken as given: no suffix appended.
     public static string SanitisePluginName(string? requested)
-        => ToAsciiPascalCase(requested);
+        => TrySanitisePluginName(requested, out string name) ? name : FallbackPluginName;
 
-    private static string ToAsciiPascalCase(string? raw)
+    public static string PluginNameFor(string? userName)
+        => TrySanitisePluginName(userName, out string name) ? name + PluginSuffix : FallbackPluginName;
+
+    public static bool TrySanitisePluginName(string? raw, out string name)
     {
+        name = string.Empty;
+
         if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
+            return false;
 
         StringBuilder builder = new(raw!.Length);
         bool capitaliseNext = true;
@@ -117,12 +97,13 @@ internal static class PluginNaming
         }
 
         if (builder.Length == 0)
-            return string.Empty;
+            return false;
 
         if (char.IsDigit(builder[0]))
             builder.Insert(0, 'P');
 
-        return builder.ToString();
+        name = builder.ToString();
+        return true;
     }
 
     private static bool IsCommandNameCharacter(char character) =>
@@ -132,7 +113,6 @@ internal static class PluginNaming
         (character >= 'a' && character <= 'z')
         || (character >= 'A' && character <= 'Z')
         || (character >= '0' && character <= '9');
-
 }
 
 internal enum PluginCommandAction { None = 0, Add, Update, Delete }
