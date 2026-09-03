@@ -62,8 +62,15 @@
     <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhinoAI.paperclip.svg" />
   </ItemGroup>
 
+  <!-- Pinned, not floating. A floating 8.0.* makes every restore query a package
+       source for the newest patch, so it can never be satisfied from the global
+       packages folder alone. That is what breaks the macOS build: the osx-arm64
+       runtime pack is not already cached there and no mapped source serves it,
+       so RhinoMacBuild.sln fails restore with NU1100. 8.0.30 is the newest 8.0.x
+       and is what 8.0.* was already resolving to, so this pins today's behaviour
+       rather than changing it. Bump by hand to move to a newer 8.0 patch. -->
   <PropertyGroup>
-    <AspNetCoreRuntimeVersion>8.0.*</AspNetCoreRuntimeVersion>
+    <AspNetCoreRuntimeVersion>8.0.30</AspNetCoreRuntimeVersion>
   </PropertyGroup>
 
   <ItemGroup>
