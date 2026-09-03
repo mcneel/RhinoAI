@@ -58,7 +58,8 @@ public class RhinoAIPlugin : PlugIn
         RhinoDoc.BeginOpenDocument -= Register;
 
         string? portStr = Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar);
-        if (!string.IsNullOrEmpty(portStr)) return;
+        if (!string.IsNullOrEmpty(portStr))
+            return;
 
         if (!RhinoAIHost.TryGetNextPort(out int port))
         {
@@ -71,9 +72,9 @@ public class RhinoAIPlugin : PlugIn
             if (RhinoAIHost.StartOrRestart(e.Document, port, true))
             {
                 RhinoApp.WriteLine("The Rhino MCP Platform is ready.");
-#if RHINOCODE
+
                 ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
-#endif
+
                 return;
             }
         }

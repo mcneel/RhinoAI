@@ -12,7 +12,7 @@ namespace RhinoAI;
 internal record struct ReturnResult(bool Result, string? Message, string? Guidance)
 {
 
-    public static ReturnResult Success(string? message = null) => new(true, null, null);
+    public static ReturnResult Success(string? message = null) => new(true, message, null);
 
     public static ReturnResult Failure(string message, string? guidance = null) => new(false, message, guidance);
 

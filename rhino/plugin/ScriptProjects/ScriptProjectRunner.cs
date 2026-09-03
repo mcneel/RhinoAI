@@ -27,7 +27,12 @@ internal static class ScriptProjectRunner
         }
     }
 
-    public static ReturnResult Reload() => Runner?.Build(true) ?? ReturnResult.Failure("Runner not found");
+    public static ReturnResult Reload()
+    {
+        ReturnResult result = TryCreate(out IProjectRunner runner);
+        if (result) return runner?.Build(true) ?? ReturnResult.Failure("Runner not found");
+        return result;
+    }
 
     public static string RunScript(RhinoDoc doc, Lang lang, string script)
     {

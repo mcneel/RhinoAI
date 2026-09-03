@@ -1,8 +1,5 @@
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-
-using RhinoAI.ScriptProjects;
 
 namespace RhinoAI.ScriptProjects;
 
@@ -11,7 +8,8 @@ internal class RhinoAppRunScript : IRhinoCodeRunner
 
     public string RunScript(RhinoDoc doc, Lang lang, string script)
     {
-        string tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}.cs");
+        string ext = lang switch { Lang.Python3 => ".py", Lang.CSharp => ".cs", _ => ".txt" };
+        string tmp = Path.Combine(Path.GetTempPath(), $"rhino_mcp_{Guid.NewGuid():N}{ext}");
         File.WriteAllText(tmp, script);
         RhinoApp.CommandWindowCaptureEnabled = true;
         RhinoApp.RunScript(doc.RuntimeSerialNumber, $"_-ScriptEditor _Run \"{tmp}\"", false);
@@ -20,24 +18,23 @@ internal class RhinoAppRunScript : IRhinoCodeRunner
 
         _ = Task.Delay(15_000).ContinueWith(_ => { try { File.Delete(tmp); } catch { } });
 
-        RhinoApp.RunScript(doc.RuntimeSerialNumber, script, true);
-
         string[] filtered = (lines ?? [])
             .Where(l => !l.StartsWith("Command:", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        int errIndex = Array.FindIndex(filtered, l =>
-            l.StartsWith("Compile Error", StringComparison.OrdinalIgnoreCase) ||
-            l.Contains("error CS", StringComparison.OrdinalIgnoreCase) ||
-            l.Contains("Exception:", StringComparison.Ordinal) ||
-            l.StartsWith("Unhandled exception", StringComparison.OrdinalIgnoreCase));
+        int errIndex = Array.FindIndex(filtered, line => IsErrorLine(line, lang));
 
-        string stdout = "no output captured";
-        string? error = null;
+        string stdout;
+        string? error;
         if (errIndex >= 0)
         {
             stdout = string.Concat(filtered.Take(errIndex));
             error = string.Concat(filtered.Skip(errIndex));
+        }
+        else
+        {
+            stdout = string.Concat(filtered);
+            error = null;
         }
 
         return JsonSerializer.Serialize(new
@@ -45,5 +42,21 @@ internal class RhinoAppRunScript : IRhinoCodeRunner
             stdout = stdout,
             error = error,
         });
+    }
+
+    // The script editor reports failures as ordinary command-window text, and a Python traceback shares no markers with a Roslyn error.
+    private static bool IsErrorLine(string line, Lang lang)
+    {
+        if (line.StartsWith("Compile Error", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return lang switch
+        {
+            Lang.Python3 => line.Contains("Traceback (most recent call last):", StringComparison.Ordinal),
+            Lang.CSharp => line.Contains("error CS", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Exception:", StringComparison.Ordinal)
+                || line.StartsWith("Unhandled exception", StringComparison.OrdinalIgnoreCase),
+            _ => false,
+        };
     }
 }
