@@ -1,3 +1,4 @@
+#if RHINOCODE
 using RhinoAI.ScriptProjects;
 
 namespace RhinoAI.Tools;
@@ -60,3 +61,4 @@ public static class CreateTool
     }
 
 }
+#endif
