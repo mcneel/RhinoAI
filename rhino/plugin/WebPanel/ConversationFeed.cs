@@ -22,7 +22,7 @@ internal sealed class ConversationFeed
     private int LifecycleSent { get; set; }
 
     // Questions have no identity of their own, so the feed mints one per question and keeps the
-    // instance to map an answer back to the object AskUserPicker arbitrates on. Ordered, and plural:
+    // instance so an answer reaches the object the conversation still holds. Ordered, and plural:
     // one ask_user call can pose several, and a later call appends to the set.
     private List<PosedQuestion> Posed { get; } = new();
     private int QuestionSeq { get; set; }
