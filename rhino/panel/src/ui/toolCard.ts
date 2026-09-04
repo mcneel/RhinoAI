@@ -24,6 +24,28 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
 
   const expanded = () => ctx.ui.isToolExpanded(id);
 
+  // A reviewed transcript's calls have all finished, so its chips could only fire at whatever is running now.
+  const chips = () => {
+    const offered = call().chips;
+    if (!offered || offered.length === 0 || ctx.store.readOnly()) return null;
+    return el(
+      'div',
+      { class: 'tool-chips' },
+      ...offered.map((chip) =>
+        el(
+          'button',
+          {
+            class: chip.style === 'danger' ? 'tool-chip danger' : 'tool-chip',
+            type: 'button',
+            onClick: () => ctx.send({ type: 'tool.chip', callId: id, chipId: chip.id }),
+          },
+          chip.icon ? icon(chip.icon, 11) : null,
+          el('span', { text: chip.label }),
+        ),
+      ),
+    );
+  };
+
   // A captured view is the result, not a detail of it: show it without asking.
   const inlinePreview = () => {
     const current = call().preview;
@@ -41,30 +63,36 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
   return el(
     'div',
     { class: () => `tool ${call().status}` },
+    // The expander cannot span the row: a chip inside it would be a button nested in a button.
     el(
-      'button',
-      {
-        class: 'tool-head',
-        type: 'button',
-        'aria-expanded': expanded,
-        onClick: () => ctx.ui.toggleTool(id),
-      },
-      () =>
-        call().status === 'running'
-          ? el('span', { class: 'spinner' })
-          : el('span', { class: 'fam' }, icon(iconFor(family), 14)),
-      el('span', { class: 'title', text: () => call().title }),
-      // Only worth the space when it says something the phrase does not. An unrecognised tool has
-      // no phrase, so its title already is the wire name.
-      when(
-        () => call().name !== call().title,
-        () => el('span', { class: 'wire', text: () => call().name }),
+      'div',
+      { class: 'tool-head' },
+      el(
+        'button',
+        {
+          class: 'tool-toggle',
+          type: 'button',
+          'aria-expanded': expanded,
+          onClick: () => ctx.ui.toggleTool(id),
+        },
+        () =>
+          call().status === 'running'
+            ? el('span', { class: 'spinner' })
+            : el('span', { class: 'fam' }, icon(iconFor(family), 14)),
+        el('span', { class: 'title', text: () => call().title }),
+        // Only worth the space when it says something the phrase does not. An unrecognised tool has
+        // no phrase, so its title already is the wire name.
+        when(
+          () => call().name !== call().title,
+          () => el('span', { class: 'wire', text: () => call().name }),
+        ),
+        when(
+          () => call().durationMs !== undefined,
+          () => el('span', { class: 'dur', text: () => formatDuration(call().durationMs ?? 0) }),
+        ),
+        el('span', { class: 'chev' }, icon('chevron', 12)),
       ),
-      when(
-        () => call().durationMs !== undefined,
-        () => el('span', { class: 'dur', text: () => formatDuration(call().durationMs ?? 0) }),
-      ),
-      el('span', { class: 'chev' }, icon('chevron', 12)),
+      chips,
     ),
     () => {
       const inline = inlinePreview();

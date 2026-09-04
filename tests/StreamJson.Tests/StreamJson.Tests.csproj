@@ -57,6 +57,7 @@
     <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/WebPanel/PanelJson.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/WebPanel/PanelTheme.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ToolChips.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.cs" LinkBase="PluginSources" />
   </ItemGroup>
 

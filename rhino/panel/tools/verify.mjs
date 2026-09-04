@@ -116,7 +116,7 @@ try {
   check('no unconsumed markdown markers leak into text', md.strayMarkers === 0);
 
   // ------------------------------------------------------- tool cards / json
-  await page.click('.tool-head');
+  await page.click('.tool-toggle');
   await wait(200);
   const json = await page.evaluate(() => ({
     keys: document.querySelectorAll('.tool-body .tok-attr').length,
@@ -126,7 +126,7 @@ try {
   check('tool arguments are highlighted as json', json.keys >= 2 && json.strings >= 1, JSON.stringify(json));
   check('a table result renders as a table, not json', json.preview >= 3);
   await shot('02-tool-expanded');
-  await page.click('.tool-head');
+  await page.click('.tool-toggle');
 
   // ------------------------------------------------ streaming + reconciliation
   await page.evaluate(() => {
@@ -506,6 +506,9 @@ try {
       toolFailed: document.querySelectorAll('.tool.failed').length,
       titles: [...document.querySelectorAll('.tool .title')].map((n) => n.textContent),
       wires: [...document.querySelectorAll('.tool .wire')].map((n) => n.textContent),
+      chips: [...document.querySelectorAll('.tool-chip')].map((n) => n.textContent),
+      chipsOnRunning: document.querySelectorAll('.tool.running .tool-chip').length,
+      chipsOnSettled: document.querySelectorAll('.tool:not(.running) .tool-chip').length,
       question: document.querySelectorAll('.question label').length,
       footerTokens: [...document.querySelectorAll('.turn-foot')].map((n) => n.textContent).join(' '),
     }));
@@ -514,7 +517,10 @@ try {
     check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
-      rendered.tools === 3 && rendered.toolOk === 1, JSON.stringify(rendered));
+      rendered.tools === 4 && rendered.toolOk === 1, JSON.stringify(rendered));
+    check('a running run_command offers a cancel chip and a settled call offers none',
+      rendered.chips.length === 1 && rendered.chips[0] === 'Cancel'
+      && rendered.chipsOnRunning === 1 && rendered.chipsOnSettled === 0, JSON.stringify(rendered));
     check('a result the agent flagged as an error renders as a failed card',
       rendered.toolFailed === 1 && rendered.titles.includes('python failed'), JSON.stringify(rendered));
     check('the mcp__rhino__ prefix never reaches the panel',
@@ -522,7 +528,7 @@ try {
     check('a namespaced tool gets its real phrase',
       rendered.titles.includes('listed objects'), JSON.stringify(rendered.titles));
     check('the wire name shows only when it adds something',
-      rendered.wires.length === 2 && !rendered.wires.includes('probe_intersection'), JSON.stringify(rendered.wires));
+      rendered.wires.length === 3 && !rendered.wires.includes('probe_intersection'), JSON.stringify(rendered.wires));
     check('the question posed by the feed renders', rendered.question === 2, JSON.stringify(rendered));
     check('per-turn tokens land on the turn, not the top bar',
       rendered.footerTokens.includes('14k tok') && !rendered.footerTokens.includes('$'),

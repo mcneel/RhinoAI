@@ -512,17 +512,23 @@ a:hover { text-decoration: underline; }
 .tool-head {
   display: flex;
   align-items: center;
-  gap: 7px;
   width: 100%;
-  padding: 5px 8px;
-  text-align: start;
   min-width: 0;
 }
-.tool-head:hover { background: var(--surface-2); }
-.tool-head .fam { color: var(--text-faint); flex: none; }
-.tool.running .tool-head .fam { color: var(--accent); }
-.tool.failed .tool-head .fam { color: var(--err); }
-.tool-head .title {
+.tool-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  text-align: start;
+}
+.tool-toggle:hover { background: var(--surface-2); }
+.tool-toggle .fam { color: var(--text-faint); flex: none; }
+.tool.running .tool-toggle .fam { color: var(--accent); }
+.tool.failed .tool-toggle .fam { color: var(--err); }
+.tool-toggle .title {
   flex: 1;
   min-width: 0;
   font-size: var(--fs);
@@ -530,14 +536,30 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.tool-head .wire {
+.tool-toggle .wire {
   font: 400 var(--fs-xs)/1 var(--mono);
   color: var(--text-faint);
   white-space: nowrap;
 }
-.tool-head .dur { font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.tool-head .chev { color: var(--text-faint); transition: transform .15s ease; flex: none; }
-.tool-head[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.tool-toggle .dur { font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.tool-toggle .chev { color: var(--text-faint); transition: transform .15s ease; flex: none; }
+.tool-toggle[aria-expanded='true'] .chev { transform: rotate(90deg); }
+
+.tool-chips { display: flex; align-items: center; gap: 4px; flex: none; padding-inline-end: 6px; }
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.tool-chip:hover { background: var(--control-hover); color: var(--text); }
+.tool-chip.danger:hover { border-color: var(--err); color: var(--err); }
 
 .spinner {
   inline-size: 12px;

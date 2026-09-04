@@ -210,6 +210,15 @@ internal sealed class ConversationFeed
         return false;
     }
 
+    // Whether the card the user clicked is still the running call, so a spent chip cannot act.
+    public bool IsCallRunning(string callId)
+    {
+        foreach (TurnCursor cursor in Cursors)
+            if (cursor.ToolResults.TryGetValue(callId, out string? result))
+                return string.IsNullOrWhiteSpace(result);
+        return false;
+    }
+
     // Tool call ids come from the agent, but the id is only guaranteed present on adapters that
     // report one; fall back to the event's position, which is stable because events only append.
     private static string CallId(TurnCursor cursor, int index, TurnEvent ev) =>
@@ -219,9 +228,10 @@ internal sealed class ConversationFeed
     {
         bool finished = !string.IsNullOrWhiteSpace(ev.Result);
         bool failed = finished && (ev.Failed || ToolSummary.IsFailure(ev.Result));
+        string name = ToolSummary.Bare(ev.Text);
         return new PanelToolCall(
             callId,
-            ToolSummary.Bare(ev.Text),
+            name,
             ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
             Payload(ev.Args),
             finished ? failed ? "failed" : "ok" : "running",
@@ -229,9 +239,11 @@ internal sealed class ConversationFeed
             failed ? FailureText(ev.Result) : null,
             ev.At.ToString("O"),
             DurationMs: null,
-            Mutated: null);
+            Mutated: null,
+            ToolChips.For(name, !finished));
     }
 
+    // Only ever emitted once a result lands, so the call has finished and any chip it offered is spent.
     private static PanelToolPatch PatchFor(TurnEvent ev)
     {
         bool failed = ev.Failed || ToolSummary.IsFailure(ev.Result);
@@ -240,7 +252,8 @@ internal sealed class ConversationFeed
             ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
             Payload(ev.Result),
             failed ? FailureText(ev.Result) : null,
-            DurationMs: null);
+            DurationMs: null,
+            ToolChips.None);
     }
 
     // Real JSON where the tool produced it, so the panel can pretty-print and highlight it; anything
