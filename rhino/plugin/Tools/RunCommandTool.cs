@@ -11,12 +11,6 @@ public static class RunCommandTool
         RhinoDoc doc,
         [Description("Rhino command string to execute")] string command)
     {
-        if (Command.InCommand())
-        {
-            return "Rhino is already running a command (likely waiting for input from a previous run_command call). " +
-                   "Call close_slot to kill this slot and start a new one, then use run_python or run_csharp for scripted geometry.";
-        }
-
         RhinoApp.CommandWindowCaptureEnabled = true;
         RhinoApp.RunScript(doc.RuntimeSerialNumber, command, false);
         var lines = RhinoApp.CapturedCommandWindowStrings(true);
