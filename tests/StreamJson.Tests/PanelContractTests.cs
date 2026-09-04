@@ -75,7 +75,11 @@ public sealed class PanelContractTests
         convo.CompleteTurn();
         feed.Pump();
 
-        convo.SetPendingQuestion(new PendingQuestion("Split the worst panels?", ["Yes", "No"], AskUserMode.Single));
+        // Two at once: one ask_user call poses a batch, so the panel replay has to stack them under a
+        // single submit rather than render only the last.
+        convo.AddPendingQuestions([
+            new PendingQuestion("Split the worst panels?", ["Yes", "No"], AskUserMode.Single),
+            new PendingQuestion("Which levels should I check?", ["L12", "L13", "L14"], AskUserMode.Multi)]);
         feed.Pump();
 
         StringBuilder json = new();

@@ -92,7 +92,7 @@ export class Store {
   readonly history = signal<readonly HistoryEntry[]>([]);
   readonly session = signal<SessionView | null>(null);
   readonly turns = signal<readonly TurnView[]>([]);
-  readonly question = signal<PendingQuestion | null>(null);
+  readonly questions = signal<readonly PendingQuestion[]>([]);
   readonly notices = signal<readonly Notice[]>([]);
   readonly status = signal<string | null>(null);
 
@@ -112,8 +112,8 @@ export class Store {
 
   readonly running: ReadSignal<boolean> = computed(() => this.currentTurn()?.status() === 'running');
 
-  /** The agent is not thinking while it is blocked on an unanswered question. */
-  readonly thinking: ReadSignal<boolean> = computed(() => this.running() && this.question() === null);
+  /** The agent is not thinking while it is blocked on unanswered questions. */
+  readonly thinking: ReadSignal<boolean> = computed(() => this.running() && this.questions().length === 0);
 
   readonly readOnly: ReadSignal<boolean> = computed(() => this.session()?.readOnly === true);
 
@@ -154,7 +154,7 @@ export class Store {
         });
         this.activeAgentName.set(event.snapshot.agent);
         this.turns.set(event.snapshot.turns.map(turnFrom));
-        this.question.set(null);
+        this.questions.set([]);
         return;
 
       // Idempotent on id. A host that re-announces a turn or a call must not be able to put two
@@ -219,12 +219,16 @@ export class Store {
         return;
       }
 
+      // Appended, not replaced: a second ask_user adds to the stack rather than evicting what is
+      // already showing. Idempotent on id for the same reason turn.begin is.
       case 'question':
-        this.question.set(event.question);
+        this.questions.set((list) =>
+          list.some((q) => q.id === event.question.id) ? list : [...list, event.question],
+        );
         return;
 
       case 'question.clear':
-        if (this.question()?.id === event.id) this.question.set(null);
+        this.questions.set((list) => list.filter((q) => q.id !== event.id));
         return;
 
       case 'notice': {

@@ -113,25 +113,44 @@ public sealed class ConversationTests
     }
 
     [Test]
-    public void Pending_question_round_trips_and_clears_reference_guarded()
+    public void Pending_questions_accumulate_and_clear_reference_guarded()
     {
         Conversation convo = NewConversation();
-        Assert.That(convo.TryGetPendingQuestion(out _), Is.False);
+        Assert.That(convo.TryGetPendingQuestions(out _), Is.False);
 
         PendingQuestion first = new("pick one", ["a", "b"], AskUserMode.Single);
-        convo.SetPendingQuestion(first);
-        Assert.That(convo.TryGetPendingQuestion(out PendingQuestion got), Is.True);
-        Assert.That(got, Is.SameAs(first));
+        convo.AddPendingQuestions([first]);
+        Assert.That(convo.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> got), Is.True);
+        Assert.That(got, Is.EqualTo(new[] { first }));
 
-        // A stale clear for an already-replaced question must not wipe the newer one.
+        // A second ask_user APPENDS: an earlier unanswered question is never silently evicted.
         PendingQuestion second = new("again", ["c"], AskUserMode.Multi);
-        convo.SetPendingQuestion(second);
-        convo.ClearPendingQuestion(first);
-        Assert.That(convo.TryGetPendingQuestion(out PendingQuestion still), Is.True);
-        Assert.That(still, Is.SameAs(second));
+        convo.AddPendingQuestions([second]);
+        Assert.That(convo.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> both), Is.True);
+        Assert.That(both, Is.EqualTo(new[] { first, second }), "order is the order they were posed in");
 
-        convo.ClearPendingQuestion(second);
-        Assert.That(convo.TryGetPendingQuestion(out _), Is.False);
+        // A stale clear takes out only its own instance, never a question posed after it.
+        convo.ClearPendingQuestions([first]);
+        Assert.That(convo.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> still), Is.True);
+        Assert.That(still, Is.EqualTo(new[] { second }));
+
+        convo.ClearPendingQuestions([second]);
+        Assert.That(convo.TryGetPendingQuestions(out _), Is.False);
+    }
+
+    [Test]
+    public void A_batch_of_questions_is_posed_and_cleared_as_one()
+    {
+        Conversation convo = NewConversation();
+        PendingQuestion units = new("units?", ["mm", "m"], AskUserMode.Single);
+        PendingQuestion tolerance = new("tolerance?", ["0.001", "0.01"], AskUserMode.Single);
+
+        convo.AddPendingQuestions([units, tolerance]);
+        Assert.That(convo.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> posed), Is.True);
+        Assert.That(posed, Is.EqualTo(new[] { units, tolerance }));
+
+        convo.ClearPendingQuestions(posed);
+        Assert.That(convo.TryGetPendingQuestions(out _), Is.False);
     }
 
     [Test]

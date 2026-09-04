@@ -11,11 +11,10 @@ internal sealed class PendingQuestion
     {
         Question = question;
 
-        // Collapse any agent-supplied literal "Other" so the synthesized free-text affordance
-        // never duplicates a real option in either channel.
+        // Collapse agent-supplied duplicates of what the panel synthesizes for every question.
         List<string> kept = [];
         foreach (string option in options)
-            if (!IsOther(option))
+            if (!IsPanelSynthesized(option))
                 kept.Add(option);
         Options = kept;
         Mode = mode;
@@ -25,6 +24,7 @@ internal sealed class PendingQuestion
     public IReadOnlyList<string> Options { get; }
     public AskUserMode Mode { get; }
 
-    public static bool IsOther(string label) =>
-        string.Equals(label?.Trim(), "Other", StringComparison.OrdinalIgnoreCase);
+    public static bool IsPanelSynthesized(string label) =>
+        string.Equals(label?.Trim(), "Other", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(label?.Trim(), "I don't know", StringComparison.OrdinalIgnoreCase);
 }

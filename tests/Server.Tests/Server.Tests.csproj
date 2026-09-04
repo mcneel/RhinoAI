@@ -36,6 +36,9 @@
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/ScriptProjects/PluginNaming.cs" LinkBase="PluginSources" />
+    <!-- ask_user's question item: the schema generated from it is what the agent reads, so assert
+         the real record rather than a lookalike. -->
+    <Compile Include="../../rhino/plugin/Tools/QuestionSpec.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>

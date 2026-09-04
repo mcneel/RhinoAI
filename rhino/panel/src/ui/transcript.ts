@@ -8,7 +8,6 @@ import { emptyState } from './empty.js';
 import { icon } from './icons.js';
 import { notices } from './notices.js';
 import { agentMessage } from './message.js';
-import { questionCard } from './question.js';
 import { toolCard } from './toolCard.js';
 
 const CONTEXT_ICON = {
@@ -204,10 +203,6 @@ export function transcript(ctx: PanelContext): Child {
           (turn) => turnView(ctx, turn),
         ),
     ),
-    () => {
-      const pending = store.question();
-      return pending ? questionCard(ctx, pending) : null;
-    },
   );
 
   // Scroll events are not a reliable signal of intent. Our own autoscroll produces them, and so

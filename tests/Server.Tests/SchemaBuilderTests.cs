@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using RhinoAI.Server;
+using RhinoAI.Tools;
 
 namespace RhinoAI.Server.Tests;
 
@@ -11,8 +12,15 @@ public class SchemaBuilderTests
 {
     private enum Color { Red, Green, Blue }
 
+    private sealed record Node(string Name, Node? Child);
+
     private class SampleMethods
     {
+        // The real ask_user signature: a batch of questions, so the schema below is the one the
+        // agent actually reads.
+        public void Batch(QuestionSpec[] questions) { }
+        public void Nested(Node root) { }
+
         public void Required(
             string name,
             int count,
@@ -148,6 +156,79 @@ public class SchemaBuilderTests
         string actual = schema.GetProperty("properties").GetProperty("map")
             .GetProperty("type").GetString()!;
         Assert.That(actual, Is.EqualTo("object"));
+    }
+
+    // A tool taking a list of records is unusable without `items`: the agent has to guess the
+    // element shape, and ask_user is exactly that tool.
+    [Test]
+    public void An_array_of_records_advertises_its_element_shape()
+    {
+        JsonElement schema = Build(Arg(nameof(SampleMethods.Batch), "questions"));
+        JsonElement questions = schema.GetProperty("properties").GetProperty("questions");
+        Assert.That(questions.GetProperty("type").GetString(), Is.EqualTo("array"));
+
+        JsonElement items = questions.GetProperty("items");
+        Assert.That(items.GetProperty("type").GetString(), Is.EqualTo("object"));
+
+        JsonElement props = items.GetProperty("properties");
+        Assert.That(props.GetProperty("question").GetProperty("type").GetString(), Is.EqualTo("string"));
+        Assert.That(props.GetProperty("options").GetProperty("type").GetString(), Is.EqualTo("array"));
+        Assert.That(props.GetProperty("options").GetProperty("items").GetProperty("type").GetString(), Is.EqualTo("string"));
+        Assert.That(props.GetProperty("multiSelect").GetProperty("type").GetString(), Is.EqualTo("boolean"));
+    }
+
+    // The names in the schema have to be the names the binder reads, or a well-formed call silently
+    // binds nothing.
+    [Test]
+    public void Nested_property_names_use_the_serializers_naming_policy()
+    {
+        JsonElement schema = Build(Arg(nameof(SampleMethods.Batch), "questions"));
+        JsonElement props = schema.GetProperty("properties").GetProperty("questions")
+            .GetProperty("items").GetProperty("properties");
+        string[] names = props.EnumerateObject().Select(p => p.Name).ToArray();
+        Assert.That(names, Is.EqualTo(new[] { "question", "options", "multiSelect" }));
+    }
+
+    [Test]
+    public void Nested_required_follows_the_same_rules_as_a_tool_parameter()
+    {
+        JsonElement items = Build(Arg(nameof(SampleMethods.Batch), "questions"))
+            .GetProperty("properties").GetProperty("questions").GetProperty("items");
+        string[] required = items.GetProperty("required").EnumerateArray().Select(e => e.GetString()!).ToArray();
+        Assert.That(required, Is.EqualTo(new[] { "question", "options" }),
+            "multiSelect has a default, so it is optional");
+    }
+
+    [Test]
+    public void Nested_descriptions_reach_the_agent()
+    {
+        JsonElement props = Build(Arg(nameof(SampleMethods.Batch), "questions"))
+            .GetProperty("properties").GetProperty("questions")
+            .GetProperty("items").GetProperty("properties");
+        Assert.That(props.GetProperty("question").GetProperty("description").GetString(),
+            Does.Contain("question to show"));
+        Assert.That(props.GetProperty("multiSelect").GetProperty("description").GetString(),
+            Does.Contain("checkboxes"));
+    }
+
+    // A self-referencing type must terminate rather than blow the stack, and it stops at a bare
+    // object rather than unrolling forever.
+    [Test]
+    public void A_recursive_type_terminates()
+    {
+        JsonElement root = Build(Arg(nameof(SampleMethods.Nested), "root")).GetProperty("properties").GetProperty("root");
+        JsonElement child = root.GetProperty("properties").GetProperty("child");
+        Assert.That(child.GetProperty("type").GetString(), Is.EqualTo("object"));
+        Assert.That(child.TryGetProperty("properties", out _), Is.False);
+    }
+
+    // Dictionary<,>'s constructors take capacities and comparers; advertising those as fields would
+    // be a lie, so framework types stay shapeless.
+    [Test]
+    public void A_framework_type_is_not_given_an_invented_shape()
+    {
+        JsonElement map = Build(Arg(nameof(SampleMethods.Types), "map")).GetProperty("properties").GetProperty("map");
+        Assert.That(map.TryGetProperty("properties", out _), Is.False);
     }
 
     [Test]

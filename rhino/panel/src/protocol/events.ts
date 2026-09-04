@@ -200,6 +200,12 @@ export interface PromptRequest {
   context: ContextItem[];
 }
 
+/** One question's answers within a submit. A submit carries every question currently showing. */
+export interface QuestionAnswer {
+  id: string;
+  answers: string[];
+}
+
 export type PanelCommand =
   | { type: 'ready' }
   | { type: 'prompt'; request: PromptRequest }
@@ -209,8 +215,8 @@ export type PanelCommand =
   | { type: 'conversation.resume'; sessionId: string }
   | { type: 'conversation.exitReview' }
   | { type: 'agent.select'; name: string }
-  | { type: 'question.answer'; id: string; answers: string[] }
-  | { type: 'question.dismiss'; id: string }
+  | { type: 'question.answer'; items: QuestionAnswer[] }
+  | { type: 'question.dismiss'; ids: string[] }
   | { type: 'tool.chip'; callId: string; chipId: string }
   | { type: 'turn.undo'; turnId: string }
   | { type: 'turn.retry'; turnId: string }

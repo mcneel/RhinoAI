@@ -54,6 +54,7 @@
   --err-line: #e9abae;
   --accent-ring: rgba(30, 107, 214, 0.18);
   --bg-fade: rgba(246, 246, 247, 0.86);
+  --scrim: rgba(28, 29, 32, 0.42);
 
   --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px -12px rgb(0 0 0 / 18%);
 
@@ -102,6 +103,7 @@
     --err-line: #6d3639;
     --accent-ring: rgba(91, 155, 255, 0.22);
     --bg-fade: rgba(28, 29, 32, 0.86);
+    --scrim: rgba(9, 10, 12, 0.58);
 
     --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 10px 30px -12px rgb(0 0 0 / 60%);
 
@@ -147,6 +149,7 @@
   --err-line: #6d3639;
   --accent-ring: rgba(91, 155, 255, 0.22);
   --bg-fade: rgba(28, 29, 32, 0.86);
+  --scrim: rgba(9, 10, 12, 0.58);
   --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 10px 30px -12px rgb(0 0 0 / 60%);
   --tok-com: #7d818c;
   --tok-str: #8ed6a8;
@@ -231,6 +234,8 @@ a:hover { text-decoration: underline; }
   border-bottom: 1px solid var(--border);
   background: var(--control);
   min-width: 0;
+  position: relative;
+  z-index: 7;
 }
 
 .agent-chip {
@@ -666,32 +671,99 @@ a:hover { text-decoration: underline; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 
-/* ---------------------------------------------------------- question card */
+/* ------------------------------------------------------- question overlay */
 
-.question {
-  border: 1px solid var(--accent-line);
-  background: var(--surface);
-  border-radius: var(--r);
-  padding: 9px 10px;
+.ask-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--scrim);
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  box-shadow: var(--shadow);
+  justify-content: flex-end;
+  padding: var(--pad);
+  animation: scrim-in .16s ease both;
 }
-.question > h4 { margin: 0; font-size: var(--fs-md); font-weight: 600; display: flex; gap: 6px; align-items: flex-start; }
-.question > h4 .icon { color: var(--accent); margin-top: 2px; }
-.question .opts { display: flex; flex-direction: column; gap: 2px; }
-.question label {
+@keyframes scrim-in { from { opacity: 0; } }
+
+.ask {
+  background: var(--surface);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  animation: ask-in .2s cubic-bezier(.2, .8, .3, 1) both;
+}
+.ask:focus { outline: none; }
+@keyframes ask-in { from { opacity: 0; transform: translateY(10px); } }
+
+.ask-head { display: flex; align-items: center; gap: 7px; }
+.ask-head .glyph {
+  inline-size: 17px;
+  block-size: 17px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.ask-head .spacer { flex: 1; }
+.ask-count { font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+.steps { display: flex; gap: 3px; flex: none; }
+.steps i { inline-size: 16px; block-size: 3px; border-radius: 2px; background: var(--surface-3); display: block; }
+.steps i.done { background: var(--accent); }
+.steps i.here { background: var(--accent); opacity: .45; }
+
+.ask-body { transition: height .18s cubic-bezier(.2, .8, .3, 1); }
+.ask-body.animating { overflow: hidden; }
+.ask-page { display: flex; flex-direction: column; gap: 8px; }
+.ask-page.turning { animation: page-in .16s ease both; }
+@keyframes page-in { from { opacity: 0; } }
+
+.ask h4 { margin: 0; font-size: var(--fs-md); font-weight: 600; line-height: 1.4; text-wrap: pretty; }
+
+.ask .opts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  cursor: pointer;
+  max-height: 208px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    linear-gradient(var(--surface) 30%, rgba(0, 0, 0, 0)) top / 100% 16px no-repeat local,
+    linear-gradient(rgba(0, 0, 0, 0), var(--surface) 70%) bottom / 100% 16px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--accent-ring), rgba(0, 0, 0, 0)) top / 100% 7px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--accent-ring), rgba(0, 0, 0, 0)) bottom / 100% 7px no-repeat scroll;
+}
+.ask label {
   display: flex;
   gap: 7px;
   align-items: center;
-  padding: 4px 6px;
+  padding: 5px 6px;
   border-radius: var(--r-sm);
   font-size: var(--fs);
   cursor: pointer;
 }
-.question label:hover { background: var(--surface-2); }
-.question input[type='text'] {
+.ask label:hover { background: var(--surface-2); }
+.ask input[type='radio'], .ask input[type='checkbox'] { accent-color: var(--accent); flex: none; }
+
+.ask .synth {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--rule);
+}
+.ask .synth label { color: var(--text-dim); padding-bottom: 9px; }
+.ask .synth label:hover, .ask .synth label.on { color: var(--text); }
+
+.ask input[type='text'] {
   font: inherit;
   color: inherit;
   background: var(--field);
@@ -700,7 +772,15 @@ a:hover { text-decoration: underline; }
   padding: 4px 7px;
   width: 100%;
 }
-.question .row { display: flex; gap: 6px; justify-content: flex-end; }
+.ask input[type='text']:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+
+.ask-row { display: flex; gap: 6px; align-items: center; }
+.ask-row .spacer { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ask, .ask-scrim, .ask-page.turning { animation: none; }
+  .ask-body { transition: none; }
+}
 
 .btn {
   padding: 4px 11px;
@@ -714,6 +794,8 @@ a:hover { text-decoration: underline; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: .4; cursor: default; }
+.btn.ghost { background: none; border-color: transparent; color: var(--text-dim); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }
 
 /* --------------------------------------------------------------- composer */
 

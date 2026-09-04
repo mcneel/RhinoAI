@@ -243,11 +243,11 @@ public class AIPAnel : Panel
                 break;
 
             case AnswerQuestionCommand answer:
-                Answer(answer.Id, answer.Answers);
+                Answer(answer.Items);
                 break;
 
             case DismissQuestionCommand dismiss:
-                Dismiss(dismiss.Id);
+                Dismiss(dismiss.Ids);
                 break;
 
             case ToolChipCommand chip:
@@ -433,24 +433,38 @@ public class AIPAnel : Panel
         Feed?.Replay();
     }
 
-    private void Answer(string id, IReadOnlyList<string> answers)
+    // One submit for every question showing: the panel sends the whole set, so this composes a single
+    // reply and wakes the agent once rather than once per card.
+    private void Answer(IReadOnlyList<QuestionAnswer> items)
     {
-        if (Feed is null || !Feed.TryResolveQuestion(id, out PendingQuestion question) || !TryDoc(out RhinoDoc doc))
+        List<string> ids = [];
+        foreach (QuestionAnswer item in items)
+            ids.Add(item.Id);
+
+        if (Feed is null || !Feed.TryResolveQuestions(ids, out IReadOnlyList<PendingQuestion> questions) || !TryDoc(out RhinoDoc doc))
             return;
 
-        if (answers.Count == 0)
+        List<string> answers = [];
+        bool anyPicked = false;
+        foreach (QuestionAnswer item in items)
         {
-            Dismiss(id);
+            if (item.Answers.Count > 0) anyPicked = true;
+            answers.Add(string.Join(", ", item.Answers));
+        }
+
+        if (!anyPicked)
+        {
+            Dismiss(ids);
             return;
         }
 
         // First-wins through the same claim the command-line picker uses: losing it means the picker
-        // already dispatched this question, so there is nothing left to do but re-render.
-        if (AskUserPicker.TryClaim(doc.RuntimeSerialNumber, question))
-            AgentDispatch.AnswerActive(doc, UserMessage.FromText(string.Join(", ", answers)));
+        // already dispatched these questions, so there is nothing left to do but re-render.
+        if (AskUserPicker.TryClaim(doc.RuntimeSerialNumber, questions))
+            AgentDispatch.AnswerActive(doc, UserMessage.FromText(AskUserPicker.Compose(questions, answers)));
 
         if (TryConversation(out Conversation convo))
-            convo.ClearPendingQuestion(question);
+            convo.ClearPendingQuestions(questions);
     }
 
     // A stale card must not cancel a command the user started by hand, so the call has to still be running.
@@ -467,15 +481,15 @@ public class AIPAnel : Panel
         }
     }
 
-    private void Dismiss(string id)
+    private void Dismiss(IReadOnlyList<string> ids)
     {
-        if (Feed is null || !Feed.TryResolveQuestion(id, out PendingQuestion question))
+        if (Feed is null || !Feed.TryResolveQuestions(ids, out IReadOnlyList<PendingQuestion> questions))
             return;
 
         if (TryDoc(out RhinoDoc doc))
-            AskUserPicker.Cancel(doc.RuntimeSerialNumber, question);
+            AskUserPicker.Cancel(doc.RuntimeSerialNumber, questions);
         if (TryConversation(out Conversation convo))
-            convo.ClearPendingQuestion(question);
+            convo.ClearPendingQuestions(questions);
     }
 
     private void OpenSettings()

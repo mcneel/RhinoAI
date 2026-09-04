@@ -21,11 +21,13 @@ internal sealed class ConversationFeed
     private List<TurnCursor> Cursors { get; } = new();
     private int LifecycleSent { get; set; }
 
-    // Questions have no identity of their own, so the feed mints one and keeps the instance to map
-    // an answer back to the object AskUserPicker arbitrates on.
-    private PendingQuestion? PosedQuestion { get; set; }
-    private string PosedId { get; set; } = string.Empty;
+    // Questions have no identity of their own, so the feed mints one per question and keeps the
+    // instance to map an answer back to the object AskUserPicker arbitrates on. Ordered, and plural:
+    // one ask_user call can pose several, and a later call appends to the set.
+    private List<PosedQuestion> Posed { get; } = new();
     private int QuestionSeq { get; set; }
+
+    private readonly record struct PosedQuestion(PendingQuestion Question, string Id);
 
     private sealed class TurnCursor
     {
@@ -52,8 +54,7 @@ internal sealed class ConversationFeed
     {
         Cursors.Clear();
         LifecycleSent = 0;
-        PosedQuestion = null;
-        PosedId = string.Empty;
+        Posed.Clear();
 
         Emit(new ConversationEvent(new PanelConversation(
             Source.AgentSessionId.ToString(),
@@ -167,46 +168,78 @@ internal sealed class ConversationFeed
         }
     }
 
+    // Diff the posed set against the conversation's: drop what is gone, pose what is new. Both
+    // directions matter, because questions leave one at a time (a stale clear) as well as together.
     private void PumpQuestion()
     {
-        bool pending = Source.TryGetPendingQuestion(out PendingQuestion question);
+        Source.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> pending);
 
-        if (!pending)
+        for (int i = Posed.Count - 1; i >= 0; i--)
         {
-            if (PosedQuestion is null)
-                return;
-            Emit(new QuestionClearEvent(PosedId));
-            PosedQuestion = null;
-            PosedId = string.Empty;
-            return;
+            if (Contains(pending, Posed[i].Question))
+                continue;
+            Emit(new QuestionClearEvent(Posed[i].Id));
+            Posed.RemoveAt(i);
         }
 
-        if (ReferenceEquals(PosedQuestion, question))
-            return;
+        foreach (PendingQuestion question in pending)
+        {
+            if (IndexOfPosed(question) >= 0)
+                continue;
 
-        if (PosedQuestion is not null)
-            Emit(new QuestionClearEvent(PosedId));
-
-        PosedQuestion = question;
-        PosedId = $"question-{++QuestionSeq}";
-        Emit(new QuestionEvent(new PanelQuestion(
-            PosedId,
-            question.Question,
-            question.Options,
-            question.Mode == AskUserMode.Multi ? "multi" : "single",
-            AllowOther: true)));
+            string id = $"question-{++QuestionSeq}";
+            Posed.Add(new PosedQuestion(question, id));
+            Emit(new QuestionEvent(new PanelQuestion(
+                id,
+                question.Question,
+                question.Options,
+                question.Mode == AskUserMode.Multi ? "multi" : "single",
+                AllowOther: true)));
+        }
     }
 
-    // Resolve the question instance a panel answer refers to, so a stale card cannot answer a
-    // question that has already been replaced.
-    public bool TryResolveQuestion(string id, out PendingQuestion question)
+    // Resolve the question instances a panel answer refers to, so a stale card cannot answer a
+    // question that has already been cleared. All-or-nothing: a batch answer is one dispatch, so a
+    // single stale id has to fail the whole submit rather than send a partial reply.
+    public bool TryResolveQuestions(IReadOnlyList<string> ids, out IReadOnlyList<PendingQuestion> questions)
     {
-        if (PosedQuestion is not null && PosedId == id)
+        List<PendingQuestion> resolved = [];
+        foreach (string id in ids)
         {
-            question = PosedQuestion;
-            return true;
+            int at = IndexOfId(id);
+            if (at < 0)
+            {
+                questions = Array.Empty<PendingQuestion>();
+                return false;
+            }
+            resolved.Add(Posed[at].Question);
         }
-        question = default!;
+
+        questions = resolved;
+        return resolved.Count > 0;
+    }
+
+    private int IndexOfId(string id)
+    {
+        for (int i = 0; i < Posed.Count; i++)
+            if (Posed[i].Id == id)
+                return i;
+        return -1;
+    }
+
+    private int IndexOfPosed(PendingQuestion question)
+    {
+        for (int i = 0; i < Posed.Count; i++)
+            if (ReferenceEquals(Posed[i].Question, question))
+                return i;
+        return -1;
+    }
+
+    private static bool Contains(IReadOnlyList<PendingQuestion> questions, PendingQuestion question)
+    {
+        foreach (PendingQuestion candidate in questions)
+            if (ReferenceEquals(candidate, question))
+                return true;
         return false;
     }
 

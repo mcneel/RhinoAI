@@ -6,20 +6,26 @@ using Rhino.Input.Custom;
 
 namespace RhinoAI;
 
-// Command-line answer affordance for a posed ask_user question, restored from the old blocking
-// picker but adapted to the non-blocking model. The ask_user tool has ALREADY returned, so this
-// GetOption does not wait for or carry a result: it merely lets the user COMPOSE the answer on the
-// command line. Picking an option dispatches that choice as the agent's next prompt (exactly like a
-// panel click) and clears the pending question. It runs on the UI thread, alongside the panel card.
+// Command-line answer affordance for posed ask_user questions, restored from the old blocking picker
+// but adapted to the non-blocking model. The ask_user tool has ALREADY returned, so this GetOption
+// does not wait for or carry a result: it merely lets the user COMPOSE the answer on the command
+// line. Working through the questions dispatches the answers as the agent's next prompt (exactly
+// like a panel submit) and clears the pending questions. It runs on the UI thread, alongside the
+// panel card.
 //
-// First-wins with the panel: the modal Get holds the UI thread, so a panel click can only land
+// One picker per doc walks the WHOLE outstanding set in order and dispatches once at the end, so the
+// command line and the panel produce the same single reply. A newer ask_user cancels the running
+// picker and restarts it over the full set (the appended question has to be visible); that discards
+// toggles already set on the command line, which is the price of keeping one picker per doc.
+//
+// First-wins with the panel: the modal Get holds the UI thread, so a panel submit can only land
 // between poll ticks (SetWaitDuration wakes Get periodically and lets the message pump drain). Both
-// channels funnel their answer through the SAME Interlocked claim on the running picker: the picker
-// picks an option and calls AnswerPicked; the panel calls TryClaim first and only dispatches if it
-// wins. Whoever flips Claimed 0->1 is the single dispatcher; the loser is a no-op. The picker also
-// re-checks Cancelled immediately after Get returns so a panel click pumped mid-Get can't trigger a
-// second dispatch. When no picker is running for a question (it never started, or already unwound),
-// the panel is the only channel and TryClaim succeeds unconditionally.
+// channels funnel through the SAME Interlocked claim on the running picker: the picker finishes its
+// walk and calls AnswerPicked; the panel calls TryClaim first and only dispatches if it wins.
+// Whoever flips Claimed 0->1 is the single dispatcher; the loser is a no-op. The picker also
+// re-checks Cancelled immediately after Get returns so a panel submit pumped mid-Get can't trigger a
+// second dispatch. When no picker is running (it never started, or already unwound), the panel is
+// the only channel and TryClaim succeeds unconditionally.
 //
 // CROSS-PLATFORM RISK: a Get fired outside a running command is fragile and behaves differently on
 // Windows vs Mac (on Rhino 8 Mac some Get paths misbehave, see AgentCommand). Everything here is
@@ -43,9 +49,9 @@ internal static class AskUserPicker
         // thread); read by the polling Get loop on the UI thread, so it is volatile.
         private volatile bool CancelledFlag;
 
-        internal Running(PendingQuestion question) => Question = question;
+        internal Running(IReadOnlyList<PendingQuestion> questions) => Questions = questions;
 
-        internal PendingQuestion Question { get; }
+        internal IReadOnlyList<PendingQuestion> Questions { get; }
 
         internal bool Cancelled => CancelledFlag;
         internal void Cancel() => CancelledFlag = true;
@@ -53,20 +59,31 @@ internal static class AskUserPicker
         // 0 = unanswered, 1 = claimed. Stays a field (not a property) because Interlocked.Exchange
         // needs a ref to it; the claim is the single funnel both channels flip exactly once.
         internal int Claimed;
+
+        internal bool Covers(IReadOnlyList<PendingQuestion> questions)
+        {
+            foreach (PendingQuestion question in questions)
+                foreach (PendingQuestion mine in Questions)
+                    if (ReferenceEquals(mine, question))
+                        return true;
+            return false;
+        }
     }
 
-    // Present the command-line picker for a freshly posed question. MUST be called on the UI thread
+    // Present the command-line picker for the outstanding questions. MUST be called on the UI thread
     // (Rhino Get APIs are UI-thread only). Returns worked-or-not so the caller keeps the printed
     // prompt as the fallback when the Get cannot run here.
-    public static bool TryShow(uint docSerial, PendingQuestion question)
+    public static bool TryShow(uint docSerial, IReadOnlyList<PendingQuestion> questions)
     {
         // A Get nested inside another command's input loop is unsafe; let the printed prompt stand.
         if (Command.InCommand())
             return false;
+        if (questions.Count == 0)
+            return false;
 
         // A newer ask_user supersedes any picker still running for this doc: cancel the old one so it
         // unwinds on its next poll instead of two pickers fighting for the command line.
-        Running running = new(question);
+        Running running = new(questions);
         lock (Gate)
         {
             if (Active.TryGetValue(docSerial, out Running? prior))
@@ -94,25 +111,25 @@ internal static class AskUserPicker
         }
     }
 
-    // Signal a running picker for this exact question to abort (the panel dismissed it, or a newer
-    // ask_user superseded it). ReferenceEquals-guarded so a stale clear can't cancel a newer picker.
-    public static void Cancel(uint docSerial, PendingQuestion question)
+    // Signal a running picker covering these questions to abort (the panel dismissed them, or a newer
+    // ask_user superseded it). Instance-guarded so a stale clear can't cancel a newer picker.
+    public static void Cancel(uint docSerial, IReadOnlyList<PendingQuestion> questions)
     {
         lock (Gate)
-            if (Active.TryGetValue(docSerial, out Running? current) && ReferenceEquals(current.Question, question))
+            if (Active.TryGetValue(docSerial, out Running? current) && current.Covers(questions))
                 current.Cancel();
     }
 
     // The panel's entry into the same single claim the picker uses. Flips the running picker's
-    // Interlocked claim for THIS question and, on a win, cancels it so its loop unwinds without a
-    // second dispatch. No running picker for the question (it never started or already unwound)
-    // means the panel is the only channel, so the claim succeeds unconditionally. Returns whether
-    // the caller won the right to dispatch the answer.
-    public static bool TryClaim(uint docSerial, PendingQuestion question)
+    // Interlocked claim and, on a win, cancels it so its loop unwinds without a second dispatch. No
+    // running picker covering these questions (it never started or already unwound) means the panel
+    // is the only channel, so the claim succeeds unconditionally. Returns whether the caller won the
+    // right to dispatch the answer.
+    public static bool TryClaim(uint docSerial, IReadOnlyList<PendingQuestion> questions)
     {
         lock (Gate)
         {
-            if (!Active.TryGetValue(docSerial, out Running? current) || !ReferenceEquals(current.Question, question))
+            if (!Active.TryGetValue(docSerial, out Running? current) || !current.Covers(questions))
                 return true;
             if (Interlocked.Exchange(ref current.Claimed, 1) != 0)
                 return false;
@@ -121,17 +138,50 @@ internal static class AskUserPicker
         }
     }
 
+    // Walk every outstanding question in order, then dispatch ONE reply. An abandoned question
+    // (Escape / Cancel) ends the walk and leaves the whole set to the panel: a partial command-line
+    // reply would answer some questions and silently drop the rest.
     private static void Run(uint docSerial, Running running)
     {
-        if (running.Question.Mode == AskUserMode.Multi)
-            RunMulti(docSerial, running);
-        else
-            RunSingle(docSerial, running);
+        List<string> answers = [];
+        foreach (PendingQuestion question in running.Questions)
+        {
+            if (running.Cancelled)
+                return;
+
+            string? answer = question.Mode == AskUserMode.Multi
+                ? RunMulti(running, question)
+                : RunSingle(running, question);
+            if (answer is null)
+                return;
+
+            answers.Add(answer);
+        }
+
+        if (running.Cancelled || answers.Count == 0)
+            return;
+        AnswerPicked(docSerial, running, Compose(running.Questions, answers));
     }
 
-    private static void RunSingle(uint docSerial, Running running)
+    // The reply text both channels produce. A single question keeps the bare answer it always had;
+    // a batch labels each line so the agent can map answers back to the questions it asked.
+    public static string Compose(IReadOnlyList<PendingQuestion> questions, IReadOnlyList<string> answers)
     {
-        PendingQuestion question = running.Question;
+        if (questions.Count == 1)
+            return answers.Count > 0 ? answers[0] : string.Empty;
+
+        StringBuilder sb = new();
+        for (int i = 0; i < questions.Count && i < answers.Count; i++)
+        {
+            if (sb.Length > 0) sb.AppendLine();
+            sb.Append(questions[i].Question).Append(' ').Append(answers[i]);
+        }
+        return sb.ToString();
+    }
+
+    // Returns the chosen label, or null when the user abandoned the question.
+    private static string? RunSingle(Running running, PendingQuestion question)
+    {
         GetOption go = new();
         go.SetCommandPrompt(question.Question);
         go.SetWaitDuration(PollMilliseconds);
@@ -152,34 +202,27 @@ internal static class AskUserPicker
             if (res == GetResult.Timeout)
                 continue;
             if (res != GetResult.Option)
-                return;   // Cancel / Escape / unexpected: leave the question for the panel.
+                return null;   // Cancel / Escape / unexpected: leave the question for the panel.
 
-            // A panel click pumped mid-Get may have cancelled (and claimed) this picker; re-check
-            // before dispatching so the two channels can't both answer.
+            // A panel submit pumped mid-Get may have cancelled (and claimed) this picker; re-check
+            // before going on so the two channels can't both answer.
             if (running.Cancelled)
-                return;
+                return null;
 
             int index = go.Option().Index;
             if (index == otherIndex)
-            {
-                if (AskOther() is string typed)
-                    AnswerPicked(docSerial, running, typed);
-                return;
-            }
+                return AskOther();
             if (byIndex.TryGetValue(index, out string? chosen))
-            {
-                AnswerPicked(docSerial, running, chosen);
-                return;
-            }
+                return chosen;
         }
+        return null;
     }
 
     // Multi-select on the command line: each option is an On/Off toggle; Done commits the set,
     // Other appends a typed answer. The toggles live for the whole loop so the user builds up a
     // selection before committing, mirroring the panel checkboxes.
-    private static void RunMulti(uint docSerial, Running running)
+    private static string? RunMulti(Running running, PendingQuestion question)
     {
-        PendingQuestion question = running.Question;
         HashSet<string> used = new(StringComparer.OrdinalIgnoreCase) { OtherToken, DoneToken };
         List<(string Label, string Token, OptionToggle Toggle)> items = [];
         foreach (string label in question.Options)
@@ -207,7 +250,7 @@ internal static class AskUserPicker
             if (res == GetResult.Timeout)
                 continue;
             if (res != GetResult.Option)
-                return;
+                return null;
 
             int index = go.Option().Index;
             if (index == doneIndex)
@@ -217,7 +260,7 @@ internal static class AskUserPicker
         }
 
         if (running.Cancelled)
-            return;
+            return null;
 
         List<string> selected = [];
         foreach ((string label, string _, OptionToggle toggle) in items)
@@ -225,14 +268,14 @@ internal static class AskUserPicker
                 selected.Add(label);
         selected.AddRange(custom);
         if (selected.Count == 0)
-            return;   // Done with nothing picked: behave like Cancel, leave it to the panel.
-        AnswerPicked(docSerial, running, string.Join(", ", selected));
+            return null;   // Done with nothing picked: behave like Cancel, leave it to the panel.
+        return string.Join(", ", selected);
     }
 
     // The first-wins claim shared with the panel: flip Claimed exactly once, then park the answer as
     // the agent's next prompt. AnswerActive guarantees delivery (dispatched now if the gate is free,
     // otherwise held and flushed the instant the running turn ends), so the answer is never lost and
-    // the live conversation's question is cleared unconditionally once parked.
+    // the live conversation's questions are cleared unconditionally once parked.
     private static void AnswerPicked(uint docSerial, Running running, string answer)
     {
         if (Interlocked.Exchange(ref running.Claimed, 1) != 0)
@@ -244,7 +287,7 @@ internal static class AskUserPicker
 
         AgentDispatch.AnswerActive(doc, UserMessage.FromText(answer));
         if (AgentHost.TryFor(doc, out IAgentRunner agent))
-            agent.Conversation.ClearPendingQuestion(running.Question);
+            agent.Conversation.ClearPendingQuestions(running.Questions);
     }
 
     // Literal capture so a multi-word answer survives verbatim.

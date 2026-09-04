@@ -7,6 +7,7 @@ import { hostMenu } from './hostMenu.js';
 import type { PanelContext } from './context.js';
 import { header } from './header.js';
 import { historyDrawer } from './history.js';
+import { questionOverlay } from './question.js';
 import { icon } from './icons.js';
 import { transcript } from './transcript.js';
 
@@ -128,6 +129,7 @@ export function app(ctx: PanelContext): Child {
       () => reviewBar(ctx),
       () => composer(ctx),
     ),
+    questionOverlay(ctx),
     when(
       () => ui.overlay() === 'agents',
       () => [el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }), agentMenu(ctx)],
