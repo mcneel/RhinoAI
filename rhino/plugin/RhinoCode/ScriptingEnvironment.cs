@@ -1,4 +1,4 @@
-#if RHINOCODE
+#if R9
 
 using System.Reflection;
 using System.Runtime.ExceptionServices;

@@ -3,6 +3,8 @@
   <PropertyGroup>
     <!-- Rhino 9: net8.0 -->
     <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
+    <!-- R8/R9 source gates (#if R9) follow $(RhinoTarget) directly. -->
+    <DefineConstants>$(DefineConstants);$(RhinoTarget)</DefineConstants>
     <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win</PluginOS>
     <PluginOS Condition="'$(PluginOS)' == ''">osx</PluginOS>
     <TargetFrameworks>net8.0</TargetFrameworks>
@@ -51,17 +53,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <RhinoCodeSdkDir>$(MSBuildProjectDirectory)/../../../../../DotNetSDK</RhinoCodeSdkDir>
-    <HasRhinoCode Condition="'$(HasRhinoCode)' == '' AND Exists('$(RhinoCodeSdkDir)/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj') ">true</HasRhinoCode>
-    <DefineConstants Condition="'$(HasRhinoCode)' == 'true'">$(DefineConstants);RHINOCODE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(HasRhinoCode)' == 'true'">
-    <ProjectReference Include="$(RhinoCodeSdkDir)/RhinoCode/src/Rhino.Runtime.Code/Rhino.Runtime.Code.csproj" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <!-- Link (not copy) the router's on-disk path contract so the plugin and
@@ -104,6 +96,7 @@
     <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" />
     <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" />
+    <PackageReference Include="RhinoCode" Version="9.0.26244.12303-beta" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
