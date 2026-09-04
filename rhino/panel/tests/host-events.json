@@ -9,6 +9,8 @@
   {"type":"turn.tool","turnId":"turn-0","call":{"id":"call-1","name":"list_objects","title":"listed objects","args":{"layer":"Facade"},"status":"running","startedAt":"2026-01-01T09:00:00.0000000+00:00"}},
   {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-1","patch":{"status":"ok","title":"listed objects","result":{"Ok":true,"count":312}}},
   {"type":"turn.tool","turnId":"turn-0","call":{"id":"call-2","name":"probe_intersection","title":"probe_intersection","args":{},"status":"running","startedAt":"2026-01-01T09:00:00.0000000+00:00"}},
+  {"type":"turn.tool","turnId":"turn-0","call":{"id":"call-3","name":"run_python","title":"ran python","args":{"code":"boom()"},"status":"running","startedAt":"2026-01-01T09:00:00.0000000+00:00"}},
+  {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-3","patch":{"status":"failed","title":"python failed","result":"NameError: name \u0027boom\u0027 is not defined","error":"The tool reported a failure."}},
   {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b2","delta":"**312 objects**, mostly planar breps.\n\n\u0060\u0060\u0060python\nprint(312)\n\u0060\u0060\u0060"},
   {"type":"turn.usage","turnId":"turn-0","usage":{"inputTokens":12480,"outputTokens":1120,"costUsd":0.09}},
   {"type":"turn.end","turnId":"turn-0","status":"ok"},

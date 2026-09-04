@@ -218,11 +218,11 @@ internal sealed class ConversationFeed
     private static PanelToolCall CallFor(string callId, TurnEvent ev)
     {
         bool finished = !string.IsNullOrWhiteSpace(ev.Result);
-        bool failed = finished && ToolSummary.IsFailure(ev.Result);
+        bool failed = finished && (ev.Failed || ToolSummary.IsFailure(ev.Result));
         return new PanelToolCall(
             callId,
             ToolSummary.Bare(ev.Text),
-            ToolSummary.Describe(ev.Text, ev.Args, ev.Result),
+            ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
             Payload(ev.Args),
             finished ? failed ? "failed" : "ok" : "running",
             Payload(ev.Result),
@@ -234,10 +234,10 @@ internal sealed class ConversationFeed
 
     private static PanelToolPatch PatchFor(TurnEvent ev)
     {
-        bool failed = ToolSummary.IsFailure(ev.Result);
+        bool failed = ev.Failed || ToolSummary.IsFailure(ev.Result);
         return new PanelToolPatch(
             failed ? "failed" : "ok",
-            ToolSummary.Describe(ev.Text, ev.Args, ev.Result),
+            ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
             Payload(ev.Result),
             failed ? FailureText(ev.Result) : null,
             DurationMs: null);

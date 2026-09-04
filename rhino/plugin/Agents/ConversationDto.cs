@@ -10,7 +10,8 @@ internal sealed record TurnEventDto(
     DateTimeOffset At,
     string Args,
     string Result,
-    string Id = "");
+    string Id = "",
+    bool Failed = false);
 
 internal sealed record TurnDto(
     string Prompt,

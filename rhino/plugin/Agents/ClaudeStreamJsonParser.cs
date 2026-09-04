@@ -42,6 +42,9 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
 
         string mcpConfig = new JsonObject { ["mcpServers"] = servers }.ToJsonString(McpSerializer.Options);
 
+        // Claude Code drops an allow rule whose server segment is a glob, leaving nothing approved.
+        string allowedTools = string.Join(",", servers.Select(server => $"mcp__{server.Key}__*"));
+
         // Raise Claude Code's per-tool-call timeout to one hour so a genuinely slow tool (a heavy
         // geometry op, a long script) isn't aborted at Claude's 60s default. MCP_TOOL_TIMEOUT is read
         // as milliseconds and clamped [1000, int.MaxValue]; MCP_TIMEOUT covers MCP server
@@ -62,8 +65,11 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         psi.ArgumentList.Add("--mcp-config");
         psi.ArgumentList.Add(mcpConfig);
         psi.ArgumentList.Add("--strict-mcp-config");
+        // The agent's cwd is the folder holding the user's .3dm, so Bash/Write/Edit point at it.
+        psi.ArgumentList.Add("--tools");
+        psi.ArgumentList.Add(string.Empty);
         psi.ArgumentList.Add("--allowedTools");
-        psi.ArgumentList.Add("mcp__rhino*");
+        psi.ArgumentList.Add(allowedTools);
         psi.ArgumentList.Add("--append-system-prompt");
         psi.ArgumentList.Add(AgentPrompts.Compose(Definition.SystemPrompt));
         psi.ArgumentList.Add("--disable-slash-commands");
@@ -191,10 +197,11 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
             // empty id anyway), so skip rather than emit an update keyed on the "" absence sentinel.
             if (!TryStr(block, "tool_use_id", out string toolCallId))
                 continue;
+            bool failed = block.TryGetProperty("is_error", out JsonElement error) && error.ValueKind == JsonValueKind.True;
             updates.Add(new ToolCallUpdateSessionUpdate
             {
                 ToolCallId = toolCallId,
-                Status = ToolCallStatus.Completed,
+                Status = failed ? ToolCallStatus.Failed : ToolCallStatus.Completed,
                 // Clone so the element outlives the `using JsonDocument` above.
                 RawOutput = block.TryGetProperty("content", out JsonElement output) ? output.Clone() : null,
             });

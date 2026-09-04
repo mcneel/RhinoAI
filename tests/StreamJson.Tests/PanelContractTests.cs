@@ -60,6 +60,12 @@ public sealed class PanelContractTests
         convo.Record(TurnEventKind.ToolUse, "mcp__rhino__probe_intersection", "{}", string.Empty, "call-2");
         feed.Pump();
 
+        convo.Record(TurnEventKind.ToolUse, "mcp__rhino__run_python", "{\"code\":\"boom()\"}", string.Empty, "call-3");
+        feed.Pump();
+
+        convo.CompleteToolCall("call-3", "\"NameError: name 'boom' is not defined\"", failed: true);
+        feed.Pump();
+
         convo.Record(TurnEventKind.AssistantText, "**312 objects**, mostly planar breps.\n\n```python\nprint(312)\n```");
         convo.RecordUsage(new TokenUsage(12480, 1120, 0.09m));
         convo.CompleteTurn();

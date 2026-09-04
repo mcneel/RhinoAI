@@ -503,6 +503,7 @@ try {
       code: document.querySelectorAll('.md-code').length,
       tools: document.querySelectorAll('.tool').length,
       toolOk: document.querySelectorAll('.tool.ok, .tool:not(.running):not(.failed)').length,
+      toolFailed: document.querySelectorAll('.tool.failed').length,
       titles: [...document.querySelectorAll('.tool .title')].map((n) => n.textContent),
       wires: [...document.querySelectorAll('.tool .wire')].map((n) => n.textContent),
       question: document.querySelectorAll('.question label').length,
@@ -513,13 +514,15 @@ try {
     check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
-      rendered.tools === 2 && rendered.toolOk === 1, JSON.stringify(rendered));
+      rendered.tools === 3 && rendered.toolOk === 1, JSON.stringify(rendered));
+    check('a result the agent flagged as an error renders as a failed card',
+      rendered.toolFailed === 1 && rendered.titles.includes('python failed'), JSON.stringify(rendered));
     check('the mcp__rhino__ prefix never reaches the panel',
       !JSON.stringify(rendered).includes('mcp__'), JSON.stringify(rendered));
     check('a namespaced tool gets its real phrase',
       rendered.titles.includes('listed objects'), JSON.stringify(rendered.titles));
     check('the wire name shows only when it adds something',
-      rendered.wires.length === 1 && rendered.wires[0] === 'list_objects', JSON.stringify(rendered.wires));
+      rendered.wires.length === 2 && !rendered.wires.includes('probe_intersection'), JSON.stringify(rendered.wires));
     check('the question posed by the feed renders', rendered.question === 2, JSON.stringify(rendered));
     check('per-turn tokens land on the turn, not the top bar',
       rendered.footerTokens.includes('14k tok') && !rendered.footerTokens.includes('$'),
