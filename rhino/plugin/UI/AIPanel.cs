@@ -458,10 +458,7 @@ public class AIPAnel : Panel
             return;
         }
 
-        // First-wins through the same claim the command-line picker uses: losing it means the picker
-        // already dispatched these questions, so there is nothing left to do but re-render.
-        if (AskUserPicker.TryClaim(doc.RuntimeSerialNumber, questions))
-            AgentDispatch.AnswerActive(doc, UserMessage.FromText(AskUserPicker.Compose(questions, answers)));
+        AgentDispatch.AnswerActive(doc, UserMessage.FromText(QuestionReply.Compose(questions, answers)));
 
         if (TryConversation(out Conversation convo))
             convo.ClearPendingQuestions(questions);
@@ -486,8 +483,6 @@ public class AIPAnel : Panel
         if (Feed is null || !Feed.TryResolveQuestions(ids, out IReadOnlyList<PendingQuestion> questions))
             return;
 
-        if (TryDoc(out RhinoDoc doc))
-            AskUserPicker.Cancel(doc.RuntimeSerialNumber, questions);
         if (TryConversation(out Conversation convo))
             convo.ClearPendingQuestions(questions);
     }
