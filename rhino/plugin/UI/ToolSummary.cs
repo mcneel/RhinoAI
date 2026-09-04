@@ -11,9 +11,26 @@ namespace RhinoAI;
 // is guarded and degrades to the generic phrase rather than throwing into the render path.
 internal static class ToolSummary
 {
-    // result is empty while the call is still in flight; show the in-progress verb without a verdict.
-    public static string Describe(string toolName, string argsJson, string resultJson)
+    // Agents see our tools through MCP, which namespaces them as mcp__<server>__<tool>. Every switch
+    // below is keyed on the registered name, so without stripping the prefix nothing ever matched and
+    // every call fell through to the generic "<tool>" phrasing.
+    //
+    // The server segment is dropped rather than kept: a foreign MCP tool loses which server it came
+    // from, which is a fair trade for the Rhino tools reading properly, and its arguments still say.
+    public static string Bare(string toolName)
     {
+        const string prefix = "mcp__";
+        if (!toolName.StartsWith(prefix, StringComparison.Ordinal))
+            return toolName;
+
+        int separator = toolName.IndexOf("__", prefix.Length, StringComparison.Ordinal);
+        return separator < 0 ? toolName : toolName[(separator + 2)..];
+    }
+
+    // result is empty while the call is still in flight; show the in-progress verb without a verdict.
+    public static string Describe(string rawToolName, string argsJson, string resultJson)
+    {
+        string toolName = Bare(rawToolName);
         bool hasResult = !string.IsNullOrWhiteSpace(resultJson);
         bool failed = hasResult && IsFailure(resultJson);
 
@@ -109,21 +126,25 @@ internal static class ToolSummary
     }
 
     // A short failure verb per tool family so "X failed" reads naturally.
-    private static string Verb(string toolName) => toolName switch
+    private static string Verb(string rawToolName)
     {
-        "run_python" => "python",
-        "run_csharp" => "C#",
-        "run_command" => "command",
-        "open_doc" => "open",
-        "save_doc" => "save",
-        "close_doc" => "close",
-        _ when toolName.StartsWith("g1_") || toolName.StartsWith("g2_") => "Grasshopper",
-        _ => toolName,
-    };
+        string toolName = Bare(rawToolName);
+        return toolName switch
+        {
+            "run_python" => "python",
+            "run_csharp" => "C#",
+            "run_command" => "command",
+            "open_doc" => "open",
+            "save_doc" => "save",
+            "close_doc" => "close",
+            _ when toolName.StartsWith("g1_") || toolName.StartsWith("g2_") => "Grasshopper",
+            _ => toolName,
+        };
+    }
 
     // Common shapes for a failed result: an { Ok: false } flag or a non-empty error/Error string. A
     // malformed or non-object payload counts as success here; the verdict only flips on a clear signal.
-    private static bool IsFailure(string resultJson)
+    internal static bool IsFailure(string resultJson)
     {
         if (Parse(resultJson) is not { } doc)
             return false;

@@ -38,6 +38,34 @@ internal static class ConversationStore
         }), null);
     }
 
+    // Drop one transcript.
+    //
+    // Used when a rejected resume forces a fresh session id: the entry under the dead id is the same
+    // conversation, and left in place it sits in the history as a duplicate row whose Resume can only
+    // fail. Marshalled and gated exactly like Save, because the caller is the agent's reader thread.
+    //
+    // Only an existing key is deleted: DeleteItem's behaviour on an absent one is undocumented, and
+    // at fifty entries the scan costs nothing.
+    public static void Delete(string sessionId)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+            return;
+
+        RhinoApp.InvokeOnUiThread(new Action(() =>
+        {
+            lock (Gate)
+            {
+                foreach (string key in KeysSnapshot())
+                {
+                    if (key != sessionId)
+                        continue;
+                    Node.DeleteItem(sessionId);
+                    return;
+                }
+            }
+        }), null);
+    }
+
     // Recents first (newest StartedAt). Corrupt slots are skipped, never thrown.
     public static IReadOnlyList<ConversationDto> List()
     {

@@ -52,6 +52,12 @@
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Agents/ConversationStore.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelJson.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/PanelTheme.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>

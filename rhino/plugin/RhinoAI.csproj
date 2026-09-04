@@ -66,15 +66,18 @@
     <EmbeddedResource Include="../../art/logo.svg" LogicalName="RhinoAI.logo.svg" />
     <EmbeddedResource Include="../../art/copy.svg" LogicalName="RhinoAI.copy.svg" />
     <EmbeddedResource Include="../../art/paperclip.svg" LogicalName="RhinoAI.paperclip.svg" />
+    <!-- The web panel, built from rhino/panel. Committed so a build needs no Node toolchain; the
+         RebuildAIPanel target below refreshes it when one is present. -->
+    <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="RhinoAI.panel.html" />
   </ItemGroup>
 
-  <!-- Pinned, not floating. A floating 8.0.* makes every restore query a package
-       source for the newest patch, so it can never be satisfied from the global
-       packages folder alone. That is what breaks the macOS build: the osx-arm64
-       runtime pack is not already cached there and no mapped source serves it,
-       so RhinoMacBuild.sln fails restore with NU1100. 8.0.30 is the newest 8.0.x
-       and is what 8.0.* was already resolving to, so this pins today's behaviour
-       rather than changing it. Bump by hand to move to a newer 8.0 patch. -->
+  <!-- Best effort: rebuild the panel bundle when the developer has already run `npm install` in
+       rhino/panel. ContinueOnError means a machine without Node simply embeds the committed file. -->
+  <Target Name="RebuildAIPanel" BeforeTargets="BeforeBuild"
+          Condition="'$(SkipPanelBuild)' != 'true' AND Exists('$(MSBuildProjectDirectory)/../panel/node_modules/esbuild')">
+    <Exec Command="node build.mjs" WorkingDirectory="$(MSBuildProjectDirectory)/../panel" ContinueOnError="true" />
+  </Target>
+
   <PropertyGroup>
     <AspNetCoreRuntimeVersion>8.0.30</AspNetCoreRuntimeVersion>
   </PropertyGroup>
