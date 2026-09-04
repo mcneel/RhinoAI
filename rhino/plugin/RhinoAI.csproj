@@ -15,7 +15,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>RhinoAI</RootNamespace>
-    <AssemblyName>RhinoMcpPlatform</AssemblyName>
+    <AssemblyName>RhinoAI</AssemblyName>
   </PropertyGroup>
 
   <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
@@ -45,9 +45,9 @@
 
   <PropertyGroup>
     <!-- Version is inherited from rhino/Directory.Build.props (single source). -->
-    <Title>Rhino MCP Platform</Title>
+    <Title>Rhino AI</Title>
     <Company>McNeel</Company>
-    <Description>MCP server plugin for Rhino</Description>
+    <Description>AI tools for Rhino</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -143,7 +143,7 @@
         {
             System.IO.File.WriteAllLines(ManifestPath, lines);
             Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High,
-                "[Rhino MCP] Synced manifest.yml version to " + Version);
+                "[Rhino AI] Synced manifest.yml version to " + Version);
         }
       ]]></Code>
     </Task>
@@ -178,7 +178,7 @@
     <!-- Strip debug artifacts after publish -->
     <RemoveDir Directories="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
-    <Message Importance="high" Text="[Rhino MCP] Bundled router RIDs: $(RouterRids)" />
+    <Message Importance="high" Text="[Rhino AI] Bundled router RIDs: $(RouterRids)" />
   </Target>
 
   <!-- Bundle ASP.NET -->
