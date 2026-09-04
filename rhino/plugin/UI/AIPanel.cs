@@ -250,6 +250,10 @@ public class AIPAnel : Panel
                 Dismiss(dismiss.Id);
                 break;
 
+            case ToolChipCommand chip:
+                RunToolChip(chip);
+                break;
+
             case OpenSettingsCommand:
                 OpenSettings();
                 break;
@@ -447,6 +451,20 @@ public class AIPAnel : Panel
 
         if (TryConversation(out Conversation convo))
             convo.ClearPendingQuestion(question);
+    }
+
+    // A stale card must not cancel a command the user started by hand, so the call has to still be running.
+    private void RunToolChip(ToolChipCommand chip)
+    {
+        if (Review is not null || Feed is null || !Feed.IsCallRunning(chip.CallId) || !TryDoc(out RhinoDoc doc))
+            return;
+
+        switch (chip.ChipId)
+        {
+            case ToolChips.CancelId:
+                RhinoApp.RunScript(doc.RuntimeSerialNumber, "!_Cancel", false);
+                break;
+        }
     }
 
     private void Dismiss(string id)

@@ -92,14 +92,19 @@ internal sealed record PanelToolCall(
     string? Error,
     string StartedAt,
     int? DurationMs,
-    bool? Mutated);
+    bool? Mutated,
+    IReadOnlyList<PanelToolChip> Chips);
 
+internal sealed record PanelToolChip(string Id, string Label, string? Icon, string? Style);
+
+// Chips travels as an empty array, never null: PanelJson drops nulls, so the panel could never clear it.
 internal sealed record PanelToolPatch(
     string? Status,
     string? Title,
     JsonNode? Result,
     string? Error,
-    int? DurationMs);
+    int? DurationMs,
+    IReadOnlyList<PanelToolChip> Chips);
 
 // Blocks arrive as their own events, so a turn always begins empty. Attachments/Context/Plan are
 // declared because the panel's contract requires them, and are the obvious seams to fill next.

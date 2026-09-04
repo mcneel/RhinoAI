@@ -5,6 +5,8 @@
 // Here the host says what changed: a text delta names the block it extends, a tool result names the
 // call it completes. `conversation` (a full snapshot) exists only for load / resume / reconnect.
 
+import type { IconName } from '../ui/icons.js';
+
 // ---------------------------------------------------------------- values
 
 export interface TokenUsage {
@@ -62,6 +64,14 @@ export type ToolPreview =
   | { kind: 'graph'; components: string[]; wires: number; errors: number; warnings: number }
   | { kind: 'table'; columns: string[]; rows: string[][] };
 
+/** An extra button on a tool card, authored host-side so the panel keeps no per-tool knowledge. */
+export interface ToolChip {
+  id: string;
+  label: string;
+  icon?: IconName;
+  style?: 'default' | 'danger';
+}
+
 export interface ToolCall {
   id: string;
   /** Wire name, e.g. `g2_place_component`. */
@@ -77,9 +87,11 @@ export interface ToolCall {
   preview?: ToolPreview;
   /** Set when the tool mutated the document, so the turn can offer an undo. */
   mutated?: boolean;
+  /** Extra buttons for this call. The host clears it on completion, so a chip cannot outlive its use. */
+  chips?: ToolChip[];
 }
 
-export type ToolPatch = Partial<Pick<ToolCall, 'status' | 'result' | 'error' | 'durationMs' | 'preview' | 'title' | 'mutated'>>;
+export type ToolPatch = Partial<Pick<ToolCall, 'status' | 'result' | 'error' | 'durationMs' | 'preview' | 'title' | 'mutated' | 'chips'>>;
 
 export type NoticeLevel = 'info' | 'warn' | 'error';
 
@@ -199,6 +211,7 @@ export type PanelCommand =
   | { type: 'agent.select'; name: string }
   | { type: 'question.answer'; id: string; answers: string[] }
   | { type: 'question.dismiss'; id: string }
+  | { type: 'tool.chip'; callId: string; chipId: string }
   | { type: 'turn.undo'; turnId: string }
   | { type: 'turn.retry'; turnId: string }
   | { type: 'context.refresh' }

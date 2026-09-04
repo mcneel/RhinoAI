@@ -66,6 +66,10 @@ public sealed class PanelContractTests
         convo.CompleteToolCall("call-3", "\"NameError: name 'boom' is not defined\"", failed: true);
         feed.Pump();
 
+        // Left running on purpose: this is the call that carries a cancel chip for the panel to render.
+        convo.Record(TurnEventKind.ToolUse, "mcp__rhino__run_command", "{\"command\":\"_Box 0,0,0 10,10,10\"}", string.Empty, "call-4");
+        feed.Pump();
+
         convo.Record(TurnEventKind.AssistantText, "**312 objects**, mostly planar breps.\n\n```python\nprint(312)\n```");
         convo.RecordUsage(new TokenUsage(12480, 1120, 0.09m));
         convo.CompleteTurn();

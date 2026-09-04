@@ -19,6 +19,7 @@ namespace RhinoAI.WebPanel;
 [JsonDerivedType(typeof(SelectAgentCommand), "agent.select")]
 [JsonDerivedType(typeof(AnswerQuestionCommand), "question.answer")]
 [JsonDerivedType(typeof(DismissQuestionCommand), "question.dismiss")]
+[JsonDerivedType(typeof(ToolChipCommand), "tool.chip")]
 [JsonDerivedType(typeof(OpenSettingsCommand), "settings.open")]
 [JsonDerivedType(typeof(OpenUrlCommand), "url.open")]
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
@@ -35,6 +36,7 @@ internal sealed record ExitReviewCommand : PanelCommand;
 internal sealed record SelectAgentCommand(string Name) : PanelCommand;
 internal sealed record AnswerQuestionCommand(string Id, IReadOnlyList<string> Answers) : PanelCommand;
 internal sealed record DismissQuestionCommand(string Id) : PanelCommand;
+internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
 internal sealed record OpenSettingsCommand : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
 internal sealed record ClipboardCommand(string Text) : PanelCommand;
