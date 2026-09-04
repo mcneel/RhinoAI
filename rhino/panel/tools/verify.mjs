@@ -288,32 +288,132 @@ try {
   await type('audit the selected objects');
   await page.keyboard.press('Enter');
   await wait(9000);
-  const question = await page.evaluate(() => ({
-    cards: document.querySelectorAll('.question').length,
-    options: document.querySelectorAll('.question input[type="radio"]').length,
-    other: document.querySelectorAll('.question input[type="text"]').length,
-    answerDisabled: document.querySelector('.question .btn.primary')?.disabled,
-    failedCard: document.querySelectorAll('.tool.failed').length,
-    failedOpen: document.querySelectorAll('.tool.failed .tool-error').length,
-    thinking: document.querySelectorAll('.status-strip').length,
-  }));
-  check('a pending question renders as a form', question.cards === 1 && question.options === 3 && question.other === 1, JSON.stringify(question));
-  check('answer stays disabled until something is chosen', question.answerDisabled === true);
+  const question = await page.evaluate(() => {
+    const composer = document.querySelector('.composer').getBoundingClientRect();
+    const overComposer = document.elementFromPoint(composer.x + composer.width / 2, composer.y + composer.height / 2);
+    const transcript = document.querySelector('.transcript').getBoundingClientRect();
+    const overTranscript = document.elementFromPoint(transcript.x + transcript.width / 2, transcript.y + 8);
+    return {
+      scrims: document.querySelectorAll('.ask-scrim').length,
+      cards: document.querySelectorAll('.ask').length,
+      pages: document.querySelectorAll('.ask-page').length,
+      steps: document.querySelectorAll('.ask .steps i').length,
+      count: document.querySelector('.ask-count')?.textContent,
+      options: document.querySelectorAll('.ask .opts input').length,
+      dontKnow: document.querySelector('.ask .synth label span')?.textContent,
+      backHidden: document.querySelector('.ask-row .btn:not(.ghost):not(.primary)')?.hidden,
+      nextLabel: document.querySelector('.ask .btn.primary')?.textContent,
+      nextDisabled: document.querySelector('.ask .btn.primary')?.disabled,
+      cancelLabel: document.querySelector('.ask .btn.ghost')?.textContent,
+      composerReachable: !document.querySelector('.ask-scrim').contains(overComposer),
+      transcriptReachable: !document.querySelector('.ask-scrim').contains(overTranscript),
+      inHeader: document.querySelector('.header').contains(document.querySelector('.ask-scrim')),
+      focusInCard: document.querySelector('.ask').contains(document.activeElement),
+      activeTag: document.activeElement?.tagName,
+      activeClass: document.activeElement?.className,
+      failedCard: document.querySelectorAll('.tool.failed').length,
+      failedOpen: document.querySelectorAll('.tool.failed .tool-error').length,
+      thinking: document.querySelectorAll('.status-strip').length,
+    };
+  });
+  // A batch is paged, not stacked: one card showing one question at a time.
+  check('a batch of questions opens one paged card',
+    question.scrims === 1 && question.cards === 1 && question.pages === 1
+    && question.steps === 2 && question.count === 'Question 1 of 2'
+    && question.options === 3, JSON.stringify(question));
+  check('the overlay blocks the composer and the transcript',
+    question.composerReachable === false && question.transcriptReachable === false && question.inHeader === false,
+    JSON.stringify(question));
+  check('the first page offers no Back', question.backHidden === true);
+  check('focus moves into the card, so the composer caret is not left blinking behind the scrim',
+    question.focusInCard === true, `${question.activeTag}.${question.activeClass}`);
+  check('the way out is Cancel, not Skip', question.cancelLabel === 'Cancel', question.cancelLabel);
+
+  // A 1px band of a different cursor is a flicker you cannot rest in, so every band has to be
+  // wide enough to land on: gaps between clickable rows must belong to a row, not the container.
+  const bands = await page.evaluate(() => {
+    const card = document.querySelector('.ask').getBoundingClientRect();
+    const x = card.x + card.width / 2;
+    const runs = [];
+    for (let y = Math.ceil(card.y); y < card.y + card.height; y++) {
+      const node = document.elementFromPoint(x, y);
+      const cursor = node ? getComputedStyle(node).cursor : 'none';
+      const last = runs[runs.length - 1];
+      if (last && last.cursor === cursor) last.px++;
+      else runs.push({ cursor, px: 1 });
+    }
+    return runs;
+  });
+  check('the pointer never crosses a sliver band over the card',
+    bands.every((band) => band.px >= 8), JSON.stringify(bands));
+  check('Next is offered before the last page', question.nextLabel === 'Next', question.nextLabel);
+  check('Next stays disabled until the page is answered', question.nextDisabled === true);
+  check('every page offers "I don\'t know"', question.dontKnow === "I don't know", question.dontKnow);
   check('a failed tool call auto-expands its error', question.failedCard === 1 && question.failedOpen === 1);
   check('no thinking cue while blocked on the question', question.thinking === 0);
   await shot('05-question');
 
-  await page.evaluate(() => {
-    document.querySelectorAll('.question label')[0].click();
-  });
+  // "I don't know" is an ANSWER: it arms Next rather than cancelling the question.
+  await page.evaluate(() => document.querySelector('.ask .synth label').click());
   await wait(150);
-  await page.evaluate(() => document.querySelector('.question .btn.primary').click());
+  const deferred = await page.evaluate(() => ({
+    nextDisabled: document.querySelector('.ask .btn.primary').disabled,
+    optionsChecked: [...document.querySelectorAll('.ask .opts input')].filter((i) => i.checked).length,
+  }));
+  check('"I don\'t know" answers the page and clears any pick',
+    deferred.nextDisabled === false && deferred.optionsChecked === 0, JSON.stringify(deferred));
+
+  // Picking a real option retracts it, and the two must never both be set.
+  await page.evaluate(() => document.querySelector('.ask .opts label').click());
+  await wait(150);
+  const retracted = await page.evaluate(() => ({
+    dontKnowChecked: document.querySelector('.ask .synth input').checked,
+    optionsChecked: [...document.querySelectorAll('.ask .opts input')].filter((i) => i.checked).length,
+  }));
+  check('picking an option retracts "I don\'t know"',
+    retracted.dontKnowChecked === false && retracted.optionsChecked === 1, JSON.stringify(retracted));
+
+  await page.evaluate(() => document.querySelector('.ask .btn.primary').click());
+  await wait(400);
+  const second = await page.evaluate(() => ({
+    pages: document.querySelectorAll('.ask-page').length,
+    count: document.querySelector('.ask-count')?.textContent,
+    backHidden: document.querySelector('.ask-row .btn:not(.ghost):not(.primary)')?.hidden,
+    nextLabel: document.querySelector('.ask .btn.primary')?.textContent,
+    stepsDone: document.querySelectorAll('.ask .steps i.done').length,
+  }));
+  check('Next turns the page rather than opening a second card',
+    second.pages === 1 && second.count === 'Question 2 of 2', JSON.stringify(second));
+  check('the last page offers Back and Answer all',
+    second.backHidden === false && second.nextLabel === 'Answer all', JSON.stringify(second));
+  check('the stepper marks the answered page', second.stepsDone === 1, JSON.stringify(second));
+
+  // Keyboard reaches the card only while focus is inside it, so Escape is the cheapest proof.
+  await page.keyboard.press('Escape');
+  await wait(250);
+  check('Escape cancels from the keyboard', (await page.evaluate(() => document.querySelectorAll('.ask').length)) === 0);
+
+  await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][1].click());
+  await wait(300);
+  await type('audit the selected objects');
+  await page.keyboard.press('Enter');
+  await wait(9000);
+  await page.evaluate(() => document.querySelector('.ask .opts label').click());
+  await wait(150);
+  await page.keyboard.press('Enter');
+  await wait(400);
+  check('Enter turns the page from the keyboard',
+    (await page.evaluate(() => document.querySelector('.ask-count')?.textContent)) === 'Question 2 of 2');
+
+  await page.evaluate(() => document.querySelector('.ask .opts label').click());
+  await wait(150);
+  await page.evaluate(() => document.querySelector('.ask .btn.primary').click());
   await wait(3500);
   const answered = await page.evaluate(() => ({
-    cards: document.querySelectorAll('.question').length,
+    scrims: document.querySelectorAll('.ask-scrim').length,
     tools: document.querySelectorAll('.tool').length,
   }));
-  check('answering clears the card and the turn continues', answered.cards === 0 && answered.tools >= 3, JSON.stringify(answered));
+  check('answering closes the overlay and the turn continues', answered.scrims === 0 && answered.tools >= 3, JSON.stringify(answered));
   await shot('06-answered');
 
   // ------------------------------------------------------------------- history
@@ -509,7 +609,9 @@ try {
       chips: [...document.querySelectorAll('.tool-chip')].map((n) => n.textContent),
       chipsOnRunning: document.querySelectorAll('.tool.running .tool-chip').length,
       chipsOnSettled: document.querySelectorAll('.tool:not(.running) .tool-chip').length,
-      question: document.querySelectorAll('.question label').length,
+      question: document.querySelectorAll('.ask .opts label').length,
+      questionPages: document.querySelectorAll('.ask-page').length,
+      questionSteps: document.querySelectorAll('.ask .steps i').length,
       footerTokens: [...document.querySelectorAll('.turn-foot')].map((n) => n.textContent).join(' '),
     }));
 
@@ -529,7 +631,8 @@ try {
       rendered.titles.includes('listed objects'), JSON.stringify(rendered.titles));
     check('the wire name shows only when it adds something',
       rendered.wires.length === 3 && !rendered.wires.includes('probe_intersection'), JSON.stringify(rendered.wires));
-    check('the question posed by the feed renders', rendered.question === 2, JSON.stringify(rendered));
+    check('the questions posed by the feed open one paged card',
+      rendered.questionPages === 1 && rendered.questionSteps === 2 && rendered.question === 2, JSON.stringify(rendered));
     check('per-turn tokens land on the turn, not the top bar',
       rendered.footerTokens.includes('14k tok') && !rendered.footerTokens.includes('$'),
       JSON.stringify(rendered.footerTokens));
@@ -669,15 +772,22 @@ try {
       (await host.evaluate(() => document.querySelector('.panel').style.zoom)) === '0.99',
       await host.evaluate(() => document.querySelector('.panel').style.zoom));
 
-    // Answering has to travel back in the shape the C# deserialiser accepts.
-    // Two steps: Answer stays disabled until the selection has propagated.
-    await host.evaluate(() => document.querySelectorAll('.question label')[0].click());
+    // Answering has to travel back in the shape the C# deserialiser accepts: one submit carrying
+    // every question posed, even though they were answered a page at a time.
+    await host.evaluate(() => document.querySelector('.ask .opts label').click());
     await wait(150);
-    await host.evaluate(() => document.querySelector('.question .btn.primary').click());
+    await host.evaluate(() => document.querySelector('.ask .btn.primary').click());
+    await wait(300);
+    await host.evaluate(() => document.querySelector('.ask .synth label').click());
+    await wait(150);
+    await host.evaluate(() => document.querySelector('.ask .btn.primary').click());
     await wait(200);
     const answered = await host.evaluate(() => window.__sent.find((m) => m.type === 'question.answer'));
-    check('an answer is sent in the shape C# parses',
-      answered?.answers?.[0] === 'Yes' && typeof answered.id === 'string', JSON.stringify(answered));
+    check('one submit answers every question in the shape C# parses',
+      answered?.items?.length === 2
+      && answered.items[0].answers[0] === 'Yes'
+      && answered.items[1].answers[0] === "I don't know"
+      && answered.items.every((i) => typeof i.id === 'string'), JSON.stringify(answered));
 
     await host.close();
   }

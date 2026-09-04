@@ -166,18 +166,61 @@ public sealed class ConversationFeedTests
         Sent.Clear();
 
         PendingQuestion question = new("Which?", ["a", "b"], AskUserMode.Single);
-        Convo.SetPendingQuestion(question);
+        Convo.AddPendingQuestions([question]);
         Feed.Pump();
         Feed.Pump();
 
         QuestionEvent posed = OfType<QuestionEvent>().Single();
         Assert.That(posed.Question.Options, Is.EqualTo(new[] { "a", "b" }));
-        Assert.That(Feed.TryResolveQuestion(posed.Question.Id, out PendingQuestion resolved), Is.True);
-        Assert.That(resolved, Is.SameAs(question), "an answer has to reach the instance the picker arbitrates on");
+        Assert.That(Feed.TryResolveQuestions([posed.Question.Id], out IReadOnlyList<PendingQuestion> resolved), Is.True);
+        Assert.That(resolved.Single(), Is.SameAs(question), "an answer has to reach the instance the picker arbitrates on");
 
-        Convo.ClearPendingQuestion(question);
+        Convo.ClearPendingQuestions([question]);
         Feed.Pump();
         Assert.That(OfType<QuestionClearEvent>().Single().Id, Is.EqualTo(posed.Question.Id));
+    }
+
+    [Test]
+    public void A_second_question_joins_the_first_rather_than_evicting_it()
+    {
+        Convo.BeginTurn("hi");
+        Feed.Replay();
+        Sent.Clear();
+
+        PendingQuestion units = new("Units?", ["mm", "m"], AskUserMode.Single);
+        PendingQuestion tolerance = new("Tolerance?", ["0.001"], AskUserMode.Single);
+        Convo.AddPendingQuestions([units]);
+        Feed.Pump();
+        Convo.AddPendingQuestions([tolerance]);
+        Feed.Pump();
+
+        QuestionEvent[] posed = OfType<QuestionEvent>();
+        Assert.That(posed, Has.Length.EqualTo(2));
+        Assert.That(posed[0].Question.Id, Is.Not.EqualTo(posed[1].Question.Id));
+        Assert.That(OfType<QuestionClearEvent>(), Is.Empty, "appending must not clear what is already showing");
+
+        // One submit answers both, so both ids have to resolve together.
+        Assert.That(Feed.TryResolveQuestions([posed[0].Question.Id, posed[1].Question.Id], out IReadOnlyList<PendingQuestion> resolved), Is.True);
+        Assert.That(resolved, Is.EqualTo(new[] { units, tolerance }));
+
+        Convo.ClearPendingQuestions(resolved);
+        Feed.Pump();
+        Assert.That(OfType<QuestionClearEvent>(), Has.Length.EqualTo(2));
+    }
+
+    [Test]
+    public void A_stale_id_fails_the_whole_submit_rather_than_answering_part_of_it()
+    {
+        Convo.BeginTurn("hi");
+        Feed.Replay();
+
+        PendingQuestion question = new("Which?", ["a"], AskUserMode.Single);
+        Convo.AddPendingQuestions([question]);
+        Feed.Pump();
+        string id = OfType<QuestionEvent>().Single().Question.Id;
+
+        Assert.That(Feed.TryResolveQuestions([id, "question-999"], out IReadOnlyList<PendingQuestion> resolved), Is.False);
+        Assert.That(resolved, Is.Empty);
     }
 
     // The panel reads `type` to pick a case, camelCases its fields, and treats an absent optional
@@ -213,8 +256,14 @@ public sealed class ConversationFeedTests
         Assert.That(prompt, Is.TypeOf<PromptCommand>());
         Assert.That(((PromptCommand)prompt!).Request.Text, Is.EqualTo("draw a box"));
 
-        PanelCommand? answer = PanelJson.Deserialize("{\"type\":\"question.answer\",\"id\":\"q1\",\"answers\":[\"a\"]}");
-        Assert.That(((AnswerQuestionCommand)answer!).Answers, Is.EqualTo(new[] { "a" }));
+        PanelCommand? answer = PanelJson.Deserialize(
+            "{\"type\":\"question.answer\",\"items\":[{\"id\":\"q1\",\"answers\":[\"a\"]},{\"id\":\"q2\",\"answers\":[\"b\",\"c\"]}]}");
+        IReadOnlyList<QuestionAnswer> items = ((AnswerQuestionCommand)answer!).Items;
+        Assert.That(items.Select(i => i.Id), Is.EqualTo(new[] { "q1", "q2" }));
+        Assert.That(items[1].Answers, Is.EqualTo(new[] { "b", "c" }));
+
+        PanelCommand? dismiss = PanelJson.Deserialize("{\"type\":\"question.dismiss\",\"ids\":[\"q1\",\"q2\"]}");
+        Assert.That(((DismissQuestionCommand)dismiss!).Ids, Is.EqualTo(new[] { "q1", "q2" }));
     }
 
     [Test]

@@ -34,8 +34,10 @@ internal sealed record LoadConversationCommand(string SessionId) : PanelCommand;
 internal sealed record ResumeConversationCommand(string SessionId) : PanelCommand;
 internal sealed record ExitReviewCommand : PanelCommand;
 internal sealed record SelectAgentCommand(string Name) : PanelCommand;
-internal sealed record AnswerQuestionCommand(string Id, IReadOnlyList<string> Answers) : PanelCommand;
-internal sealed record DismissQuestionCommand(string Id) : PanelCommand;
+// One submit answers every question showing, so both carry the whole set: the panel renders the
+// outstanding questions as a single card with a single button.
+internal sealed record AnswerQuestionCommand(IReadOnlyList<QuestionAnswer> Items) : PanelCommand;
+internal sealed record DismissQuestionCommand(IReadOnlyList<string> Ids) : PanelCommand;
 internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
 internal sealed record OpenSettingsCommand : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
@@ -51,5 +53,7 @@ internal sealed record OpenMenuCommand(
     bool CanResetZoom,
     string ZoomLabel,
     string Selection) : PanelCommand;
+
+internal sealed record QuestionAnswer(string Id, IReadOnlyList<string> Answers);
 
 internal sealed record PromptRequest(string Text);

@@ -15,5 +15,6 @@
   {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b2","delta":"**312 objects**, mostly planar breps.\n\n\u0060\u0060\u0060python\nprint(312)\n\u0060\u0060\u0060"},
   {"type":"turn.usage","turnId":"turn-0","usage":{"inputTokens":12480,"outputTokens":1120,"costUsd":0.09}},
   {"type":"turn.end","turnId":"turn-0","status":"ok"},
-  {"type":"question","question":{"id":"question-1","question":"Split the worst panels?","options":["Yes","No"],"mode":"single","allowOther":true}}
+  {"type":"question","question":{"id":"question-1","question":"Split the worst panels?","options":["Yes","No"],"mode":"single","allowOther":true}},
+  {"type":"question","question":{"id":"question-2","question":"Which levels should I check?","options":["L12","L13","L14"],"mode":"multi","allowOther":true}}
 ]

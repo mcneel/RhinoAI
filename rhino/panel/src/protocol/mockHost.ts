@@ -643,11 +643,13 @@ const SCENARIOS: readonly Scenario[] = [
       );
 
       host.status(null);
-      const questionId = nextId('q');
+      // Two at once: one ask_user call poses a batch, and the panel has to stack them under one
+      // submit rather than showing only the last.
+      const questionIds = [nextId('q'), nextId('q')];
       host.emit({
         type: 'question',
         question: {
-          id: questionId,
+          id: questionIds[0] as string,
           question: 'The L14 mitre has a 0.4 mm gap. How should I close it?',
           options: [
             'Raise the join tolerance and re-join',
@@ -658,9 +660,19 @@ const SCENARIOS: readonly Scenario[] = [
           allowOther: true,
         },
       });
+      host.emit({
+        type: 'question',
+        question: {
+          id: questionIds[1] as string,
+          question: 'Which panels should I check the same way?',
+          options: ['The rest of level 14', 'Every mitred panel', 'Only the ones I flagged'],
+          mode: 'multi',
+          allowOther: true,
+        },
+      });
 
       const answers = await script.awaitAnswer();
-      host.emit({ type: 'question.clear', id: questionId });
+      for (const id of questionIds) host.emit({ type: 'question.clear', id });
       if (answers.length === 0) {
         host.emit({ type: 'turn.usage', turnId, usage: usage(11_200, 1_460, 0.1) });
         host.emit({ type: 'turn.end', turnId, status: 'ok' });
@@ -837,11 +849,11 @@ export class MockHost implements Bridge {
       }
 
       case 'question.answer':
-        this.script?.answer(command.answers);
+        this.script?.answer(command.items.flatMap((item) => item.answers));
         return;
 
       case 'question.dismiss':
-        this.emit({ type: 'question.clear', id: command.id });
+        for (const id of command.ids) this.emit({ type: 'question.clear', id });
         this.script?.answer([]);
         return;
 

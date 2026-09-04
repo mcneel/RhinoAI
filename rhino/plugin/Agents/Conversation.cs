@@ -86,11 +86,12 @@ internal sealed class Conversation
     private List<TurnEvent> LifecycleList { get; } = new();
     private Turn? Current { get; set; }
 
-    // Transient UI state, not transcript history: the panel renders this inline while a posed
-    // ask_user question is unanswered. Deliberately kept out of Render() and any persistence so a
-    // half-asked question is never serialized. Set by the ask_user tool body; cleared by the panel
-    // once the answer prompt is dispatched.
-    private PendingQuestion? CurrentQuestion { get; set; }
+    // Transient UI state, not transcript history: the panel renders these inline while posed
+    // ask_user questions are unanswered. Deliberately kept out of Render() and any persistence so a
+    // half-asked question is never serialized. Appended by the ask_user tool body; cleared by the
+    // panel once the answer prompt is dispatched. A list because one call can pose several questions
+    // and a later call adds to the set rather than replacing it.
+    private List<PendingQuestion> PendingQuestionList { get; } = new();
 
     public Conversation(Guid agentSessionId, string agentName, string docTitle)
     {
@@ -222,29 +223,33 @@ internal sealed class Conversation
         Changed?.Invoke();
     }
 
-    public bool TryGetPendingQuestion(out PendingQuestion question)
+    public bool TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> questions)
     {
         lock (Sync)
         {
-            question = CurrentQuestion!;
-            return CurrentQuestion is not null;
+            questions = PendingQuestionList.ToArray();
+            return questions.Count > 0;
         }
     }
 
-    public void SetPendingQuestion(PendingQuestion question)
+    // Appends: a second ask_user must not evict an earlier unanswered question.
+    public void AddPendingQuestions(IReadOnlyList<PendingQuestion> questions)
     {
         lock (Sync)
-            CurrentQuestion = question;
+            foreach (PendingQuestion question in questions)
+                PendingQuestionList.Add(question);
         Changed?.Invoke();
     }
 
-    // ReferenceEquals-guarded so a finished question clearing late can't wipe a newer one that
-    // already replaced it (e.g. a superseding ask_user posed before the old answer landed).
-    public void ClearPendingQuestion(PendingQuestion question)
+    // Removes exactly these instances, so a finished question clearing late can't wipe a newer one
+    // posed after it (e.g. a superseding ask_user posed before the old answer landed).
+    public void ClearPendingQuestions(IReadOnlyList<PendingQuestion> questions)
     {
         lock (Sync)
-            if (ReferenceEquals(CurrentQuestion, question))
-                CurrentQuestion = null;
+            foreach (PendingQuestion question in questions)
+                for (int i = PendingQuestionList.Count - 1; i >= 0; i--)
+                    if (ReferenceEquals(PendingQuestionList[i], question))
+                        PendingQuestionList.RemoveAt(i);
         Changed?.Invoke();
     }
 
