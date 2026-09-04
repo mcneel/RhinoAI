@@ -28,6 +28,17 @@ internal static class AISettings
         set => Settings.SetStringList(nameof(DisabledTools), value);
     }
 
+    // Overrides the username-derived name of the plugin manage_plugin_commands writes to.
+    public static string? ScriptPluginName
+    {
+        get
+        {
+            string stored = Settings.GetString(nameof(ScriptPluginName), string.Empty);
+            return string.IsNullOrWhiteSpace(stored) ? null : stored;
+        }
+        set => Settings.SetString(nameof(ScriptPluginName), value ?? string.Empty);
+    }
+
     // External MCP servers merged into each agent's own config beside `rhino` (Part 4).
     public static string ExtraMcpServersJson
     {

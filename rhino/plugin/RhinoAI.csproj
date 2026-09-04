@@ -3,6 +3,8 @@
   <PropertyGroup>
     <!-- Rhino 9: net8.0 -->
     <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
+    <!-- R8/R9 source gates (#if R9) follow $(RhinoTarget) directly. -->
+    <DefineConstants>$(DefineConstants);$(RhinoTarget)</DefineConstants>
     <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win</PluginOS>
     <PluginOS Condition="'$(PluginOS)' == ''">osx</PluginOS>
     <TargetFrameworks>net8.0</TargetFrameworks>
@@ -19,18 +21,22 @@
   <!-- Rhino.Common.props supplies $(RhinoOutputDir) (src4/bin/<Config>/ on Windows,
        bin/<Config>MacRhino/ on macOS). Guarded so a standalone checkout without the
        Rhino source tree still builds. -->
-  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props"
-          Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
+  <Import Project="..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props" Condition="Exists('..\..\..\..\..\RhinoProjectPropertySheets\Rhino.Common.props')" />
 
   <PropertyGroup>
     <!-- In-tree R9 builds stage into the solution's shared plug-in folder,
-         src4/bin/<Config>/Plug-ins/RhinoAI, so a locally built Rhino loads this
-         plug-in like every other plug-in in Rhino.sln. The layout inside that
-         folder is unchanged (net8.0/ + router/ + manifest.yml + icon.png), so the
-         yak package is still built straight out of it. Windows only for now:
-         every other case (macOS, R8, or a checkout without the property sheets)
-         keeps the project-local bin. -->
-    <RhinoAIStagingDir Condition="'$(RhinoTarget)' == 'R9' AND '$(RhinoOutputDir)' != '' AND $([MSBuild]::IsOSPlatform('Windows'))">$(RhinoOutputDir)Plug-ins\RhinoAI</RhinoAIStagingDir>
+         src4/bin/<Config>/Plug-ins/RhinoAI (bin/<Config>MacRhino/... on macOS), so
+         a locally built Rhino loads this plug-in like every other plug-in in
+         Rhino.sln / RhinoMacBuild.sln. The layout inside that folder is unchanged
+         (net8.0/ + router/ + manifest.yml + icon.png), so the yak package is still
+         built straight out of it, and RhinoCommon's GetMultiTargetPath resolves the
+         net8.0/ subfolder on both platforms. R8, and a checkout without the property
+         sheets, keep the project-local bin.
+
+         NormalizePath is load-bearing: $(RhinoOutputDir) is spelt with backslashes,
+         which macOS treats as ordinary filename characters. The router publish below
+         hands this path to a shell, so it has to be real separators. -->
+    <RhinoAIStagingDir Condition="'$(RhinoTarget)' == 'R9' AND '$(RhinoOutputDir)' != ''">$([MSBuild]::NormalizePath('$(RhinoOutputDir)', 'Plug-ins', 'RhinoAI'))</RhinoAIStagingDir>
     <RhinoAIStagingDir Condition="'$(RhinoAIStagingDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</RhinoAIStagingDir>
     <!-- $(TargetFramework) is appended by the SDK, giving <staging>/net8.0. -->
     <OutputPath>$(RhinoAIStagingDir)/</OutputPath>
@@ -47,7 +53,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <!-- Link (not copy) the router's on-disk path contract so the plugin and
@@ -97,6 +103,7 @@
     <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" />
     <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" />
+    <PackageReference Include="RhinoCode" Version="9.0.26244.12303-beta" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
@@ -108,9 +115,7 @@
        can never drift from the single source in Directory.Build.props. Runs as a
        build dependency (keeps the checked-in file in sync) and before the yak
        copy (so the staged package picks up the rewritten value). -->
-  <UsingTask TaskName="SyncManifestVersion"
-             TaskFactory="RoslynCodeTaskFactory"
-             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+  <UsingTask TaskName="SyncManifestVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <ManifestPath ParameterType="System.String" Required="true" />
       <Version ParameterType="System.String" Required="true" />
@@ -166,8 +171,7 @@
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
     <!-- Publish one RID at a time via Exec -->
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router"
-          Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;$(YakStagingDir)/router/%(_RouterRid.Identity)&quot; --nologo" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../router" Command="dotnet publish Router.csproj --configuration $(Configuration) --runtime %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) --output &quot;$(YakStagingDir)/router/%(_RouterRid.Identity)&quot; --nologo" />
     <!-- Strip debug artifacts after publish -->
     <RemoveDir Directories="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(YakStagingDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
@@ -182,21 +186,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('$(_FxDir)')" Text="ASP.NET Core runtime pack not found at '$(_FxDir)' (PluginOS=$(PluginOS)). Run 'dotnet restore' for this PluginOS first." />
     <ItemGroup>
-      <_AspNetCoreFiles Include="$(_FxDir)/*.dll"
-        Exclude="
-          $(_FxDir)/Microsoft.AspNetCore.Authentication.BearerToken.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Authentication.Cookies.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Authentication.OAuth.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Components*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Identity*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Mvc*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Razor*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Server.HttpSys.dll;
-          $(_FxDir)/Microsoft.AspNetCore.Server.IIS*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.SignalR*.dll;
-          $(_FxDir)/Microsoft.AspNetCore.StaticFiles.dll;
-          $(_FxDir)/Microsoft.Extensions.Identity*.dll
-        " />
+      <_AspNetCoreFiles Include="$(_FxDir)/*.dll" Exclude="&#xA;          $(_FxDir)/Microsoft.AspNetCore.Authentication.BearerToken.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Authentication.Cookies.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Authentication.OAuth.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Components*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Identity*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Mvc*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Razor*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Server.HttpSys.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.Server.IIS*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.SignalR*.dll;&#xA;          $(_FxDir)/Microsoft.AspNetCore.StaticFiles.dll;&#xA;          $(_FxDir)/Microsoft.Extensions.Identity*.dll&#xA;        " />
     </ItemGroup>
     <Copy SourceFiles="@(_AspNetCoreFiles)" DestinationFolder="$(YakStagingDir)/net8.0/" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="[Rhino MCP] Bundled ASP.NET Core ($(PluginOS)) from $(_FxDir)" />

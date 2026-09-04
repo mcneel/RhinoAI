@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/ScriptProjects/PluginNaming.cs" LinkBase="PluginSources" />
   </ItemGroup>
 
 </Project>
