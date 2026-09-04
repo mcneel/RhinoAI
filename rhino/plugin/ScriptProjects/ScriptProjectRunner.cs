@@ -14,7 +14,7 @@ internal static class ScriptProjectRunner
 
         try
         {
-#if RHINOCODE
+#if R9
             runner = Runner = new RhinoCodeProjectRunner();
 #else
             runner = Runner = new RhinoAppProjectRunner();
@@ -36,7 +36,7 @@ internal static class ScriptProjectRunner
 
     public static string RunScript(RhinoDoc doc, Lang lang, string script)
     {
-#if RHINOCODE
+#if R9
         RhinoCodeRunScript runner = new ();
 #else
         RhinoAppRunScript runner = new ();

@@ -1,4 +1,4 @@
-#if RHINOCODE
+#if R9
 using RhinoAI.ScriptProjects;
 
 namespace RhinoAI.Tools;
