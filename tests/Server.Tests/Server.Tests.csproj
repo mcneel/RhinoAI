@@ -18,13 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
   </ItemGroup>
 
-  <!--
-    Pull only the pure (non-Rhino, non-AspNetCore) Server sources into the test
-    assembly. McpEndpoint.cs depends on Microsoft.AspNetCore and ToolRegistry.cs
-    depends on RhinoApp; those need a different host to test and live elsewhere.
-    Compiling the sources in (rather than ProjectReference'ing RhinoAI.csproj)
-    keeps the test assembly RhinoCommon-free and side-steps internals-visibility.
-  -->
+  <!-- Only Rhino-free plug-in sources are linked in, so the test assembly never loads RhinoCommon. -->
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Server/Attributes.ai.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/Protocol.ai.cs" LinkBase="ServerSources" />
@@ -36,14 +30,12 @@
     <Compile Include="../../rhino/plugin/Server/ToolResultFormatter.ai.cs" LinkBase="ServerSources" />
   </ItemGroup>
 
-  <!-- IToolResult is the contract every tool returns and the formatter renders; both are Rhino-free. -->
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Tools/ToolResult.cs" LinkBase="PluginSources" />
     <Using Include="System.Text.Json" />
     <Using Include="Rhino.AI.Server" />
   </ItemGroup>
 
-  <!-- The panel feed and the transcript graph it flattens: no Rhino, so they test here. -->
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Agents/Conversation.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
@@ -60,9 +52,6 @@
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.ai.cs" LinkBase="PluginSources" />
-    <Compile Include="../../rhino/plugin/ScriptProjects/PluginNaming.cs" LinkBase="PluginSources" />
-    <!-- ask_user's question item: the schema generated from it is what the agent reads, so assert
-         the real record rather than a lookalike. -->
     <Compile Include="../../rhino/plugin/Tools/QuestionSpec.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/AskUserValidation.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.ai.cs" LinkBase="PluginSources" />

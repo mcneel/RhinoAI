@@ -42,13 +42,10 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore router
-        run: dotnet restore rhino/router/Router.csproj
-
       - name: Build router
-        run: dotnet build rhino/router/Router.csproj --configuration Release --no-restore
+        run: dotnet build rhino/router/Router.csproj --configuration Release
 
-      # NOTE: tests/Integration.Tests is intentionally excluded
+      # tests/Integration.Tests is intentionally excluded
       - name: Test router
         run: dotnet test tests/Router.Tests/Router.Tests.csproj --configuration Release --verbosity normal
 
@@ -75,13 +72,12 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # Separate restore so NuGet's GeneratePathProperty ($(Pkg…)) for the
-      # ASP.NET Core runtime pack is populated before the build evaluates it.
+      # Restore first so the generated NuGet props exist when the build evaluates.
       - name: Restore plugin
         shell: bash
         run: dotnet restore rhino/plugin/RhinoAI.csproj '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
-      - name: Build plugin (bundles ${{ matrix.plugin.os }} routers + ASP.NET Core)
+      - name: Build plugin (${{ matrix.rhino_target }}, ${{ matrix.plugin.os }})
         shell: bash
         run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
@@ -91,7 +87,7 @@ jobs:
           curl -fsSL -o yak https://files.mcneel.com/yak/tools/0.13.0/mac/yak
           chmod +x yak
 
-      - name: Build yak package (${{ matrix.rhino_target }}, ${{ matrix.plugin.os }})
+      - name: Build yak package
         shell: bash
         run: |
           "$GITHUB_WORKSPACE/yak" build --platform ${{ matrix.plugin.yak }}
@@ -144,8 +140,7 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         uses: actions/download-artifact@v8
         with:
-          # No name → grabs every rhino-mcp-platform-{R8,R9}-{win,osx} artifact,
-          # each into its own subdir under dist/.
+          # No name downloads every yak artifact into its own subdir under dist/.
           path: dist
 
       - name: Create GitHub Release (creates tag atomically)

@@ -37,9 +37,7 @@ jobs:
             rid: win-x64
           - os: windows-11-arm
             rid: win-arm64
-          # Ubuntu runs only the "unsupported platform" test — the launcher
-          # doesn't ship for linux and Rhino isn't published there, so we
-          # don't build the router. Just keeps that platform-gate path honest.
+          # Ubuntu only runs the unsupported-platform test, so no router build.
           - os: ubuntu-latest
             rid: ""
 
@@ -67,8 +65,6 @@ jobs:
         working-directory: tests/launcher
         shell: bash
         env:
-          # When set, the integration test stages this directory into a fake
-          # yak tree and exercises a real MCP initialize handshake. Unset on
-          # ubuntu (no router build there) so the integration test is skipped.
+          # Unset on ubuntu so the real-router integration test is skipped.
           RHINO_MCP_TEST_ROUTER_DIR: ${{ matrix.rid != '' && format('{0}/published-router', github.workspace) || '' }}
         run: node --test
