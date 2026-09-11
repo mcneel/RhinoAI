@@ -19,10 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../../rhino/acp/Acp.csproj" />
-  </ItemGroup>
-
-  <!-- Read the pinned method list at test time to guard generator coverage. -->
-  <ItemGroup>
     <None Include="../../rhino/acp/schema/meta.json" Link="meta.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

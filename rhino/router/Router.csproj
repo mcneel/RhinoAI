@@ -2,44 +2,21 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <LangVersion>12</LangVersion>
-    <RootNamespace>Rhino.AI.Router</RootNamespace>
     <AssemblyName>rhino-mcp-router</AssemblyName>
-    <Nullable>enable</Nullable>
+    <RootNamespace>Rhino.AI.Router</RootNamespace>
+    <Title>Rhino MCP Router</Title>
+    <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
-    <!-- $(RhinoTarget), $(BaseOutputPath) and $(BaseIntermediateOutputPath) are set in
-         rhino/Directory.Build.props: BaseIntermediateOutputPath is only honoured if it
-         is assigned before Microsoft.Common.props is imported (MSB3539), which cannot
-         happen from inside this file. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/obj/**</DefaultItemExcludes>
+    <RuntimeIdentifiers>win-x64;win-arm64;osx-arm64</RuntimeIdentifiers>
+    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Router.Tests" />
-  </ItemGroup>
-
-  <!--
-    Publish settings split by RID. Gated on RuntimeIdentifier so plain
-    `dotnet build` (used by tests and dev loops) stays framework-dependent.
-
-    Windows: framework-dependent + RollForward. Rhino installs .NET 8 globally
-    on Windows, so the host can resolve the runtime; the resulting .exe is
-    ~5MB. RollForward=Major lets future Rhinos with newer runtimes still load
-    the router.
-
-    macOS: NativeAOT. ~18MB single native binary, no .NET install needed, and
-    starts in ~120ms (vs ~430ms for framework-dependent). Requires the
-    source-generated RouterJsonContext + typed WithTools<T> registration that
-    Program.cs uses — anonymous types or reflection-based MCP tool discovery
-    would break here.
-  -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND $(RuntimeIdentifier.StartsWith('win-'))">
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <RollForward>Major</RollForward>
   </PropertyGroup>
+
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND !$(RuntimeIdentifier.StartsWith('win-'))">
     <PublishAot>true</PublishAot>
     <SelfContained>true</SelfContained>
@@ -51,57 +28,20 @@
     <NativeDebugSymbols>false</NativeDebugSymbols>
   </PropertyGroup>
 
-  <!-- codegen/ holds the nested Router.Codegen project; exclude its sources from
-       the router's default **/*.cs glob so they only compile in that project. -->
   <ItemGroup>
+    <InternalsVisibleTo Include="Router.Tests" />
     <Compile Remove="codegen/**" />
     <None Remove="codegen/**" />
     <EmbeddedResource Remove="codegen/**" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <!-- Assembly version attributes come from src4/version.cs in-tree (see
-         rhino/Directory.Build.props) and from $(Version) in a standalone checkout.
-         Program.cs reads AssemblyInformationalVersion for the MCP ServerInfo, so
-         neither the version nor $(Company) is set here. -->
-    <Title>Rhino MCP Router</Title>
-    <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-    <!-- Match the version family the plugin uses (ModelContextProtocol.AspNetCore 1.2.0)
-         so router and plugin agree at runtime. The 0.4.x preview line targets .NET 10
-         packages and won't load under a net8.0 runtime. -->
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
   </ItemGroup>
 
-  <!--
-    SQLite provider, split by target OS. Microsoft.Data.Sqlite is a metapackage over
-    .Core + SQLitePCLRaw.bundle_e_sqlite3; taking .Core directly lets the bundle - and
-    so the native engine - be chosen per platform.
-
-    Windows: winsqlite3, the SQLite that ships as part of Windows (10 1803 and later),
-    so the router carries no native SQLite of its own. bundle_e_sqlite3 would drop an
-    e_sqlite3.dll next to the exe that has no VERSIONINFO resource and is unsigned,
-    which the Rhino installer has no good way to version or service - Windows Installer
-    only replaces an unversioned file while its modified date still matches its created
-    date, so it goes stale after anything touches it. SlotStore stays well inside what
-    the in-box engine offers: PRAGMA journal_mode/synchronous/busy_timeout, CREATE TABLE
-    IF NOT EXISTS, plain DML and transactions. Nothing here needs RETURNING, upserts,
-    JSON functions or STRICT tables, which are what would push past the SQLite in older
-    Windows builds. The trade is that the engine version follows the OS instead of being
-    pinned - fine for a slot table, so check this again if the schema gets ambitious.
-
-    macOS: e_sqlite3, exactly as before. There is no system library the NativeAOT
-    publish can bind to, and the Mac installer does not care about Windows version
-    resources.
-
-    RuntimeIdentifier is empty for a plain `dotnet build` (tests and dev loops), so fall
-    back to the build OS there. 2.1.6 is what Microsoft.Data.Sqlite 8.0.10 resolves
-    SQLitePCLRaw to; keep the two in step when either is bumped.
-  -->
+  <!-- winsqlite3 ships with Windows; the e_sqlite3.dll bundle is unversioned and the Rhino installer cannot service it. -->
   <PropertyGroup>
     <RouterUsesWinSqlite Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.StartsWith('win-'))</RouterUsesWinSqlite>
     <RouterUsesWinSqlite Condition="'$(RuntimeIdentifier)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</RouterUsesWinSqlite>
@@ -113,39 +53,15 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.6" Condition="'$(RouterUsesWinSqlite)' != 'true'" />
   </ItemGroup>
 
-  <!--
-    Source generator: scans plugin tool source files and emits one router-side
-    proxy per [McpServerTool]. Referenced as an Analyzer (not a runtime ref) so
-    its assembly doesn't ship with the router.
-  -->
   <ItemGroup>
-    <ProjectReference Include="codegen/Router.Codegen.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="codegen/Router.Codegen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
     <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
   </ItemGroup>
 
-  <!--
-    macOS/e_sqlite3 only - a no-op on Windows, where winsqlite3 means there is no
-    native SQLite to place.
-
-    AOT publish drops native deps like libe_sqlite3.dylib in $(OutDir), but the
-    AOT-linked binary lives in $(OutDir)native/. dlopen searches alongside the
-    binary, so without this copy the router crashes on startup with a
-    DllNotFoundException for e_sqlite3. The publish dir gets it right out of
-    the box; this target makes the `dotnet build -r <rid>` flow work too, so
-    MCP clients can point at bin/.../native/rhino-mcp-router during dev.
-  -->
-  <Target Name="CopyNativeSqliteAlongsideAotBinary"
-          AfterTargets="Build"
-          Condition="'$(PublishAot)' == 'true' AND Exists('$(OutDir)libe_sqlite3.dylib')">
-    <Copy SourceFiles="$(OutDir)libe_sqlite3.dylib"
-          DestinationFolder="$(OutDir)native"
-          SkipUnchangedFiles="true" />
+  <!-- dlopen looks next to the AOT binary in native/, not in $(OutDir). -->
+  <Target Name="CopyNativeSqliteAlongsideAotBinary" AfterTargets="Build" Condition="'$(PublishAot)' == 'true' AND Exists('$(OutDir)libe_sqlite3.dylib')">
+    <Copy SourceFiles="$(OutDir)libe_sqlite3.dylib" DestinationFolder="$(OutDir)native" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

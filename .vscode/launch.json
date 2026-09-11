@@ -1,79 +1,81 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "configurations": [
     {
-      "name": "Rhino 9 - netcore",
+      "name": "Rhino (dev build)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (R9)",
+      "program": "",
+      "osx": {
+        "program": "${input:derivedDataRoot}/Build/Products/Debug/Rhinoceros.app/Contents/MacOS/Rhinoceros",
+        "args": ["-nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug" }
+      },
+      "windows": {
+        "program": "${workspaceFolder}/../../../bin/Debug/Rhino.exe",
+        "targetArchitecture": "x86_64",
+        "args": ["/netcore", "/nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-win/Debug" }
+      },
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Rhino 9 BETA",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build (R9)",
       "program": "",
       "osx": {
         "program": "/Applications/RhinoBETA.app/Contents/MacOS/Rhinoceros",
-        "args": [
-          "-nosplash"
-        ],
-        "env": {
-          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug",
-        }
+        "args": ["-nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug" }
       },
       "windows": {
-        "program": "C:\\Program Files\\Rhino 9 WIP\\System\\Rhino.exe",
+        "program": "C:\\Program Files\\Rhino 9 BETA\\System\\Rhino.exe",
         "targetArchitecture": "x86_64",
-        "args": [
-          "/netcore",
-          "/nosplash"
-        ],
-        "env": {
-          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/../../../bin/Debug/Plug-ins/RhinoAI",
-        }
+        "args": ["/netcore", "/nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-win/Debug" }
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "console": "internalConsole"
     },
     {
-      "name": "Rhino 8 - netcore",
+      "name": "Rhino 8",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build (R8)",
       "program": "",
       "osx": {
         "program": "/Applications/Rhino 8.app/Contents/MacOS/Rhinoceros",
-        "args": [
-          "-nosplash"
-        ],
-        "env": {
-          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Debug",
-        }
+        "args": ["-nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Debug" }
       },
       "windows": {
         "program": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
         "targetArchitecture": "x86_64",
-        "args": [
-          "/netcore",
-          "/nosplash"
-        ],
-        "env": {
-          "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-win/Debug",
-        }
+        "args": ["/netcore", "/nosplash"],
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-win/Debug" }
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "console": "internalConsole"
     },
     {
-      "name": "Router - launch",
+      "name": "Router",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "router: build + register + open claude",
-      "program": "${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router.dll",
-      "args": [],
+      "preLaunchTask": "register router with claude",
+      "program": "${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.dll",
       "cwd": "${workspaceFolder}/rhino/router",
       "stopAtEntry": false,
       "console": "integratedTerminal"
     },
     {
-      "name": "Docs - hugo server",
+      "name": "Docs",
       "type": "node-terminal",
       "request": "launch",
       "command": "hugo server --buildDrafts --disableFastRender",
@@ -83,7 +85,17 @@
         "uriFormat": "%s",
         "action": "openExternally"
       }
-    },
+    }
   ],
-  "compounds": []
+  "inputs": [
+    {
+      "id": "derivedDataRoot",
+      "type": "command",
+      "command": "shellCommand.execute",
+      "args": {
+        "command": "${workspaceFolder}/../../../../build/mac/getderiveddata/getderiveddata.sh",
+        "useFirstResult": true
+      }
+    }
+  ]
 }

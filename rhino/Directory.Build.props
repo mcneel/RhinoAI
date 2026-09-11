@@ -1,60 +1,22 @@
 <Project>
 
-  <!-- In-tree vs standalone. Inside the Rhino source tree this plug-in is built like
-       every other Rhino plug-in: RhinoCommon and friends come from the sibling
-       projects under src4/DotNetSDK, and src4/version.cs supplies the assembly
-       version attributes. A standalone RhinoAI checkout (no Rhino source next to it)
-       keeps the NuGet + $(Version) path so it still builds on its own.
-       Detected the same way Grasshopper2 does it: src4/version.cs.props is only
-       present when we are inside the Rhino tree. -->
   <PropertyGroup>
-    <IsInRhino Condition="'$(IsInRhino)' == '' AND Exists('$(MSBuildThisFileDirectory)../../../../version.cs.props')">true</IsInRhino>
+    <RhinoSrc4Dir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', '..'))</RhinoSrc4Dir>
+    <IsInRhino Condition="'$(IsInRhino)' == '' AND Exists('$(RhinoSrc4Dir)version.cs.props')">true</IsInRhino>
     <IsInRhino Condition="'$(IsInRhino)' == ''">false</IsInRhino>
   </PropertyGroup>
 
-  <!-- Chain the Rhino tree's own Directory.Build.props (src4/Directory.Build.props).
-       MSBuild stops at the first Directory.Build.props it finds walking up, so
-       without this the RhinoAI projects would silently miss the tree-wide settings
-       every other plug-in gets - notably AccelerateBuildsInVisualStudio=false, which
-       is what stops VS from copying RhinoCommon.dll into the plug-in folder. Imported
-       first so anything below still wins. -->
-  <PropertyGroup>
-    <RhinoTreeDirectoryBuildProps Condition="'$(IsInRhino)' == 'true'">$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</RhinoTreeDirectoryBuildProps>
-  </PropertyGroup>
-  <Import Project="$(RhinoTreeDirectoryBuildProps)" Condition="'$(RhinoTreeDirectoryBuildProps)' != ''" />
+  <!-- MSBuild stops at the first Directory.Build.props it finds, so the tree-wide one has to be chained by hand. -->
+  <Import Project="$(RhinoSrc4Dir)Directory.Build.props" Condition="'$(IsInRhino)' == 'true'" />
+  <Import Project="$(RhinoSrc4Dir)version.cs.props" Condition="'$(IsInRhino)' == 'true'" />
 
-  <!-- version.cs.props turns off the SDK's generated version attributes and compiles
-       src4/version.cs into every project below, so AssemblyVersion /
-       AssemblyFileVersion / AssemblyInformationalVersion come from
-       RhinoBuildConstants, exactly like Commands.rhp, MeshCommands.rhp and the rest.
-       Bump versions in src4/build/build_dates.msbuild, never here. -->
-  <Import Project="$(MSBuildThisFileDirectory)../../../../version.cs.props" Condition="'$(IsInRhino)' == 'true'" />
-
-  <!-- Yak package version for manifest.yml. Deliberately NOT the Rhino build version:
-       Package Manager releases of the Rhino AI plug-in version independently of the
-       Rhino build they ship with. The router's MCP ServerInfo and the plugin manifest
-       both derive from this, so the two cannot drift. Bump here only. The connector
-       (connector/manifest.json) and cc-plugin version independently - do NOT couple
-       them to this. -->
   <PropertyGroup>
     <RhinoAIPackageVersion>0.2.1-wip</RhinoAIPackageVersion>
-    <!-- Standalone builds have no version.cs, so the package version doubles as the
-         assembly version there. In-tree, version.cs wins and $(Version) is left alone. -->
     <Version Condition="'$(IsInRhino)' == 'false'">$(RhinoAIPackageVersion)</Version>
     <Company Condition="'$(IsInRhino)' == 'false'">Robert McNeel &amp; Associates</Company>
-  </PropertyGroup>
-
-  <!-- Router.csproj keeps bin/ and obj/ split per $(RhinoTarget) so an R8 and an R9
-       build never share intermediates. BaseIntermediateOutputPath has to be set before
-       Microsoft.Common.props is imported, or MSBuild uses the new path while NuGet
-       writes project.assets.json to the default obj/ - warning MSB3539, and two
-       disagreeing views of obj/. Directory.Build.props is the first place that runs
-       early enough, which is exactly what MSB3539 tells you to do. Scoped by project
-       file so it only touches the router. -->
-  <PropertyGroup Condition="'$(MSBuildProjectFile)' == 'Router.csproj'">
-    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
-    <BaseOutputPath>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)/</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj/$(RhinoTarget)/</BaseIntermediateOutputPath>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
 </Project>

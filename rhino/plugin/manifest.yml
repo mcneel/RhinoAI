@@ -1,6 +1,6 @@
 ---
+# version is appended at build time from RhinoAIPackageVersion in rhino/Directory.Build.props
 name: Rhino-MCP-Platform
-version: 0.2.1-wip
 authors:
 - Callum Sykes
 - Dan Cascaval

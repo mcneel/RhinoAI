@@ -1,386 +1,142 @@
 {
   "version": "2.0.0",
+  "type": "shell",
+  "command": "dotnet",
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "problemMatcher": "$msCompile",
+  "presentation": {
+    "reveal": "always",
+    "clear": true
+  },
   "tasks": [
     {
-      "label": "build (R8)",
-      "command": "dotnet",
-      "type": "shell",
-      "args": [
-        "build",
-        "-p:RhinoTarget=R8",
-        "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
+      "label": "build (R9)",
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-p:RhinoTarget=R9", "-clp:NoSummary"],
+      "group": { "kind": "build", "isDefault": true }
     },
     {
-      "label": "build (R9)",
-      "command": "dotnet",
-      "type": "shell",
-      "args": [
-        "build",
-        "-p:RhinoTarget=R9",
-        "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
+      "label": "build (R8)",
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-p:RhinoTarget=R8", "-clp:NoSummary"],
       "group": "build"
     },
     {
       "label": "build router",
-      "command": "dotnet",
-      "type": "shell",
-      "args": [
-        "build",
-        "-clp:NoSummary",
-        "${workspaceFolder}/rhino/router/Router.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "build release (R8)",
-      "command": "dotnet",
-      "type": "shell",
-      "args": [
-        "build",
-        "-c:Release",
-        "-p:RhinoTarget=R8",
-        "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
+      "args": ["build", "rhino/router/Router.csproj", "-clp:NoSummary"],
       "group": "build"
     },
     {
       "label": "build release (R9)",
-      "command": "dotnet",
-      "type": "shell",
-      "args": [
-        "build",
-        "-c:Release",
-        "-p:RhinoTarget=R9",
-        "-clp:NoSummary",
-        "${workspaceFolder}/rhino/plugin/RhinoAI.csproj"
-      ],
-      "problemMatcher": "$msCompile",
-      "presentation": {
-        "reveal": "always",
-        "clear": true
+      "hide": true,
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R9", "-clp:NoSummary"]
+    },
+    {
+      "label": "build release (R8)",
+      "hide": true,
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R8", "-clp:NoSummary"]
+    },
+    {
+      "label": "pack yak (R9)",
+      "dependsOn": "build release (R9)",
+      "osx": {
+        "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak",
+        "args": ["build", "--platform", "mac"],
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release" }
       },
+      "windows": {
+        "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe",
+        "args": ["build", "--platform", "win"],
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release" }
+      },
+      "problemMatcher": [],
       "group": "build"
     },
     {
       "label": "pack yak (R8)",
-      "type": "shell",
       "dependsOn": "build release (R8)",
-      "windows": {
-        "command": "C:/Program Files/Rhino 8/System/Yak.exe",
-        "args": ["build", "--platform", "win"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-win/Release"
-        }
-      },
       "osx": {
         "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak",
         "args": ["build", "--platform", "mac"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Release"
-        }
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Release" }
       },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak build on Linux is unsupported."]
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "pack yak (R9)",
-      "type": "shell",
-      "dependsOn": "build release (R9)",
       "windows": {
         "command": "C:/Program Files/Rhino 8/System/Yak.exe",
         "args": ["build", "--platform", "win"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release"
-        }
-      },
-      "osx": {
-        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak",
-        "args": ["build", "--platform", "mac"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release"
-        }
-      },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak build on Linux is unsupported."]
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-win/Release" }
       },
       "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
       "group": "build"
     },
     {
-      "label": "install yak (Rhino 8)",
-      "type": "shell",
-      "dependsOn": "pack yak (R8)",
-      "windows": {
-        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 8/System/Yak.exe' install $_.Name }",
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-win/Release"
-        }
-      },
-      "osx": {
-        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak",
-        "args": ["install", "*.yak"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Release"
-        }
-      },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak install on Linux is unsupported."]
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "install yak (BETA)",
-      "type": "shell",
+      "label": "install yak (R9)",
       "dependsOn": "pack yak (R9)",
-      "windows": {
-        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 BETA/System/Yak.exe' install $_.Name }",
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release"
-        }
-      },
       "osx": {
         "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak",
         "args": ["install", "*.yak"],
-        "options": {
-          "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release"
-        }
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release" }
       },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak install on Linux is unsupported."]
+      "windows": {
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 BETA/System/Yak.exe' install $_.Name }",
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release" }
       },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "install yak (Rhino 8 + BETA)",
-      "dependsOn": ["install yak (Rhino 8)", "install yak (BETA)"],
-      "dependsOrder": "sequence",
       "problemMatcher": [],
       "group": "build"
     },
     {
-      "label": "uninstall yak (Rhino 8)",
-      "type": "shell",
+      "label": "install yak (R8)",
+      "dependsOn": "pack yak (R8)",
+      "osx": {
+        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak",
+        "args": ["install", "*.yak"],
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Release" }
+      },
+      "windows": {
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 8/System/Yak.exe' install $_.Name }",
+        "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R8-win/Release" }
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "uninstall yak (R9)",
       "args": ["uninstall", "Rhino-MCP-Platform"],
-      "windows": {
-        "command": "C:/Program Files/Rhino 8/System/Yak.exe"
-      },
-      "osx": {
-        "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak"
-      },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak uninstall on Linux is unsupported."]
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "uninstall yak (BETA)",
-      "type": "shell",
-      "args": ["uninstall", "Rhino-MCP-Platform"],
-      "windows": {
-        "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe"
-      },
-      "osx": {
-        "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak"
-      },
-      "linux": {
-        "command": "echo",
-        "args": ["Yak uninstall on Linux is unsupported."]
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "uninstall yak (Rhino 8 + BETA)",
-      "dependsOn": ["uninstall yak (Rhino 8)", "uninstall yak (BETA)"],
-      "problemMatcher": [],
-      "group": "build"
-    },
-    {
-      "label": "register router with claude",
-      "type": "shell",
-      "osx": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version BETA"
-      },
-      "linux": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev '${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router' -- --default-version BETA"
-      },
-      "windows": {
-        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/R9/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version BETA"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      }
-    },
-    {
-      "label": "pack mcpb",
-      "type": "shell",
-      "command": "node",
-      "args": ["build.mjs"],
-      "options": {
-        "cwd": "${workspaceFolder}/connector"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "build and install mcpb",
-      "type": "shell",
-      "dependsOn": "pack mcpb",
-      "dependsOrder": "sequence",
-      "osx": {
-        "command": "open",
-        "args": ["connector.mcpb"]
-      },
-      "linux": {
-        "command": "xdg-open",
-        "args": ["connector.mcpb"]
-      },
-      "windows": {
-        "command": "cmd",
-        "args": ["/c", "start", "", "connector.mcpb"]
-      },
-      "options": {
-        "cwd": "${workspaceFolder}/connector"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
-    },
-    {
-      "label": "open claude tab",
-      "type": "shell",
-      "command": "echo",
-      "args": ["${command:claude-vscode.newConversation}"],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "silent",
-        "echo": false,
-        "panel": "dedicated"
-      }
-    },
-    {
-      "label": "router: build + register + open claude",
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "build router",
-        "register router with claude",
-        "open claude tab"
-      ],
+      "osx": { "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak" },
+      "windows": { "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe" },
       "problemMatcher": []
     },
     {
-      "label": "docs: serve",
-      "type": "shell",
-      "command": "hugo",
-      "args": ["server", "--buildDrafts", "--disableFastRender"],
-      "options": {
-        "cwd": "${workspaceFolder}/docs"
-      },
-      "isBackground": true,
-      "problemMatcher": {
-        "owner": "hugo",
-        "pattern": {
-          "regexp": "^.*$",
-          "file": 1,
-          "location": 2,
-          "message": 3
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^Start building sites",
-          "endsPattern": "^Web Server is available at"
-        }
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      },
-      "group": "build"
+      "label": "uninstall yak (R8)",
+      "args": ["uninstall", "Rhino-MCP-Platform"],
+      "osx": { "command": "/Applications/Rhino 8.app/Contents/Resources/bin/yak" },
+      "windows": { "command": "C:/Program Files/Rhino 8/System/Yak.exe" },
+      "problemMatcher": []
     },
     {
-      "label": "docs: build",
-      "type": "shell",
-      "command": "hugo",
-      "args": ["--minify"],
-      "options": {
-        "cwd": "${workspaceFolder}/docs"
+      "label": "register router with claude",
+      "dependsOn": "build router",
+      "command": "claude mcp remove rhino-mcp-router-dev 2>/dev/null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router\" -- --default-version BETA",
+      "windows": {
+        "command": "claude mcp remove rhino-mcp-router-dev 2>$null; claude mcp add rhino-mcp-router-dev \"${workspaceFolder}/rhino/router/bin/Debug/net8.0/rhino-mcp-router.exe\" -- --default-version BETA"
       },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      },
-      "group": "build"
+      "problemMatcher": []
+    },
+    {
+      "label": "pack connector",
+      "command": "node",
+      "args": ["build.mjs"],
+      "options": { "cwd": "${workspaceFolder}/connector" },
+      "problemMatcher": []
+    },
+    {
+      "label": "install connector",
+      "dependsOn": "pack connector",
+      "command": "open",
+      "args": ["connector.mcpb"],
+      "linux": { "command": "xdg-open" },
+      "windows": { "command": "explorer" },
+      "options": { "cwd": "${workspaceFolder}/connector" },
+      "problemMatcher": []
     }
   ]
 }
