@@ -37,7 +37,7 @@
        (connector/manifest.json) and cc-plugin version independently - do NOT couple
        them to this. -->
   <PropertyGroup>
-    <RhinoAIPackageVersion>0.2.1-wip</RhinoAIPackageVersion>
+    <RhinoAIPackageVersion>0.3.3</RhinoAIPackageVersion>
     <!-- Standalone builds have no version.cs, so the package version doubles as the
          assembly version there. In-tree, version.cs wins and $(Version) is left alone. -->
     <Version Condition="'$(IsInRhino)' == 'false'">$(RhinoAIPackageVersion)</Version>
