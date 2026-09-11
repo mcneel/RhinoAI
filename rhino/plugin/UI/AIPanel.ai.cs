@@ -596,7 +596,7 @@ public class AIPanel : Panel
         bool windows = !Environment.OSVersion.Platform.Equals(PlatformID.Unix);
         PanelTheme.Palette palette = new(
             Chrome: Paint(Rhino.ApplicationSettings.PaintColor.PanelBackground),
-            Field: Paint(Rhino.ApplicationSettings.PaintColor.EditBoxBackground),
+            Field: Read(UI.ThemeSettings.Content.List.Enabled.Background),
             Text: Paint(Rhino.ApplicationSettings.PaintColor.TextEnabled),
             Dim: Paint(Rhino.ApplicationSettings.PaintColor.TextDisabled),
             Border: Paint(Rhino.ApplicationSettings.PaintColor.GridLinesOnPanelBackground),
