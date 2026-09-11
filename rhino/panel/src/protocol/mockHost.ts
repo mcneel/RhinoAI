@@ -1033,6 +1033,8 @@ export class MockHost implements Bridge {
         docTitle: 'tower-study.3dm',
         capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true },
       },
+      language: 'en-US',
+      strings: {},
     });
     const zoom = storedZoom();
     if (zoom !== null) this.emit({ type: 'zoom', action: 'set', level: zoom });

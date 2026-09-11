@@ -3,6 +3,8 @@ import type { Child } from '../core/dom.js';
 import { computed, signal } from '../core/signal.js';
 import { formatBytes } from '../state/format.js';
 import { isAttachable, MAX_ATTACHMENT_BYTES, readAttachments } from '../protocol/attachments.js';
+import { t } from '../i18n/t.js';
+import type { StringKey } from '../i18n/strings.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
@@ -10,18 +12,18 @@ import { icon, type IconName } from './icons.js';
 interface Command {
   key: string;
   label: string;
-  hint: string;
+  hint: StringKey;
   icon: IconName;
   run(ctx: PanelContext): void;
 }
 
 const COMMANDS: readonly Command[] = [
-  { key: 'new', label: '/new', hint: 'Start a fresh conversation', icon: 'plus', run: (c) => c.send({ type: 'conversation.new' }) },
-  { key: 'history', label: '/history', hint: 'Browse past conversations', icon: 'history', run: (c) => c.ui.openOverlay('history') },
-  { key: 'agent', label: '/agent', hint: 'Switch agent or model', icon: 'agent', run: (c) => c.ui.openOverlay('agents') },
-  { key: 'login', label: '/login', hint: 'Sign in to the selected CLI agent', icon: 'agent', run: (c) => c.send({ type: 'agent.login' }) },
-  { key: 'stop', label: '/stop', hint: 'Cancel the running turn', icon: 'stop', run: (c) => c.send({ type: 'cancel' }) },
-  { key: 'settings', label: '/settings', hint: 'Open AI settings', icon: 'settings', run: (c) => c.send({ type: 'settings.open' }) },
+  { key: 'new', label: '/new', hint: 'cmd.newHint', icon: 'plus', run: (c) => c.send({ type: 'conversation.new' }) },
+  { key: 'history', label: '/history', hint: 'cmd.historyHint', icon: 'history', run: (c) => c.ui.openOverlay('history') },
+  { key: 'agent', label: '/agent', hint: 'cmd.agentHint', icon: 'agent', run: (c) => c.ui.openOverlay('agents') },
+  { key: 'login', label: '/login', hint: 'cmd.loginHint', icon: 'agent', run: (c) => c.send({ type: 'agent.login' }) },
+  { key: 'stop', label: '/stop', hint: 'cmd.stopHint', icon: 'stop', run: (c) => c.send({ type: 'cancel' }) },
+  { key: 'settings', label: '/settings', hint: 'cmd.settingsHint', icon: 'settings', run: (c) => c.send({ type: 'settings.open' }) },
 ];
 
 const CONTEXT_ICON: Record<ContextItem['kind'], IconName> = {
@@ -44,7 +46,7 @@ export function composer(ctx: PanelContext): Child {
       store.apply({
         type: 'notice',
         level: 'error',
-        text: `${file.name} is ${formatBytes(file.size)}, over the ${formatBytes(MAX_ATTACHMENT_BYTES)} attachment limit.`,
+        text: t('composer.overAttachmentLimit', file.name, formatBytes(file.size), formatBytes(MAX_ATTACHMENT_BYTES)),
       });
     void readAttachments(files.filter(isAttachable)).then((list) => list.forEach((a) => ui.addAttachment(a)));
   };
@@ -190,7 +192,7 @@ export function composer(ctx: PanelContext): Child {
       ),
       el(
         'button',
-        { class: 'icon-btn', type: 'button', 'aria-label': `Remove ${attachment.name}`, onClick: () => ui.removeAttachment(attachment.id) },
+        { class: 'icon-btn', type: 'button', 'aria-label': () => t('chip.removeNamed', attachment.name), onClick: () => ui.removeAttachment(attachment.id) },
         icon('close', 12),
       ),
     );
@@ -202,7 +204,7 @@ export function composer(ctx: PanelContext): Child {
       return el(
         'div',
         { class: 'mention-menu', role: 'listbox' },
-        el('div', { class: 'menu-head', text: 'Commands' }),
+        el('div', { class: 'menu-head', text: () => t('composer.commands') }),
         ...commands.map((command, index) =>
           el(
             'button',
@@ -213,7 +215,7 @@ export function composer(ctx: PanelContext): Child {
               onClick: () => runCommand(command),
             },
             icon(command.icon, 14),
-            el('span', { class: 'body' }, el('b', { text: command.label }), el('span', { text: command.hint })),
+            el('span', { class: 'body' }, el('b', { text: command.label }), el('span', { text: () => t(command.hint) })),
           ),
         ),
       );
@@ -222,7 +224,7 @@ export function composer(ctx: PanelContext): Child {
     return el(
       'div',
       { class: 'mention-menu', role: 'listbox' },
-      el('div', { class: 'menu-head', text: 'Attach document context' }),
+      el('div', { class: 'menu-head', text: () => t('composer.attachContext') }),
       ...items.map((item, index) =>
         el(
           'button',
@@ -278,7 +280,7 @@ export function composer(ctx: PanelContext): Child {
                 el('span', { text: item.count !== undefined ? `${item.label} (${item.count})` : item.label }),
                 el(
                   'button',
-                  { type: 'button', 'aria-label': `Remove ${item.label}`, onClick: () => ui.toggleContext(item) },
+                  { type: 'button', 'aria-label': () => t('chip.removeNamed', item.label), onClick: () => ui.toggleContext(item) },
                   icon('close', 11),
                 ),
               ),
@@ -303,9 +305,8 @@ export function composer(ctx: PanelContext): Child {
       { class: 'composer-box' },
       el('textarea', {
         rows: 1,
-        placeholder: () =>
-          store.running() ? 'Type your next message…' : 'Ask, or describe what you want built.  / for commands, @ for context',
-        'aria-label': 'Message',
+        placeholder: () => t(store.running() ? 'composer.placeholderBusy' : 'composer.placeholderIdle'),
+        'aria-label': () => t('composer.ariaMessage'),
         value: () => ui.draft(),
         onInput: (event: Event) => {
           ui.draft.set((event.target as HTMLTextAreaElement).value);
@@ -328,7 +329,7 @@ export function composer(ctx: PanelContext): Child {
         { class: 'composer-actions' },
         el(
           'button',
-          { class: 'icon-btn', type: 'button', title: 'Attach a file', onClick: () => ctx.send({ type: 'attachments.pick' }) },
+          { class: 'icon-btn', type: 'button', title: () => t('composer.attachFile'), onClick: () => ctx.send({ type: 'attachments.pick' }) },
           icon('paperclip', 15),
         ),
         el(
@@ -336,7 +337,7 @@ export function composer(ctx: PanelContext): Child {
           {
             class: 'icon-btn',
             type: 'button',
-            title: 'Attach document context',
+            title: () => t('composer.attachContext'),
             onClick: () => {
               const draft = ui.draft();
               const needsSpace = draft.length > 0 && !draft.endsWith(' ');
@@ -353,13 +354,13 @@ export function composer(ctx: PanelContext): Child {
         el('span', { class: 'spacer' }),
         el('span', {
           class: 'composer-hint',
-          text: () => (store.running() ? 'Esc to stop' : ui.hasDraft() ? 'Enter to send' : ''),
+          text: () => (store.running() ? t('composer.hintStop') : ui.hasDraft() ? t('composer.hintSend') : ''),
         }),
         () =>
           store.running()
             ? el(
                 'button',
-                { class: 'send stop', type: 'button', title: 'Stop  (Esc)', onClick: () => ctx.send({ type: 'cancel' }) },
+                { class: 'send stop', type: 'button', title: () => t('composer.stop'), onClick: () => ctx.send({ type: 'cancel' }) },
                 icon('stop', 13),
               )
             : el(
@@ -367,7 +368,7 @@ export function composer(ctx: PanelContext): Child {
                 {
                   class: 'send',
                   type: 'button',
-                  title: 'Send  (Enter)',
+                  title: () => t('composer.send'),
                   disabled: () => !ui.hasDraft() || !store.hasReadyAgent(),
                   onClick: () => {
                     ctx.submit();

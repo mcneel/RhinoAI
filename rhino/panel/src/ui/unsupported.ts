@@ -8,6 +8,7 @@
 // Deliberately styled with primitives only. Nothing here may use a feature the check just failed.
 
 import { el, mount } from '../core/dom.js';
+import { t } from '../i18n/t.js';
 
 const PROBE = '(container-type: inline-size)';
 
@@ -20,14 +21,10 @@ export function renderUnsupported(root: HTMLElement, onOverride: () => void): vo
     el(
       'div',
       { class: 'unsupported' },
-      el('h1', { text: 'This panel needs a newer system WebView' }),
-      el('p', {
-        text: 'The panel renders in the WebView that comes with your operating system, so updating the OS (macOS ships WebKit with Safari) is what fixes it.',
-      }),
-      el('p', {
-        text: 'Every Apple Silicon Mac can run a recent macOS, so this usually just means pending system updates.',
-      }),
-      el('p', { class: 'quiet', text: 'The classic AI panel keeps working in the meantime.' }),
+      el('h1', { text: () => t('unsupported.title') }),
+      el('p', { text: () => t('unsupported.body') }),
+      el('p', { text: () => t('unsupported.macos') }),
+      el('p', { class: 'quiet', text: () => t('unsupported.classic') }),
       el(
         'button',
         {
@@ -38,7 +35,7 @@ export function renderUnsupported(root: HTMLElement, onOverride: () => void): vo
             onOverride();
           },
         },
-        'Show it anyway',
+        () => t('unsupported.showAnyway'),
       ),
     ),
   );

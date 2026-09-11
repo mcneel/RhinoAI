@@ -171,7 +171,7 @@ export interface HostInfo {
 // ---------------------------------------------------------------- host -> panel
 
 export type HostEvent =
-  | { type: 'hello'; host: HostInfo }
+  | { type: 'hello'; host: HostInfo; language: string; strings: Readonly<Record<string, string>> }
   | { type: 'theme'; scheme: 'light' | 'dark'; tokens?: Record<string, string> }
   | { type: 'agents'; agents: AgentInfo[]; active: string | null }
   | { type: 'context'; items: ContextItem[] }

@@ -1,6 +1,7 @@
 import { bind, each, el, onCleanup, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { clockTime, formatTokens, relativeTime } from '../state/format.js';
+import { t } from '../i18n/t.js';
 import type { BlockView, TurnView } from '../state/store.js';
 import type { Attachment, ContextItem, PlanStep } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
@@ -27,12 +28,16 @@ function contextChip(ctx: PanelContext, item: ContextItem, removable?: () => voi
     icon(CONTEXT_ICON[item.kind], 12),
     el('span', { text: item.count !== undefined ? `${item.label} (${item.count})` : item.label }),
     removable
-      ? el('button', { type: 'button', 'aria-label': `Remove ${item.label}`, onClick: removable }, icon('close', 11))
+      ? el(
+          'button',
+          { type: 'button', 'aria-label': () => t('chip.removeNamed', item.label), onClick: removable },
+          icon('close', 11),
+        )
       : el(
           'button',
           {
             type: 'button',
-            'aria-label': `Show ${item.label} in Rhino`,
+            'aria-label': () => t('chip.revealNamed', item.label),
             onClick: () => ctx.send({ type: 'context.reveal', id: item.id }),
           },
           icon('reveal', 11),
@@ -63,7 +68,7 @@ function planStrip(turn: TurnView): Child {
       el(
         'div',
         { class: 'plan' },
-        el('div', { class: 'plan-head', text: 'Plan' }),
+        el('div', { class: 'plan-head', text: () => t('plan.head') }),
         each(
           () => turn.plan(),
           (step) => step.id,
@@ -116,7 +121,7 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
           // the relationship we want the user to have with the panel.
           text: () => {
             const value = usage();
-            return value ? `${formatTokens(value.inputTokens + value.outputTokens)} tok` : '';
+            return value ? t('history.tokenCount', formatTokens(value.inputTokens + value.outputTokens)) : '';
           },
         }),
       ],
@@ -124,7 +129,7 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
     el('span', { class: 'spacer' }),
     el(
       'button',
-      { type: 'button', title: 'Copy the reply', onClick: () => ctx.copy(replyText(turn)) },
+      { type: 'button', title: () => t('turn.copy'), onClick: () => ctx.copy(replyText(turn)) },
       icon('copy', 13),
     ),
     when(
@@ -132,7 +137,7 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
       () =>
         el(
           'button',
-          { type: 'button', title: 'Ask again', onClick: () => ctx.send({ type: 'turn.retry', turnId: turn.id }) },
+          { type: 'button', title: () => t('turn.retry'), onClick: () => ctx.send({ type: 'turn.retry', turnId: turn.id }) },
           icon('retry', 13),
         ),
     ),
@@ -143,11 +148,11 @@ function turnFooter(ctx: PanelContext, turn: TurnView): Child {
           'button',
           {
             type: 'button',
-            title: 'Revert every document change this turn made',
+            title: () => t('turn.undoTitle'),
             onClick: () => ctx.send({ type: 'turn.undo', turnId: turn.id }),
           },
           icon('undo', 13),
-          el('span', { text: 'Revert' }),
+          el('span', { text: () => t('turn.undo') }),
         ),
     ),
   );
@@ -180,7 +185,7 @@ function turnView(ctx: PanelContext, turn: TurnView): Child {
     ),
     when(
       () => turn.status() === 'cancelled',
-      () => el('div', { class: 'lifecycle', text: 'stopped' }),
+      () => el('div', { class: 'lifecycle', text: () => t('turn.stopped') }),
     ),
     turnFooter(ctx, turn),
   );
@@ -322,7 +327,7 @@ export function transcript(ctx: PanelContext): Child {
             'button',
             { type: 'button', onClick: jumpToLatest },
             icon('arrowDown', 13),
-            el('span', { text: 'New output' }),
+            el('span', { text: () => t('transcript.newOutput') }),
           ),
         ),
     ),

@@ -5,6 +5,7 @@
 // nothing re-diffs, no row is rebuilt, no width is re-measured.
 
 import { computed, signal, type ReadSignal, type Signal } from '../core/signal.js';
+import { applyStrings } from '../i18n/t.js';
 import {
   type AgentInfo,
   type Attachment,
@@ -123,6 +124,7 @@ export class Store {
     switch (event.type) {
       case 'hello':
         this.host.set(event.host);
+        applyStrings(event.language, event.strings);
         // Scrollbar styling is Windows-only; see panel.css.
         document.documentElement.dataset['platform'] = event.host.platform;
         return;

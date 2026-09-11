@@ -31,7 +31,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
 internal abstract record PanelEvent;
 
-internal sealed record HelloEvent(PanelHost Host) : PanelEvent;
+internal sealed record HelloEvent(PanelHost Host, string Language, IReadOnlyDictionary<string, string> Strings) : PanelEvent;
 internal sealed record ThemeEvent(string Scheme, IReadOnlyDictionary<string, string>? Tokens) : PanelEvent;
 internal sealed record AgentsEvent(IReadOnlyList<PanelAgent> Agents, string? Active) : PanelEvent;
 internal sealed record ContextEvent(IReadOnlyList<PanelContextItem> Items) : PanelEvent;

@@ -555,12 +555,15 @@ public class AIPanel : Panel
 
     private void SendEnvironment()
     {
-        Bridge.Post(new HelloEvent(new PanelHost(
-            "Rhinoceros",
-            RhinoApp.Version.ToString(),
-            Environment.OSVersion.Platform == PlatformID.Unix ? "macos" : "windows",
-            TryDoc(out RhinoDoc doc) ? DocTitle(doc) : "Untitled",
-            new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true))));
+        Bridge.Post(new HelloEvent(
+            new PanelHost(
+                "Rhinoceros",
+                RhinoApp.Version.ToString(),
+                Environment.OSVersion.Platform == PlatformID.Unix ? "macos" : "windows",
+                TryDoc(out RhinoDoc doc) ? DocTitle(doc) : "Untitled",
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true)),
+            PanelStrings.LanguageTag(),
+            PanelStrings.Localized()));
 
         // A freshly loaded page is always at 100%, so the stored level has to be pushed to it.
         Bridge.Post(new ZoomEvent("set", AISettings.ZoomLevel / 100.0));
