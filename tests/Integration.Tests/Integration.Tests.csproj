@@ -8,9 +8,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Rhino.AI.Integration.Tests</RootNamespace>
-    <!-- NUnit1032 fires on IAsyncDisposable fields disposed in [OneTimeTearDown];
-         the analyzer only recognises per-test [TearDown], which is wrong for
-         fixture-scoped resources like the rhino router subprocess. -->
+    <!-- NUnit1032 does not recognise fixture-scoped disposal in [OneTimeTearDown]. -->
     <NoWarn>$(NoWarn);NUnit1032</NoWarn>
   </PropertyGroup>
 
