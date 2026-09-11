@@ -22,6 +22,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(DismissQuestionCommand), "question.dismiss")]
 [JsonDerivedType(typeof(ToolChipCommand), "tool.chip")]
 [JsonDerivedType(typeof(PickAttachmentsCommand), "attachments.pick")]
+[JsonDerivedType(typeof(SetZoomCommand), "zoom.set")]
 [JsonDerivedType(typeof(OpenSettingsCommand), "settings.open")]
 [JsonDerivedType(typeof(OpenUrlCommand), "url.open")]
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
@@ -43,6 +44,8 @@ internal sealed record AnswerQuestionCommand(IReadOnlyList<QuestionAnswer> Items
 internal sealed record DismissQuestionCommand(IReadOnlyList<string> Ids) : PanelCommand;
 internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
 internal sealed record PickAttachmentsCommand : PanelCommand;
+// Level is the panel's own scale, where 1.0 is the user's 100%; the host only stores it.
+internal sealed record SetZoomCommand(double Level) : PanelCommand;
 internal sealed record OpenSettingsCommand : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
 internal sealed record ClipboardCommand(string Text) : PanelCommand;

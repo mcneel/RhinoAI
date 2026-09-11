@@ -7,26 +7,18 @@
 import { signal, type ReadSignal } from '../core/signal.js';
 import { DEFAULT, STEPS, indexOf, stepIn, stepOut, toCssZoom } from './zoomSteps.js';
 
-const STORAGE_KEY = 'rhino-ai.zoom';
-
-// LoadHtml gives the document an opaque origin, where touching localStorage throws rather than
-// returning null, so both directions are guarded and zoom simply does not persist in that case.
-function restore(): number {
-  try {
-    const stored = Number(window.localStorage.getItem(STORAGE_KEY));
-    return Number.isFinite(stored) && stored > 0 ? (STEPS[indexOf(stored)] as number) : DEFAULT;
-  } catch {
-    return DEFAULT;
-  }
-}
-
 export class Zoom {
-  private readonly level = signal(restore());
+  private readonly level = signal(DEFAULT);
+  private readonly persist: (level: number) => void;
 
   readonly value: ReadSignal<number> = this.level;
 
   /** The element the zoom applies to; set once the panel root exists. */
   private target: HTMLElement | null = null;
+
+  constructor(persist: (level: number) => void) {
+    this.persist = persist;
+  }
 
   attach(target: HTMLElement): void {
     this.target = target;
@@ -34,13 +26,16 @@ export class Zoom {
   }
 
   set(value: number): void {
+    if (value === this.level.peek()) return;
     this.level.set(value);
     this.apply();
-    try {
-      window.localStorage.setItem(STORAGE_KEY, String(value));
-    } catch {
-      /* opaque origin: the level still applies, it just will not survive a reload */
-    }
+    this.persist(value);
+  }
+
+  /** The level the host had stored: applied, never handed straight back to it as a fresh choice. */
+  restore(value: number): void {
+    this.level.set(Number.isFinite(value) && value > 0 ? (STEPS[indexOf(value)] as number) : DEFAULT);
+    this.apply();
   }
 
   in(): void {

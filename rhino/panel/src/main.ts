@@ -17,7 +17,7 @@ const native = resolveNativeBridge();
 const bridge: Bridge = native ?? (__MOCK__ ? new MockHost() : inertBridge());
 const store = new Store();
 const ui = new UiState();
-const zoom = new Zoom();
+const zoom = new Zoom((level) => bridge.send({ type: 'zoom.set', level }));
 
 const ctx: PanelContext = {
   store,
@@ -62,6 +62,7 @@ function start(): void {
     if (event.type === 'zoom') {
       if (event.action === 'in') zoom.in();
       else if (event.action === 'out') zoom.out();
+      else if (event.action === 'set') zoom.restore(event.level);
       else zoom.reset();
       return;
     }

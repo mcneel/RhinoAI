@@ -25,6 +25,18 @@ const lines = (...parts: string[]) => parts.join('\n');
 let counter = 0;
 const nextId = (prefix: string) => `${prefix}-${++counter}`;
 
+// Rhino keeps the panel's zoom in its own settings; localStorage is this stand-in's equivalent.
+const ZOOM_KEY = 'rhino-ai.zoom';
+
+function storedZoom(): number | null {
+  try {
+    const level = Number(window.localStorage.getItem(ZOOM_KEY));
+    return Number.isFinite(level) && level > 0 ? level : null;
+  } catch {
+    return null;
+  }
+}
+
 /** One in-flight scripted turn: cancellable, and able to block on an answer. */
 class Script {
   private cancelled = false;
@@ -876,6 +888,14 @@ export class MockHost implements Bridge {
         this.pickFiles();
         return;
 
+      case 'zoom.set':
+        try {
+          window.localStorage.setItem(ZOOM_KEY, String(command.level));
+        } catch {
+          /* opaque origin: the level still applies, it just will not survive a reload */
+        }
+        return;
+
       case 'settings.open':
         this.notice('info', 'AI settings would open as a Rhino options page.');
         return;
@@ -1014,6 +1034,8 @@ export class MockHost implements Bridge {
         capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true },
       },
     });
+    const zoom = storedZoom();
+    if (zoom !== null) this.emit({ type: 'zoom', action: 'set', level: zoom });
     this.emit({
       type: 'theme',
       scheme: window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark',

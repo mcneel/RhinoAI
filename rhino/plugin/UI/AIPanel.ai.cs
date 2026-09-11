@@ -262,6 +262,10 @@ public class AIPanel : Panel
                 PickAttachments();
                 break;
 
+            case SetZoomCommand zoom:
+                AISettings.ZoomLevel = (int)Math.Round(zoom.Level * 100);
+                break;
+
             case OpenSettingsCommand:
                 OpenSettings();
                 break;
@@ -557,6 +561,9 @@ public class AIPanel : Panel
             Environment.OSVersion.Platform == PlatformID.Unix ? "macos" : "windows",
             TryDoc(out RhinoDoc doc) ? DocTitle(doc) : "Untitled",
             new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true))));
+
+        // A freshly loaded page is always at 100%, so the stored level has to be pushed to it.
+        Bridge.Post(new ZoomEvent("set", AISettings.ZoomLevel / 100.0));
 
         // Forced: this runs on the panel's `ready`, so the page is new and has nothing yet.
         SendTheme(force: true);

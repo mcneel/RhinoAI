@@ -50,8 +50,8 @@ internal sealed record NoticeEvent(string Level, string Text) : PanelEvent;
 internal sealed record StatusEvent(string? Text) : PanelEvent;
 
 // The host owns the menu, the panel owns the zoom ladder, so this carries an intent rather than a
-// level and the ladder is never duplicated on this side.
-internal sealed record ZoomEvent(string Action) : PanelEvent;
+// level and the ladder is never duplicated on this side. "set" is the exception: the stored level.
+internal sealed record ZoomEvent(string Action, double? Level = null) : PanelEvent;
 internal sealed record ReloadEvent : PanelEvent;
 
 internal sealed record PanelHost(
