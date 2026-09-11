@@ -190,8 +190,9 @@ export type HostEvent =
   | { type: 'notice'; level: NoticeLevel; text: string }
   | { type: 'status'; text: string | null }
   // The host owns the right-click menu, but the panel owns the zoom ladder, so the menu sends back
-  // an intent rather than a level.
+  // an intent rather than a level. `set` is the other direction: the level the host had stored.
   | { type: 'zoom'; action: 'in' | 'out' | 'reset' }
+  | { type: 'zoom'; action: 'set'; level: number }
   | { type: 'reload' };
 
 // ---------------------------------------------------------------- panel -> host
@@ -227,6 +228,8 @@ export type PanelCommand =
   | { type: 'context.reveal'; id: string }
   | { type: 'attachments.pick' }
   | { type: 'attachments.drop'; files: { name: string; mediaType: string; dataUrl: string }[] }
+  // The panel cannot store its own level (opaque origin, so localStorage throws), so the host keeps it.
+  | { type: 'zoom.set'; level: number }
   | { type: 'settings.open' }
   | { type: 'url.open'; url: string }
   | { type: 'clipboard.write'; text: string }

@@ -28,6 +28,23 @@ internal class RhinoCodeProjectRunner : IProjectRunner
         Paths.Directory.EnsureDirectory();
     }
 
+    public bool TryGetProjectCommandNames(out List<string> commandNames)
+    {
+        commandNames = [];
+        if (CachedProject is null)
+        {
+            return true;
+        }
+
+        foreach(ICode code in CachedProject.GetCodes())
+        {
+            if (!code.HasTitle()) continue;
+            commandNames.Add(code.Title);
+        }
+
+        return true;
+    }
+
     private IToolResult TryGetProject(out IProject project)
     {
         project = default!;

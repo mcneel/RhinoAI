@@ -31,6 +31,13 @@ export function formatDuration(ms: number): string {
   return `${minutes}m ${Math.round((ms % 60_000) / 1000)}s`;
 }
 
+/** A counter that is read while it runs, so it only ever moves a second at a time: "8s", then "1:05". */
+export function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  if (total < 60) return `${total}s`;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;

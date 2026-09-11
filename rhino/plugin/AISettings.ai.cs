@@ -35,6 +35,13 @@ internal static class AISettings
         set => Settings.SetStringList(nameof(DisabledAgents), value);
     }
 
+    // The panel's text zoom as the percentage the user sees; the ladder itself lives in the panel.
+    public static int ZoomLevel
+    {
+        get => Settings.GetInteger(nameof(ZoomLevel), 100);
+        set => Settings.SetInteger(nameof(ZoomLevel), value);
+    }
+
     public static bool IsEnabled(AgentDefinition def) =>
         def.Enabled && !DisabledAgents.Contains(def.Name, StringComparer.OrdinalIgnoreCase);
 

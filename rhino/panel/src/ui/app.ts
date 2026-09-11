@@ -1,6 +1,8 @@
-import { el, onCleanup, when } from '../core/dom.js';
+import { bind, el, onCleanup, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
-import { clockTime } from '../state/format.js';
+import { signal } from '../core/signal.js';
+import { BUSY_WORDS, busyWord } from '../state/busy.js';
+import { clockTime, formatElapsed } from '../state/format.js';
 import { agentMenu } from './agentMenu.js';
 import { composer } from './composer.js';
 import { hostMenu } from './hostMenu.js';
@@ -13,15 +15,51 @@ import { transcript } from './transcript.js';
 
 function statusStrip(ctx: PanelContext): Child {
   const { store } = ctx;
-  const text = () => store.status() ?? (store.thinking() ? 'Working…' : null);
+  const now = signal(Date.now());
+  let offset = 0;
+
+  // One clock for the whole strip, so the word and the counter can never disagree about the turn.
+  bind(() => {
+    if (!store.thinking()) return;
+    offset = Math.floor(Math.random() * BUSY_WORDS.length);
+    now.set(Date.now());
+    const timer = setInterval(() => now.set(Date.now()), 1000);
+    return () => clearInterval(timer);
+  });
+
+  const elapsed = (): number | null => {
+    const startedAt = store.currentTurn()?.startedAt;
+    const started = startedAt === undefined ? Number.NaN : Date.parse(startedAt);
+    return Number.isNaN(started) ? null : Math.max(0, now() - started);
+  };
+
+  const hosted = () => store.status();
+  const text = () => hosted() ?? (store.thinking() ? `${busyWord(elapsed() ?? 0, offset)}…` : null);
+  const counting = () => store.thinking() && elapsed() !== null;
+
   return when(
     () => text() !== null,
     () =>
       el(
         'div',
         { class: 'status-strip', role: 'status' },
-        el('span', { class: 'spark' }, icon('sparkle', 13)),
-        el('span', { class: 'shimmer', text: () => text() ?? '' }),
+        el('span', { class: 'spark' }, icon('sparkle', 14)),
+        el('span', {
+          class: 'shimmer',
+          'aria-hidden': () => (hosted() === null ? 'true' : false),
+          text: () => text() ?? '',
+        }),
+        el('span', { class: 'sr-only', text: () => (hosted() === null ? 'Working' : '') }),
+        el('span', { class: 'spacer' }),
+        when(
+          counting,
+          () =>
+            el('span', {
+              class: 'elapsed',
+              'aria-hidden': 'true',
+              text: () => formatElapsed(elapsed() ?? 0),
+            }),
+        ),
       ),
   );
 }

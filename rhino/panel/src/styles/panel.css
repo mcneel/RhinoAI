@@ -200,6 +200,17 @@ a:hover { text-decoration: underline; }
 
 .icon { flex: none; display: block; }
 
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Chromium draws its own scrollbars, which look nothing like Rhino's. macOS overlay scrollbars
    already match and styling them would make them permanently visible, so this is Windows only. */
 :root[data-platform='windows'] ::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -294,15 +305,34 @@ a:hover { text-decoration: underline; }
   padding: 5px var(--pad);
   font-size: var(--fs-sm);
   color: var(--text-dim);
-  background: var(--control);
-  border-top: 1px solid var(--border);
+  background: var(--accent-soft);
+  border-top: 1px solid var(--accent-line);
   min-height: 0;
 }
-.status-strip .spark { color: var(--accent); }
+.status-strip .spark { color: var(--accent); flex: none; }
+.status-strip .spark path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: twinkle 1.9s ease-in-out infinite;
+}
+/* A quarter turn brings a four-point star back onto itself, so this twinkles rather than spins. */
+.status-strip .spark path:nth-child(2) { animation-delay: -.95s; }
+@keyframes twinkle {
+  0%, 100% { transform: scale(.72) rotate(0deg); opacity: .45; }
+  50% { transform: scale(1.15) rotate(90deg); opacity: 1; }
+}
+.status-strip .spacer { flex: 1; }
+.status-strip .elapsed {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
 .status-strip .shimmer {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  min-inline-size: 0;
   background: linear-gradient(90deg, var(--text-dim) 20%, var(--text) 45%, var(--text-dim) 70%);
   background-size: 220% 100%;
   -webkit-background-clip: text;

@@ -29,6 +29,8 @@ internal static class PluginNaming
         if (string.IsNullOrWhiteSpace(name))
             return CommandNameProblem.Empty;
 
+        name = name.Trim();
+
         StringBuilder coerced = new(name.Length);
         foreach (char character in name)
         {
@@ -60,6 +62,17 @@ internal static class PluginNaming
                 return CommandNameProblem.InvalidCharacters;
         }
 
+        if (ScriptProjectRunner.TryGetProjectCommandNames(out List<string> commandNames))
+        {
+            if (!commandNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                if (Commands.Command.IsCommand(name))
+                {
+                    return CommandNameProblem.AlreadyExists;
+                }
+            }
+        }
+
         return CommandNameProblem.None;
     }
 
@@ -68,6 +81,7 @@ internal static class PluginNaming
         CommandNameProblem.Empty => "Command name is required.",
         CommandNameProblem.InvalidCharacters => $"Command name \"{name}\" is not valid. Use letters, digits and underscores only, with no spaces.",
         CommandNameProblem.TooLong => $"Command name \"{name}\" is longer than {MaxCommandNameLength} characters.",
+        CommandNameProblem.AlreadyExists => $"Command \"{name}\" already exists as a built in Rhino Command. You cannot update this command. Choose a different name.",
         _ => throw new ArgumentOutOfRangeException(
             nameof(problem), problem, "A usable command name has no problem to describe."),
     };
@@ -121,4 +135,4 @@ internal static class PluginNaming
 
 internal enum PluginCommandAction { None = 0, Add, Update, Delete }
 
-internal enum CommandNameProblem { None, Empty, InvalidCharacters, TooLong }
+internal enum CommandNameProblem { None, Empty, InvalidCharacters, TooLong, AlreadyExists }

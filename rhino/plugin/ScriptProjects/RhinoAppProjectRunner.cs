@@ -31,4 +31,10 @@ internal class RhinoAppProjectRunner : IProjectRunner
         return Failure(ToolError.Unsupported, NOT_AVAILABLE);
     }
 
+    public bool TryGetProjectCommandNames(out List<string> commandNames)
+    {
+        commandNames = [];
+        return false;
+    }
+
 }

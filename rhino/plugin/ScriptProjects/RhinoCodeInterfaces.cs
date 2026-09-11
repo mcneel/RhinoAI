@@ -25,4 +25,6 @@ internal interface IProjectRunner
 
     public IToolResult Build(bool reloadOnly);
 
+    public bool TryGetProjectCommandNames(out List<string> commandNames);
+
 }

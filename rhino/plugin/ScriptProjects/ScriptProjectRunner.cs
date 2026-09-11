@@ -29,6 +29,13 @@ internal static class ScriptProjectRunner
         }
     }
 
+    public static bool TryGetProjectCommandNames(out List<string> commandNames)
+    {
+        commandNames = [];
+        Runner?.TryGetProjectCommandNames(out commandNames);
+        return true;
+    }
+
     public static IToolResult Reload()
     {
         IToolResult result = TryCreate(out IProjectRunner runner);
