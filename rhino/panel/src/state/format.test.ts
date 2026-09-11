@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatBytes, formatDuration, formatTokens, prettyJson, relativeTime, summarize } from './format.ts';
+import { formatBytes, formatDuration, formatElapsed, formatTokens, prettyJson, relativeTime, summarize } from './format.ts';
 
 test('relative time buckets', () => {
   const now = Date.parse('2026-09-03T12:00:00Z');
@@ -27,6 +27,16 @@ test('duration formatting', () => {
   assert.equal(formatDuration(1_260), '1.3s');
   assert.equal(formatDuration(45_000), '45s');
   assert.equal(formatDuration(95_000), '1m 35s');
+});
+
+test('elapsed formatting never shows a fraction or a negative', () => {
+  assert.equal(formatElapsed(-50), '0s');
+  assert.equal(formatElapsed(0), '0s');
+  assert.equal(formatElapsed(8_900), '8s');
+  assert.equal(formatElapsed(59_999), '59s');
+  assert.equal(formatElapsed(60_000), '1:00');
+  assert.equal(formatElapsed(65_000), '1:05');
+  assert.equal(formatElapsed(3_725_000), '62:05');
 });
 
 test('byte formatting', () => {
