@@ -25,7 +25,8 @@
     <DefineConstants>$(DefineConstants);$(RhinoTarget)</DefineConstants>
     <!-- CS0436: version.cs is also compiled into referenced Rhino assemblies whose internals are visible here. -->
     <NoWarn>$(NoWarn);NU1701;CA1416;MSB3277;CS0436</NoWarn>
-    <PluginOutputDir>$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</PluginOutputDir>
+    <PluginOutputDir Condition="'$(PluginOutputDir)' == '' AND '$(RhinoTarget)' == 'R9' AND '$(RhinoPlugInOutputDir)' != ''">$([MSBuild]::NormalizePath('$(RhinoPlugInOutputDir)', 'RhinoAI'))</PluginOutputDir>
+    <PluginOutputDir Condition="'$(PluginOutputDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</PluginOutputDir>
     <OutputPath>$(PluginOutputDir)/</OutputPath>
   </PropertyGroup>
 
@@ -73,7 +74,7 @@
     <ItemGroup>
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
-    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
+    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
     <RemoveDir Directories="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
   </Target>

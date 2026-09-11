@@ -29,12 +29,12 @@
     {
       "label": "build release (R9)",
       "hide": true,
-      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R9", "-clp:NoSummary"]
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R9", "-p:IsInRhino=false", "-clp:NoSummary"]
     },
     {
       "label": "build release (R8)",
       "hide": true,
-      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R8", "-clp:NoSummary"]
+      "args": ["build", "rhino/plugin/RhinoAI.csproj", "-c", "Release", "-p:RhinoTarget=R8", "-p:IsInRhino=false", "-clp:NoSummary"]
     },
     {
       "label": "pack yak (R9)",

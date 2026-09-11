@@ -10,13 +10,13 @@
       "osx": {
         "program": "${input:derivedDataRoot}/Build/Products/Debug/Rhinoceros.app/Contents/MacOS/Rhinoceros",
         "args": ["-nosplash"],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug" }
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/../../../bin/DebugMacRhino/Plug-ins/RhinoAI" }
       },
       "windows": {
         "program": "${workspaceFolder}/../../../bin/Debug/Rhino.exe",
         "targetArchitecture": "x86_64",
         "args": ["/netcore", "/nosplash"],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-win/Debug" }
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/../../../bin/Debug/Plug-ins/RhinoAI" }
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
