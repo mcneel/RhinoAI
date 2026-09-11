@@ -16,7 +16,18 @@ namespace Rhino.AI;
 
 internal sealed class McpServer : IDisposable
 {
-    private WebApplication? App { get; set; }
+    // The running WebApplication, held as object so that no member of this class is
+    // typed by Microsoft.AspNetCore.
+    //
+    // Rhino's host loads Microsoft.NETCore.App and Microsoft.WindowsDesktop.App only,
+    // so on an install where ASP.NET Core is neither bundled nor resolvable, every
+    // method whose body or signature names one of its types fails to JIT. That failure
+    // is raised in the CALLER, which is why a FileLoadException for Microsoft.AspNetCore
+    // came out of `HasStarted` - a property Start's own try/catch never gets to guard.
+    // Keeping those types inside RunApp/StopApp below, both [MethodImpl(NoInlining)] and
+    // both called from inside a try, confines the failure to a place that can catch it:
+    // the server reports that it did not start instead of taking Rhino down.
+    private object? App { get; set; }
     private CancellationTokenSource Cts { get; } = new CancellationTokenSource();
 
     public bool HasStarted => App is not null;
@@ -30,24 +41,7 @@ internal sealed class McpServer : IDisposable
         Port = port;
         try
         {
-            WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
-            {
-                // Prevent unnecesssary file watchers
-                Args = ["--hostBuilder:reloadConfigOnChange=false"],
-                ContentRootPath = Path.GetDirectoryName(typeof(McpServer).Assembly.Location),
-            });
-            builder.Logging.ClearProviders();
-            builder.Logging.AddProvider(new RhinoLoggerProvider());
-            builder.Logging.SetMinimumLevel(LogLevel.Warning);
-            builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(port));
-
-            builder.Services.AddSingleton(doc);
-
-            App = builder.Build();
-            App.MapMcp("/");
-            App.MapMcp("/agent", filtered: true);
-
-            _ = App.RunAsync(Cts.Token);
+            App = RunApp(doc, port, Cts.Token);
 
             RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
             return true;
@@ -59,6 +53,34 @@ internal sealed class McpServer : IDisposable
             return false;
         }
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static object RunApp(RhinoDoc doc, int port, CancellationToken token)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
+        {
+            // Prevent unnecesssary file watchers
+            Args = ["--hostBuilder:reloadConfigOnChange=false"],
+            ContentRootPath = Path.GetDirectoryName(typeof(McpServer).Assembly.Location),
+        });
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RhinoLoggerProvider());
+        builder.Logging.SetMinimumLevel(LogLevel.Warning);
+        builder.Services.Configure<KestrelServerOptions>(o => o.ListenLocalhost(port));
+
+        builder.Services.AddSingleton(doc);
+
+        WebApplication app = builder.Build();
+        app.MapMcp("/");
+        app.MapMcp("/agent", filtered: true);
+
+        _ = app.RunAsync(token);
+
+        return app;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void StopApp(object app) => ((WebApplication)app).StopAsync();
 
     private static string DescribeException(Exception ex)
     {
@@ -74,7 +96,10 @@ internal sealed class McpServer : IDisposable
         { Cts?.Cancel(); }
         catch { }
         try
-        { App?.StopAsync(); }
+        {
+            if (App is object app)
+                StopApp(app);
+        }
         catch { }
         App = null;
     }
