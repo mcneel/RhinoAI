@@ -45,7 +45,7 @@
         "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release" }
       },
       "windows": {
-        "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe",
+        "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe",
         "args": ["build", "--platform", "win"],
         "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release" }
       },
@@ -77,7 +77,7 @@
         "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Release" }
       },
       "windows": {
-        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 BETA/System/Yak.exe' install $_.Name }",
+        "command": "Get-ChildItem *.yak | ForEach-Object { & 'C:/Program Files/Rhino 9 WIP/System/Yak.exe' install $_.Name }",
         "options": { "cwd": "${workspaceFolder}/rhino/plugin/bin/R9-win/Release" }
       },
       "problemMatcher": [],
@@ -102,7 +102,7 @@
       "label": "uninstall yak (R9)",
       "args": ["uninstall", "Rhino-MCP-Platform"],
       "osx": { "command": "/Applications/RhinoBETA.app/Contents/Resources/bin/yak" },
-      "windows": { "command": "C:/Program Files/Rhino 9 BETA/System/Yak.exe" },
+      "windows": { "command": "C:/Program Files/Rhino 9 WIP/System/Yak.exe" },
       "problemMatcher": []
     },
     {
