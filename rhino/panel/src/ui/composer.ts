@@ -315,12 +315,10 @@ export function composer(ctx: PanelContext): Child {
         onKeyDown,
         onPaste,
         onClick: syncMention,
+        // Never focus() on mount: the panel mounts at startup and on reload, and it would take the keyboard off the command line.
         ref: (node: HTMLTextAreaElement) => {
           input = node;
-          requestAnimationFrame(() => {
-            grow();
-            node.focus();
-          });
+          requestAnimationFrame(grow);
         },
       }),
       el(
