@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Rhino.FileIO;
@@ -13,12 +12,14 @@ internal static class RhinoAIHost
     private static Dictionary<uint, McpServer> Servers { get; } = new();
 
     // UI-thread-only!
-    private static Timer? _heartbeat;
+    private static bool _heartbeatHooked;
+    private static long _lastAnnounceTick;
 
-    // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot 
-    // re-adopt on its own instead of staying gone until the user re-runs MCPStart. 
+    // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot
+    // re-adopt on its own instead of staying gone until the user re-runs MCPStart.
     // Re-dropping a already-adopted listener is a no-op.
     private static TimeSpan HeartbeatInterval { get; } = TimeSpan.FromSeconds(15);
+    private static long HeartbeatIntervalMs { get; } = (long)HeartbeatInterval.TotalMilliseconds;
 
     // Re-bound by the replacing document, so a swap doesn't strand clients on a fixed port.
     private static int? PortFreedByLastClose { get; set; }
@@ -215,29 +216,38 @@ internal static class RhinoAIHost
 
     private static void EnsureHeartbeat()
     {
-        _heartbeat ??= new Timer(static _ => Heartbeat(), null, HeartbeatInterval, HeartbeatInterval);
+        if (_heartbeatHooked)
+            return;
+        _lastAnnounceTick = Environment.TickCount64;
+        RhinoApp.Idle += Heartbeat;
+        _heartbeatHooked = true;
     }
 
     private static void StopHeartbeatIfIdle()
     {
-        if (Servers.Count == 0)
-        {
-            _heartbeat?.Dispose();
-            _heartbeat = null;
-        }
+        if (Servers.Count > 0 || !_heartbeatHooked)
+            return;
+        RhinoApp.Idle -= Heartbeat;
+        _heartbeatHooked = false;
     }
 
-    private static void Heartbeat()
+    // Rides Rhino's idle event rather than a ThreadPool timer: announcing only
+    // needs the UI thread to read `Servers`, and a timer had to get there via
+    // InvokeOnUiThread, which on macOS blocks the pool thread until the main
+    // loop drains (performSelectorOnMainThread:waitUntilDone:YES). Ticks piled
+    // up faster than they cleared and starved the pool Kestrel runs on.
+    //
+    // Idle fires very often, so self-throttle to HeartbeatInterval. The port
+    // snapshot keeps a re-entrant WriteLine from invalidating the enumerator.
+    private static void Heartbeat(object? sender, EventArgs e)
     {
-        // Heartbeat must be touched from UI thread
-        RhinoApp.InvokeOnUiThread(new Action(static () =>
-        {
-            foreach (McpServer server in Servers.Values)
-            {
-                if (server.HasStarted)
-                    WriteAnnouncement(server.Port);
-            }
-        }));
+        long now = Environment.TickCount64;
+        if (now - _lastAnnounceTick < HeartbeatIntervalMs)
+            return;
+        _lastAnnounceTick = now;
+
+        foreach (int port in Servers.Values.Where(s => s.HasStarted).Select(s => s.Port).ToArray())
+            WriteAnnouncement(port);
     }
 
     // Drop a one-shot announcement into <temp>/rhino-mcp-listeners/ so a router
