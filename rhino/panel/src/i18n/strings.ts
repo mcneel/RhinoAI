@@ -11,9 +11,9 @@ export const EN = {
   'empty.theAgent': 'The agent',
   'empty.body':
     'It can read the document, run scripts, drive Grasshopper and capture views. Mention @context to point it at something specific.',
-  'empty.starterCommand': 'Create me a command that generates 100 random spheres',
+  'empty.starterCommand': 'Create a command that generates 100 random spheres',
   'empty.starterTower': 'Build a twisty tower in Grasshopper',
-  'empty.starterLayers': 'Organize the objects in the view into layers',
+  'empty.starterLayers': 'Organize the objects in the active viewport into layers',
   'empty.noAgent': 'No agent available',
   'empty.noAgentBody': 'Install Claude Code, Codex or Gemini CLI and sign in, then pick it here.',
   'empty.openSettings': 'Open AI settings',
