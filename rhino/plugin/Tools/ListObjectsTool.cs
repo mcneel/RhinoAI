@@ -34,7 +34,7 @@ internal static class ListObjectsTool
             if (TryParseObjectType(geometryType, out ObjectType filter))
                 settings.ObjectTypeFilter = filter;
             else
-                coerced.Note($"geometryType '{geometryType}' is not recognised, so no type filter was applied");
+                coerced.Note($"geometryType '{geometryType}' is not recognized, so no type filter was applied");
         }
 
         if (!string.IsNullOrEmpty(layer))

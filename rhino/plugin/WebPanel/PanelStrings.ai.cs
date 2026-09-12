@@ -19,7 +19,7 @@ internal static class PanelStrings
         ["empty.body"] = LOC.STR("It can read the document, run scripts, drive Grasshopper and capture views. Mention @context to point it at something specific."),
         ["empty.starterCommand"] = LOC.STR("Create me a command that generates 100 random spheres"),
         ["empty.starterTower"] = LOC.STR("Build a twisty tower in Grasshopper"),
-        ["empty.starterLayers"] = LOC.STR("Organise the objects in the view into layers"),
+        ["empty.starterLayers"] = LOC.STR("Organize the objects in the view into layers"),
         ["empty.noAgent"] = LOC.STR("No agent available"),
         ["empty.noAgentBody"] = LOC.STR("Install Claude Code, Codex or Gemini CLI and sign in, then pick it here."),
         ["empty.openSettings"] = LOC.STR("Open AI settings"),

@@ -35,7 +35,7 @@ internal static class GH2_Diagnostics
         }
         catch (OperationCanceledException)
         {
-            return Faulted(ghDoc, "Cancelled", $"The solution did not finish within {SolveTimeout.TotalSeconds:F0} seconds and was cancelled");
+            return Faulted(ghDoc, "Canceled", $"The solution did not finish within {SolveTimeout.TotalSeconds:F0} seconds and was canceled");
         }
         catch (Exception ex)
         {
@@ -76,7 +76,7 @@ internal static class GH2_Diagnostics
             if (state.Phase == Phase.Cancelled)
             {
                 diagnostics.Add(MakeDiagnostic(obj, GH2DiagnosticLevel.Error,
-                    "Skipped: a prior fault cancelled this solution before this component ran"));
+                    "Skipped: a prior fault canceled this solution before this component ran"));
                 continue;
             }
 

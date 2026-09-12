@@ -400,7 +400,7 @@ internal sealed class AISettingsPanel : Panel
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = Rhino.UI.LOC.STR("Tools the built-in \"rhino\" server exposes, grouped by behaviour. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool."),
+            Text = Rhino.UI.LOC.STR("Tools the built-in \"rhino\" server exposes, grouped by behavior. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool."),
             TextColor = Colors.Gray,
         };
 
