@@ -66,11 +66,11 @@ Quick actions you can fire off without writing a prompt.
 
 ### Specialist agents
 
-Each agent is tuned for a different kind of work. You can call them explicitly (*"have the modeller build me a chair"*) or let Claude pick.
+Each agent is tuned for a different kind of work. You can call them explicitly (*"have the modeler build me a chair"*) or let Claude pick.
 
 | Agent | What it's good at |
 | --- | --- |
-| `rhino-modeller` | Creating and editing geometry. |
+| `rhino-modeler` | Creating and editing geometry. |
 | `rhino-drafter` | Drawings, dimensions, layouts. |
 | `rhino-inspector` | Reporting on a document without changing it. |
 | `rhino-organizer` | Layers, blocks, naming, tidying up. |
@@ -102,7 +102,7 @@ Claude should delegate to `rhino-inspector` and reply with a summary of layers, 
 Then try:
 
 {{< prompt >}}
-Modeller: design a 1.6m park bench with wooden slats and cast iron
+Modeler: design a 1.6m park bench with wooden slats and cast iron
 legs.
 {{< /prompt >}}
 

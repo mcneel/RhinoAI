@@ -19,20 +19,20 @@ internal static class PanelContextSource
 
         RhinoObject[] selected = doc.Objects.GetSelectedObjects(includeLights: false, includeGrips: false).ToArray();
         if (selected.Length > 0)
-            items.Add(new PanelContextItem("ctx-selection", "selection", "Selection", Describe(selected), selected.Length));
+            items.Add(new PanelContextItem("ctx-selection", "selection", Rhino.UI.LOC.STR("Selection"), Describe(selected), selected.Length));
 
         if (doc.Views.ActiveView is { } view)
-            items.Add(new PanelContextItem("ctx-view", "view", view.ActiveViewport.Name, "active viewport", null));
+            items.Add(new PanelContextItem("ctx-view", "view", view.ActiveViewport.Name, Rhino.UI.LOC.STR("active viewport"), null));
 
         // Labelled by what it attaches rather than by the file, which reads as a bare "Untitled" on
         // an unsaved document. The file name belongs in the detail line, alongside the counts.
         Dictionary<int, int> perLayer = CountByLayer(doc);
-        string name = string.IsNullOrEmpty(doc.Path) ? "unsaved" : System.IO.Path.GetFileName(doc.Path);
+        string name = string.IsNullOrEmpty(doc.Path) ? Rhino.UI.LOC.STR("unsaved") : System.IO.Path.GetFileName(doc.Path);
         items.Add(new PanelContextItem(
             "ctx-document",
             "document",
-            "Whole document",
-            $"{name} · {perLayer.Values.Sum()} objects · {perLayer.Count} layers in use",
+            Rhino.UI.LOC.STR("Whole document"),
+            string.Format(Rhino.UI.LOC.STR("{0} · {1} objects · {2} layers in use"), name, perLayer.Values.Sum(), perLayer.Count),
             null));
 
         // Busiest first: an empty layer is rarely what someone means by "@".

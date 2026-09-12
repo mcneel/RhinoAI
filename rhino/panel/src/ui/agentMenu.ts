@@ -1,15 +1,22 @@
 import { each, el, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
+import { t } from '../i18n/t.js';
+import type { StringKey } from '../i18n/strings.js';
 import type { AgentAvailability, AgentInfo } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
 
-const REASON: Record<AgentAvailability, string> = {
-  ready: '',
-  disabled: 'turned off in settings',
-  missing: 'not installed',
-  signin: 'needs sign-in',
+const REASON: Record<AgentAvailability, StringKey | null> = {
+  ready: null,
+  disabled: 'agent.reasonDisabled',
+  missing: 'agent.reasonMissing',
+  signin: 'agent.reasonSignin',
 };
+
+function reasonFor(agent: AgentInfo): string {
+  const key = REASON[agent.availability];
+  return agent.detail ?? (key === null ? '' : t(key));
+}
 
 export function agentMenu(ctx: PanelContext): Child {
   const { store, ui } = ctx;
@@ -29,7 +36,7 @@ export function agentMenu(ctx: PanelContext): Child {
             .join(' '),
         type: 'button',
         disabled: !ready,
-        title: ready ? `Use ${agent.label}` : (agent.detail ?? REASON[agent.availability]),
+        title: () => (ready ? t('agent.useNamed', agent.label) : reasonFor(agent)),
         onClick: () => {
           ctx.send({ type: 'agent.select', name: agent.name });
           ui.closeOverlay();
@@ -41,7 +48,7 @@ export function agentMenu(ctx: PanelContext): Child {
         { class: 'body' },
         el('b', { text: agent.label }),
         el('span', {
-          text: ready ? agent.modelLabel : (agent.detail ?? REASON[agent.availability]),
+          text: () => (ready ? agent.modelLabel : reasonFor(agent)),
         }),
       ),
       when(
@@ -54,7 +61,7 @@ export function agentMenu(ctx: PanelContext): Child {
   return el(
     'div',
     { class: 'popover', role: 'menu' },
-    el('div', { class: 'menu-head', text: 'Agent' }),
+    el('div', { class: 'menu-head', text: () => t('agent.menuHead') }),
     each(
       () => store.agents(),
       (agent) => agent.name,
@@ -72,7 +79,7 @@ export function agentMenu(ctx: PanelContext): Child {
         },
       },
       icon('settings', 15),
-      el('span', { class: 'body' }, el('b', { text: 'AI settings…' })),
+      el('span', { class: 'body' }, el('b', { text: () => t('agent.settings') })),
     ),
   );
 }

@@ -22,7 +22,7 @@ internal static class GH2_PlaceSliderTool
         [Description("Maximum slider value.")] decimal max,
         [Description("Canvas X position in pixels.")] int x = 100,
         [Description("Canvas Y position in pixels.")] int y = 100,
-        [Description("Number of decimal places (0 for integer behaviour). Range: 0..12.")] int decimals = 3,
+        [Description("Number of decimal places (0 for integer behavior). Range: 0..12.")] int decimals = 3,
         [Description("Optional UserName for the slider.")] string? name = null,
         [Description("If true, trigger a new solution after placing. Set false to batch multiple operations and solve once at the end.")] bool solve = true)
     {

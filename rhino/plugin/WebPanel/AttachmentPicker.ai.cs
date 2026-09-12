@@ -23,10 +23,10 @@ internal static class AttachmentPicker
 
     public static IReadOnlyList<PanelAttachment> Pick(Control parent, Action<string> warn)
     {
-        OpenFileDialog dialog = new() { Title = "Attach files", MultiSelect = true };
-        dialog.Filters.Add(new FileFilter("Images and text", [.. ImageTypes.Keys, .. TextExtensions]));
-        dialog.Filters.Add(new FileFilter("Images", [.. ImageTypes.Keys]));
-        dialog.Filters.Add(new FileFilter("All files", ".*"));
+        OpenFileDialog dialog = new() { Title = Rhino.UI.LOC.STR("Attach files"), MultiSelect = true };
+        dialog.Filters.Add(new FileFilter(Rhino.UI.LOC.STR("Images and text"), [.. ImageTypes.Keys, .. TextExtensions]));
+        dialog.Filters.Add(new FileFilter(Rhino.UI.LOC.STR("Images"), [.. ImageTypes.Keys]));
+        dialog.Filters.Add(new FileFilter(Rhino.UI.LOC.STR("All files"), ".*"));
 
         if (dialog.ShowDialog(parent) != DialogResult.Ok)
             return [];
@@ -46,7 +46,11 @@ internal static class AttachmentPicker
             long length = new FileInfo(path).Length;
             if (length > MaxBytes)
             {
-                warn($"{name} is {length / (1024 * 1024)} MB, over the {MaxBytes / (1024 * 1024)} MB attachment limit.");
+                warn(string.Format(
+                    Rhino.UI.LOC.STR("{0} is {1} MB, over the {2} MB attachment limit."),
+                    name,
+                    length / (1024 * 1024),
+                    MaxBytes / (1024 * 1024)));
                 return null;
             }
 
@@ -56,14 +60,14 @@ internal static class AttachmentPicker
 
             if (!PanelAttachment.LooksLikeText(data))
             {
-                warn($"{name} is neither an image nor a text file, so it cannot be attached.");
+                warn(string.Format(Rhino.UI.LOC.STR("{0} is neither an image nor a text file, so it cannot be attached."), name));
                 return null;
             }
             return PanelAttachment.From(NextId(), AttachmentKind.TextFile, name, "text/plain", data);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
-            warn($"Could not read {name}: {ex.Message}");
+            warn(string.Format(Rhino.UI.LOC.STR("Could not read {0}: {1}"), name, ex.Message));
             return null;
         }
     }

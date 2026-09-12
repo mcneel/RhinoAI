@@ -2,6 +2,7 @@ import { computed } from '../core/signal.js';
 import { each, el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { formatTokens, relativeTime } from '../state/format.js';
+import { t } from '../i18n/t.js';
 import type { HistoryEntry } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
@@ -39,22 +40,26 @@ export function historyDrawer(ctx: PanelContext): Child {
         el('span', { text: '·' }),
         el('span', { text: entry.docTitle }),
         el('span', { text: '·' }),
-        el('span', { text: `${entry.turns} turn${entry.turns === 1 ? '' : 's'}` }),
+        el('span', {
+          text: () => t(entry.turns === 1 ? 'history.turnCountOne' : 'history.turnCountMany', entry.turns),
+        }),
         el('span', { text: '·' }),
-        el('span', { text: `${formatTokens(entry.usage.inputTokens + entry.usage.outputTokens)} tok` }),
+        el('span', {
+          text: () => t('history.tokenCount', formatTokens(entry.usage.inputTokens + entry.usage.outputTokens)),
+        }),
       ),
     );
 
   return el(
     'div',
-    { class: 'drawer', role: 'dialog', 'aria-label': 'Conversation history' },
+    { class: 'drawer', role: 'dialog', 'aria-label': () => t('header.history') },
     el(
       'div',
       { class: 'drawer-head' },
-      el('b', { text: 'Conversations' }),
+      el('b', { text: () => t('history.title') }),
       el(
         'button',
-        { class: 'icon-btn', type: 'button', 'aria-label': 'Close', onClick: () => ui.closeOverlay() },
+        { class: 'icon-btn', type: 'button', 'aria-label': () => t('history.close'), onClick: () => ui.closeOverlay() },
         icon('close', 14),
       ),
     ),
@@ -64,7 +69,7 @@ export function historyDrawer(ctx: PanelContext): Child {
       icon('search', 14),
       el('input', {
         type: 'search',
-        placeholder: 'Search prompts, agents, models…',
+        placeholder: () => t('history.search'),
         value: () => ui.historyQuery(),
         onInput: (event: Event) => ui.historyQuery.set((event.target as HTMLInputElement).value),
         ref: (input: HTMLInputElement) => requestAnimationFrame(() => input.focus()),
@@ -80,7 +85,10 @@ export function historyDrawer(ctx: PanelContext): Child {
       ),
       () =>
         matches().length === 0
-          ? el('div', { class: 'lifecycle', text: store.history().length === 0 ? 'No saved conversations yet' : 'Nothing matches' })
+          ? el('div', {
+              class: 'lifecycle',
+              text: () => t(store.history().length === 0 ? 'history.empty' : 'history.noMatch'),
+            })
           : null,
     ),
   );

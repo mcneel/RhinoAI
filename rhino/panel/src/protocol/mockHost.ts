@@ -332,7 +332,7 @@ interface Scenario {
 }
 
 // Order is significant: the first pattern to match wins, and the starters deliberately overlap
-// ("organise ... in the view into layers" contains "view").
+// ("organize ... in the active viewport into layers" contains "view").
 const SCENARIOS: readonly Scenario[] = [
   {
     match: /grasshopper|tower|twist|loft|canvas|\bgh\b/i,
@@ -771,7 +771,7 @@ const SCENARIOS: readonly Scenario[] = [
           '',
           '- something with **tower** or **grasshopper**: plan steps, five tool calls, a solved-graph card',
           '- something with **spheres** or **command**: a script card with highlighted source',
-          '- something with **layers** or **organise**: a table result and a summary',
+          '- something with **layers** or **organize**: a table result and a summary',
           '- something with **selected** or **problems**: a failing tool card and an inline question',
           '- something with **capture** or **view**: an image result rendered in place',
           '',
@@ -1033,6 +1033,8 @@ export class MockHost implements Bridge {
         docTitle: 'tower-study.3dm',
         capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true },
       },
+      language: 'en-US',
+      strings: {},
     });
     const zoom = storedZoom();
     if (zoom !== null) this.emit({ type: 'zoom', action: 'set', level: zoom });

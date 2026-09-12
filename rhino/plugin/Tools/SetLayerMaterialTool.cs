@@ -24,7 +24,7 @@ internal static class SetLayerMaterialTool
 
         Color? parsedColor = ParseColor(color);
         if (color is not null && parsedColor is null)
-            return Failure(ToolError.BadArgument, $"Could not parse color: {color}", "Use a hex string like '#FF0000' or a known colour name");
+            return Failure(ToolError.BadArgument, $"Could not parse color: {color}", "Use a hex string like '#FF0000' or a known color name");
 
         Layer lay = doc.Layers[idx];
 
