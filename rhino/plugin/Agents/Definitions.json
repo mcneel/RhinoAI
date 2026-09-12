@@ -10,13 +10,15 @@
         "win": [
           "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe",
           "%APPDATA%/Claude/claude-code/**/claude.exe",
-          "%USERPROFILE%/.local/bin/claude.exe"
+          "%USERPROFILE%/.local/bin/claude.exe",
+          "%APPDATA%/npm/claude.cmd"
         ],
         "mac": [
           "%USERPROFILE%/.local/bin/claude",
           "%USERPROFILE%/.local/share/claude/versions/*",
-          "/Library/Application Support/Claude/claude-code/**/claude.app/Contents/MacOS/Claude",
-          "/opt/homebrew/bin/claude"
+          "%USERPROFILE%/Library/Application Support/Claude/claude-code/**/claude.app/Contents/MacOS/claude",
+          "/opt/homebrew/bin/claude",
+          "/usr/local/bin/claude",
         ]
       },
       "models": [
