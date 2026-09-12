@@ -11,7 +11,7 @@
   <Import Project="$(RhinoSrc4Dir)version.cs.props" Condition="'$(IsInRhino)' == 'true'" />
 
   <PropertyGroup>
-    <RhinoAIPackageVersion>0.2.1-wip</RhinoAIPackageVersion>
+    <RhinoAIPackageVersion>9.9.9</RhinoAIPackageVersion>
     <Version Condition="'$(IsInRhino)' == 'false'">$(RhinoAIPackageVersion)</Version>
     <Company Condition="'$(IsInRhino)' == 'false'">Robert McNeel &amp; Associates</Company>
     <TargetFramework>net8.0</TargetFramework>
