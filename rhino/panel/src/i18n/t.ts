@@ -5,10 +5,12 @@ import { EN, type StringKey } from './strings.js';
 const table = signal<Partial<Record<StringKey, string>>>({});
 const tag = signal('en-US');
 
-export function applyStrings(language: string, strings: Readonly<Record<string, string>>): void {
-  document.documentElement.lang = language;
-  tag.set(language);
-  table.set(strings as Partial<Record<StringKey, string>>);
+export function applyStrings(language?: string, strings?: Readonly<Record<string, string>>): void {
+  if (language) {
+    document.documentElement.lang = language;
+    tag.set(language);
+  }
+  table.set((strings ?? {}) as Partial<Record<StringKey, string>>);
 }
 
 export function locale(): string {

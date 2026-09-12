@@ -17,7 +17,7 @@ public class RhinoAIPlugin : PlugIn
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
-        Rhino.UI.Panels.RegisterPanel(this, typeof(AIPanel), "AI", LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
+        Rhino.UI.Panels.RegisterPanel(this, typeof(AIPanel), Rhino.UI.LOC.STR("AI"), LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
 
         WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
 

@@ -293,7 +293,7 @@ public class AIPanel : Panel
             if (sent.ToAttachment() is { } attachment)
                 attachments.Add(attachment);
             else
-                Bridge.Post(new NoticeEvent("error", $"Could not attach {sent.Name}."));
+                Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Could not attach {0}."), sent.Name)));
         }
 
         if ((text.Length == 0 && attachments.Count == 0) || !TryDoc(out RhinoDoc doc))
@@ -303,7 +303,7 @@ public class AIPanel : Panel
         // writing, and so a prompt is never silently dropped when no agent is available.
         if (!AgentHost.TryFor(doc, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", "No AI agent available. Open AI settings to configure one."));
+            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return;
         }
 
@@ -326,12 +326,12 @@ public class AIPanel : Panel
             return;
         if (!AgentHost.TryFor(doc, out IAgentRunner agent))
         {
-            Bridge.Post(new NoticeEvent("error", "No AI agent available. Open AI settings to configure one."));
+            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return;
         }
         if (!AgentDispatch.TryEnsureListener(doc, out int port))
         {
-            Bridge.Post(new NoticeEvent("error", "Could not start an MCP server for this document."));
+            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("Could not start an MCP server for this document.")));
             return;
         }
         ExitReview();
@@ -408,7 +408,7 @@ public class AIPanel : Panel
     {
         if (!ConversationStore.TryLoad(sessionId, out ConversationDto dto))
         {
-            Bridge.Post(new NoticeEvent("error", "That conversation could not be loaded."));
+            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("That conversation could not be loaded.")));
             return;
         }
 
@@ -433,7 +433,7 @@ public class AIPanel : Panel
         // process and silently abandon the in-flight answer, so refuse rather than abort it.
         if (TurnRunning())
         {
-            Bridge.Post(new NoticeEvent("warn", "Stop the running turn before resuming another conversation."));
+            Bridge.Post(new NoticeEvent("warn", Rhino.UI.LOC.STR("Stop the running turn before resuming another conversation.")));
             return;
         }
 
@@ -441,7 +441,7 @@ public class AIPanel : Panel
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", $"Cannot resume: agent '{dto.AgentName}' is no longer available."));
+            Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
             return;
         }
 

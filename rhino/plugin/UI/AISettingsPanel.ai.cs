@@ -17,7 +17,7 @@ internal sealed class AISettingsPanel : Panel
     // they moved here so the grid stays a plain selection list and every editable property reads top-down.
     private Label NameHeader { get; } = new() { Font = Fonts.Sans(13, FontStyle.Bold) };
     private Label AvailableLabel { get; } = new();
-    private CheckBox EnabledBox { get; } = new() { Text = "Enabled" };
+    private CheckBox EnabledBox { get; } = new() { Text = Rhino.UI.LOC.STR("Enabled") };
     private DropDown ModelBox { get; } = new();
     private TextArea SearchPathsBox { get; } = new() { Wrap = false, Height = 70, ReadOnly = true };
     private TextArea SystemPromptBox { get; } = new() { Wrap = true, Height = 90 };
@@ -34,7 +34,7 @@ internal sealed class AISettingsPanel : Panel
 
     // Sentinel shown in the grid's Model dropdown for an empty model. Picking it stores an empty
     // string, i.e. "pass no --model, let the CLI choose its own default".
-    private const string DefaultModelLabel = "(default)";
+    private static string DefaultModelLabel => Rhino.UI.LOC.STR("(default)");
 
     // Suppresses the editor->row write-back while we are programmatically loading
     // the editor from a freshly selected row.
@@ -48,9 +48,9 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = "AI Agents", Content = AgentsTab() });
-        tabs.Pages.Add(new TabPage { Text = "MCP Servers", Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = "Tools", Content = ToolsTab() });
+        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("AI Agents"), Content = AgentsTab() });
+        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("MCP Servers"), Content = McpServersTab() });
+        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("Tools"), Content = ToolsTab() });
 
         Content = tabs;
     }
@@ -117,7 +117,7 @@ internal sealed class AISettingsPanel : Panel
         AgentGrid.DataStore = Rows;
         AgentGrid.Columns.Add(new GridColumn
         {
-            HeaderText = "Default",
+            HeaderText = Rhino.UI.LOC.STR("Default"),
             HeaderTextAlignment = TextAlignment.Center,
             DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.DefaultGlyph), TextAlignment = TextAlignment.Center },
             Editable = false,
@@ -126,7 +126,7 @@ internal sealed class AISettingsPanel : Panel
         });
         AgentGrid.Columns.Add(new GridColumn
         {
-            HeaderText = "Agent",
+            HeaderText = Rhino.UI.LOC.STR("Agent"),
             HeaderTextAlignment = TextAlignment.Center,
             DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.Name), TextAlignment = TextAlignment.Center },
             Editable = false,
@@ -160,9 +160,9 @@ internal sealed class AISettingsPanel : Panel
                 new TableRow(NameHeader),
                 new TableRow(AvailableLabel),
                 new TableRow(EnabledBox),
-                new TableRow(LabeledColumn("Model:", ModelBox)),
-                new TableRow(LabeledColumn("Found at:", SearchPathsBox)),
-                new TableRow(LabeledColumn("Prompt:", SystemPromptBox)),
+                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Model:"), ModelBox)),
+                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Found at:"), SearchPathsBox)),
+                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Prompt:"), SystemPromptBox)),
                 new TableRow { ScaleHeight = true },
             },
         };
@@ -195,9 +195,9 @@ internal sealed class AISettingsPanel : Panel
 
     private ContextMenu BuildGridContextMenu()
     {
-        ButtonMenuItem setDefault = new() { Text = "Set Default" };
+        ButtonMenuItem setDefault = new() { Text = Rhino.UI.LOC.STR("Set Default") };
         setDefault.Click += (_, _) => SetSelectedDefault();
-        ButtonMenuItem reset = new() { Text = "Restore Defaults" };
+        ButtonMenuItem reset = new() { Text = Rhino.UI.LOC.STR("Restore Defaults") };
         reset.Click += (_, _) => ResetSelected();
 
         ContextMenu menu = new() { Items = { setDefault, reset } };
@@ -217,9 +217,10 @@ internal sealed class AISettingsPanel : Panel
 
         DialogResult confirm = MessageBox.Show(
             this,
-            $"Reset \"{row.Name}\" to its default settings? This clears its model and prompt, "
-                + "and re-enables it.",
-            "Reset Agent",
+            string.Format(
+                Rhino.UI.LOC.STR("Reset \"{0}\" to its default settings? This clears its model and prompt, and re-enables it."),
+                row.Name),
+            Rhino.UI.LOC.STR("Reset Agent"),
             MessageBoxButtons.YesNo,
             MessageBoxType.Question);
         if (confirm != DialogResult.Yes)
@@ -251,7 +252,7 @@ internal sealed class AISettingsPanel : Panel
             }
             else
             {
-                NameHeader.Text = "No agent selected";
+                NameHeader.Text = Rhino.UI.LOC.STR("No agent selected");
                 AvailableLabel.Text = string.Empty;
                 EnabledBox.Checked = false;
                 ModelBox.Items.Clear();
@@ -334,7 +335,7 @@ internal sealed class AISettingsPanel : Panel
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = "Extra MCP servers merged into every agent alongside the built-in \"rhino\" server.",
+            Text = Rhino.UI.LOC.STR("Extra MCP servers merged into every agent alongside the built-in \"rhino\" server."),
             TextColor = Colors.Gray,
         };
 
@@ -360,7 +361,7 @@ internal sealed class AISettingsPanel : Panel
                      .GroupBy(t => t.Category)
                      .OrderBy(g => CategoryOrder(g.Key)))
         {
-            ToolNode groupNode = new(group.Key) { Expanded = true };
+            ToolNode groupNode = new(CategoryLabel(group.Key)) { Expanded = true };
             foreach (ToolInfo tool in group.OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase))
             {
                 ToolNode leaf = new(tool.Name, !disabled.Contains(tool.Name), tool.Title, tool.Description)
@@ -375,9 +376,9 @@ internal sealed class AISettingsPanel : Panel
         }
 
         TreeGridView tree = new() { ShowHeader = true, DataStore = roots };
-        tree.Columns.Add(new GridColumn { HeaderText = "On", DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
-        tree.Columns.Add(new GridColumn { HeaderText = "Tool", DataCell = new TextBoxCell(1), Width = 210 });
-        tree.Columns.Add(new GridColumn { HeaderText = "Description", DataCell = new TextBoxCell(2), Width = 380 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("On"), DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Tool"), DataCell = new TextBoxCell(1), Width = 210 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Description"), DataCell = new TextBoxCell(2), Width = 380 });
         tree.CellEdited += (_, e) =>
         {
             if (e.Column != 0 || e.Item is not ToolNode node)
@@ -399,8 +400,7 @@ internal sealed class AISettingsPanel : Panel
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = "Tools the built-in \"rhino\" server exposes, grouped by behaviour. Unchecking a tool "
-                + "hides it from in-Rhino agents only; external clients still see every tool.",
+            Text = Rhino.UI.LOC.STR("Tools the built-in \"rhino\" server exposes, grouped by behaviour. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool."),
             TextColor = Colors.Gray,
         };
 
@@ -422,6 +422,14 @@ internal sealed class AISettingsPanel : Panel
         "Modify" => 1,
         "Destructive" => 2,
         _ => 3,
+    };
+
+    private static string CategoryLabel(string category) => category switch
+    {
+        "Read-only" => Rhino.UI.LOC.STR("Read-only"),
+        "Modify" => Rhino.UI.LOC.STR("Modify"),
+        "Destructive" => Rhino.UI.LOC.STR("Destructive"),
+        _ => category,
     };
 
     // A group checkbox is checked only when every tool under it is on; toggling it cascades to all
@@ -501,13 +509,13 @@ internal sealed class AISettingsPanel : Panel
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
-                error = "MCP config must be a JSON object.";
+                error = Rhino.UI.LOC.STR("MCP config must be a JSON object.");
                 return false;
             }
             if (!doc.RootElement.TryGetProperty("mcpServers", out JsonElement servers)
                 || servers.ValueKind != JsonValueKind.Object)
             {
-                error = "MCP config must contain an \"mcpServers\" object.";
+                error = Rhino.UI.LOC.STR("MCP config must contain an \"mcpServers\" object.");
                 return false;
             }
             normalized = JsonSerializer.Serialize(doc.RootElement, IndentedJson);
@@ -515,7 +523,7 @@ internal sealed class AISettingsPanel : Panel
         }
         catch (JsonException ex)
         {
-            error = $"Invalid JSON: {ex.Message}";
+            error = string.Format(Rhino.UI.LOC.STR("Invalid JSON: {0}"), ex.Message);
             return false;
         }
     }

@@ -1,3 +1,5 @@
+using Rhino.UI;
+
 namespace Rhino.AI.WebPanel;
 
 // Authored host-side beside the card's title, because the panel holds no per-tool knowledge.
@@ -7,8 +9,8 @@ internal static class ToolChips
 
     public static IReadOnlyList<PanelToolChip> None { get; } = [];
 
-    private static IReadOnlyList<PanelToolChip> CancelOnly { get; } =
-        [new PanelToolChip(CancelId, "Cancel", "stop", "danger")];
+    private static IReadOnlyList<PanelToolChip> CancelOnly =>
+        [new PanelToolChip(CancelId, LOC.STR("Cancel"), "stop", "danger")];
 
     public static IReadOnlyList<PanelToolChip> For(string toolName, bool isRunning) =>
         isRunning && IsCancellable(toolName) ? CancelOnly : None;

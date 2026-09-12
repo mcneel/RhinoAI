@@ -15,7 +15,7 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private Image? LightCachedImage { get; set; }
     private Image? DarkCachedImage { get; set; }
 
-    public AIOptionsPage() : base("AI")
+    public AIOptionsPage() : base(LOC.STR("AI"))
     {
         Panel.Width = 800;
     }
