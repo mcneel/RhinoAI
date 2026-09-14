@@ -7,6 +7,8 @@ namespace Rhino.AI;
 public interface IHarness
 {
 
+    public PermissionSet Permissions { get; }
+
 #region MCP
 
     public IReadOnlyDictionary<string, IMcp> Mcps { get; }

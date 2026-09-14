@@ -24,6 +24,11 @@ public record struct ToolReturn(string Message, ToolResult Result, string? Guida
 {
     public static ToolReturn Failure(string message, string guidance) => new(message, ToolResult.Failure, guidance);
     public static ToolReturn Success(string message) => new(message, ToolResult.Success, null);
+
+    internal static ToolReturn AskPermisson() => new ("Requested tool requires permission", ToolResult.Mixed, $"Ask user for permission using the {new Tools.AskPermission().Name} tool.");
+
+    internal static ToolReturn Refused() => new ("Tool use was refused", ToolResult.Failure, "Ask the user what to do");
+
 }
 
 public record struct ToolArg(string Name, string Description, ToolArgType Type, bool Required);
