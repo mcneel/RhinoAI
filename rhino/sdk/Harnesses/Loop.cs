@@ -9,10 +9,10 @@ public sealed class Loop(IHarness harness)
 
     private IHarness Harness { get; } = harness;
 
-    public async Task<IEnumerable<ITurn>> StartAsync(ITurn start, CancellationToken token)
+    public async Task<IEnumerable<ITurn>> StartAsync(IEnumerable<ITurn> start, CancellationToken token)
     {
         List<ITurn> conversation = [];
-        List<ITurn> nextTurn = [start];
+        List<ITurn> nextTurn = new (start);
         while (nextTurn.Count > 0)
         {
             IEnumerable<ITurn> turns = await Harness.SendAsync(nextTurn, token);
@@ -24,7 +24,7 @@ public sealed class Loop(IHarness harness)
                 if (turn is ToolTurn tool)
                 {
                     ToolReturn result = await Harness.UseToolAsync(tool.Name, tool.Args, token).ConfigureAwait(false);
-                    nextTurn.Add(new ToolResultTurn(tool.Name, result));
+                    // nextTurn.Add(new ToolResultTurn(tool.Name, result));
                 }
             }
         }

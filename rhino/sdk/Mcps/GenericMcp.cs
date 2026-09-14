@@ -1,9 +1,11 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Globalization;
+using System.Collections.Generic;
+
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rhino.AI;
@@ -48,7 +50,7 @@ public abstract class GenericMcp : IMcp
 
         foreach (ToolArg declared in tool.Args)
         {
-            if (declared.Required && !supplied.ContainsKey(declared.Name))
+            if (declared.Required && !supplied.Any(s => string.Equals(s.Name, declared.Name)))
                 return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
         }
 

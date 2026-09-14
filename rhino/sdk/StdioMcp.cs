@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Rhino.AI;
 
@@ -11,10 +12,8 @@ public sealed class StdioMcp : IMcp
 
     public string Name { get; }
 
-    public MCPConnectionType ConnectionType => MCPConnectionType.STDIO;
-
-    private Dictionary<string, Tool> PrivateTools { get; } = [];
-    public IReadOnlyDictionary<string, Tool> Tools
+    private Dictionary<string, ITool> PrivateTools { get; } = [];
+    public IReadOnlyDictionary<string, ITool> Tools
     {
         get
         {
@@ -62,6 +61,26 @@ public sealed class StdioMcp : IMcp
     public string RunTool(string ToolName, params (string Name, string Value)[] args)
     {
         // TODO :Run Tool
+        return string.Empty;
     }
 
+    public Task<bool> InitAsync(CancellationToken token)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RegisterTool(ITool tool)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
 }

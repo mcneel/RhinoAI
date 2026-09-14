@@ -2,7 +2,10 @@
 
   <PropertyGroup>
     <RootNamespace>Rhino.AI</RootNamespace>
-    <InternalIsVisibleTo>sdk.tests</InternalIsVisibleTo>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="sdk.tests" />
+  </ItemGroup>
 
 </Project>

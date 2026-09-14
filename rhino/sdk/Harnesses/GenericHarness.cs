@@ -29,8 +29,8 @@ public abstract class GenericHarness : IHarness
         AddMcp(new DefaultToolsMcp());
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(ITurn turn, CancellationToken token)
-    => await Loop.StartAsync(turn, token);
+    public async Task<IEnumerable<ITurn>> LoopAsync(IEnumerable<ITurn> start, CancellationToken token)
+    => await Loop.StartAsync(start, token);
 
     public abstract Task<IEnumerable<ITurn>> SendAsync(IEnumerable<ITurn> turn, CancellationToken token);
 

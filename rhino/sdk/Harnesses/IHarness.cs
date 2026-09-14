@@ -20,7 +20,7 @@ public interface IHarness
 #region Send/Recieve
 
     public Task<IEnumerable<ITurn>> SendAsync(IEnumerable<ITurn> turn, CancellationToken token);
-    public Task<IEnumerable<ITurn>> LoopAsync(ITurn turn, CancellationToken token);
+    public Task<IEnumerable<ITurn>> LoopAsync(IEnumerable<ITurn> start, CancellationToken token);
 
 #endregion
 

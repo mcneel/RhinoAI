@@ -32,6 +32,9 @@ dotnet_style_prefer_compound_assignment = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
 dotnet_style_namespace_match_folder = true:suggestion
 
+# IDE0028: Simplify collection initialization
+dotnet_diagnostic.IDE0028.severity = none
+
 [*.cs]
 # New line preferences
 csharp_new_line_before_open_brace = all
@@ -103,7 +106,7 @@ csharp_preserve_single_line_statements = true
 
 # Expression-level preferences
 dotnet_style_object_initializer = true:suggestion
-dotnet_style_collection_initializer = true:suggestion
+dotnet_style_collection_initializer = true:none
 dotnet_style_explicit_tuple_names = true:suggestion
 dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
@@ -151,7 +154,7 @@ csharp_space_between_square_brackets = false
 csharp_using_directive_placement = outside_namespace:silent
 csharp_prefer_simple_using_statement = true:suggestion
 csharp_prefer_braces = true:silent
-csharp_style_namespace_declarations = block_scoped:silent
+csharp_style_namespace_declarations = block_scoped:none
 csharp_style_prefer_method_group_conversion = true:silent
 csharp_style_prefer_top_level_statements = true:silent
 csharp_style_prefer_primary_constructors = true:suggestion
@@ -161,3 +164,6 @@ csharp_style_expression_bodied_local_functions = false:silent
 # Analyzer severities
 # IDE0305: "use a collection expression" for a fluent .ToList()/.ToArray(); off deliberately
 dotnet_diagnostic.IDE0305.severity = none
+
+# IDE0160: Convert to block scoped namespace
+dotnet_diagnostic.IDE0160.severity = none
