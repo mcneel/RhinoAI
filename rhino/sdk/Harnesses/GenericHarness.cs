@@ -13,10 +13,10 @@ public abstract class GenericHarness : IHarness
 
     public string DefaultPrompt { get; set; } = "You are a Rhino Expert.";
 
-    protected Dictionary<string, IMcp> PrivateMcps { get; } = new (StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, IMcp> PrivateMcps { get; } = new (StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
 
-    protected Dictionary<string, ISkill> PrivateSkills { get; } = new (StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, ISkill> PrivateSkills { get; } = new (StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
 
     protected List<JsonNode> Contents { get; } = [];
@@ -26,7 +26,7 @@ public abstract class GenericHarness : IHarness
     public GenericHarness()
     {
         Loop = new(this);
-        PrivateMcps.Add(nameof(DefaultToolsMcp), new DefaultToolsMcp());
+        AddMcp(new DefaultToolsMcp());
     }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(ITurn turn, CancellationToken token)
@@ -54,5 +54,7 @@ public abstract class GenericHarness : IHarness
     }
 
     public abstract Task<bool> RequestPermissionFromUser(string name, List<IToolArg> args, CancellationToken token);
+
+    public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
 
 }

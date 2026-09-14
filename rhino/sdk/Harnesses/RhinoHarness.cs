@@ -11,7 +11,7 @@ public sealed class RhinoHarness : GenericHarness
     public RhinoHarness() : base()
     {
         StdioMcp rhinoMcp = new ("rhino", new Uri(ResolveRouter));
-        PrivateMcps.Add(rhinoMcp.Name, rhinoMcp);
+        AddMcp(rhinoMcp);
     }
 
     public string ResolveRouter => throw new NotImplementedException("Where is the Router?");

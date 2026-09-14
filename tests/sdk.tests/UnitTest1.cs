@@ -21,7 +21,7 @@ public class Tests
 
         Model gemini = new ("gemini-3.5-flash-lite", "Google");
         RhinoHarness harness = new();
-        harness.Mcps.Add(mcp);
+        harness.AddMcp(mcp);
         Agent agent = new(gemini, harness);
 
         CancellationTokenSource source = new(100_000);
@@ -44,8 +44,8 @@ public class Tests
 
         public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
         {
-            if (!args.TryGetAs("city", out string city)) return "City parameter is mandatory";
-            return $"The weather is 18 degrees and extremely stormy in {city}";
+            if (!args.TryGetString("city", out string city)) return ToolReturn.Failure("City parameter is mandatory", "Please include the City parameter");
+            return ToolReturn.Success($"The weather is 18 degrees and extremely stormy in {city}");
         }
 
     }
