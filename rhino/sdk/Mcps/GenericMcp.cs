@@ -32,21 +32,18 @@ public abstract class GenericMcp : IMcp
 
     public Task<bool> InitAsync(CancellationToken token) => Task.FromResult(true);
 
-    public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<KeyValuePair<string, string>> args, CancellationToken token)
+    public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
             return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
 
-        Dictionary<string, object> supplied = new(args.Count);
-        foreach (KeyValuePair<string, string> argument in args)
+        List<IToolArg> supplied = new(args.Count);
+        foreach (IToolArg argument in args)
         {
-            if (Declared(tool, argument.Key) is not ToolArg declared)
-                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Key}'.", $"Call '{toolName}' again with only the arguments it declares.");
+            if (Declared(tool, argument.Name) is not ToolArg declared)
+                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
 
-            if (ToValue(declared, argument.Value) is not object value)
-                return ToolReturn.Failure($"Argument '{declared.Name}' wants {declared.Type}, got \"{argument.Value}\".", $"Call '{toolName}' again with '{declared.Name}' as {declared.Type}.");
-
-            supplied[declared.Name] = value;
+            supplied.Add(argument);
         }
 
         foreach (ToolArg declared in tool.Args)

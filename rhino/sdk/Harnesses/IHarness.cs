@@ -26,7 +26,7 @@ public interface IHarness
 
 #region Tools
 
-    public Task<ToolReturn> UseToolAsync(string name, List<KeyValuePair<string, string>> args, CancellationToken token);
+    public Task<ToolReturn> UseToolAsync(string name, List<IToolArg> args, CancellationToken token);
 
 #endregion
 

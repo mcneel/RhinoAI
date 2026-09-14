@@ -14,7 +14,7 @@ public class WriteTool : ITool
     public bool ReadOnly { get; } = false;
     public bool Destructive { get; } = true;
     public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.String, true),
+        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
         new ToolArg("data", "The data to write", ToolArgType.String, true),
     ];
 
@@ -24,12 +24,12 @@ public class WriteTool : ITool
     }
 
 
-    public async Task<ToolReturn> UseAsync(IReadOnlyDictionary<string, object> args, CancellationToken token)
+    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!args.TryGetAs(Args[0].Name, out string filePath))
+        if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call write again with file set to an absolute path.");
 
-        if (!args.TryGetAs(Args[1].Name, out string data))
+        if (!args.TryGetString(Args[1].Name, out string data))
             return ToolReturn.Failure("data parameter is mandatory", "Call write again with data set to the whole contents of the file.");
 
         if (Directory.Exists(filePath))

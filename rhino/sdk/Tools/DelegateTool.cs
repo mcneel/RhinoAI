@@ -1,7 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Rhino.AI.Tools;
 
@@ -17,21 +18,30 @@ public class DelegateTool : ITool
         new ToolArg("context", "The Context for the SubAgent", ToolArgType.String, true),
     ];
 
+    private Func<string, Agent>? SubAgent { get; }
+
     public DelegateTool()
     {
-        
-    }
-    
 
-    public async Task<ToolReturn> UseAsync(IReadOnlyDictionary<string, object> args, CancellationToken token)
+    }
+
+    public DelegateTool(Func<string, Agent> subAgent)
     {
-        if (!args.TryGetAs(Args[0].Name, out string model))
+        SubAgent = subAgent;
+    }
+
+    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+    {
+        if (!args.TryGetString(Args[0].Name, out string model))
             return ToolReturn.Failure("model parameter is mandatory", "Call delegate again with model set to the model the sub agent should run on.");
 
-        if (!args.TryGetAs(Args[1].Name, out string context))
+        if (!args.TryGetString(Args[1].Name, out string context))
             return ToolReturn.Failure("context parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
 
-        Agent agent = new (model, new ReadOnlyHarness());
+        if (SubAgent is null)
+            return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
+
+        Agent agent = SubAgent(model);
         IEnumerable<ITurn> turns = await agent.SendAsync(context, token).ConfigureAwait(false);
 
         StringBuilder report = new();

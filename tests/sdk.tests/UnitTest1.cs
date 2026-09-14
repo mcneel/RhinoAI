@@ -42,7 +42,7 @@ public class Tests
           new ToolArg("city", "The City to check", ToolArgType.String, true)  
         ];
 
-        public async Task<ToolReturn> UseAsync(IReadOnlyDictionary<string, object> args, CancellationToken token)
+        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
         {
             if (!args.TryGetAs("city", out string city)) return "City parameter is mandatory";
             return $"The weather is 18 degrees and extremely stormy in {city}";

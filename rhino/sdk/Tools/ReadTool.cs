@@ -14,7 +14,7 @@ public class ReadTool : ITool
     public bool ReadOnly { get; } = true;
     public bool Destructive { get; } = false;
     public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.String, true),
+        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
     ];
 
     public ReadTool()
@@ -23,9 +23,9 @@ public class ReadTool : ITool
     }
 
 
-    public async Task<ToolReturn> UseAsync(IReadOnlyDictionary<string, object> args, CancellationToken token)
+    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!args.TryGetAs(Args[0].Name, out string filePath))
+        if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call read again with file set to an absolute path.");
 
         FileInfo info = new(filePath);

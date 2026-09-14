@@ -14,20 +14,20 @@ public class EditTool : ITool
     public bool ReadOnly { get; } = false;
     public bool Destructive { get; } = true;    
     public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.String, true),
+        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
         new ToolArg("old", "The exact text to replace", ToolArgType.String, true),
         new ToolArg("new", "The text to replace it with", ToolArgType.String, true),
     ];
 
-    public async Task<ToolReturn> UseAsync(IReadOnlyDictionary<string, object> args, CancellationToken token)
+    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!args.TryGetAs(Args[0].Name, out string filePath))
+        if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call edit again with file set to an absolute path.");
 
-        if (!args.TryGetAs(Args[1].Name, out string oldText))
+        if (!args.TryGetString(Args[1].Name, out string oldText))
             return ToolReturn.Failure("old parameter is mandatory", "Call edit again with old set to the exact text to replace.");
 
-        if (!args.TryGetAs(Args[2].Name, out string newText))
+        if (!args.TryGetString(Args[2].Name, out string newText))
             return ToolReturn.Failure("new parameter is mandatory", "Call edit again with new set to the replacement text.");
 
         if (oldText.Length == 0)
