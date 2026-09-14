@@ -7,12 +7,25 @@ namespace Rhino.AI;
 public interface IHarness
 {
 
-    // public bool RegisterTool();
+#region MCP
+
+    public IReadOnlyDictionary<string, IMcp> Mcps { get; }
+    
+    public IReadOnlyDictionary<string, ISkill> Skills { get; }
+
+#endregion
+
+#region Send/Recieve
 
     public Task<IEnumerable<ITurn>> SendAsync(IEnumerable<ITurn> turn, CancellationToken token);
     public Task<IEnumerable<ITurn>> LoopAsync(ITurn turn, CancellationToken token);
-    public ToolResult UseTool(string name, List<KeyValuePair<string, string>> args);
 
-    // MCP Servers
+#endregion
+
+#region Tools
+
+    public Task<ToolReturn> UseToolAsync(string name, List<KeyValuePair<string, string>> args, CancellationToken token);
+
+#endregion
 
 }

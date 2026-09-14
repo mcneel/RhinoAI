@@ -13,8 +13,3 @@ public sealed record ToolTurn(string Name, List<KeyValuePair<string, string>> Ar
         => PrivateData ??= JsonSerializer.Serialize(new { Name, Args }) ?? string.Empty;
 
 }
-
-public sealed record ToolResult(string Json)
-{
-
-}
