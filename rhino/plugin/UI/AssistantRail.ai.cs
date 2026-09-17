@@ -24,6 +24,9 @@ internal interface IRailHost
     bool Attach(Control rail, int width);
 
     void Detach();
+
+    /// <summary>Narrows or widens the window by the rail's width, so its own content keeps its size.</summary>
+    void ChangeWidthBy(int pixels);
 }
 
 // An assistant as a rail down the right-hand side of the window its work is in, and the window of
@@ -35,6 +38,9 @@ internal interface IRailHost
 internal sealed class AssistantRail
 {
     private const int DefaultWidth = 420;
+
+    // Below this the assistant stops being usable, so it never comes back from a free window narrower.
+    private const int MinWidth = 260;
 
     public AssistantRail(AIProfile profile, IRailHost host, Func<uint, AIPanel> assistant)
     {
@@ -81,11 +87,22 @@ internal sealed class AssistantRail
                 return;
             }
 
+            // Read before Leave() takes the free window down: it comes back at the width it was given there.
+            bool returning = Floating is { IsDisposed: false };
+            int width = returning ? Math.Max(MinWidth, Floating!.Width) : DefaultWidth;
+
             Build(documentSerialNumber);
             Leave();
 
-            if (Rail is null || !Host.Attach(Rail, DefaultWidth))
+            // Takes back the room released when it left, so the window's own content keeps its width.
+            if (returning)
+                Host.ChangeWidthBy(width);
+
+            if (Rail is null || !Host.Attach(Rail, width))
             {
+                if (returning)
+                    Host.ChangeWidthBy(-width);
+
                 RhinoApp.WriteLine($"[rhino-ai] the assistant could not be put beside {Host.Name}.");
                 Close();
                 return;
@@ -191,7 +208,16 @@ internal sealed class AssistantRail
             return;
 
         Rectangle at = OnScreen();
+
+        // Read before Leave() clears it: only a rail that was inside the window is holding room in it.
+        bool wasAttached = Attached;
+
         Leave();
+
+        // The window gives back exactly the room the rail held, so the free window lands beside it, not over it.
+        if (wasAttached && at.Width > 0)
+            Host.ChangeWidthBy(-at.Width);
+
         EnterFree(at);
     }
 

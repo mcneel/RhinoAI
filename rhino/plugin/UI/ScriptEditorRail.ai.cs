@@ -2,6 +2,7 @@
 
 using System.Threading.Tasks;
 
+using Eto.Drawing;
 using Eto.Forms;
 
 namespace Rhino.AI;
@@ -35,6 +36,9 @@ internal sealed class ScriptEditorRailHost : IRailHost
     // Below this the code half stops being usable, so the rail gives up its preferred width first.
     private const int MinEditorWidth = 520;
 
+    // Below this the assistant stops being usable, so the splitter will not drag it narrower.
+    private const int MinRailWidth = 260;
+
     public string Name => "the Script Editor";
 
     public bool IsShowing => ScriptEditorSession.IsShowing;
@@ -53,10 +57,6 @@ internal sealed class ScriptEditorRailHost : IRailHost
         if (Editor is not { IsDisposed: false } editor || editor.Content is not { } existing)
             return false;
 
-        int room = Math.Min(width, Math.Max(0, editor.Width - MinEditorWidth));
-        if (room <= 0)
-            room = width;
-
         Split = new Splitter
         {
             Orientation = Orientation.Horizontal,
@@ -64,11 +64,26 @@ internal sealed class ScriptEditorRailHost : IRailHost
             FixedPanel = SplitterFixedPanel.Panel2,
             Panel1 = existing,
             Panel2 = rail,
-            Position = Math.Max(MinEditorWidth, editor.Width - room),
+            // Neither half can be dragged away to nothing.
+            Panel1MinimumSize = MinEditorWidth,
+            Panel2MinimumSize = MinRailWidth,
+            // Panel2's own width under this FixedPanel, applied at the first real layout rather than now.
+            RelativePosition = width,
         };
 
         editor.Content = Split;
         return true;
+    }
+
+    public void ChangeWidthBy(int pixels)
+    {
+        if (Editor is not { IsDisposed: false } editor)
+            return;
+
+        int width = Math.Max(MinEditorWidth, editor.Width + pixels);
+
+        // Assigned as a Size so only the right edge moves: that is the side the rail was on.
+        editor.Size = new Size(width, editor.Height);
     }
 
     public void Detach()

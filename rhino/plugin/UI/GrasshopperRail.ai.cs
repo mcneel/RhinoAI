@@ -23,6 +23,9 @@ internal static class GrasshopperRail
 // wrapping an Eto Content, which is what the Script Editor's host does.
 internal sealed class GrasshopperRailHost : IRailHost
 {
+    // Below this the canvas stops being usable, so the room the rail gives back stops there.
+    private const int MinCanvasWidth = 520;
+
     public string Name => "Grasshopper";
 
     public bool IsShowing => GrasshopperWindows.IsShowing;
@@ -49,5 +52,23 @@ internal sealed class GrasshopperRailHost : IRailHost
     {
         Native?.Detach();
         Native = null;
+    }
+
+    public void ChangeWidthBy(int pixels)
+    {
+        if (Editor is not { } editor)
+            return;
+
+        try
+        {
+            // WinForms keeps Left when Width changes, so only the right edge moves, as in the editor.
+            dynamic window = editor;
+            int width = (int)window.Width + pixels;
+            window.Width = Math.Max(MinCanvasWidth, width);
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[rhino-ai] could not resize the Grasshopper window: {ex.GetBaseException().Message}");
+        }
     }
 }
