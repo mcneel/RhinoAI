@@ -22,10 +22,12 @@ internal sealed record TurnDto(
     TokenUsage Usage = default,
     IReadOnlyList<AttachmentInfo>? Attachments = null);
 
+// Profile names the panel that owns the transcript; one saved before it existed reads as Rhino's.
 internal sealed record ConversationDto(
     string SessionId,
     string AgentName,
     string DocTitle,
     DateTimeOffset StartedAt,
     IReadOnlyList<TurnEventDto> Lifecycle,
-    IReadOnlyList<TurnDto> Turns);
+    IReadOnlyList<TurnDto> Turns,
+    string Profile = "ai");

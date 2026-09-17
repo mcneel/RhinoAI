@@ -20,6 +20,8 @@ public class RhinoAIPlugin : PlugIn
         if (RouterStaging.EnsureStaged().StagingError is string stagingError)
             RhinoApp.WriteLine($"RhinoAI: could not stage the MCP router ({stagingError}).");
 
+        // The one docked panel. The other two assistants are not Rhino panels: each lives in the
+        // window its work is in, the Script Editor's and Grasshopper's.
         Rhino.UI.Panels.RegisterPanel(this, typeof(UI.AIPanel), Rhino.UI.LOC.STR("AI"), LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
 
         WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
@@ -65,6 +67,7 @@ public class RhinoAIPlugin : PlugIn
     {
         CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
+        RhinoAIHost.StopApplicationListener();
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;

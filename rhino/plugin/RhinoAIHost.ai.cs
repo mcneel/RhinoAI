@@ -92,6 +92,42 @@ internal static class RhinoAIHost
         Servers.TryGetValue(doc.RuntimeSerialNumber, out McpServer? server)
             && (server?.HasStarted ?? false);
 
+    // The application's own listener, for an assistant that is Rhino's rather than a document's.
+    // Deliberately not in Servers: it is not a slot. It is never announced to the router, never
+    // reaped when a document closes, and lives until the plug-in unloads.
+    private static McpServer? AppServer { get; set; }
+
+    public static bool TryGetApplicationPort(out int port)
+    {
+        port = -1;
+        if (AppServer is not { HasStarted: true } server)
+            return false;
+        port = server.Port;
+        return true;
+    }
+
+    public static bool StartApplicationListener(AIProfile profile, out int port)
+    {
+        if (TryGetApplicationPort(out port))
+            return true;
+
+        if (!TryGetNextPort(out port))
+            return false;
+
+        McpServer server = new();
+        if (!server.Start(port, profile))
+            return false;
+
+        AppServer = server;
+        return true;
+    }
+
+    public static void StopApplicationListener()
+    {
+        AppServer?.Stop();
+        AppServer = null;
+    }
+
     public static bool TryGetPortFor(RhinoDoc doc, out int port)
     {
         port = -1;
@@ -115,6 +151,10 @@ internal static class RhinoAIHost
         if (Servers.Count > 0)
         {
             candidate = Servers.Max(s => s.Value.Port) + 1;
+        }
+        if (AppServer is { HasStarted: true } app && app.Port >= candidate)
+        {
+            candidate = app.Port + 1;
         }
 
         if (TryBindCandidate(candidate, out port))

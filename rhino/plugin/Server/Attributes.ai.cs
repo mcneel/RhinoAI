@@ -9,7 +9,9 @@ namespace Rhino.AI.Server;
 internal sealed class McpServerToolTypeAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-internal sealed class McpServerToolAttribute(string name, string? title = null, bool readOnly = false, bool destructive = false) : Attribute
+internal sealed class McpServerToolAttribute(
+    string name, string? title = null, bool readOnly = false, bool destructive = false,
+    bool enabledByDefault = true, bool confirmByDefault = false) : Attribute
 {
     public string? Name { get; } = name;
     public string? Title { get; } = title;
@@ -18,6 +20,17 @@ internal sealed class McpServerToolAttribute(string name, string? title = null, 
 
     public bool ReadOnly { get; } = readOnly;
     public bool Destructive { get; } = destructive;
+
+    // The mode the in-Rhino agent starts with (Off / On / Ask); the user overrides it in AI Settings.
+    public bool EnabledByDefault { get; } = enabledByDefault;
+    public bool ConfirmByDefault { get; } = confirmByDefault;
+}
+
+// Groups a tool type's tools under one label in AI Settings and in the panel's quick switches.
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+internal sealed class ToolGroupAttribute(string label) : Attribute
+{
+    public string Label { get; } = label;
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

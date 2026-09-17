@@ -89,7 +89,7 @@ The totals are not smaller, and it would be dishonest to imply they are. `rhino/
 - **Markdown with highlighted code.** Headings, lists, tables, blockquotes, inline code, and fenced code with a language label and a copy button. The old panel put raw text in a `Label`.
 - **Tool results rendered as the thing they are.** A capture shows the image inline without a click. A layer listing shows a table. A selection shows a clickable object list that reveals in the viewport. A solve shows component and diagnostic chips. Raw JSON is still one click away, syntax-highlighted.
 - **`@` context.** Mention the selection, a layer, the active view, the document or the open Grasshopper file, and it rides along with the prompt as a chip. This is the affordance a CAD agent most obviously wants and Eto made awkward.
-- **`/` commands** in the composer: new, history, agent, stop, settings.
+- **`/` commands** in the composer: new, history, agent, stop, tools, settings.
 - **Per-turn revert.** `TurnUndoCheckpoint` already makes a turn one undo record; the turn footer now exposes it.
 - **A plan strip** for agents that emit one.
 - **Searchable history** as a drawer, instead of a dropdown of truncated labels.

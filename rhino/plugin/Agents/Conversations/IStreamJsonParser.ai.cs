@@ -44,6 +44,13 @@ internal interface IStreamJsonParser
     // concern, not the runner's.
     public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume);
 
+    // True when this stderr line is the CLI saying it has no such session, i.e. refusing the id the
+    // spawn passed as its resume target. Consulted only for a spawn that did pass one, so a match is
+    // proof the saved id is gone and the runner can re-open fresh instead of wedging on it. False for
+    // a CLI whose wording is not known: the runner still infers a refusal from an exit before the
+    // resumed session has completed a turn.
+    public bool IsResumeRejection(string stderrLine);
+
     // The single newline-framed stdin line that carries one user turn (a JSON envelope for Claude,
     // plain text for Codex). Pure: built only from the ACP prompt blocks the runner already has.
     public string FormatTurn(IReadOnlyList<Acp.ContentBlock> prompt);

@@ -183,5 +183,10 @@ export function app(ctx: PanelContext): Child {
       () => ui.overlay() === 'history',
       () => historyDrawer(ctx),
     ),
+    // The permissions menu itself lives in the composer, anchored above the prompt; only the scrim is here.
+    when(
+      () => ui.overlay() === 'permissions',
+      () => el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }),
+    ),
   );
 }

@@ -1246,6 +1246,89 @@ a:hover { text-decoration: underline; }
   z-index: 6;
 }
 
+/* Permissions, anchored above the prompt like the slash menu. The composer is lifted over the
+   scrim (z 8) while it is open, so the menu takes the popover's own level. */
+.composer.permissions-open { z-index: 9; }
+.permissions-menu {
+  position: absolute;
+  bottom: 100%;
+  inset-inline: 0;
+  margin-bottom: 5px;
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 4px;
+  z-index: 9;
+}
+.permission-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: var(--r-sm);
+}
+.permission-row:hover { background: var(--surface-2); }
+.permission-row label { display: flex; align-items: center; gap: 7px; min-width: 0; cursor: pointer; }
+.permission-row .permission-on { flex: 1; }
+.permission-row .permission-on b { font-weight: 550; font-size: var(--fs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.permission-row .permission-ask-toggle { flex: none; font-size: var(--fs-xs); color: var(--text-dim); }
+.permission-row.dim .permission-on b { color: var(--text-faint); font-weight: 400; }
+.permission-row.dim .permission-ask-toggle { opacity: .5; }
+.permission-row input { accent-color: var(--accent); flex: none; margin: 0; }
+
+/* The Ask card, in the transcript rather than over it: the turn is blocked until it is answered, so
+   it sits where the call would have landed and reads as part of the conversation. */
+.permission-card {
+  margin: 6px 0 2px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r);
+  animation: ask-in .2s cubic-bezier(.2, .8, .3, 1) both;
+}
+.permission-card-head { display: flex; align-items: center; gap: 7px; min-width: 0; flex-wrap: wrap; }
+.permission-card-head .glyph {
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex: none;
+}
+.permission-card-head b { font-weight: 600; }
+.permission-card-detail {
+  margin: 0;
+  padding: 7px 9px;
+  max-height: 160px;
+  overflow: auto;
+  scrollbar-width: thin;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.permission-card-remember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.permission-card-remember input { accent-color: var(--accent); flex: none; margin: 0; }
+.permission-card-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
 /* ------------------------------------------------- review chrome (dev only) */
 
 .devframe {

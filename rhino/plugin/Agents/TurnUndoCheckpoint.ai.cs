@@ -22,7 +22,8 @@ internal sealed class TurnUndoCheckpoint
 
     // 0 means BeginUndoRecord declined (undo disabled, or a record was already open). We then own
     // nothing and must not call EndUndoRecord; whoever opened the existing record will close it.
-    private uint RecordSerial { get; }
+    // Public because the turn keeps it: it is what the panel's Revert undoes (see TurnRevert).
+    public uint RecordSerial { get; }
 
     private TurnUndoCheckpoint(RhinoDoc doc, uint recordSerial)
     {
@@ -33,7 +34,14 @@ internal sealed class TurnUndoCheckpoint
     public static Task<TurnUndoCheckpoint> OpenAsync(RhinoDoc doc, string description)
     {
         return OnUiThreadAsync(() =>
-            new TurnUndoCheckpoint(doc, doc.BeginUndoRecord(description)));
+        {
+            uint serial = doc.BeginUndoRecord(description);
+            // From the first record we own onwards, watch what becomes of it: the user can undo it
+            // themselves long before they think to press Revert.
+            if (serial != 0)
+                TurnRevert.Watch();
+            return new TurnUndoCheckpoint(doc, serial);
+        });
     }
 
     public Task CloseAsync()

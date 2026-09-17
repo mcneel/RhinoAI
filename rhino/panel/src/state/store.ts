@@ -17,6 +17,8 @@ import {
   type NoticeLevel,
   type PendingQuestion,
   type PlanStep,
+  type PermissionAsk,
+  type PermissionGroup,
   type TokenUsage,
   type ToolCall,
   type TurnImage,
@@ -96,6 +98,9 @@ export class Store {
   readonly agents = signal<readonly AgentInfo[]>([]);
   readonly activeAgentName = signal<string | null>(null);
   readonly context = signal<readonly ContextItem[]>([]);
+  readonly permissionGroups = signal<readonly PermissionGroup[]>([]);
+  /** Calls waiting for an answer, newest last. Each is blocking the agent's turn. */
+  readonly permissionAsks = signal<readonly PermissionAsk[]>([]);
   readonly history = signal<readonly HistoryEntry[]>([]);
   readonly session = signal<SessionView | null>(null);
   readonly turns = signal<readonly TurnView[]>([]);
@@ -119,8 +124,10 @@ export class Store {
 
   readonly running: ReadSignal<boolean> = computed(() => this.currentTurn()?.status() === 'running');
 
-  /** The agent is not thinking while it is blocked on unanswered questions. */
-  readonly thinking: ReadSignal<boolean> = computed(() => this.running() && this.questions().length === 0);
+  /** The agent is not thinking while it is blocked on the user: an unanswered question or ask card. */
+  readonly thinking: ReadSignal<boolean> = computed(
+    () => this.running() && this.questions().length === 0 && this.permissionAsks().length === 0,
+  );
 
   readonly readOnly: ReadSignal<boolean> = computed(() => this.session()?.readOnly === true);
 
@@ -149,6 +156,21 @@ export class Store {
         this.context.set(event.items);
         return;
 
+      case 'permissions':
+        this.permissionGroups.set(event.groups);
+        return;
+
+      // Idempotent on id, like the other cards: a re-announced ask must not produce two rows.
+      case 'permission.ask':
+        this.permissionAsks.set((asks) =>
+          asks.some((ask) => ask.id === event.ask.id) ? asks : [...asks, event.ask],
+        );
+        return;
+
+      case 'permission.ask.clear':
+        this.permissionAsks.set((asks) => asks.filter((ask) => ask.id !== event.id));
+        return;
+
       case 'history':
         this.history.set(event.entries);
         return;
@@ -162,7 +184,11 @@ export class Store {
         });
         this.activeAgentName.set(event.snapshot.agent);
         this.turns.set(event.snapshot.turns.map(turnFrom));
+        // Both blocking cards belong to the transcript being replaced. The host rebuilds its feed
+        // around the new one and poses whatever is still pending again, under fresh ids, so keeping
+        // them would show a card against someone else's transcript and then double it on the way back.
         this.questions.set([]);
+        this.permissionAsks.set([]);
         return;
 
       // Idempotent on id. A host that re-announces a turn or a call must not be able to put two
@@ -226,6 +252,10 @@ export class Store {
 
       case 'turn.usage':
         this.turn(event.turnId)?.usage.set(event.usage);
+        return;
+
+      case 'turn.undoable':
+        this.turn(event.turnId)?.undoable.set(event.undoable);
         return;
 
       case 'turn.end': {

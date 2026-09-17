@@ -27,8 +27,8 @@ internal sealed class AgentRunner : IAgentRunner
 
     private bool Started { get; set; }
 
-    public AgentRunner(AgentDefinition def, string docTitle, Func<IAcpClient, Conversation, string, IAcpAgent> connect)
-        : this(def, new Conversation(Guid.NewGuid(), def.Name, docTitle), connect)
+    public AgentRunner(AgentDefinition def, AIProfile profile, string docTitle, Func<IAcpClient, Conversation, string, IAcpAgent> connect)
+        : this(def, new Conversation(Guid.NewGuid(), def.Name, docTitle, profile), connect)
     {
     }
 

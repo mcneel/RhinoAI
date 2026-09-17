@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
-// The single funnel every surface (command, command-line interceptor, panel) routes through,
-// so they all drive one active agent per doc against one shared conversation. Resolves the
-// active agent, ensures an MCP listener for the doc, then fires the turn off-thread.
+// The single funnel every surface (command, command-line interceptor, panels) routes through,
+// so they all drive one active agent per (doc, profile) against one shared conversation. Resolves
+// the active agent, ensures an MCP listener for the doc, then fires the turn off-thread.
 internal static class AgentDispatch
 {
     // One slot per doc, taken for the full Open..run..Close of a turn. It serializes the undo-record
@@ -16,6 +16,7 @@ internal static class AgentDispatch
     // declines it and that turn's mutations land in the wrong record), and it is the funnel-level
     // one-turn-at-a-time guard the panel's Send/Stop button only enforces at the UI: the interceptor
     // and AgentCommand reach PromptActive directly, so the guard has to live here, not on the button.
+    // Both panels share it: they mutate the same document.
     private static Dictionary<uint, SemaphoreSlim> DocGates { get; } = new();
 
     // At most one held ask_user answer per doc. ask_user is non-blocking (W11): the question card and
@@ -24,7 +25,7 @@ internal static class AgentDispatch
     // parked here and flushed the instant the turn's finally releases the gate. The pending slot holds
     // exactly one answer (a later answer replaces an earlier one) and is cleared only on a dispatch
     // that actually acquired the gate, so an answer is never silently dropped onto a busy gate.
-    private static Dictionary<uint, UserMessage> PendingAnswers { get; } = new();
+    private static Dictionary<uint, (AIProfile Profile, UserMessage Message)> PendingAnswers { get; } = new();
     private static object PendingLock { get; } = new();
 
     static AgentDispatch()
@@ -58,6 +59,15 @@ internal static class AgentDispatch
     // happy path needs zero setup. Shared by panel-open (warm the listener the moment an agent is
     // available) and the prompt path (the safety net if open didn't run). Idempotent: a started
     // listener is reused. Worked-or-not so callers can stay silent on the warm-up path.
+    // The listener this profile's agent talks to. An application-wide assistant gets the application's
+    // listener, whose tools resolve the document per call, so it keeps working — on the document in
+    // front — across a File>New, a document switch and a document close. Everything else gets the
+    // listener bound to its own document.
+    public static bool TryEnsureListener(RhinoDoc doc, AIProfile profile, out int port) =>
+        AgentHost.IsApplicationWide(profile)
+            ? RhinoAIHost.StartApplicationListener(profile, out port)
+            : TryEnsureListener(doc, out port);
+
     public static bool TryEnsureListener(RhinoDoc doc, out int port)
     {
         if (RhinoAIHost.TryGetPortFor(doc, out port))
@@ -74,8 +84,8 @@ internal static class AgentDispatch
     // was accepted (queued to run). A false return means nothing started: no agent, no listener, or a
     // turn is already running for this doc. Announces the busy gate so the user knows their prompt was
     // declined rather than silently dropped.
-    public static bool PromptActive(RhinoDoc doc, UserMessage message) =>
-        TryDispatch(doc, message, asAnswer: false, announceBusy: true);
+    public static bool PromptActive(RhinoDoc doc, AIProfile profile, UserMessage message) =>
+        TryDispatch(doc, profile, message, asAnswer: false, announceBusy: true);
 
     // The entry point for ask_user ANSWERS (panel card or command-line picker). The answer can land
     // while the agent's turn is still running, so it is PARKED as this doc's pending answer (replacing
@@ -84,10 +94,10 @@ internal static class AgentDispatch
     // parked it is guaranteed to be delivered, so the caller can clear the question card on the
     // winning claim. Callable from the UI thread (panel/picker); the flush marshals its real dispatch
     // onto the UI thread itself.
-    public static void AnswerActive(RhinoDoc doc, UserMessage message)
+    public static void AnswerActive(RhinoDoc doc, AIProfile profile, UserMessage message)
     {
         lock (PendingLock)
-            PendingAnswers[doc.RuntimeSerialNumber] = message;
+            PendingAnswers[doc.RuntimeSerialNumber] = (profile, message);
         FlushPendingAnswer(doc);
     }
 
@@ -104,15 +114,14 @@ internal static class AgentDispatch
     public static void FlushPendingAnswer(RhinoDoc doc) =>
         RhinoApp.InvokeOnUiThread(new Action(() =>
         {
-            UserMessage message;
+            (AIProfile Profile, UserMessage Message) held;
             lock (PendingLock)
             {
-                if (!PendingAnswers.TryGetValue(doc.RuntimeSerialNumber, out UserMessage? held))
+                if (!PendingAnswers.TryGetValue(doc.RuntimeSerialNumber, out held))
                     return;
-                message = held;
             }
 
-            TryDispatch(doc, message, asAnswer: true, announceBusy: false);
+            TryDispatch(doc, held.Profile, held.Message, asAnswer: true, announceBusy: false);
         }));
 
     // The shared acquire-or-reject path behind both a fresh prompt and an answer flush. Resolves the
@@ -132,21 +141,22 @@ internal static class AgentDispatch
     // A busy gate is never otherwise queued (or two users' intent would merge into one undo record and
     // one session); the at-most-one parked answer is the only out-of-band queue, and it is drained
     // ahead of fresh prompts.
-    private static bool TryDispatch(RhinoDoc doc, UserMessage message, bool asAnswer, bool announceBusy)
+    private static bool TryDispatch(RhinoDoc doc, AIProfile profile, UserMessage message, bool asAnswer, bool announceBusy)
     {
-        if (!AgentHost.TryFor(doc, out IAgentRunner agent))
+        if (!AgentHost.TryFor(doc, profile, out IAgentRunner agent))
         {
             RhinoApp.WriteLine("No agent available. Open AI Settings to configure one.");
             return false;
         }
 
-        if (!TryEnsureListener(doc, out int port))
+        if (!TryEnsureListener(doc, profile, out int port))
         {
             RhinoApp.WriteLine($"[{agent.Name}] could not start an MCP server for this document.");
             return false;
         }
 
-        string url = $"http://localhost:{port}/agent";
+        // Each profile has its own route on the same listener, so its agent sees its own tool modes.
+        string url = $"http://localhost:{port}{AIProfiles.Route(profile)}";
         string cwd = !string.IsNullOrEmpty(doc.Path)
             ? Path.GetDirectoryName(doc.Path) ?? Path.GetTempPath()
             : Path.GetTempPath();
@@ -205,6 +215,7 @@ internal static class AgentDispatch
         try
         {
             checkpoint = await TurnUndoCheckpoint.OpenAsync(doc, TurnUndoCheckpoint.Describe(message.Text)).ConfigureAwait(false);
+            agent.Conversation.NoteUndoRecord(checkpoint.RecordSerial);
             await agent.PromptAsync(message, url, cwd).ConfigureAwait(false);
         }
         catch (ObjectDisposedException)

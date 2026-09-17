@@ -14,6 +14,18 @@ export const EN = {
   'empty.starterCommand': 'Create a command that generates 100 random spheres',
   'empty.starterTower': 'Build a twisty tower in Grasshopper',
   'empty.starterLayers': 'Organize the objects in the active viewport into layers',
+  'empty.bodyScript':
+    'It works in the Script Editor: reading the open script, editing the lines it needs and running it. Mention @context to point it at something specific.',
+  'empty.bodyGrasshopper':
+    'It works on the Grasshopper canvas: reading the definition, placing and wiring components, and solving. Mention @context to point it at something specific.',
+  'empty.starterScriptNew':
+    'Write a new script that builds a spiral staircase, and add a few comments so I can learn',
+  'empty.starterScriptExplain': 'Explain what the open script does',
+  'empty.starterScriptPick': 'Write a script that asks me to pick curves and lofts them',
+  'empty.starterScriptFix': 'Run the open script and fix the errors',
+  'empty.starterGhRead': 'Read the canvas and tell me what this definition does',
+  'empty.starterGhTower': 'Build a twisty tower driven by a height and a twist slider',
+  'empty.starterGhSolve': 'Solve the definition and fix the components reporting errors',
   'empty.noAgent': 'No agent available',
   'empty.noAgentBody': 'Install Claude Code, Codex or Gemini CLI and sign in, then pick it here.',
   'empty.openSettings': 'Open AI settings',
@@ -139,6 +151,20 @@ export const EN = {
     'Every Apple Silicon Mac can run a recent macOS, so this usually just means pending system updates.',
   'unsupported.classic': 'The classic AI panel keeps working in the meantime.',
   'unsupported.showAnyway': 'Show it anyway',
+
+  'permissions.title': 'Permissions',
+  'permissions.button': 'Permissions: what this assistant may do  (/permissions)',
+  'permissions.command': 'Choose what this assistant may do',
+  'permissions.askToggle': 'Ask me in the chat before each call',
+  'permissions.ask': 'Ask',
+  'permissions.empty': 'Nothing to switch here',
+  'permissions.allInSettings': 'All permissions in AI settings…',
+  'permissions.askTitle': '{0} wants to run',
+  'permissions.askHint':
+    'Allow: this tool stops asking and just runs. No: it is switched off for this assistant. You can undo either one in the settings dialog, under Permissions.',
+  'permissions.remember': 'Remember this choice',
+  'permissions.allow': 'Allow',
+  'permissions.refuse': 'No',
 } as const;
 
 export type StringKey = keyof typeof EN;

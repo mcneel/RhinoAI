@@ -18,11 +18,12 @@ internal sealed record AgentDefinition(string Name, SearchPaths SearchPaths, IRe
         LoggedIn = true;
     }
 
-    public IAgentRunner GetRunner(string docTitle) => Name.ToLowerInvariant() switch
+    // The profile picks the panel's own model, prompt and MCP route for the spawned CLI.
+    public IAgentRunner GetRunner(AIProfile profile, string docTitle) => Name.ToLowerInvariant() switch
     {
-        "claude" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this))),
-        "codex" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, CodexHome.Prepare()))),
-        "gemini" => new AgentRunner(this, docTitle, (client, _, cwd) => GeminiConnection.Connect(this, client, cwd)),
+        "claude" => new AgentRunner(this, profile, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this, profile))),
+        "codex" => new AgentRunner(this, profile, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, profile, CodexHome.Prepare()))),
+        "gemini" => new AgentRunner(this, profile, docTitle, (client, _, cwd) => GeminiConnection.Connect(this, client, cwd)),
 
         // TODO : Use a better result
         _ => throw new NotImplementedException($"{Name} is not configured")

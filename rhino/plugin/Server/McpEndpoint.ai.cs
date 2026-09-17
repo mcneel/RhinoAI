@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Rhino.AI.Tools;
+
 namespace Rhino.AI.Server;
 
 // McpServer gives each listener prefix one dispatcher, handling MCP-flavoured
@@ -18,14 +20,18 @@ internal sealed class McpDispatcher
 
     private IServiceProvider Services { get; }
 
-    private bool Filtered { get; }
+    // Which assistant this route serves, or null for the external one. The external client has its
+    // own permission UI and is never gated here; an in-Rhino panel is gated by that panel's modes.
+    private AIProfile? Profile { get; }
 
-    public McpDispatcher(IServiceProvider rootServices, bool filtered)
+    private bool Filtered => Profile is not null;
+
+    public McpDispatcher(IServiceProvider rootServices, AIProfile? profile)
     {
         _tools = ToolRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
         _resources = ResourceRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
         Services = rootServices;
-        Filtered = filtered;
+        Profile = profile;
     }
 
     public async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
@@ -138,18 +144,16 @@ internal sealed class McpDispatcher
 
     private Task<JsonRpcResponse> HandleToolsList()
     {
-        HashSet<string> disabled = Filtered
-            ? new HashSet<string>(Rhino.AI.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
-            : [];
-        // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
-        // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
+        // In-panel-only tools (e.g. ask_user) are hidden from the external `/` endpoint; only an
+        // in-Rhino panel's route lists them, and only those honour that panel's per-tool modes.
+        AIProfile? gated = Profile;
         return Task.FromResult(new JsonRpcResponse
         {
             Result = new ListToolsResult
             {
                 Tools = _tools.All
                     .Where(t => Filtered || !t.InPanelOnly)
-                    .Where(t => !disabled.Contains(t.Name))
+                    .Where(t => gated is not AIProfile profile || ToolPolicy.IsAvailable(profile, t))
                     .Select(t => new ToolDescriptor
                 {
                     Name = t.Name,
@@ -247,7 +251,13 @@ internal sealed class McpDispatcher
                 }
             };
 
-        if (Filtered && Rhino.AI.AISettings.DisabledTools.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+        AIProfile? gated = Profile;
+
+        // Which assistant is calling, for the length of this call: list_enabled has to answer for
+        // the route it arrived on, and nothing else here carries that down into a tool.
+        ToolAudience.Profile = gated;
+
+        if (gated is AIProfile profile && !ToolPolicy.IsAvailable(profile, tool))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError
@@ -255,6 +265,21 @@ internal sealed class McpDispatcher
                     Code = JsonRpcErrorCode.MethodNotFound,
                     Message = $"Tool '{p.Name}' is not available.",
                 }
+            };
+
+        // A declined call is a result, not an error: the agent is told to stop rather than to retry,
+        // and the tool is never entered. The document is what locates the conversation the request is
+        // asked in; without one the policy falls back to a dialog.
+        if (gated is AIProfile asking && ToolPolicy.NeedsConfirmation(asking, tool)
+            && !await ToolPolicy.ConfirmAsync(asking, services.GetService(typeof(RhinoDoc)) as RhinoDoc, tool, p.Arguments, ct)
+                .ConfigureAwait(false))
+            return new JsonRpcResponse
+            {
+                Result = ToolResultFormatter.Format(Failure(
+                    ToolError.Refused,
+                    $"The user declined to run '{p.Name}'.",
+                    "Do not retry it on your own. Explain what you wanted to do and ask the user to "
+                    + "allow it; the tool is set to ask before each call in Rhino AI settings.")),
             };
 
         try

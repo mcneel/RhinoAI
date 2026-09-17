@@ -20,6 +20,8 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(OpenUrlCommand), "url.open")]
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
 [JsonDerivedType(typeof(OpenMenuCommand), "menu.open")]
+[JsonDerivedType(typeof(SetPermissionCommand), "permission.set")]
+[JsonDerivedType(typeof(AnswerPermissionCommand), "permission.answer")]
 internal abstract partial record PanelCommand { }
 
 internal sealed record ReadyCommand : PanelCommand;
@@ -35,7 +37,15 @@ internal sealed record DismissQuestionCommand(IReadOnlyList<string> Ids) : Panel
 internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
 internal sealed record PickAttachmentsCommand : PanelCommand;
 internal sealed record SetZoomCommand(double Level) : PanelCommand;
-internal sealed record OpenSettingsCommand : PanelCommand;
+// Page is the settings tab to land on, by label: the quick menu's link says "permissions", so
+// opening permissions opens permissions.
+internal sealed record OpenSettingsCommand(string? Page = null) : PanelCommand;
+
+// Mode is "off" | "on" | "ask"; the host answers with a fresh `permissions` event.
+internal sealed record SetPermissionCommand(string Name, string Mode) : PanelCommand;
+
+// Remember turns a one-off answer into a standing permission: allowed becomes On, refused Off.
+internal sealed record AnswerPermissionCommand(string Id, bool Allow, bool Remember) : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
 internal sealed record ClipboardCommand(string Text) : PanelCommand;
 

@@ -69,9 +69,10 @@ internal static class AskUserTool
         return tcs.Task;
     }
 
-    // UI-thread only: reads AgentHost's unsynchronized dictionaries.
+    // UI-thread only: reads AgentHost's unsynchronized dictionaries. The running turn's agent, so the
+    // card lands in whichever panel asked.
     private static ConversationLookup ResolveConversation(RhinoDoc doc) =>
-        AgentHost.TryFor(doc, out IAgentRunner agent)
+        AgentHost.TryForRunning(doc, out IAgentRunner agent)
             ? new ConversationLookup(true, agent.Conversation)
             : new ConversationLookup(false, default!);
 

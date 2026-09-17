@@ -10,36 +10,54 @@ namespace Rhino.AI;
 internal sealed class McpServer : IDisposable
 {
     private const string ExternalRoute = "/";
-    private const string AgentRoute = "/agent";
 
     private HttpListener? ExternalListener { get; set; }
-    private HttpListener? AgentListener { get; set; }
+
+    // One listener per assistant, because the route is what tells the dispatcher whose permissions
+    // to apply: /agent, /script, /grasshopper. The external "/" has no assistant and no gate.
+    private List<HttpListener> AssistantListeners { get; } = [];
     private CancellationTokenSource Cts { get; } = new CancellationTokenSource();
 
-    public bool HasStarted => ExternalListener is not null;
+    public bool HasStarted => ExternalListener is not null || AssistantListeners.Count > 0;
 
     public int Port { get; private set; }
 
     public DateTime StartTime { get; private set; } = DateTime.UtcNow;
 
-    public bool Start(RhinoDoc doc, int port)
+    // A document's own server: everything it serves acts on that document, and it goes when the
+    // document does.
+    public bool Start(RhinoDoc doc, int port) => Start(port, new DocumentServices(doc), external: true, AIProfiles.All);
+
+    // The application's server, for an assistant that belongs to Rhino rather than to one document.
+    // Only that assistant's route is mapped: the external route and the per-document panels have
+    // their own.
+    public bool Start(int port, AIProfile profile) =>
+        Start(port, new ActiveDocumentServices(), external: false, [profile]);
+
+    private bool Start(int port, IServiceProvider services, bool external, IReadOnlyList<AIProfile> profiles)
     {
         if (HasStarted)
             return true;
         Port = port;
         try
         {
-            DocumentServices services = new(doc);
+            if (external)
+                ExternalListener = Listen(port, ExternalRoute);
+            if (ExternalListener is { } external_)
+                _ = AcceptAsync(external_, new McpDispatcher(services, profile: null), ExternalRoute);
 
-            ExternalListener = Listen(port, ExternalRoute);
-            AgentListener = Listen(port, $"{AgentRoute}/");
-
-            _ = AcceptAsync(ExternalListener, new McpDispatcher(services, filtered: false), ExternalRoute);
-            _ = AcceptAsync(AgentListener, new McpDispatcher(services, filtered: true), AgentRoute);
+            foreach (AIProfile profile in profiles)
+            {
+                string route = AIProfiles.Route(profile);
+                HttpListener listener = Listen(port, $"{route}/");
+                AssistantListeners.Add(listener);
+                _ = AcceptAsync(listener, new McpDispatcher(services, profile), route);
+            }
 
             StartTime = DateTime.UtcNow;
 
-            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
+            string routes = string.Join(", ", profiles.Select(AIProfiles.Route));
+            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use {routes})");
             return true;
         }
         catch (Exception ex)
@@ -135,9 +153,10 @@ internal sealed class McpServer : IDisposable
         catch { }
 
         CloseListener(ExternalListener);
-        CloseListener(AgentListener);
+        foreach (HttpListener listener in AssistantListeners)
+            CloseListener(listener);
         ExternalListener = null;
-        AgentListener = null;
+        AssistantListeners.Clear();
     }
 
     private static void CloseListener(HttpListener? listener)

@@ -14,7 +14,7 @@ namespace Rhino.AI;
 // free to call this before every script run.
 internal static class ScriptingEnvironment
 {
-    private static readonly Guid RhinoCodePluginId = new Guid("c9cba87a-23ce-4f15-a918-97645c05cde7");
+    internal static readonly Guid RhinoCodePluginId = new Guid("c9cba87a-23ce-4f15-a918-97645c05cde7");
 
     private static MethodInfo? Starter { get; set; }
 

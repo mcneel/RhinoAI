@@ -23,7 +23,7 @@ internal partial class AIPanelViewModel : IDisposable
     private string? PinnedAgentName { get; set; }
 
     private Conversation? ActiveConversation =>
-        Document is { } doc && AgentHost.TryFor(doc, out IAgentRunner agent) ? agent.Conversation : null;
+        Document is { } doc && AgentHost.TryFor(doc, Profile, out IAgentRunner agent) ? agent.Conversation : null;
 
     public void Attach()
     {
@@ -168,7 +168,9 @@ internal partial class AIPanelViewModel : IDisposable
             OpenImageCommand open => OpenImage(open.Id),
             SaveImageCommand save => SaveImage(save.Id),
             SetZoomCommand zoom => SetZoom(zoom.Level),
-            OpenSettingsCommand => OpenSettings(),
+            OpenSettingsCommand settings => OpenSettings(settings.Page),
+            SetPermissionCommand permission => SetPermission(permission.Name, permission.Mode),
+            AnswerPermissionCommand answer => AnswerPermission(answer.Id, answer.Allow, answer.Remember),
             OpenUrlCommand open => OpenUrl(open.Url),
             ClipboardCommand copy => CopyToClipboard(copy.Text),
             OpenMenuCommand menu => ShowMenu(menu),
@@ -199,20 +201,20 @@ internal partial class AIPanelViewModel : IDisposable
         if ((text.Length == 0 && attachments.Count == 0) || Document is not { } doc)
             return false;
 
-        if (!AgentHost.TryFor(doc, out IAgentRunner _))
+        if (!AgentHost.TryFor(doc, Profile, out IAgentRunner _))
         {
             Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return false;
         }
 
         Resubscribe();
-        AgentDispatch.PromptActive(doc, new UserMessage(text, attachments));
+        AgentDispatch.PromptActive(doc, Profile, new UserMessage(text, attachments));
         return true;
     }
 
     private bool CancelCurrentAgentTurn()
     {
-        if (!AgentHost.TryFor(Document, out IAgentRunner running)) return false;
+        if (!AgentHost.TryFor(Document, Profile, out IAgentRunner running)) return false;
         running.Cancel();
         return true;
     }
@@ -223,9 +225,9 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (Document is { } doc)
         {
-            AgentHost.Stop(doc);
+            AgentHost.Stop(doc, Profile);
             if (PinnedAgentName is { } pinned)
-                AgentHost.SetActive(doc, pinned);
+                AgentHost.SetActive(doc, Profile, pinned);
         }
 
         ShowLive();
@@ -266,7 +268,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         Persist();
 
-        if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
+        if (!AgentHost.TryResume(doc, Profile, dto, out IAgentRunner _))
         {
             Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
             return false;
@@ -288,7 +290,7 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
 
         PinnedAgentName = name;
-        AgentHost.SetActive(doc, name);
+        AgentHost.SetActive(doc, Profile, name);
         ShowLive();
         SendAgents();
         return true;
@@ -298,7 +300,7 @@ internal partial class AIPanelViewModel : IDisposable
     {
         if (Document is not { } doc)
             return false;
-        if (!AgentHost.TryFor(doc, out IAgentRunner agent))
+        if (!AgentHost.TryFor(doc, Profile, out IAgentRunner agent))
         {
             Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return false;
@@ -337,7 +339,7 @@ internal partial class AIPanelViewModel : IDisposable
         if (!anyPicked)
             return Dismiss(ids);
 
-        AgentDispatch.AnswerActive(doc, UserMessage.FromText(QuestionReply.Compose(questions, answers)));
+        AgentDispatch.AnswerActive(doc, Profile, UserMessage.FromText(QuestionReply.Compose(questions, answers)));
         ActiveConversation?.ClearPendingQuestions(questions);
         return true;
     }
@@ -416,13 +418,14 @@ internal partial class AIPanelViewModel : IDisposable
         return true;
     }
 
-    private bool OpenSettings()
+    private bool OpenSettings(string? page = null)
     {
-        AISettingsDialog dialog = new();
+        AISettingsDialog dialog = new(Profile, page);
         dialog.ShowModal(View);
         SendAgents();
         SendContext();
         SendHistory();
+        SendPermissions();
         return true;
     }
 
@@ -472,7 +475,8 @@ internal partial class AIPanelViewModel : IDisposable
                 RhinoApp.Version.ToString(),
                 OperatingSystem.IsWindows() ? "windows" : "macos",
                 Document is { } doc ? DocTitle(doc) : "Untitled",
-                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true)),
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true),
+                AIProfiles.Wire(Profile)),
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 
@@ -481,6 +485,55 @@ internal partial class AIPanelViewModel : IDisposable
         SendAgents();
         SendContext();
         SendHistory();
+        SendPermissions();
+    }
+
+    // What the quick menu above the composer offers: this assistant's own tools, and only those —
+    // the ones its work actually consists of, which is the list worth a switch at arm's reach.
+    // Everything it shares with the other panels has its switch on the Permissions page, which the
+    // menu links to.
+    private void SendPermissions()
+    {
+        List<PanelPermissionGroup> groups = new();
+
+        ToolInfo[] own = [.. ToolCatalog.All
+            .Where(t => ToolPolicy.Owner(t.Name) == Profile)
+            .OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase)];
+        if (own.Length > 0)
+            groups.Add(new PanelPermissionGroup(own[0].Group ?? AIProfiles.Name(Profile), Describe(own)));
+
+        Bridge.Post(new PermissionsEvent(groups));
+    }
+
+    private IReadOnlyList<PanelToolPermission> Describe(IEnumerable<ToolInfo> tools) =>
+        [.. tools.Select(tool => new PanelToolPermission(
+            tool.Name, tool.Title, tool.Description, ToolModes.Format(ToolPolicy.Mode(Profile, tool))))];
+
+    // The panel only ever offers the tools the catalog knows, so an unknown name is a stale card.
+    private bool SetPermission(string name, string mode)
+    {
+        if (!ToolModes.TryParse(mode, out ToolMode parsed) || !ToolCatalog.TryGet(name, out ToolInfo tool))
+            return false;
+        ToolPolicy.SetMode(Profile, tool, parsed);
+        SendPermissions();
+        return true;
+    }
+
+    private bool AnswerPermission(string id, bool allow, bool remember)
+    {
+        if (Review is not null || Feed is null || !Feed.TryResolvePermission(id, out PermissionRequest request))
+            return false;
+
+        request.Resolve(allow);
+
+        // "Don't ask again" writes the same switch the quick menu does, so the tool stops asking:
+        // allowed becomes On, refused becomes Off.
+        if (remember && ToolCatalog.TryGet(request.Tool, out ToolInfo tool))
+        {
+            ToolPolicy.SetMode(Profile, tool, allow ? ToolMode.On : ToolMode.Off);
+            SendPermissions();
+        }
+        return true;
     }
 
     private void SendContext()
@@ -511,7 +564,7 @@ internal partial class AIPanelViewModel : IDisposable
                 }));
         }
 
-        string? active = Document is { } doc && AgentHost.TryFor(doc, out IAgentRunner agent)
+        string? active = Document is { } doc && AgentHost.TryFor(doc, Profile, out IAgentRunner agent)
             ? agent.Name
             : AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Available && AISettings.IsEnabled(r))?.Name;
 

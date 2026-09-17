@@ -4,9 +4,12 @@ using Rhino.Input.Custom;
 
 namespace Rhino.AI;
 
+// Reports the listener's port and offers to start one: a diagnostic, so it is a test command.
+// Style.Hidden is what makes Rhino treat a managed command as one, keeping it out of autocomplete.
+[CommandStyle(Style.Hidden)]
 public class MCPStatusCommand : Command
 {
-    public override string EnglishName => "McpStatus";
+    public override string EnglishName => "TestMCPStatus";
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 

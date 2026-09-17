@@ -32,16 +32,24 @@ internal sealed class Turn
     private object Sync { get; }
     private List<TurnEvent> EventList { get; } = new();
 
-    internal Turn(string prompt, IReadOnlyList<AttachmentInfo> attachments, object sync, DateTimeOffset? startedAt = null)
+    internal Turn(
+        string prompt, IReadOnlyList<AttachmentInfo> attachments, object sync,
+        uint undoRecord = 0, DateTimeOffset? startedAt = null)
     {
         Prompt = prompt;
         Attachments = attachments;
         StartedAt = startedAt ?? DateTimeOffset.UtcNow;
         Sync = sync;
+        UndoRecord = undoRecord;
     }
 
     public string Prompt { get; }
     public IReadOnlyList<AttachmentInfo> Attachments { get; }
+
+    // The document undo record this turn's changes went into; 0 when it has none, which is the case
+    // for a restored transcript and for a document with undo recording off. Non-zero is what puts
+    // Revert on offer (see TurnRevert).
+    public uint UndoRecord { get; }
     public DateTimeOffset StartedAt { get; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public bool Completed { get { lock (Sync) return CompletedAt.HasValue; } }
@@ -97,11 +105,15 @@ internal sealed class Conversation
     // and a later call adds to the set rather than replacing it.
     private List<PendingQuestion> PendingQuestionList { get; } = new();
 
-    public Conversation(Guid agentSessionId, string agentName, string docTitle)
+    // Tool calls waiting for the user to allow or refuse them; see TryGetPendingPermissions.
+    private List<PermissionRequest> PendingPermissionList { get; } = new();
+
+    public Conversation(Guid agentSessionId, string agentName, string docTitle, AIProfile profile = AIProfile.Rhino)
     {
         AgentSessionId = agentSessionId;
         AgentName = agentName;
         DocTitle = docTitle;
+        Profile = profile;
         StartedAt = DateTimeOffset.UtcNow;
     }
 
@@ -113,7 +125,7 @@ internal sealed class Conversation
     public static Conversation Restore(ConversationDto dto)
     {
         Guid sessionId = Guid.TryParse(dto.SessionId, out Guid parsed) ? parsed : Guid.NewGuid();
-        Conversation convo = new(sessionId, dto.AgentName, dto.DocTitle)
+        Conversation convo = new(sessionId, dto.AgentName, dto.DocTitle, AIProfiles.Parse(dto.Profile))
         {
             StartedAt = dto.StartedAt,
         };
@@ -123,7 +135,7 @@ internal sealed class Conversation
 
         foreach (TurnDto turnDto in dto.Turns)
         {
-            Turn turn = new(turnDto.Prompt, turnDto.Attachments ?? [], convo.Sync, turnDto.StartedAt);
+            Turn turn = new(turnDto.Prompt, turnDto.Attachments ?? [], convo.Sync, startedAt: turnDto.StartedAt);
             foreach (TurnEventDto ev in turnDto.Events)
                 // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
@@ -143,22 +155,39 @@ internal sealed class Conversation
     public Guid AgentSessionId { get; private set; }
     public string AgentName { get; }
     public string DocTitle { get; }
+    // Which panel owns this transcript; each panel lists and resumes only its own.
+    public AIProfile Profile { get; }
     public DateTimeOffset StartedAt { get; private init; }
 
     // Raised after every mutation so a panel can re-render. Fired OUTSIDE the lock: handlers
     // marshal to the UI thread and read the graph, which would deadlock if we still held Sync.
     public event Action? Changed;
 
+    // For state a panel renders but the transcript does not hold — whether Rhino has stopped and is
+    // waiting for the user, say. Nothing here changed; the panel is only asked to look again.
+    public void Touch() => Changed?.Invoke();
+
     // Live references, not a snapshot: the current turn may still be appending.
     public IReadOnlyList<Turn> Turns { get { lock (Sync) return TurnList.ToArray(); } }
     public IReadOnlyList<TurnEvent> Lifecycle { get { lock (Sync) return LifecycleList.ToArray(); } }
+
+    // The undo record AgentDispatch opened for the turn that is about to begin, consumed by the next
+    // BeginTurn. The record has to be recording before the agent's first tool call lands, which is
+    // earlier than the turn object exists, so it arrives separately.
+    private uint PendingUndoRecord { get; set; }
+
+    public void NoteUndoRecord(uint recordSerial)
+    {
+        lock (Sync) PendingUndoRecord = recordSerial;
+    }
 
     public Turn BeginTurn(string prompt, IReadOnlyList<AttachmentInfo>? attachments = null)
     {
         Turn turn;
         lock (Sync)
         {
-            turn = new(prompt, attachments ?? [], Sync);
+            turn = new(prompt, attachments ?? [], Sync, PendingUndoRecord);
+            PendingUndoRecord = 0;
             TurnList.Add(turn);
             Current = turn;
         }
@@ -257,6 +286,35 @@ internal sealed class Conversation
                 for (int i = PendingQuestionList.Count - 1; i >= 0; i--)
                     if (ReferenceEquals(PendingQuestionList[i], question))
                         PendingQuestionList.RemoveAt(i);
+        Changed?.Invoke();
+    }
+
+    // A tool set to Ask waits here for its answer, which the panel gives from a card in the chat.
+    // One at a time in practice, since the agent's turn blocks on it, but held as a list so a second
+    // one cannot silently evict the first.
+    public bool TryGetPendingPermissions(out IReadOnlyList<PermissionRequest> permissions)
+    {
+        lock (Sync)
+        {
+            permissions = PendingPermissionList.ToArray();
+            return permissions.Count > 0;
+        }
+    }
+
+    public void AddPendingPermission(PermissionRequest permission)
+    {
+        lock (Sync)
+            PendingPermissionList.Add(permission);
+        Changed?.Invoke();
+    }
+
+    // Removes exactly this instance, so a request withdrawn late cannot wipe a newer one.
+    public void RemovePendingPermission(PermissionRequest permission)
+    {
+        lock (Sync)
+            for (int i = PendingPermissionList.Count - 1; i >= 0; i--)
+                if (ReferenceEquals(PendingPermissionList[i], permission))
+                    PendingPermissionList.RemoveAt(i);
         Changed?.Invoke();
     }
 

@@ -5,14 +5,17 @@ namespace Rhino.AI;
 
 internal sealed class AISettingsDialog : Dialog
 {
-    private AISettingsPanel Panel { get; } = new();
+    private AISettingsTabs Panel { get; }
 
-    public AISettingsDialog()
+    // Opened from one assistant, but it shows them all: the caller's own tab is simply the one in
+    // front, so the title is the feature rather than that assistant.
+    public AISettingsDialog(AIProfile profile, string? page = null)
     {
+        Panel = new AISettingsTabs(profile, page);
         Title = Rhino.UI.LOC.STR("AI Settings");
         Padding = new Padding(12);
-        Size = new Size(720, 680);
-        MinimumSize = new Size(560, 440);
+        Size = new Size(780, 740);
+        MinimumSize = new Size(600, 460);
         Resizable = true;
 
         Button saveButton = new() { Text = Rhino.UI.LOC.STR("Save") };

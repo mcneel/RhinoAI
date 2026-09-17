@@ -65,6 +65,33 @@ export interface ContextItem {
 /** `unknown`: the turn ended without the call ever reporting, so it may or may not have run. */
 export type ToolStatus = 'running' | 'ok' | 'failed' | 'denied' | 'unknown';
 
+/** What this assistant may do with a tool. `ask` makes it ask in the chat before every call. */
+export type PermissionMode = 'off' | 'on' | 'ask';
+
+/** One switchable permission, with the mode the host currently applies. */
+export interface PermissionEntry {
+  name: string;
+  title: string;
+  description: string;
+  mode: PermissionMode;
+}
+
+export interface PermissionGroup {
+  label: string;
+  tools: PermissionEntry[];
+}
+
+/** A call waiting for the user to allow or refuse it. The agent's turn is blocked until it does. */
+export interface PermissionAsk {
+  id: string;
+  /** Wire name of the tool asking, e.g. `script_editor_run`. */
+  tool: string;
+  /** What to call it, e.g. "Run Script". */
+  title: string;
+  /** The arguments as the user should read them; empty when the call takes none. */
+  detail: string;
+}
+
 /** A payload the panel renders as something better than JSON. */
 export type ToolPreview =
   | { kind: 'image'; dataUrl: string; caption?: string }
@@ -169,6 +196,8 @@ export interface HostInfo {
   version: string;
   platform: 'windows' | 'macos';
   docTitle: string;
+  /** Which assistant this page is. Absent means the general one. */
+  profile?: 'rhino' | 'script' | 'grasshopper';
   capabilities: {
     attachments: boolean;
     viewportCapture: boolean;
@@ -194,6 +223,9 @@ export type HostEvent =
   | { type: 'turn.plan'; turnId: string; steps: PlanStep[] }
   | { type: 'turn.usage'; turnId: string; usage: TokenUsage }
   | { type: 'turn.end'; turnId: string; status: TurnStatus; error?: string }
+  // Revert is a single Rhino undo, so it is on offer only while that undo record is still the newest
+  // one. The host withdraws it once the record is spent, by Revert or by the user's own Ctrl+Z.
+  | { type: 'turn.undoable'; turnId: string; undoable: boolean }
   | { type: 'question'; question: PendingQuestion }
   | { type: 'question.clear'; id: string }
   | { type: 'attachments.add'; attachments: Attachment[] }
@@ -203,7 +235,11 @@ export type HostEvent =
   // an intent rather than a level. `set` is the other direction: the level the host had stored.
   | { type: 'zoom'; action: 'in' | 'out' | 'reset' }
   | { type: 'zoom'; action: 'set'; level: number }
-  | { type: 'reload' };
+  | { type: 'reload' }
+  // Sent whole on every change, so the panel never shows a permission the host did not accept.
+  | { type: 'permissions'; groups: PermissionGroup[] }
+  | { type: 'permission.ask'; ask: PermissionAsk }
+  | { type: 'permission.ask.clear'; id: string };
 
 // ---------------------------------------------------------------- panel -> host
 
@@ -232,6 +268,9 @@ export type PanelCommand =
   | { type: 'question.answer'; items: QuestionAnswer[] }
   | { type: 'question.dismiss'; ids: string[] }
   | { type: 'tool.chip'; callId: string; chipId: string }
+  | { type: 'permission.set'; name: string; mode: PermissionMode }
+  // `remember` turns the answer into the standing permission: allowed becomes on, refused becomes off.
+  | { type: 'permission.answer'; id: string; allow: boolean; remember: boolean }
   | { type: 'turn.undo'; turnId: string }
   | { type: 'turn.retry'; turnId: string }
   | { type: 'context.refresh' }
@@ -242,7 +281,7 @@ export type PanelCommand =
   | { type: 'attachments.drop'; files: { name: string; mediaType: string; dataUrl: string }[] }
   // The panel cannot store its own level (opaque origin, so localStorage throws), so the host keeps it.
   | { type: 'zoom.set'; level: number }
-  | { type: 'settings.open' }
+  | { type: 'settings.open'; page?: 'Permissions' }
   | { type: 'url.open'; url: string }
   | { type: 'clipboard.write'; text: string }
   | {

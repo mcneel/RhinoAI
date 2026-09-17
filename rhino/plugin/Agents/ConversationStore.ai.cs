@@ -144,7 +144,8 @@ internal static class ConversationStore
             conversation.DocTitle,
             conversation.StartedAt,
             lifecycle,
-            turns);
+            turns,
+            AIProfiles.Wire(conversation.Profile));
     }
 
     private static TurnEventDto ToDto(TurnEvent ev) =>

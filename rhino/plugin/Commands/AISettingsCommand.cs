@@ -10,7 +10,7 @@ public class MCPSettingsCommand : RhinoCommand
 
     protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
     {
-        AISettingsDialog dialog = new();
+        AISettingsDialog dialog = new(AIProfile.Rhino);
         dialog.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow);
         return Rhino.Commands.Result.Success;
     }

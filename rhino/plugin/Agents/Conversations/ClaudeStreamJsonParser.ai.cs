@@ -15,10 +15,12 @@ namespace Rhino.AI;
 internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
 {
     private AgentDefinition Definition { get; }
+    private AIProfile Profile { get; }
 
-    public ClaudeStreamJsonParser(AgentDefinition definition)
+    public ClaudeStreamJsonParser(AgentDefinition definition, AIProfile profile)
     {
         Definition = definition;
+        Profile = profile;
     }
 
     public string DisplayName => Definition.Name;
@@ -100,7 +102,7 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         psi.ArgumentList.Add("--allowedTools");
         psi.ArgumentList.Add(allowedTools);
         psi.ArgumentList.Add("--append-system-prompt");
-        psi.ArgumentList.Add(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)));
+        psi.ArgumentList.Add(AgentPrompts.Compose(Profile, AISettings.EffectivePrompt(Definition)));
         psi.ArgumentList.Add("--disable-slash-commands");
         psi.ArgumentList.Add(resume ? "--resume" : "--session-id");
         psi.ArgumentList.Add(agentSessionId);
@@ -113,6 +115,13 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         // foreach (string arg in Definition.ExtraArgs)
         //     psi.ArgumentList.Add(arg);
     }
+
+    // Claude Code scopes a session to the working directory (one file per session, under the project
+    // its cwd maps to), so a saved id reads as 'not found' whenever the model moved folders - a chat
+    // started in an unsaved document and resumed after a Save As hits this - not only when the
+    // session expired.
+    public bool IsResumeRejection(string stderrLine) =>
+        stderrLine.Contains("No conversation found with session ID", StringComparison.OrdinalIgnoreCase);
 
     // ACP content blocks -> Claude's stream-json user content (text + base64 image). Underscored
     // property names survive the camelCase policy, so media_type stays media_type.

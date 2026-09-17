@@ -6,6 +6,7 @@ import type { BlockView, TurnView } from '../state/store.js';
 import type { Attachment, ContextItem, PlanStep } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { emptyState } from './empty.js';
+import { permissionAsks } from './permissionAsk.js';
 import { icon } from './icons.js';
 import { imageBlock } from './imageBlock.js';
 import { notices } from './notices.js';
@@ -210,6 +211,8 @@ export function transcript(ctx: PanelContext): Child {
           (turn) => turnView(ctx, turn),
         ),
     ),
+    // At the end of the transcript, where the call that is waiting for it would have landed.
+    permissionAsks(ctx),
   );
 
   // Deliberately not scrollTop = scrollHeight. The panel carries a CSS zoom (0.9 at 100%, 1.8 at the

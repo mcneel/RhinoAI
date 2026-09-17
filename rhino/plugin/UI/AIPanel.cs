@@ -18,10 +18,18 @@ public partial class AIPanel : Panel
 
     }
 
-    public AIPanel(uint documentSerialNumber)
+    public AIPanel(uint documentSerialNumber) : this(documentSerialNumber, AIProfile.Rhino)
+    {
+
+    }
+
+    // Which chat surface this is. The assistants are this panel under another profile, and
+    // everything profile-scoped — agent pool, MCP route, prompt steer, tool permissions, history —
+    // keys off it.
+    private protected AIPanel(uint documentSerialNumber, AIProfile profile)
     {
         Content = View = new();
-        DataContext = new AIPanelViewModel(View, documentSerialNumber);
+        DataContext = new AIPanelViewModel(View, documentSerialNumber, profile);
         LoadUI();
     }
 

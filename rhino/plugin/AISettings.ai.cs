@@ -14,26 +14,63 @@ internal static class AISettings
             ? plugin.Settings
             : throw new InvalidOperationException("RhinoAI plugin is not loaded; AISettings is unavailable.");
 
-    // Name of the agent the registry prefers when resolving the active one.
-    public static string DefaultAgentName
-    {
-        get => Settings.GetString(nameof(DefaultAgentName), "claude");
-        set => Settings.SetString(nameof(DefaultAgentName), value);
-    }
+    // The one setting that is per assistant is its tool permissions, and this is its key. Rhino's
+    // prefix is empty, so the keys that predate profiles are the ones it still reads.
+    private static string Key(AIProfile profile, string name) => AIProfiles.SettingsPrefix(profile) + name;
 
-    // Tools hidden from in-Rhino agents (Part 3). Empty = nothing hidden.
+    // Which agent, which model, which prompt and which agents exist at all are ONE set of settings
+    // for every assistant: the choice of agent is about the machine it runs on, not about which
+    // panel is asking. They keep the unprefixed keys, so what the AI panel had is what they all get.
+    public static string DefaultAgentName() => Settings.GetString("DefaultAgentName", "claude");
+
+    public static void SetDefaultAgentName(string value) => Settings.SetString("DefaultAgentName", value);
+
+    // Tools hidden from in-Rhino agents (Part 3). Empty = nothing hidden. Superseded by
+    // ToolModeOverrides; still read as Off for settings written before modes existed.
     public static string[] DisabledTools
     {
         get => Settings.GetStringList(nameof(DisabledTools), []);
         set => Settings.SetStringList(nameof(DisabledTools), value);
     }
 
-    // Definitions ship read-only in Definitions.json, so user edits are stored here and layered on at use.
-    public static string[] DisabledAgents
+    // Per-tool modes for a profile's agent as "name=mode" (off | on | ask), only where the user
+    // departed from the profile's default for the tool.
+    public static string[] ToolModeOverrides(AIProfile profile) => Settings.GetStringList(Key(profile, "ToolModeOverrides"), []);
+
+    private static void SetToolModeOverrides(AIProfile profile, string[] value) => Settings.SetStringList(Key(profile, "ToolModeOverrides"), value);
+
+    public static ToolMode ToolModeFor(AIProfile profile, string name, ToolMode @default)
     {
-        get => Settings.GetStringList(nameof(DisabledAgents), []);
-        set => Settings.SetStringList(nameof(DisabledAgents), value);
+        foreach (string entry in ToolModeOverrides(profile))
+            if (ToolModes.IsFor(entry, name) && ToolModes.TryParseEntry(entry, out _, out ToolMode mode))
+                return mode;
+        return profile == AIProfile.Rhino && DisabledTools.Contains(name, StringComparer.OrdinalIgnoreCase) ? ToolMode.Off : @default;
     }
+
+    // Back to whatever the defaults currently say. Worth having as one action: an override is only
+    // stored where the user departed from the default OF THE DAY, so settings saved before a default
+    // changed keep winning over the new one, and the only way to see the new default is to drop them.
+    public static void ClearToolModeOverrides(AIProfile profile)
+    {
+        SetToolModeOverrides(profile, []);
+        if (profile == AIProfile.Rhino)
+            DisabledTools = [];
+    }
+
+    public static void SetToolMode(AIProfile profile, string name, ToolMode mode, ToolMode @default)
+    {
+        string[] others = ToolModeOverrides(profile).Where(entry => !ToolModes.IsFor(entry, name)).ToArray();
+        SetToolModeOverrides(profile, mode == @default ? others : [.. others, ToolModes.FormatEntry(name, mode)]);
+        if (profile == AIProfile.Rhino)
+            DisabledTools = DisabledTools
+                .Where(n => !string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+    }
+
+    // Definitions ship read-only in Definitions.json, so user edits are stored here and layered on at use.
+    public static string[] DisabledAgents() => Settings.GetStringList("DisabledAgents", []);
+
+    private static void SetDisabledAgents(string[] value) => Settings.SetStringList("DisabledAgents", value);
 
     // The panel's text zoom as the percentage the user sees; the ladder itself lives in the panel.
     public static int ZoomLevel
@@ -43,14 +80,14 @@ internal static class AISettings
     }
 
     public static bool IsEnabled(AgentDefinition def) =>
-        def.Enabled && !DisabledAgents.Contains(def.Name, StringComparer.OrdinalIgnoreCase);
+        def.Enabled && !DisabledAgents().Contains(def.Name, StringComparer.OrdinalIgnoreCase);
 
     public static void SetAgentEnabled(string name, bool enabled)
     {
-        string[] remaining = DisabledAgents
+        string[] remaining = DisabledAgents()
             .Where(n => !string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        DisabledAgents = enabled ? remaining : [.. remaining, name];
+        SetDisabledAgents(enabled ? remaining : [.. remaining, name]);
     }
 
     public static string AgentModel(string name) => Settings.GetString(AgentKey(name, "Model"), string.Empty);
@@ -64,6 +101,8 @@ internal static class AISettings
     public static string EffectiveModel(AgentDefinition def) =>
         AgentModel(def.Name) is { Length: > 0 } model ? model : def.DefaultModel;
 
+    // The user's own prompt, shared like the rest. What makes an assistant itself is the steer
+    // AgentPrompts adds per profile on top of this, which is ours and not a setting.
     public static string EffectivePrompt(AgentDefinition def) =>
         AgentPrompt(def.Name) is { Length: > 0 } prompt ? prompt : def.DefaultPrompt;
 

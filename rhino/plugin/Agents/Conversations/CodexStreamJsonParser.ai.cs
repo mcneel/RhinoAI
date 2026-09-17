@@ -12,11 +12,13 @@ namespace Rhino.AI;
 internal sealed class CodexStreamJsonParser : IStreamJsonParser
 {
     private AgentDefinition Definition { get; }
+    private AIProfile Profile { get; }
     private string CodexHome { get; }
 
-    public CodexStreamJsonParser(AgentDefinition definition, string codexHome)
+    public CodexStreamJsonParser(AgentDefinition definition, AIProfile profile, string codexHome)
     {
         Definition = definition;
+        Profile = profile;
         CodexHome = codexHome;
     }
 
@@ -79,7 +81,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         }
 
         psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
+        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(Profile, AISettings.EffectivePrompt(Definition)))}");
 
         if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
@@ -97,6 +99,11 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
 
     private static string EncodeString(string text) =>
         "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n") + "\"";
+
+    // Codex's wording for a missing `exec resume` target is not pinned to a verified version here,
+    // and a wrong guess would throw away a live session, so this says nothing and leaves the runner
+    // to infer a refusal from an exit before the resumed session completes a turn.
+    public bool IsResumeRejection(string stderrLine) => false;
 
     public string FormatTurn(IReadOnlyList<ContentBlock> prompt)
     {

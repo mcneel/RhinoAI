@@ -11,6 +11,7 @@ const PREFIXES: readonly (readonly [string, ToolFamily])[] = [
   ['g1_', 'grasshopper'],
   ['g2_', 'grasshopper'],
   ['run_', 'script'],
+  ['script_editor_', 'script'],
   ['get_viewport', 'view'],
   ['set_camera', 'view'],
   ['zoom_', 'view'],

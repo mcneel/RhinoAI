@@ -10,6 +10,9 @@ import type {
   HistoryEntry,
   HostEvent,
   PanelCommand,
+  PermissionAsk,
+  PermissionGroup,
+  PlanStep,
   ToolCall,
   ToolPatch,
   TokenUsage,
@@ -69,6 +72,22 @@ class Script {
 
 // ---------------------------------------------------------------- fixtures
 
+// Mirrors the plug-in's Script Editor group and its shipped defaults.
+const PERMISSIONS: PermissionGroup[] = [
+  {
+    label: 'Script Editor',
+    tools: [
+      { name: 'script_editor_read', title: 'Read Script', description: 'Read the whole current document.', mode: 'on' },
+      { name: 'script_editor_read_lines', title: 'Read Script Lines', description: 'Read a numbered line range.', mode: 'on' },
+      { name: 'script_editor_edit_lines', title: 'Modify Script Lines', description: 'Replace, insert or delete lines.', mode: 'on' },
+      { name: 'script_editor_clear', title: 'Clear Script', description: 'Empty the current document.', mode: 'on' },
+      { name: 'script_editor_load', title: 'Load Script', description: 'Open a .py or .cs file in the editor.', mode: 'off' },
+      { name: 'script_editor_save', title: 'Save Script', description: 'Save the current document.', mode: 'off' },
+      { name: 'script_editor_run', title: 'Run Script', description: 'Run the current document.', mode: 'ask' },
+    ],
+  },
+];
+
 const AGENTS: readonly AgentInfo[] = [
   { name: 'claude', label: 'Claude Code', model: 'claude-opus-5', modelLabel: 'Opus 5', availability: 'ready', builtin: true },
   { name: 'codex', label: 'Codex', model: 'gpt-5-codex', modelLabel: 'GPT-5 Codex', availability: 'ready', builtin: true },
@@ -96,7 +115,7 @@ const CONTEXT: readonly ContextItem[] = [
   { id: 'ctx-selection', kind: 'selection', label: 'Selection', detail: '3 breps, 1 curve', count: 4 },
   { id: 'ctx-view', kind: 'view', label: 'Perspective', detail: 'active viewport' },
   { id: 'ctx-doc', kind: 'document', label: 'tower-study.3dm', detail: '1,284 objects · 12 layers' },
-  { id: 'ctx-layer-facade', kind: 'layer', label: 'Facade::Panels', detail: '312 objects', count: 312 },
+  { id: 'ctx-layer-facade', kind: 'layer', label: 'Facade::Panels', detail: '212 objects', count: 212 },
   { id: 'ctx-layer-core', kind: 'layer', label: 'Core', detail: '18 objects', count: 18 },
   { id: 'ctx-gh', kind: 'grasshopper', label: 'facade.gh', detail: 'open on canvas' },
 ];
@@ -140,6 +159,75 @@ const usage = (input: number, output: number, cost: number): TokenUsage => ({
   costUsd: cost,
 });
 
+// Rhino persists the change and answers with the whole set rather than echoing the one tool.
+const permissionSnapshot = (): PermissionGroup[] =>
+  PERMISSIONS.map((group) => ({ ...group, tools: group.tools.map((tool) => ({ ...tool })) }));
+
+// The script the seeded transcript writes and then asks permission to run. One source for the tool
+// card and for the permission card, so the length quoted on the card cannot drift from the code.
+const AUDIT_SCRIPT = lines(
+  '#! python 3',
+  '"""Report how far each picked panel is from its best-fit plane.',
+  '',
+  'Nothing is moved or modified: pick the panels, get a sorted table back.',
+  '"""',
+  'import Rhino',
+  'import rhinoscriptsyntax as rs',
+  'import scriptcontext as sc',
+  '',
+  'TOL = sc.doc.ModelAbsoluteTolerance',
+  '',
+  '',
+  'def deviation(brep):',
+  '    """Largest distance from the brep vertices to their best-fit plane."""',
+  '    pts = [v.Location for v in brep.Vertices]',
+  '    ok, plane = Rhino.Geometry.Plane.FitPlaneToPoints(pts)',
+  '    if ok != Rhino.Geometry.PlaneFitResult.Success:',
+  '        return None',
+  '    return max(abs(plane.DistanceTo(p)) for p in pts)',
+  '',
+  '',
+  'ids = rs.GetObjects("Select the panels to audit", rs.filter.polysurface)',
+  'if not ids:',
+  '    print("Nothing picked.")',
+  'else:',
+  '    rows = []',
+  '    for id in ids:',
+  '        brep = rs.coercebrep(id)',
+  '        if brep is None:',
+  '            continue',
+  '        d = deviation(brep)',
+  '        if d is not None and d > TOL:',
+  '            rows.append((rs.ObjectName(id) or str(id)[:8], d))',
+  '',
+  '    rows.sort(key=lambda row: -row[1])',
+  '    print(f"{len(rows)} of {len(ids)} panels are off plane:")',
+  '    for name, d in rows:',
+  '        print(f"  {name:<22} {d:7.2f} mm")',
+);
+
+const SEED_TURN = 'turn-seed-4';
+
+// What the plug-in's DescribeCall builds for a Run Script ask: the document and its length, what the
+// run will stop and ask the user for, then the code itself — rather than the call's own arguments,
+// which say only `{"title":"planarity-audit.py"}`.
+const SEED_ASK: PermissionAsk = {
+  id: 'ask-seed-run',
+  tool: 'script_editor_run',
+  title: 'Run Script',
+  detail: lines(
+    `planarity-audit.py — ${AUDIT_SCRIPT.split('\n').length} lines`,
+    'It will stop and ask you to select objects in a viewport.',
+    '',
+    AUDIT_SCRIPT,
+  ),
+};
+
+const seedPlan = (last: PlanStep['state']): PlanStep[] => [
+  { id: 'r1', text: 'Write the audit as a script I can re-run', state: 'done' },
+  { id: 'r2', text: 'Run it over the mullion caps', state: last },
+];
+
 function seeded(): ConversationSnapshot {
   const start = Date.now() - 9 * 60_000;
   return {
@@ -166,7 +254,7 @@ function seeded(): ConversationSnapshot {
             call: {
               id: 'call-seed-1',
               name: 'list_objects',
-              title: 'listed 312 objects on Facade::Panels',
+              title: 'listed 212 objects on Facade::Panels',
               args: { layer: 'Facade::Panels', include: ['type', 'area', 'planarity'] },
               status: 'ok',
               durationMs: 410,
@@ -175,7 +263,7 @@ function seeded(): ConversationSnapshot {
                 kind: 'table',
                 columns: ['Type', 'Count', 'Planar', 'Notes'],
                 rows: [
-                  ['Brep', '288', '271', '17 doubly curved'],
+                  ['Brep', '188', '176', '12 doubly curved'],
                   ['Extrusion', '18', '18', ''],
                   ['Mesh', '6', '6', 'imported, welded'],
                 ],
@@ -183,18 +271,36 @@ function seeded(): ConversationSnapshot {
             },
           },
           {
+            kind: 'tool',
+            id: 'call-seed-1b',
+            call: {
+              id: 'call-seed-1b',
+              name: 'capture_viewport',
+              title: 'captured Perspective',
+              args: { view: 'Perspective', width: 1120, display: 'Shaded' },
+              status: 'ok',
+              durationMs: 640,
+              startedAt: new Date(start + 1400).toISOString(),
+              preview: {
+                kind: 'image',
+                dataUrl: viewportCapture(),
+                caption: 'Perspective · Facade::Panels · shaded',
+              },
+            },
+          },
+          {
             kind: 'text',
             id: 'block-seed-1',
-            at: new Date(start + 1400).toISOString(),
+            at: new Date(start + 2200).toISOString(),
             text: lines(
-              'Three hundred and twelve objects, and **17 of them are doubly curved** which is the only real problem in there.',
+              'Two hundred and twelve objects, and **12 of them are doubly curved** which is the only real problem in there.',
               '',
-              '- 271 breps are planar and will unroll cleanly',
+              '- 176 breps are planar and will unroll cleanly',
               '- 18 extrusions are fine, they are just boxes',
               '- 6 imported meshes are welded but carry no thickness',
-              '- 17 breps have Gaussian curvature in both directions',
+              '- 12 breps have Gaussian curvature in both directions',
               '',
-              'The 17 are all on the south-west corner where the surface twists. A fabricator will either cold-bend them or you rationalise them into planar quads. I can tag them onto their own layer so you can look at them in isolation.',
+              'The 12 are all on the south-west corner where the surface twists. A fabricator will either cold-bend them or you rationalise them into planar quads. I can tag them onto their own layer so you can look at them in isolation.',
             ),
           },
         ],
@@ -255,7 +361,7 @@ function seeded(): ConversationSnapshot {
                   'print(f"{len(moved)} panels re-layered")',
                 ),
               },
-              result: { moved: 17, maxDeviationMm: 41.6, layer: 'Facade::Panels::NonPlanar' },
+              result: { moved: 12, maxDeviationMm: 41.6, layer: 'Facade::Panels::NonPlanar' },
             },
           },
           {
@@ -285,14 +391,132 @@ function seeded(): ConversationSnapshot {
               '| L11 corner | 30.4 mm | borderline |',
               '',
               '- 4 panels over 30 mm (worst is **41.6 mm**)',
-              '- 7 panels between 10 and 30 mm',
-              '- 6 panels under 10 mm, which most glaziers will cold-bend without complaint',
+              '- 5 panels between 10 and 30 mm',
+              '- 3 panels under 10 mm, which most glaziers will cold-bend without complaint',
               '',
               '> The 41.6 mm one is the corner panel at level 14. That one wants splitting into two triangles rather than bending.',
               '',
               'The heatmap is saved at [planarity heatmap](</Users/Scott Davidson/Rhino renders/planarity heatmap.png>).',
               '',
               'Say the word and I will split the four worst into triangles.',
+            ),
+          },
+        ],
+      },
+      {
+        id: 'turn-seed-3',
+        prompt: 'Split the four worst, then show me the level 14 corner.',
+        attachments: [],
+        context: [],
+        startedAt: new Date(start + 240_000).toISOString(),
+        status: 'ok',
+        usage: usage(16_740, 2_610, 0.18),
+        undoable: true,
+        plan: [
+          { id: 'q1', text: 'Split the four panels over 30 mm', state: 'done' },
+          { id: 'q2', text: 'Re-measure what came out', state: 'done' },
+          { id: 'q3', text: 'Frame the corner and capture it', state: 'done' },
+        ],
+        blocks: [
+          {
+            kind: 'tool',
+            id: 'call-seed-3',
+            call: {
+              id: 'call-seed-3',
+              name: 'run_command',
+              title: 'split 4 panels into 8 triangles',
+              args: { command: '_Split', objects: 4, along: 'shorter diagonal' },
+              status: 'ok',
+              durationMs: 880,
+              mutated: true,
+              startedAt: new Date(start + 241_000).toISOString(),
+              preview: {
+                kind: 'objects',
+                items: [
+                  { id: 'obj-l14a', label: 'L14 corner · north half', layer: 'Facade::Panels::NonPlanar' },
+                  { id: 'obj-l14b', label: 'L14 corner · south half', layer: 'Facade::Panels::NonPlanar' },
+                  { id: 'obj-l15a', label: 'L15 corner · north half', layer: 'Facade::Panels::NonPlanar' },
+                  { id: 'obj-more', label: 'and 5 more', layer: 'Facade::Panels::NonPlanar' },
+                ],
+              },
+              result: { split: 4, produced: 8, maxDeviationMm: 0.0009 },
+            },
+          },
+          {
+            kind: 'notice',
+            id: 'notice-seed-3',
+            level: 'warn',
+            text: 'Two of the four already carried a seam across the corner, so those were split along the seam rather than a fresh diagonal.',
+          },
+          {
+            kind: 'tool',
+            id: 'call-seed-4',
+            call: {
+              id: 'call-seed-4',
+              name: 'capture_viewport',
+              title: 'captured Perspective',
+              args: { view: 'Perspective', width: 1120, display: 'Shaded' },
+              status: 'ok',
+              durationMs: 640,
+              startedAt: new Date(start + 242_400).toISOString(),
+              preview: {
+                kind: 'image',
+                dataUrl: viewportCapture('corner'),
+                caption: 'Perspective · level 14 corner · shaded',
+              },
+            },
+          },
+          {
+            kind: 'text',
+            id: 'block-seed-3',
+            at: new Date(start + 243_500).toISOString(),
+            text: lines(
+              'Split, and the corner reads much better.',
+              '',
+              '- the 4 panels became **8 triangles**, every one planar to 0.001 mm',
+              '- the remaining 8 non-planar panels are untouched, still bendable',
+              '- one undo record, so `Undo` puts the four quads back',
+              '',
+              'The new seam runs corner to corner, which will show as a shadow line on the elevation. Say so and I will flip the diagonal.',
+            ),
+          },
+        ],
+      },
+      {
+        id: SEED_TURN,
+        prompt: 'Make that a script I can re-run on any selection, and run it over the mullion caps.',
+        attachments: [],
+        context: [CONTEXT[0] as ContextItem],
+        startedAt: new Date(start + 470_000).toISOString(),
+        status: 'running',
+        usage: null,
+        // Writing the script and auditing with it leave the document alone, so there is nothing to revert.
+        undoable: false,
+        plan: seedPlan('active'),
+        blocks: [
+          {
+            kind: 'tool',
+            id: 'call-seed-5',
+            call: {
+              id: 'call-seed-5',
+              name: 'script_editor_edit_lines',
+              title: `wrote planarity-audit.py (${AUDIT_SCRIPT.split('\n').length} lines)`,
+              args: { title: 'planarity-audit.py', first: 1, last: 0 },
+              status: 'ok',
+              durationMs: 520,
+              startedAt: new Date(start + 471_000).toISOString(),
+              preview: { kind: 'code', language: 'python', text: AUDIT_SCRIPT },
+              result: { lines: AUDIT_SCRIPT.split('\n').length },
+            },
+          },
+          {
+            kind: 'text',
+            id: 'block-seed-4',
+            at: new Date(start + 473_000).toISOString(),
+            text: lines(
+              'It is in the editor as `planarity-audit.py`. It asks you to pick the objects, so the same script answers for the mullion caps now and for anything else later.',
+              '',
+              'Running it is yours to allow:',
             ),
           },
         ],
@@ -817,6 +1041,8 @@ export class MockHost implements Bridge {
   private script: Script | null = null;
   private activeTurn: string | null = null;
   private booted = false;
+  /** The seeded transcript's last turn is parked on a Run Script card until this is answered. */
+  private askOpen = false;
 
   subscribe(handler: (event: HostEvent) => void): () => void {
     this.handlers.add(handler);
@@ -836,6 +1062,12 @@ export class MockHost implements Bridge {
         return;
 
       case 'cancel':
+        // Rhino cancels a pending ask with the turn that is waiting on it, so the card goes too.
+        if (this.askOpen && !this.script) {
+          this.askOpen = false;
+          this.emit({ type: 'permission.ask.clear', id: SEED_ASK.id });
+          this.emit({ type: 'turn.end', turnId: SEED_TURN, status: 'cancelled' });
+        }
         if (this.script && this.activeTurn) {
           this.script.cancel();
           this.emit({ type: 'status', text: null });
@@ -850,6 +1082,7 @@ export class MockHost implements Bridge {
         this.script?.cancel();
         this.script = null;
         this.activeTurn = null;
+        this.askOpen = false;
         this.emit({ type: 'status', text: null });
         this.emit({
           type: 'conversation',
@@ -871,12 +1104,12 @@ export class MockHost implements Bridge {
       }
 
       case 'conversation.resume':
-        this.emit({ type: 'conversation', snapshot: seeded() });
+        this.sendSeeded();
         this.notice('info', 'Resumed the saved session; the next prompt continues it.');
         return;
 
       case 'conversation.exitReview':
-        this.emit({ type: 'conversation', snapshot: seeded() });
+        this.sendSeeded();
         return;
 
       case 'agent.select': {
@@ -896,11 +1129,12 @@ export class MockHost implements Bridge {
         return;
 
       case 'turn.undo':
-        this.notice('info', 'Reverted every document change that turn made (one Rhino undo record).');
+        this.emit({ type: 'turn.undoable', turnId: command.turnId, undoable: false });
+        this.notice('info', 'Reverted the document changes that turn made.');
         return;
 
       case 'turn.retry':
-        this.notice('info', 'A real host would re-send that prompt to the agent.');
+        this.notice('info', 'A real host would re-send that prompt as a new turn.');
         return;
 
       case 'context.reveal':
@@ -921,6 +1155,30 @@ export class MockHost implements Bridge {
 
       case 'settings.open':
         this.notice('info', 'AI settings would open as a Rhino options page.');
+        return;
+
+      // The card is withdrawn by the host, never by the panel, so the stand-in has to do it too.
+      case 'permission.answer': {
+        this.emit({ type: 'permission.ask.clear', id: command.id });
+        // "Remember this choice" is the same write the settings dialog makes: allowed becomes On,
+        // refused becomes Off, and the permissions menu shows it the moment the card closes.
+        if (command.remember) {
+          for (const group of PERMISSIONS)
+            for (const tool of group.tools)
+              if (tool.name === SEED_ASK.tool) tool.mode = command.allow ? 'on' : 'off';
+          this.emit({ type: 'permissions', groups: permissionSnapshot() });
+        }
+        if (command.id === SEED_ASK.id && this.askOpen) {
+          this.askOpen = false;
+          void this.resumeSeededTurn(command.allow);
+        }
+        return;
+      }
+
+      case 'permission.set':
+        for (const group of PERMISSIONS)
+          for (const tool of group.tools) if (tool.name === command.name) tool.mode = command.mode;
+        this.emit({ type: 'permissions', groups: permissionSnapshot() });
         return;
 
       case 'agent.login':
@@ -1047,6 +1305,11 @@ export class MockHost implements Bridge {
   }
 
   private boot(): void {
+    // The panel serves three assistants, so the stand-in has to be able to play any of them while the
+    // page is open: `mockHost.emit({ type: 'hello', host: { …, profile: 'grasshopper' } })`. Mock-only
+    // code, so it never reaches a build with a real host.
+    (window as unknown as { mockHost: MockHost }).mockHost = this;
+
     this.emit({
       type: 'hello',
       host: {
@@ -1067,8 +1330,94 @@ export class MockHost implements Bridge {
     });
     this.emit({ type: 'agents', agents: [...AGENTS], active: 'claude' });
     this.emit({ type: 'context', items: [...CONTEXT] });
+    this.emit({ type: 'permissions', groups: permissionSnapshot() });
     this.emit({ type: 'history', entries: [...HISTORY] });
+    this.sendSeeded();
+  }
+
+  // The seeded transcript's last turn is blocked on a Run Script card, so whatever puts that snapshot
+  // back on screen puts the card back with it — which is what the real feed's replay does, since a
+  // request the conversation still holds is posed again by the new feed.
+  private sendSeeded(): void {
     this.emit({ type: 'conversation', snapshot: seeded() });
+    this.askOpen = true;
+    this.emit({ type: 'permission.ask', ask: SEED_ASK });
+  }
+
+  // Answering that card has to carry the turn on from where it parked: a refusal ends it, an allow
+  // runs the script and reports what it found.
+  private async resumeSeededTurn(allow: boolean): Promise<void> {
+    const turnId = SEED_TURN;
+    const script = new Script();
+    this.script = script;
+    this.activeTurn = turnId;
+
+    try {
+      if (!allow) {
+        this.emit({ type: 'turn.plan', turnId, steps: seedPlan('skipped') });
+        await this.text(
+          turnId,
+          script,
+          lines(
+            '',
+            'Left unrun. The script is still in the editor, so `Run` there does the same thing whenever you want it.',
+          ),
+        );
+      } else {
+        this.status('Running planarity-audit.py…');
+        await this.tool(
+          turnId,
+          script,
+          'script_editor_run',
+          'ran planarity-audit.py (18 caps picked)',
+          { title: 'planarity-audit.py' },
+          1_600,
+          {
+            preview: {
+              kind: 'table',
+              columns: ['Cap', 'Deviation', 'Verdict'],
+              rows: [
+                ['Cap L14-SW', '18.40 mm', 'split or bend'],
+                ['Cap L15-SW', '11.02 mm', 'cold-bend'],
+                ['Cap L13-SW', '4.71 mm', 'within reach'],
+                ['Cap L12-SW', '2.08 mm', 'fine'],
+                ['Cap L11-SW', '1.16 mm', 'fine'],
+              ],
+            },
+            result: { picked: 18, offPlane: 5, worstMm: 18.4 },
+          },
+        );
+        this.status(null);
+        this.emit({ type: 'turn.plan', turnId, steps: seedPlan('done') });
+        await this.text(
+          turnId,
+          script,
+          lines(
+            '',
+            '5 of the 18 caps are off plane, and only the top one is awkward:',
+            '',
+            '- **Cap L14-SW at 18.40 mm** sits right under the corner panel we just split',
+            '- the other four are all under 12 mm, which the fabricator will roll',
+            '- the remaining 13 are planar to within tolerance',
+            '',
+            'The script read the selection, so pointing it at another layer is just a different pick.',
+          ),
+        );
+      }
+      this.emit({ type: 'turn.usage', turnId, usage: usage(21_360, 3_180, 0.21) });
+      this.emit({ type: 'turn.end', turnId, status: 'ok' });
+    } catch (error) {
+      if (error !== ABORTED) {
+        this.settleInFlight(turnId);
+        this.emit({ type: 'turn.end', turnId, status: 'error', error: String(error) });
+        this.status(null);
+      }
+    } finally {
+      if (this.script === script) {
+        this.script = null;
+        this.activeTurn = null;
+      }
+    }
   }
 
   private async runTurn(

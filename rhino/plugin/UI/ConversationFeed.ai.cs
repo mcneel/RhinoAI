@@ -33,7 +33,14 @@ internal sealed class ConversationFeed
 
     private readonly record struct PosedQuestion(PendingQuestion Question, string Id);
 
-    private readonly record struct ToolOutcome(string Result, bool Done);
+    // Same bookkeeping for permission requests: the feed mints the id the card answers with, and
+    // withdraws the card when the request is gone.
+    private List<PosedPermission> PosedPermissions { get; } = new();
+    private int PermissionSeq { get; set; }
+
+    private readonly record struct PosedPermission(PermissionRequest Request, string Id);
+
+    private readonly record struct ToolOutcome(string Result, bool Done, string Title);
 
     private sealed class TurnCursor
     {
@@ -65,6 +72,7 @@ internal sealed class ConversationFeed
         Cursors.Clear();
         LifecycleSent = 0;
         Posed.Clear();
+        PosedPermissions.Clear();
 
         Emit(new ConversationEvent(new PanelConversation(
             Source.AgentSessionId.ToString(),
@@ -115,6 +123,7 @@ internal sealed class ConversationFeed
         }
 
         PumpQuestion();
+        PumpPermission();
     }
 
     private static IReadOnlyList<PanelAttachment> Describe(string turnId, IReadOnlyList<AttachmentInfo> attachments)
@@ -137,7 +146,7 @@ internal sealed class ConversationFeed
             if (ev.Kind != TurnEventKind.ToolUse)
                 continue;
             string callId = CallId(cursor, i, ev);
-            ToolOutcome landed = new(ev.Result, ev.Done);
+            ToolOutcome landed = new(ev.Result, ev.Done, TitleFor(ev));
             if (!cursor.ToolOutcomes.TryGetValue(callId, out ToolOutcome sent) || sent == landed)
                 continue;
             cursor.ToolOutcomes[callId] = landed;
@@ -160,7 +169,7 @@ internal sealed class ConversationFeed
                 {
                     cursor.OpenTextBlock = null;
                     string callId = CallId(cursor, cursor.EventsSent, ev);
-                    cursor.ToolOutcomes[callId] = new ToolOutcome(ev.Result, ev.Done);
+                    cursor.ToolOutcomes[callId] = new ToolOutcome(ev.Result, ev.Done, TitleFor(ev));
                     Emit(new TurnToolEvent(cursor.Id, CallFor(callId, ev)));
                     EmitImagesIn(cursor, ev.Result);
                     break;
@@ -233,6 +242,62 @@ internal sealed class ConversationFeed
 
     // Diff the posed set against the conversation's: drop what is gone, pose what is new. Both
     // directions matter, because questions leave one at a time (a stale clear) as well as together.
+    // Same diff as PumpQuestion: withdraw the cards whose request is gone (answered, cancelled, or
+    // the turn ended), then post a card for each new one.
+    private void PumpPermission()
+    {
+        Source.TryGetPendingPermissions(out IReadOnlyList<PermissionRequest> pending);
+
+        for (int i = PosedPermissions.Count - 1; i >= 0; i--)
+        {
+            if (ContainsPermission(pending, PosedPermissions[i].Request))
+                continue;
+            Emit(new PermissionAskClearEvent(PosedPermissions[i].Id));
+            PosedPermissions.RemoveAt(i);
+        }
+
+        foreach (PermissionRequest request in pending)
+        {
+            if (IndexOfPosedPermission(request) >= 0)
+                continue;
+
+            string id = $"permission-{++PermissionSeq}";
+            PosedPermissions.Add(new PosedPermission(request, id));
+            Emit(new PermissionAskEvent(new PanelPermissionAsk(id, request.Tool, request.Title, request.Detail)));
+        }
+    }
+
+    // The request a card's answer refers to; false when the card is stale, so a click on a request
+    // that has already been answered or cancelled does nothing.
+    public bool TryResolvePermission(string id, out PermissionRequest request)
+    {
+        foreach (PosedPermission posed in PosedPermissions)
+        {
+            if (posed.Id != id)
+                continue;
+            request = posed.Request;
+            return true;
+        }
+        request = default!;
+        return false;
+    }
+
+    private static bool ContainsPermission(IReadOnlyList<PermissionRequest> requests, PermissionRequest request)
+    {
+        foreach (PermissionRequest candidate in requests)
+            if (ReferenceEquals(candidate, request))
+                return true;
+        return false;
+    }
+
+    private int IndexOfPosedPermission(PermissionRequest request)
+    {
+        for (int i = 0; i < PosedPermissions.Count; i++)
+            if (ReferenceEquals(PosedPermissions[i].Request, request))
+                return i;
+        return -1;
+    }
+
     private void PumpQuestion()
     {
         Source.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> pending);
@@ -328,7 +393,7 @@ internal sealed class ConversationFeed
         return new PanelToolCall(
             callId,
             name,
-            ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
+            TitleFor(ev),
             Payload(ev.Args),
             finished ? failed ? "failed" : "ok" : "running",
             Payload(ev.Result),
@@ -341,13 +406,29 @@ internal sealed class ConversationFeed
 
     private static PanelToolPatch UnknownPatch { get; } = new("unknown", null, null, null, null, ToolChips.None);
 
-    // Only ever emitted once the terminal update lands, so the call has finished and any chip it offered is spent.
+    // While a call is in flight the phrasing is present tense, and one that has Rhino waiting on the
+    // user says so instead: a getter on the command line is not something the panel can show, so the
+    // card carries it.
+    private static string TitleFor(TurnEvent ev) =>
+        ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed, running: !ev.Done);
+
     private static PanelToolPatch PatchFor(TurnEvent ev)
     {
+        // Not finished: the title changed under us and nothing else did. A null status renames the
+        // card and leaves it running, chips and all — closing it here would strand the call.
+        if (!ev.Done)
+            return new PanelToolPatch(
+                null,
+                TitleFor(ev),
+                null,
+                null,
+                DurationMs: null,
+                ToolChips.For(ToolSummary.RemoveUnderscoreUnderscoreNaming(ev.Text), true));
+
         bool failed = ev.Failed || ToolSummary.IsFailure(ev.Result);
         return new PanelToolPatch(
             failed ? "failed" : "ok",
-            ToolSummary.Describe(ev.Text, ev.Args, ev.Result, ev.Failed),
+            TitleFor(ev),
             Payload(ev.Result),
             failed ? FailureText(ev.Result) : null,
             DurationMs: null,

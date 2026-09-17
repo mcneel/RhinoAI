@@ -20,6 +20,8 @@
   <!-- Only Rhino-free plug-in sources are linked in, so the test assembly never loads RhinoCommon. -->
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Server/Attributes.ai.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/Server/ToolMode.ai.cs" LinkBase="ServerSources" />
+    <Compile Include="../../rhino/plugin/AIProfile.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Server/Protocol.ai.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/SchemaBuilder.ai.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Server/ParameterBinder.ai.cs" LinkBase="ServerSources" />
@@ -40,6 +42,8 @@
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ToolActivity.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Server/PermissionRequest.ai.cs" LinkBase="ServerSources" />
     <Compile Include="../../rhino/plugin/Agents/Attachment.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/PanelAttachment.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/PanelCommands.cs" LinkBase="PanelSources" />

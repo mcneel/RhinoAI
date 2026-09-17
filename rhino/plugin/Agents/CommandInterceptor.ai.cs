@@ -87,18 +87,18 @@ internal sealed class CommandInterceptor : IDisposable
         {
             case "cancel":
             case "stop":
-                if (AgentHost.TryFindActive(Doc, out IAgentRunner running))
+                if (AgentHost.TryFindActive(Doc, AIProfile.Rhino, out IAgentRunner running))
                     running.Cancel();
                 else
                     RhinoApp.WriteLine($"{RoutedMarker} nothing running.");
                 return;
             case "exit":
             case "quit":
-                AgentHost.Stop(Doc);
+                AgentHost.Stop(Doc, AIProfile.Rhino);
                 RhinoApp.WriteLine($"{RoutedMarker} agent stopped.");
                 return;
         }
 
-        AgentDispatch.PromptActive(Doc, UserMessage.FromText(request));
+        AgentDispatch.PromptActive(Doc, AIProfile.Rhino, UserMessage.FromText(request));
     }
 }

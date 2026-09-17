@@ -8,6 +8,7 @@ import type { StringKey } from '../i18n/strings.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
+import { permissionsMenu } from './permissionsMenu.js';
 
 interface Command {
   key: string;
@@ -21,6 +22,7 @@ const COMMANDS: readonly Command[] = [
   { key: 'new', label: '/new', hint: 'cmd.newHint', icon: 'plus', run: (c) => c.send({ type: 'conversation.new' }) },
   { key: 'history', label: '/history', hint: 'cmd.historyHint', icon: 'history', run: (c) => c.ui.openOverlay('history') },
   { key: 'agent', label: '/agent', hint: 'cmd.agentHint', icon: 'agent', run: (c) => c.ui.openOverlay('agents') },
+  { key: 'permissions', label: '/permissions', hint: 'permissions.command', icon: 'settings', run: (c) => c.ui.openOverlay('permissions') },
   { key: 'login', label: '/login', hint: 'cmd.loginHint', icon: 'agent', run: (c) => c.send({ type: 'agent.login' }) },
   { key: 'stop', label: '/stop', hint: 'cmd.stopHint', icon: 'stop', run: (c) => c.send({ type: 'cancel' }) },
   { key: 'settings', label: '/settings', hint: 'cmd.settingsHint', icon: 'settings', run: (c) => c.send({ type: 'settings.open' }) },
@@ -264,6 +266,10 @@ export function composer(ctx: PanelContext): Child {
     },
     menu,
     when(
+      () => ui.overlay() === 'permissions',
+      () => permissionsMenu(ctx),
+    ),
+    when(
       () => ui.pickedContext().length > 0,
       () =>
         el(
@@ -329,6 +335,23 @@ export function composer(ctx: PanelContext): Child {
           'button',
           { class: 'icon-btn', type: 'button', title: () => t('composer.attachFile'), onClick: () => ctx.send({ type: 'attachments.pick' }) },
           icon('paperclip', 15),
+        ),
+        when(
+          () => store.permissionGroups().length > 0,
+          () =>
+            el(
+              'button',
+              {
+                class: () => `icon-btn${ui.overlay() === 'permissions' ? ' on' : ''}`,
+                type: 'button',
+                title: () => t('permissions.button'),
+                'aria-expanded': () => ui.overlay() === 'permissions',
+                onClick: () => ui.openOverlay('permissions'),
+              },
+              // The same two knobs the header wears: both lead to what this assistant is allowed to
+              // do, so they should not look like two different kinds of thing.
+              icon('settings', 15),
+            ),
         ),
         el(
           'button',

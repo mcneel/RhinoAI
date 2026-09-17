@@ -1,14 +1,13 @@
 using System.Collections.ObjectModel;
-using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
 
 namespace Rhino.AI;
 
-// Shared settings UI (AI Agents / MCP Servers / Tools). Hosted by both the standalone
-// AISettingsDialog and the Rhino Options page (AIOptionsPage); neither owns the commit logic,
-// it lives here behind TryCommit so the two hosts can never drift.
-internal sealed class AISettingsPanel : Panel
+// One assistant's settings: the pages that edit them, and the commit that writes them back. Hosted
+// by AISettingsTabs, which the standalone AISettingsDialog and the Rhino Options page both show;
+// neither owns the commit logic, it lives here behind TryCommit so the hosts can never drift.
+internal sealed class AISettingsPanel
 {
     private ObservableCollection<AgentRow> Rows { get; } = [];
     private GridView AgentGrid { get; } = new() { ShowHeader = true, AllowMultipleSelection = false, AllowColumnReordering = false, AllowEmptySelection = true };
@@ -40,20 +39,29 @@ internal sealed class AISettingsPanel : Panel
     // the editor from a freshly selected row.
     private bool Loading { get; set; }
 
-    public AISettingsPanel()
+    // Whose settings this page edits. Extra MCP servers are shared by every agent, so only the AI
+    // profile's page shows that tab.
+    public AIProfile Profile { get; }
+
+    // Not a control in its own right any more: it reads one assistant's settings, hands out the pages
+    // that edit them and writes them back. AISettingsTabs decides where those pages go, which is how
+    // one assistant's permissions can sit on the same row of tabs as another's.
+    public AISettingsPanel(AIProfile profile)
     {
-        Padding = new Padding(20);
-        Height = 600;
-
+        Profile = profile;
         SeedRows();
-
-        TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("AI Agents"), Content = AgentsTab() });
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("MCP Servers"), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("Tools"), Content = ToolsTab() });
-
-        Content = tabs;
     }
+
+    /// <summary>The agents this assistant may use, and the model and prompt of the selected one.</summary>
+    public Control Agents() => Pad(AgentsTab());
+
+    /// <summary>The extra MCP servers every agent sees. Shared, so only the Rhino page offers it.</summary>
+    public Control Mcp() => Pad(McpServersTab());
+
+    /// <summary>What this assistant's agent is allowed to do.</summary>
+    public Control Permissions() => Pad(ToolsTab());
+
+    private static Control Pad(Control page) => new Eto.Forms.Panel { Padding = new Padding(12), Content = page };
 
     // Persists every tab back to AISettings. Returns false (and shows the MCP error inline) when the
     // MCP JSON is invalid, so the hosting dialog/page can keep itself open; true once everything is saved.
@@ -61,14 +69,18 @@ internal sealed class AISettingsPanel : Panel
     {
         error = string.Empty;
 
-        if (!TryValidateMcpJson(McpJsonBox.Text, out string normalizedJson, out string validationError))
+        string normalizedJson = string.Empty;
+        if (Profile == AIProfile.Rhino)
         {
-            McpErrorLabel.Text = validationError;
-            McpErrorLabel.Visible = true;
-            error = validationError;
-            return false;
+            if (!TryValidateMcpJson(McpJsonBox.Text, out normalizedJson, out string validationError))
+            {
+                McpErrorLabel.Text = validationError;
+                McpErrorLabel.Visible = true;
+                error = validationError;
+                return false;
+            }
+            McpErrorLabel.Visible = false;
         }
-        McpErrorLabel.Visible = false;
 
         foreach (AgentRow row in Rows)
         {
@@ -78,28 +90,21 @@ internal sealed class AISettingsPanel : Panel
         }
 
         if (Rows.FirstOrDefault(r => r.IsDefault) is AgentRow defaultRow)
-            AISettings.DefaultAgentName = defaultRow.Name;
+            AISettings.SetDefaultAgentName(defaultRow.Name);
 
-        AISettings.ExtraMcpServersJson = normalizedJson;
+        if (Profile == AIProfile.Rhino)
+            AISettings.ExtraMcpServersJson = normalizedJson;
 
-        // ScanTools hides router-internal underscore tools from the grid, so they have no checkbox to
-        // round-trip; carry forward any that were already disabled instead of silently dropping them.
-        IEnumerable<string> uncheckedNames = ToolLeaves
-            .Where(leaf => leaf.GetValue(0) is not true)
-            .Select(leaf => leaf.ToolName);
-        IEnumerable<string> preservedUnderscore = AISettings.DisabledTools
-            .Where(n => n.StartsWith('_'));
-        AISettings.DisabledTools = uncheckedNames
-            .Concat(preservedUnderscore)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        foreach (ToolNode leaf in ToolLeaves)
+            if (leaf.Tool is { } tool)
+                ToolPolicy.SetMode(Profile, tool, leaf.Mode);
 
         return true;
     }
 
     private void SeedRows()
     {
-        string defaultName = AISettings.DefaultAgentName;
+        string defaultName = AISettings.DefaultAgentName();
         bool anyDefault = false;
         foreach (AgentDefinition def in AgentRegistry.Instance.AllDefinitions)
         {
@@ -167,12 +172,22 @@ internal sealed class AISettingsPanel : Panel
             },
         };
 
+        Label help = new()
+        {
+            Wrap = WrapMode.Word,
+            Text = Rhino.UI.LOC.STR("Which agent runs, on which model, with which prompt — one set of settings, "
+                + "shared by every assistant. Only what each of them is allowed to do is its own, on the "
+                + "Permissions tab."),
+            TextColor = Colors.Gray,
+        };
+
         TableLayout layout = new()
         {
             Padding = new Padding(8),
-            Spacing = new Size(12, 0),
+            Spacing = new Size(12, 8),
             Rows =
             {
+                new TableRow(new TableCell(help), new TableCell(new Panel())),
                 new TableRow(
                     new TableCell(left),
                     new TableCell(properties, scaleWidth: true))
@@ -216,7 +231,7 @@ internal sealed class AISettingsPanel : Panel
             return;
 
         DialogResult confirm = MessageBox.Show(
-            this,
+            Rhino.UI.RhinoEtoApp.MainWindow,
             string.Format(
                 Rhino.UI.LOC.STR("Reset \"{0}\" to its default settings? This clears its model and prompt, and re-enables it."),
                 row.Name),
@@ -354,54 +369,58 @@ internal sealed class AISettingsPanel : Panel
 
     private Control ToolsTab()
     {
-        HashSet<string> disabled = new(AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase);
-
-        TreeGridItemCollection roots = [];
-        foreach (IGrouping<string, ToolInfo> group in ScanTools()
-                     .GroupBy(t => t.Category)
-                     .OrderBy(g => CategoryOrder(g.Key)))
-        {
-            ToolNode groupNode = new(CategoryLabel(group.Key)) { Expanded = true };
-            foreach (ToolInfo tool in group.OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase))
-            {
-                ToolNode leaf = new(tool.Name, !disabled.Contains(tool.Name), tool.Title, tool.Description)
-                {
-                    Parent = groupNode,
-                };
-                groupNode.Children.Add(leaf);
-                ToolLeaves.Add(leaf);
-            }
-            SyncGroupState(groupNode);
-            roots.Add(groupNode);
-        }
-
-        TreeGridView tree = new() { ShowHeader = true, DataStore = roots };
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("On"), DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Tool"), DataCell = new TextBoxCell(1), Width = 210 });
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Description"), DataCell = new TextBoxCell(2), Width = 380 });
-        tree.CellEdited += (_, e) =>
-        {
-            if (e.Column != 0 || e.Item is not ToolNode node)
-                return;
-            if (node.IsGroup)
-            {
-                bool on = node.GetValue(0) is true;
-                foreach (ToolNode child in node.Children.OfType<ToolNode>())
-                    child.SetValue(0, on);
-                tree.ReloadItem(node);
-            }
-            else if (node.Parent is ToolNode group)
-            {
-                SyncGroupState(group);
-                tree.ReloadItem(group);
-            }
-        };
+        // Two questions, asked in that order: how much of Rhino does this assistant reach, and then
+        // how dangerous is each thing it reaches. The first is the two tables; the second is the
+        // groups inside each of them.
+        Control? own = Section(OwnCategory, ToolCatalog.All.Where(t => ToolPolicy.Owner(t.Name) == Profile));
+        Control? shared = Section(SharedCategory, ToolCatalog.All.Where(t => ToolPolicy.Owner(t.Name) != Profile));
 
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = Rhino.UI.LOC.STR("Tools the built-in \"rhino\" server exposes, grouped by behavior. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool."),
+            Text = string.Format(
+                Rhino.UI.LOC.STR("What the {0} panel's agent is allowed to do. On: it may call the tool. Ask: it has to "
+                    + "ask you in the chat before each call. The other panels and external MCP clients are "
+                    + "not affected."),
+                AIProfiles.Name(Profile)),
             TextColor = Colors.Gray,
+        };
+
+        // An assistant that owns no tools of its own — the Rhino one — is left with the one table
+        // rather than an empty heading. The divider is draggable because the two tables are never
+        // anywhere near the same length.
+        Control body = own is null || shared is null
+            ? (own ?? shared)!
+            : new Splitter
+            {
+                Orientation = Orientation.Vertical,
+                FixedPanel = SplitterFixedPanel.Panel1,
+                Panel1 = own,
+                Panel2 = shared,
+                Position = OwnSectionHeight,
+            };
+
+        // An override is only stored where the user departed from the default of the day, so settings
+        // saved before a default changed go on winning over the new one. This is the way back.
+        Button reset = new() { Text = Rhino.UI.LOC.STR("Reset to defaults") };
+        reset.Click += (_, _) =>
+        {
+            AISettings.ClearToolModeOverrides(Profile);
+
+            foreach (ToolNode leaf in ToolLeaves)
+            {
+                if (leaf.Tool is not { } tool)
+                    continue;
+                ToolMode mode = ToolPolicy.DefaultMode(Profile, tool);
+                leaf.SetValue(0, mode != ToolMode.Off);
+                leaf.SetValue(1, mode == ToolMode.Ask);
+            }
+
+            foreach (ToolNode group in ToolLeaves.Select(leaf => leaf.Parent).OfType<ToolNode>().Distinct())
+                SyncGroupState(group);
+
+            foreach (TreeGridView tree in Trees)
+                tree.ReloadData();
         };
 
         return new TableLayout
@@ -411,18 +430,130 @@ internal sealed class AISettingsPanel : Panel
             Rows =
             {
                 new TableRow(help),
-                new TableRow(tree) { ScaleHeight = true },
+                new TableRow(body) { ScaleHeight = true },
+                new TableRow(new StackLayout
+                {
+                    Orientation = Orientation.Horizontal,
+                    Items = { new StackLayoutItem(null, expand: true), reset },
+                }),
             },
         };
     }
 
-    private static int CategoryOrder(string category) => category switch
+    // The permission tables, so a reset can repaint them.
+    private List<TreeGridView> Trees { get; } = [];
+
+    // One titled table: everything on one side of the first question, grouped by how dangerous it is.
+    // Null when this assistant has nothing on that side.
+    private Control? Section(string title, IEnumerable<ToolInfo> tools)
     {
-        "Read-only" => 0,
-        "Modify" => 1,
-        "Destructive" => 2,
-        _ => 3,
-    };
+        TreeGridItemCollection roots = [];
+        foreach (IGrouping<string, ToolInfo> behaviour in tools
+                     .GroupBy(t => t.Behaviour)
+                     .OrderBy(g => CategoryOrder(g.Key)))
+        {
+            ToolNode group = new(CategoryLabel(behaviour.Key)) { Expanded = true };
+            foreach (ToolInfo tool in behaviour.OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase))
+            {
+                ToolNode leaf = new(tool, ToolPolicy.Mode(Profile, tool)) { Parent = group };
+                group.Children.Add(leaf);
+                ToolLeaves.Add(leaf);
+            }
+            SyncGroupState(group);
+            roots.Add(group);
+        }
+
+        if (roots.Count == 0)
+            return null;
+
+        Label label = new() { Text = title, Font = SystemFonts.Bold() };
+
+        return new TableLayout
+        {
+            Spacing = new Size(0, 4),
+            Rows =
+            {
+                new TableRow(label),
+                new TableRow(Tree(roots)) { ScaleHeight = true },
+            },
+        };
+    }
+
+    // Tool before Ask, which is not the order the two switches would like: the tree draws its
+    // expander and its indent in the first column, so anything between that and the name leaves a
+    // group row reading as an expander, a checkbox, an empty checkbox and then, at a distance, a
+    // word — which is not a heading. Next to its own checkbox it is one.
+    private TreeGridView Tree(TreeGridItemCollection roots)
+    {
+        TreeGridView tree = new() { ShowHeader = true, DataStore = roots };
+        Trees.Add(tree);
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("On"), DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Tool"), DataCell = new TextBoxCell(2), Width = 230 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Ask"), DataCell = new CheckBoxCell(1), Editable = true, Width = 48 });
+        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Description"), DataCell = new TextBoxCell(3), Width = 380 });
+
+        // And the group's own name in bold, so the eye has something to catch besides the indent.
+        tree.CellFormatting += (_, e) =>
+        {
+            if (e.Item is ToolNode { IsGroup: true })
+                e.Font = SystemFonts.Bold();
+        };
+
+        tree.CellEdited += (_, e) =>
+        {
+            if (e.Item is not ToolNode node)
+                return;
+
+            // The columns moved; the values did not. On and Ask are still 0 and 1.
+            int column = e.Column == 2 ? 1 : e.Column;
+            if (column > 1)
+                return;
+
+            // A group reaches every tool under it, however deep; every group above it then re-reads
+            // its own state from what is now there.
+            if (node.IsGroup)
+            {
+                Cascade(node, column, node.GetValue(column) is true);
+                tree.ReloadItem(node);
+            }
+
+            for (ToolNode? above = node.Parent as ToolNode; above is not null; above = above.Parent as ToolNode)
+            {
+                SyncGroupState(above);
+                tree.ReloadItem(above);
+            }
+        };
+
+        return tree;
+    }
+
+    private static void Cascade(ToolNode group, int column, bool value)
+    {
+        foreach (ToolNode child in group.Children.OfType<ToolNode>())
+        {
+            child.SetValue(column, value);
+            if (child.IsGroup)
+                Cascade(child, column, value);
+        }
+    }
+
+    // A group checkbox is checked only when every tool under it has it; toggling it cascades to all
+    // children. Mixed groups read as unchecked (no tri-state) to keep the model free of nulls.
+    private static void SyncGroupState(ToolNode group)
+    {
+        List<ToolNode> children = group.Children.OfType<ToolNode>().ToList();
+        group.SetValue(0, children.Count > 0 && children.All(c => c.GetValue(0) is true));
+        group.SetValue(1, children.Count > 0 && children.All(c => c.GetValue(1) is true));
+    }
+
+    // The assistant's own tools are few and the shared ones are many, so the divider starts here
+    // rather than halfway.
+    private const int OwnSectionHeight = 200;
+
+    // The first question is how much of Rhino this assistant reaches, which is now which table a
+    // tool is in.
+    private static string OwnCategory => Rhino.UI.LOC.STR("Relevant to this assistant");
+    private static string SharedCategory => Rhino.UI.LOC.STR("General access to Rhino resources");
 
     private static string CategoryLabel(string category) => category switch
     {
@@ -432,54 +563,13 @@ internal sealed class AISettingsPanel : Panel
         _ => category,
     };
 
-    // A group checkbox is checked only when every tool under it is on; toggling it cascades to all
-    // children. Mixed groups read as unchecked (no tri-state) to keep the model free of nulls.
-    private static void SyncGroupState(ToolNode group)
+    private static int CategoryOrder(string category) => category switch
     {
-        List<ToolNode> children = group.Children.OfType<ToolNode>().ToList();
-        bool allOn = children.Count > 0 && children.All(c => c.GetValue(0) is true);
-        group.SetValue(0, allOn);
-    }
-
-    // Mirror of ToolRegistry.Scan that reads name/title/description/behaviour without instantiating
-    // tools or needing an IServiceProvider (Scan does the latter to build full schemas, which we must
-    // not do here). Router-internal tools (leading underscore) are excluded so they can't be hidden.
-    private static IReadOnlyList<ToolInfo> ScanTools()
-    {
-        const BindingFlags flags =
-            BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-
-        List<ToolInfo> tools = [];
-        Assembly assembly = typeof(McpSerializer).Assembly;
-        foreach (Type type in SafeGetTypes(assembly))
-        {
-            if (type.GetCustomAttribute<McpServerToolTypeAttribute>() is null)
-                continue;
-
-            foreach (MethodInfo method in type.GetMethods(flags))
-            {
-                if (method.GetCustomAttribute<McpServerToolAttribute>() is not McpServerToolAttribute toolAttr)
-                    continue;
-
-                string name = toolAttr.Name ?? method.Name;
-                if (name.StartsWith('_'))
-                    continue;
-
-                string title = string.IsNullOrWhiteSpace(toolAttr.Title) ? name : toolAttr.Title!;
-                string description = method.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
-                string category = toolAttr.ReadOnly ? "Read-only" : toolAttr.Destructive ? "Destructive" : "Modify";
-                tools.Add(new ToolInfo(name, title, description, category));
-            }
-        }
-
-        return tools;
-    }
-
-    private static IEnumerable<Type> SafeGetTypes(Assembly assembly)
-    {
-        try { return assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t is not null)!; }
-    }
+        "Read-only" => 0,
+        "Modify" => 1,
+        "Destructive" => 2,
+        _ => 3,
+    };
 
     private static string PrettyJson(string json)
     {
@@ -528,29 +618,26 @@ internal sealed class AISettingsPanel : Panel
         }
     }
 
-    // Immutable scan result for one tool row in the Tools tree.
-    private readonly record struct ToolInfo(string Name, string Title, string Description, string Category);
-
-    // TreeGridView node for the Tools tab. Group nodes carry the category label in column 1 and a
-    // roll-up checkbox in column 0; leaf nodes carry [enabled, title, description] and the tool name.
+    // A row of a permissions tree. Group nodes carry the category label in value 2 and roll-up
+    // checkboxes in 0 (On) and 1 (Ask); leaf nodes carry [on, ask, title, description].
     private sealed class ToolNode : TreeGridItem
     {
-        public string ToolName { get; }
-        public bool IsGroup { get; }
+        public ToolInfo? Tool { get; }
+        public bool IsGroup => Tool is null;
 
-        public ToolNode(string toolName, bool enabled, string title, string description)
-            : base(enabled, title, description)
+        public ToolNode(ToolInfo tool, ToolMode mode)
+            : base(mode != ToolMode.Off, mode == ToolMode.Ask, tool.Title, tool.Description)
         {
-            ToolName = toolName;
-            IsGroup = false;
+            Tool = tool;
         }
 
         public ToolNode(string category)
-            : base(false, category, string.Empty)
+            : base(false, false, category, string.Empty)
         {
-            ToolName = string.Empty;
-            IsGroup = true;
         }
+
+        public ToolMode Mode =>
+            GetValue(0) is not true ? ToolMode.Off : GetValue(1) is true ? ToolMode.Ask : ToolMode.On;
     }
 
     // Only Model, SystemPrompt, Enabled and IsDefault are user-editable; the rest mirrors the definition.

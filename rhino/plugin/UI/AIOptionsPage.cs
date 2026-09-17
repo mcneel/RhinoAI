@@ -11,16 +11,19 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private const string IconResourceName = "Rhino.AI.Panel_light.svg";
     private const string DarkIconResourceName = "Rhino.AI.Panel_dark.svg";
 
-    private AISettingsPanel Panel { get; } = new();
+    // A fixed host whose content is replaced on every activation. AISettingsPanel reads AISettings in
+    // its constructor, so one built at plug-in load showed whatever was true at startup for the rest
+    // of the session — every change made from a panel's own settings dialog was invisible here.
+    private Eto.Forms.Panel Host { get; } = new();
+    private AISettingsTabs? Shown { get; set; }
     private Image? LightCachedImage { get; set; }
     private Image? DarkCachedImage { get; set; }
 
     public AIOptionsPage() : base(LOC.STR("AI"))
     {
-        Panel.Width = 800;
     }
 
-    public override object PageControl => Panel;
+    public override object PageControl => Host;
 
     // Mac's Settings UI lists pages by icon; a page with no PageImage never shows in the navigation.
     public override Image PageImage => HostUtils.RunningInDarkMode switch
@@ -29,12 +32,18 @@ internal sealed class AIOptionsPage : OptionsDialogPage
         _ => LightCachedImage ??= LoadIcon(IconResourceName),
     };
 
-    public override bool OnApply() => true; // Panel.TryCommit(out _);
+    // Was returning true without committing, so OK on this page discarded everything typed into it.
+    // Safe to commit now that the page is rebuilt on activation: it can only write back what it read.
+    public override bool OnApply() => Shown?.TryCommit(out _) ?? true;
 
     public override bool OnActivate(bool active)
     {
         if (active)
+        {
+            Shown = new AISettingsTabs(AIProfile.Rhino) { Width = 800 };
+            Host.Content = Shown;
             Modified = true;
+        }
         return base.OnActivate(active);
     }
 

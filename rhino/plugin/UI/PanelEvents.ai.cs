@@ -30,9 +30,23 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(StatusEvent), "status")]
 [JsonDerivedType(typeof(ZoomEvent), "zoom")]
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
+[JsonDerivedType(typeof(PermissionsEvent), "permissions")]
+[JsonDerivedType(typeof(PermissionAskEvent), "permission.ask")]
+[JsonDerivedType(typeof(PermissionAskClearEvent), "permission.ask.clear")]
 internal abstract record PanelEvent;
 
 internal sealed record HelloEvent(PanelHost Host, string Language, IReadOnlyDictionary<string, string> Strings) : PanelEvent;
+
+// What the quick menu above the composer offers: this assistant's own tools and how each one runs.
+internal sealed record PermissionsEvent(IReadOnlyList<PanelPermissionGroup> Groups) : PanelEvent;
+internal sealed record PanelPermissionGroup(string Label, IReadOnlyList<PanelToolPermission> Tools);
+internal sealed record PanelToolPermission(string Name, string Title, string Description, string Mode);
+
+// A tool call waiting to be allowed. It is asked in the chat, where the user is already looking,
+// and withdrawn by id however it was answered.
+internal sealed record PermissionAskEvent(PanelPermissionAsk Ask) : PanelEvent;
+internal sealed record PermissionAskClearEvent(string Id) : PanelEvent;
+internal sealed record PanelPermissionAsk(string Id, string Tool, string Title, string Detail);
 internal sealed record ThemeEvent(string Scheme, IReadOnlyDictionary<string, string>? Tokens) : PanelEvent;
 internal sealed record AgentsEvent(IReadOnlyList<PanelAgent> Agents, string? Active) : PanelEvent;
 internal sealed record ContextEvent(IReadOnlyList<PanelContextItem> Items) : PanelEvent;
@@ -61,7 +75,9 @@ internal sealed record PanelHost(
     string Version,
     string Platform,
     string DocTitle,
-    PanelCapabilities Capabilities);
+    PanelCapabilities Capabilities,
+    // Which assistant this panel is, so the empty state can offer the examples that suit it.
+    string Profile);
 
 internal sealed record PanelCapabilities(
     bool Attachments,

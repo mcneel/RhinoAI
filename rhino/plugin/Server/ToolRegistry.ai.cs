@@ -48,6 +48,7 @@ internal sealed class ToolRegistry
                 ToolHandler handler = new(
                     method, name, toolAttr.Title, description,
                     toolAttr.ReadOnly, toolAttr.Destructive,
+                    ToolModes.DefaultFor(toolAttr.EnabledByDefault, toolAttr.ConfirmByDefault),
                     marshalToUi, inPanelOnly, services);
 
                 if (!registry.ByName.TryAdd(name, handler))
@@ -87,11 +88,19 @@ internal sealed class ToolHandler
     private readonly ParameterDescriptor[] _parameters;
     private readonly bool _marshalToUi;
 
+    // Optional, per tool type: `public static string? DescribeCall(string name, IDictionary<string,
+    // JsonElement>? arguments)`, letting a tool say what a call is about to do in better words than
+    // its own arguments. Used by the permission card.
+    private readonly MethodInfo? _describe;
+
     public string Name { get; }
     public string? Title { get; }
     public string? Description { get; }
     public bool ReadOnly { get; }
     public bool Destructive { get; }
+
+    // The declared starting mode; ToolPolicy layers the user's setting on top.
+    public ToolMode DefaultMode { get; }
 
     // True for tools that only make sense to the in-Rhino panel agent (the
     // `/agent` endpoint); the external `/` endpoint hides them and refuses calls.
@@ -101,7 +110,7 @@ internal sealed class ToolHandler
 
     public ToolHandler(
         MethodInfo method, string name, string? title, string? description,
-        bool readOnly, bool destructive,
+        bool readOnly, bool destructive, ToolMode defaultMode,
         bool marshalToUi, bool inPanelOnly, IServiceProvider services)
     {
         _method = method;
@@ -110,8 +119,16 @@ internal sealed class ToolHandler
         Description = description;
         ReadOnly = readOnly;
         Destructive = destructive;
+        DefaultMode = defaultMode;
         _marshalToUi = marshalToUi;
         InPanelOnly = inPanelOnly;
+
+        _describe = method.DeclaringType?.GetMethod(
+            name: "DescribeCall",
+            bindingAttr: BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(string), typeof(IDictionary<string, JsonElement>)],
+            modifiers: null);
 
         _parameters = method.GetParameters()
             .Select(pi => ResolveBinding(pi, services))
@@ -131,6 +148,23 @@ internal sealed class ToolHandler
         return new ParameterDescriptor(pi, ParameterBindingKind.Argument);
     }
 
+    // What this call is about to do, in the tool's own words; null when it has nothing better to say
+    // than its arguments. May read the document, so callers run it on the UI thread.
+    public string? Describe(IDictionary<string, JsonElement>? arguments)
+    {
+        if (_describe is null)
+            return null;
+        try
+        {
+            return _describe.Invoke(null, [Name, arguments]) as string;
+        }
+        catch (Exception ex)
+        {
+            RhinoApp.WriteLine($"[rhino-ai] {Name} could not describe itself: {ex.GetBaseException().Message}");
+            return null;
+        }
+    }
+
     public Task<CallToolResult> InvokeAsync(
         IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
     {
@@ -144,6 +178,9 @@ internal sealed class ToolHandler
         TaskCompletionSource<CallToolResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RhinoApp.InvokeOnUiThread(new Action(async () =>
         {
+            // A tool holding the UI thread at a getter — a script calling rs.GetObject(), a command
+            // that prompts — looks identical to a hung one from the panel. This is what tells it apart.
+            using IDisposable waiting = UserPromptWatch.While(scope.GetService(typeof(RhinoDoc)) as RhinoDoc);
             try
             { tcs.SetResult(await InvokeCoreAsync(arguments, scope, ct).ConfigureAwait(false)); }
             catch (Exception ex) { tcs.SetException(ex); }

@@ -52,10 +52,27 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     // fresh session). Pre-seeded true when resuming a past conversation so even the FIRST spawn resumes.
     private bool HasEverStarted { get; set; }
 
-    // True only while a resume-from-start spawn has not yet completed a single turn: the saved
-    // --resume target is unproven, so a read-loop exit before any turn lands is treated as the CLI
-    // rejecting the (likely expired) id. We then fail soft to a fresh session (see ReadLoopAsync).
+    // True only while a resume spawn has not yet completed a single turn: the target is unproven, so
+    // a read-loop exit before any turn lands is treated as the CLI rejecting the id. We then fail soft
+    // to a fresh session (see ReadLoopAsync). Re-armed on EVERY spawn, not just the first of a
+    // restored conversation: a spawn that dies before the CLI ever writes the session leaves every
+    // later respawn resuming an id that was never created, and without this that conversation is
+    // wedged for good.
     private bool ResumePending { get; set; }
+
+    // Sticky proof the CLI really holds this session - a turn landed on it, or the CLI minted the id
+    // itself. Until then a resume is a guess, whoever made it.
+    private bool SessionProven { get; set; }
+
+    // The CLI said in so many words that it has no such session (IStreamJsonParser.IsResumeRejection):
+    // certainty rather than the inference above, and the only cover for a session that disappears
+    // after being proven. Armed per spawn.
+    private bool ResumeRefused { get; set; }
+
+    // Set when the read loop has just rotated a refused resume onto a fresh session; consumed by the
+    // prompt that was in flight so it re-runs there, rather than failing with an error whose only
+    // answer is to send the same message again.
+    private bool ResumeReset { get; set; }
 
     private string McpUrl { get; set; } = string.Empty;
 
@@ -100,7 +117,33 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         return new(new NewSessionResponse { SessionId = AgentSessionIdText });
     }
 
+    // Retried once, and only for a resume the CLI refused: by the time the filter runs the read loop
+    // has already rotated to a fresh session, so re-running the same prompt continues the user's turn
+    // instead of failing it over a saved id they never chose and cannot fix.
     public async ValueTask<PromptResponse> SessionPromptAsync(PromptRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await RunPromptAsync(request.Prompt, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception) when (ConsumeResumeReset())
+        {
+            return await RunPromptAsync(request.Prompt, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private bool ConsumeResumeReset()
+    {
+        lock (Gate)
+        {
+            if (!ResumeReset)
+                return false;
+            ResumeReset = false;
+            return true;
+        }
+    }
+
+    private async ValueTask<PromptResponse> RunPromptAsync(IReadOnlyList<ContentBlock> prompt, CancellationToken cancellationToken)
     {
         await EnsureStartedAsync().ConfigureAwait(false);
 
@@ -111,7 +154,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             lock (Gate)
                 CurrentTurn = turn;
 
-            await SendTurnAsync(request.Prompt).ConfigureAwait(false);
+            await SendTurnAsync(prompt).ConfigureAwait(false);
             StopReason reason = await turn.Task.ConfigureAwait(false);
             return new PromptResponse { StopReason = reason };
         }
@@ -207,13 +250,31 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         };
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
-        Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), HasEverStarted);
+        bool resume;
+        lock (Gate)
+        {
+            resume = HasEverStarted;
+            ResumePending = resume && !SessionProven;
+            ResumeRefused = false;
+            ResumeReset = false;
+        }
+        Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), resume);
 
         Process proc = new() { StartInfo = psi };
         proc.ErrorDataReceived += (_, e) =>
         {
-            if (!string.IsNullOrEmpty(e.Data))
-                RhinoApp.WriteLine($"[{Parser.DisplayName}:err] {e.Data}");
+            if (string.IsNullOrEmpty(e.Data))
+                return;
+            // A refused resume is handled below - fresh session, same transcript - so it becomes a
+            // note in the conversation rather than a raw CLI line in the command history naming an
+            // id the user never saw and cannot act on.
+            if (resume && Parser.IsResumeRejection(e.Data))
+            {
+                lock (Gate)
+                    ResumeRefused = true;
+                return;
+            }
+            RhinoApp.WriteLine($"[{Parser.DisplayName}:err] {e.Data}");
         };
         proc.Start();
         proc.BeginErrorReadLine();
@@ -265,7 +326,12 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     private async Task SendTurnAsync(IReadOnlyList<ContentBlock> prompt)
     {
-        StreamWriter writer = Stdin ?? throw new InvalidOperationException($"{Parser.DisplayName} agent not started.");
+        // Read under the gate so a CLI that has already exited is observed together with the read
+        // loop's resume verdict rather than ahead of it: the retry above turns on seeing that flag.
+        StreamWriter? stdin;
+        lock (Gate)
+            stdin = Stdin;
+        StreamWriter writer = stdin ?? throw new InvalidOperationException($"{Parser.DisplayName} agent not started.");
         string line = Parser.FormatTurn(prompt);
 
         await WriteGate.WaitAsync().ConfigureAwait(false);
@@ -364,10 +430,12 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                     // captured its own SessionId, and RhinoAcpClient routes by Conversation, not id).
                     // ...unless the CLI is simply signed out, which says nothing about whether the id
                     // was resumable: rotating it there would burn a perfectly good session.
-                    if (ResumePending && signedOut.Length == 0)
+                    if ((ResumePending || ResumeRefused) && signedOut.Length == 0)
                     {
                         resumeRejected = true;
                         ResumePending = false;
+                        ResumeRefused = false;
+                        ResumeReset = true;
                         HasEverStarted = false;
 
                         // Keep the saved transcript pointing at the session that will actually
@@ -381,7 +449,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 }
             }
             if (resumeRejected)
-                Conversation.NoteSystem("could not resume the saved session (it may have expired); started fresh");
+                Conversation.NoteSystem("could not resume the saved session (it may have expired, or the model moved to another folder); started fresh");
             if (completed is TurnCompletion done)
             {
                 Conversation.RecordUsage(done.Usage);
@@ -489,6 +557,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             stale = AgentSessionId;
             AgentSessionId = parsed;
             ResumePending = false;
+            SessionProven = true; // the CLI minted this id, so it is holding the session
         }
         Conversation.AdoptSessionId(parsed);
         ConversationStore.Delete(stale.ToString());
@@ -506,7 +575,10 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             if (ReferenceEquals(Proc, token)) // both null in the loopback seam, so it matches there
             {
                 turn = CurrentTurn;
-                ResumePending = false; // a turn landed, so the --resume target was accepted
+                // A turn landed, so the session exists: this resume target was accepted and every
+                // later respawn of it is resuming something real.
+                ResumePending = false;
+                SessionProven = true;
                 if (Parser.IsOneTurnPerProcess)
                 {
                     PendingCompletion = new TurnCompletion(reason, usage);

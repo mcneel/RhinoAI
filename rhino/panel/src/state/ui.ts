@@ -3,7 +3,7 @@
 import { computed, signal, type ReadSignal } from '../core/signal.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 
-export type Overlay = 'none' | 'history' | 'agents' | 'context';
+export type Overlay = 'none' | 'history' | 'agents' | 'context' | 'permissions';
 
 export class UiState {
   readonly draft = signal('');
