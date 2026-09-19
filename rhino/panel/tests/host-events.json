@@ -13,6 +13,7 @@
   {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-3","patch":{"status":"failed","title":"python failed","result":"NameError: name \u0027boom\u0027 is not defined","error":"The tool reported a failure.","chips":[]}},
   {"type":"turn.tool","turnId":"turn-0","call":{"id":"call-4","name":"run_command","title":"ran _Box 0,0,0 10,10,10","args":{"command":"_Box 0,0,0 10,10,10"},"status":"running","startedAt":"2026-01-01T09:00:00.0000000+00:00","chips":[{"id":"cancel","label":"Cancel","icon":"stop","style":"danger"}]}},
   {"type":"turn.text","turnId":"turn-0","blockId":"turn-0-b2","delta":"**312 objects**, mostly planar breps.\n\n\u0060\u0060\u0060python\nprint(312)\n\u0060\u0060\u0060"},
+  {"type":"turn.image","turnId":"turn-0","image":{"id":"a3f1c09e42b7","name":"exec-91909287-454a-419b-86b5-6f883204d8cd.png","src":"/image/a3f1c09e42b7","bytes":3659122}},
   {"type":"turn.usage","turnId":"turn-0","usage":{"inputTokens":12480,"outputTokens":1120,"costUsd":0.09}},
   {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-2","patch":{"status":"unknown","chips":[]}},
   {"type":"turn.tool.patch","turnId":"turn-0","callId":"call-4","patch":{"status":"unknown","chips":[]}},

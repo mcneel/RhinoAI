@@ -1,21 +1,23 @@
+import { locale, t } from '../i18n/t.js';
+
 export function relativeTime(iso: string, now = Date.now()): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return '';
   const seconds = Math.max(0, Math.round((now - then) / 1000));
-  if (seconds < 45) return 'just now';
+  if (seconds < 45) return t('format.justNow');
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t('format.minutesAgo', minutes);
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('format.hoursAgo', hours);
   const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(then).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (days < 7) return t('format.daysAgo', days);
+  return new Date(then).toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
 }
 
 export function clockTime(iso: string): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return '';
-  return new Date(then).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return new Date(then).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 export function formatTokens(count: number): string {
@@ -42,6 +44,14 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const MINTED_NAME = /^(?:[a-z]+[-_])?(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
+
+/** What to call an image in a caption: a generated file is named with a uuid, which tells the reader nothing. */
+export function imageLabel(name: string): string {
+  const stem = name.replace(/\.[^.]+$/, '');
+  return stem.length > 0 && MINTED_NAME.test(stem) ? t('image.generated') : name;
 }
 
 export function prettyJson(value: unknown): string {

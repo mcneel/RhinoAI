@@ -15,7 +15,6 @@
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Only Rhino-free plug-in sources are linked in, so the test assembly never loads RhinoCommon. -->
@@ -42,16 +41,22 @@
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/Attachment.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelAttachment.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelCommands.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelEvents.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/PanelJson.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/ToolChips.ai.cs" LinkBase="PanelSources" />
-    <Compile Include="../../rhino/plugin/WebPanel/ConversationFeed.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelAttachment.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelCommands.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelCommands.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelEvents.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelJson.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ToolChips.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ServedImages.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ImageMentions.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/GeneratedImages.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/ConversationFeed.ai.cs" LinkBase="PanelSources" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/RouterStaging.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/router/RouterPaths.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/QuestionSpec.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/AskUserValidation.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/AskUserQuestion.ai.cs" LinkBase="PluginSources" />

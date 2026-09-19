@@ -1,6 +1,7 @@
+using System.Text;
 using System.Text.Json.Nodes;
 
-namespace Rhino.AI.WebPanel;
+namespace Rhino.AI.UI;
 
 // Translates a Conversation into the panel's incremental event stream.
 //
@@ -15,8 +16,11 @@ internal sealed class ConversationFeed
     // Conversation.NoteSessionStarted writes exactly this.
     private const string SessionStartedMarker = "session started";
 
+    private const int TextOverlap = 512;
+
     private Conversation Source { get; }
     private Action<PanelEvent> Emit { get; }
+    private GeneratedImages Produced { get; }
 
     private List<TurnCursor> Cursors { get; } = new();
     private int LifecycleSent { get; set; }
@@ -41,12 +45,16 @@ internal sealed class ConversationFeed
         public Dictionary<string, ToolOutcome> ToolOutcomes = new();
         public bool UsageSent;
         public bool Ended;
+        public StringBuilder Text = new();
+        public int TextScanned;
+        public HashSet<string> ImagesSent = new(StringComparer.OrdinalIgnoreCase);
     }
 
-    public ConversationFeed(Conversation source, Action<PanelEvent> emit)
+    public ConversationFeed(Conversation source, Action<PanelEvent> emit, string? generatedImagesRoot = null)
     {
         Source = source;
         Emit = emit;
+        Produced = new GeneratedImages(generatedImagesRoot);
     }
 
     // Replay the whole conversation as if it were arriving live. Cheaper than a snapshot type, and
@@ -134,6 +142,7 @@ internal sealed class ConversationFeed
                 continue;
             cursor.ToolOutcomes[callId] = landed;
             Emit(new TurnToolPatchEvent(cursor.Id, callId, PatchFor(ev)));
+            EmitImagesIn(cursor, ev.Result);
         }
 
         for (; cursor.EventsSent < events.Count; cursor.EventsSent++)
@@ -144,6 +153,7 @@ internal sealed class ConversationFeed
                 case TurnEventKind.AssistantText:
                     cursor.OpenTextBlock ??= $"{cursor.Id}-b{++cursor.TextBlocks}";
                     Emit(new TurnTextEvent(cursor.Id, cursor.OpenTextBlock, ev.Text));
+                    AppendAndScan(cursor, ev.Text);
                     break;
 
                 case TurnEventKind.ToolUse:
@@ -152,6 +162,7 @@ internal sealed class ConversationFeed
                     string callId = CallId(cursor, cursor.EventsSent, ev);
                     cursor.ToolOutcomes[callId] = new ToolOutcome(ev.Result, ev.Done);
                     Emit(new TurnToolEvent(cursor.Id, CallFor(callId, ev)));
+                    EmitImagesIn(cursor, ev.Result);
                     break;
                 }
 
@@ -159,9 +170,12 @@ internal sealed class ConversationFeed
                     cursor.OpenTextBlock = null;
                     if (!string.IsNullOrWhiteSpace(ev.Text))
                         Emit(new TurnTextEvent(cursor.Id, $"{cursor.Id}-b{++cursor.TextBlocks}", ev.Text));
+                    AppendAndScan(cursor, ev.Text);
                     break;
             }
         }
+
+        EmitProducedImages(cursor, turn);
 
         if (!cursor.UsageSent && !turn.Usage.IsEmpty)
         {
@@ -181,6 +195,40 @@ internal sealed class ConversationFeed
                     Emit(new TurnToolPatchEvent(cursor.Id, CallId(cursor, i, events[i]), UnknownPatch));
             Emit(new TurnEndEvent(cursor.Id, "ok", null));
         }
+    }
+
+    // A path can straddle two deltas, so the tail already read is read again rather than the whole turn.
+    private void AppendAndScan(TurnCursor cursor, string delta)
+    {
+        if (delta.Length == 0)
+            return;
+
+        cursor.Text.Append(delta);
+        int from = Math.Max(0, cursor.TextScanned - TextOverlap);
+        string window = cursor.Text.ToString(from, cursor.Text.Length - from);
+        cursor.TextScanned = cursor.Text.Length;
+        EmitImagesIn(cursor, window);
+    }
+
+    private void EmitImagesIn(TurnCursor cursor, string text)
+    {
+        foreach (string path in ImageMentions.In(text))
+            EmitImage(cursor, path);
+    }
+
+    private void EmitProducedImages(TurnCursor cursor, Turn turn)
+    {
+        foreach (string path in Produced.Between(turn.StartedAt, turn.CompletedAt ?? DateTimeOffset.UtcNow))
+            EmitImage(cursor, path);
+    }
+
+    private void EmitImage(TurnCursor cursor, string path)
+    {
+        if (cursor.ImagesSent.Contains(path) || ServedImages.Publish(path) is not { } image)
+            return;
+
+        cursor.ImagesSent.Add(path);
+        Emit(new TurnImageEvent(cursor.Id, image));
     }
 
     // Diff the posed set against the conversation's: drop what is gone, pose what is new. Both

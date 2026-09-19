@@ -27,7 +27,7 @@ const INLINE = new RegExp(
     /\*([^*\n]+)\*/,
     /_([^_\n]+)_(?![A-Za-z0-9])/,
     /~~([\s\S]+?)~~/,
-    /\[([^\]\n]*)\]\(([^)\s]+)\)/,
+    /\[([^\]\n]*)\]\((<[^>\n]*>|[^)\s]+)(?:\s+"[^"\n]*")?\)/,
     /(https?:\/\/[^\s<>()[\]]+)/,
   ]
     .map((r) => `(?:${r.source})`)
@@ -89,7 +89,9 @@ function inline(source: string, options: MarkdownOptions): DocumentFragment {
       node.appendChild(inline(strike, options));
       fragment.appendChild(node);
     } else if (linkHref !== undefined) {
-      fragment.appendChild(anchor(linkHref, linkText || linkHref, options));
+      // The bracketed destination is the only spelling that survives a space, which local paths have.
+      const href = linkHref.startsWith('<') && linkHref.endsWith('>') ? linkHref.slice(1, -1) : linkHref;
+      fragment.appendChild(anchor(href, linkText || href, options));
     } else if (bareUrl !== undefined) {
       fragment.appendChild(anchor(bareUrl, bareUrl, options));
     }

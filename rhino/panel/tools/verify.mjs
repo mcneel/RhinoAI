@@ -105,6 +105,10 @@ try {
       tableHeads: q('.msg-agent .md-table th'),
       rawPipes: [...document.querySelectorAll('.msg-agent p')].filter((p) => p.textContent.includes('| ---')).length,
       strayMarkers: [...document.querySelectorAll('.msg-agent')].filter((m) => /\*\*|`{1,3}/.test(m.textContent)).length,
+      spacedLink: [...document.querySelectorAll('.msg-agent a')].filter((a) =>
+        a.getAttribute('href')?.endsWith('/Rhino renders/planarity heatmap.png'),
+      ).length,
+      rawDestinations: [...document.querySelectorAll('.msg-agent')].filter((m) => m.textContent.includes('](<')).length,
     };
   });
   check('markdown renders bold', md.strong > 0);
@@ -114,6 +118,30 @@ try {
   check('markdown renders tables', md.tableRows >= 3 && md.tableHeads === 3, JSON.stringify(md));
   check('table syntax is not left as a paragraph', md.rawPipes === 0);
   check('no unconsumed markdown markers leak into text', md.strayMarkers === 0);
+  check('a bracketed destination carries a path with a space in it', md.spacedLink === 1, JSON.stringify(md));
+  check('a bracketed destination is not left as literal text', md.rawDestinations === 0);
+
+  // ------------------------------------------------------------ image block
+  const picture = await page.evaluate(() => {
+    const block = document.querySelector('.img-block');
+    const img = block?.querySelector('img');
+    return {
+      blocks: document.querySelectorAll('.img-block').length,
+      name: block?.querySelector('figcaption .name')?.textContent ?? '',
+      size: block?.querySelector('figcaption .size')?.textContent ?? '',
+      save: block?.querySelectorAll('.img-save').length ?? 0,
+      wide: img ? Math.round(img.getBoundingClientRect().width) : 0,
+      column: block ? Math.round(block.getBoundingClientRect().width) : 0,
+      popOut: block?.querySelectorAll('.img-frame .img-open').length ?? 0,
+    };
+  });
+  check('an image the agent produced draws as its own block', picture.blocks >= 1);
+  check('the image block names the file, its pixels and its size',
+    picture.name.endsWith('.png') && /× \d+ · [\d.]+ (MB|KB)/.test(picture.size), JSON.stringify(picture));
+  check('the image block offers a save button', picture.save === 1);
+  check('the image fills the transcript column', picture.wide > 0 && picture.wide === picture.column,
+    JSON.stringify(picture));
+  check('the image carries a pop-out button over its corner', picture.popOut === 1, JSON.stringify(picture));
 
   // ------------------------------------------------------- tool cards / json
   await page.click('.tool-toggle');
@@ -565,14 +593,13 @@ try {
   await page.keyboard.press('Equal');
   await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control');
   await wait(150);
-  // Level 1 is the design's natural size, which is CSS zoom 0.9; one rung in is 1.1 x 0.9.
-  check('the keyboard shortcut zooms in', (await zoomOf()) === '0.99', await zoomOf());
+  check('the keyboard shortcut zooms in', (await zoomOf()) === '1.1', await zoomOf());
 
   await page.keyboard.down(process.platform === 'darwin' ? 'Meta' : 'Control');
   await page.keyboard.press('Digit0');
   await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control');
   await wait(150);
-  check('the reset shortcut returns to 100%', (await zoomOf()) === '0.9', await zoomOf());
+  check('the reset shortcut returns to 100%', (await zoomOf()) === '1', await zoomOf());
 
   const panelCentre = await page.evaluate(() => {
     const r = document.querySelector('.panel').getBoundingClientRect();
@@ -583,8 +610,8 @@ try {
   await page.mouse.wheel({ deltaY: -120 });
   await page.keyboard.up('Control');
   await wait(200);
-  check('ctrl and the wheel zooms', (await zoomOf()) === '0.99', await zoomOf());
-  await page.evaluate(() => { document.querySelector('.panel').style.zoom = '0.9'; });
+  check('ctrl and the wheel zooms', (await zoomOf()) === '1.1', await zoomOf());
+  await page.evaluate(() => { document.querySelector('.panel').style.zoom = '1'; });
 
   await page.click('.composer textarea');
   const box = await page.evaluate(() => {
@@ -609,7 +636,12 @@ try {
     const host = await browser.newPage();
     host.setDefaultTimeout(6000);
     host.on('pageerror', (e) => consoleProblems.push(`[host pageerror] ${e.message}`));
-    host.on('console', (m) => { if (m.type() === 'error') consoleProblems.push(`[host] ${m.text().slice(0, 200)}`); });
+    // Nothing serves /image/ here, so the contract sample's image is expected to 404 and fall back.
+    host.on('console', (m) => {
+      if (m.type() !== 'error') return;
+      if (m.location()?.url?.includes('/image/')) return;
+      consoleProblems.push(`[host] ${m.text().slice(0, 200)}`);
+    });
     await host.setViewport({ width: 420, height: 900 });
 
     // Stand in for Eto's injected shim, which is what the panel talks to inside Rhino.
@@ -653,6 +685,10 @@ try {
       questionPages: document.querySelectorAll('.ask-page').length,
       questionSteps: document.querySelectorAll('.ask .steps i').length,
       footerTokens: [...document.querySelectorAll('.turn-foot')].map((n) => n.textContent).join(' '),
+      images: document.querySelectorAll('.img-block').length,
+      imageSrc: document.querySelector('.img-block img')?.getAttribute('src'),
+      imageFrames: document.querySelectorAll('.img-block .img-frame:not([hidden])').length,
+      imageName: document.querySelector('.img-block figcaption .name')?.textContent ?? '',
     }));
 
     check('C#-serialised events render a turn', rendered.turns === 1 && rendered.prompt?.includes('Facade'), JSON.stringify(rendered));
@@ -665,6 +701,12 @@ try {
       && rendered.chipsOnRunning === 1 && rendered.chipsOnSettled === 0, JSON.stringify(rendered));
     check('a result the agent flagged as an error renders as a failed card',
       rendered.toolFailed === 1 && rendered.titles.includes('python failed'), JSON.stringify(rendered));
+    check('a C#-serialised image lands as a block pointing at the host route',
+      rendered.images === 1 && rendered.imageSrc === '/image/a3f1c09e42b7', JSON.stringify(rendered));
+    check('an image the host cannot serve drops the picture and keeps its caption',
+      rendered.imageFrames === 0 && rendered.imageName.length > 0, JSON.stringify(rendered));
+    check('a uuid filename is labelled rather than shown',
+      rendered.imageName === 'Generated image', JSON.stringify(rendered));
     check('the mcp__rhino__ prefix never reaches the panel',
       !JSON.stringify(rendered).includes('mcp__'), JSON.stringify(rendered));
     check('a namespaced tool gets its real phrase',
@@ -831,7 +873,7 @@ try {
     await host.evaluate(() => window.rhinoAI.receive({ type: 'zoom', action: 'in' }));
     await wait(150);
     check('a zoom event from the host moves the panel one rung',
-      (await host.evaluate(() => document.querySelector('.panel').style.zoom)) === '0.99',
+      (await host.evaluate(() => document.querySelector('.panel').style.zoom)) === '1.1',
       await host.evaluate(() => document.querySelector('.panel').style.zoom));
 
     // Answering has to travel back in the shape the C# deserialiser accepts: one submit carrying

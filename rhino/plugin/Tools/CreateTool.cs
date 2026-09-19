@@ -12,10 +12,9 @@ internal static class CreateTool
         RhinoDoc doc,
         [Description("add | update | delete")] string action,
         [Description("Command name the user will type in Rhino, Letters, digits and underscores only, no spaces.")] string commandName,
-        [Description("Python 3 source for the command. Required for add and update. Use `__rhino_doc__` as the document handle, as with run_python.")] string? script = null,
+        [Description("C# source for the command. Required for add and update. Use `__rhino_doc__` as the document handle, as with run_csharp.")] string? script = null,
         [Description("Optional Icon if adding or updating a command (recommended)")] string? svg = null)
     {
-
         if (!ScriptProjectRunner.IsSupportedRhino)
             return Failure(ToolError.Unsupported, $"This needs Rhino 9 or later; this is Rhino {RhinoApp.Version.Major}.");
 
@@ -47,7 +46,7 @@ internal static class CreateTool
         if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
         {
             if (string.IsNullOrWhiteSpace(script))
-                return Failure(ToolError.BadArgument, $"A Python script is required to {action.ToLowerInvariant()} a command.");
+                return Failure(ToolError.BadArgument, $"A C# script is required to {action.ToLowerInvariant()} a command.");
 
             IToolResult addResult = runner.AddCommandToProject(commandName, script, svg);
             if (addResult.Error is not null)

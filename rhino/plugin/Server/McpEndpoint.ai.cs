@@ -1,35 +1,22 @@
+using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace Rhino.AI.Server;
 
-// MapMcp wires a single POST endpoint at `pattern` that handles MCP-flavoured
+// McpServer gives each listener prefix one dispatcher, handling MCP-flavoured
 // JSON-RPC 2.0. We don't implement the Streamable-HTTP SSE channel (the plugin
 // only exposes request/response tools); a client requesting `text/event-stream`
 // just gets back the JSON response inline, which every MCP client we test with
 // tolerates.
 
-internal static class McpEndpointExtensions
-{
-    public static IEndpointConventionBuilder MapMcp(
-        this IEndpointRouteBuilder endpoints, string pattern, bool filtered = false)
-    {
-        McpDispatcher dispatcher = new(endpoints.ServiceProvider, filtered);
-        return endpoints.MapPost(pattern, dispatcher.HandleAsync);
-    }
-}
-
 internal sealed class McpDispatcher
 {
-    
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
+
+    private IServiceProvider Services { get; }
 
     private bool Filtered { get; }
 
@@ -37,18 +24,17 @@ internal sealed class McpDispatcher
     {
         _tools = ToolRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
         _resources = ResourceRegistry.Scan(typeof(McpDispatcher).Assembly, rootServices);
+        Services = rootServices;
         Filtered = filtered;
     }
 
-    public async Task HandleAsync(HttpContext ctx)
+    public async Task HandleAsync(HttpListenerContext ctx, CancellationToken ct)
     {
-        ILogger? logger = ctx.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("Rhino.AI.Server");
-
         JsonRpcRequest? request;
         try
         {
             request = await JsonSerializer.DeserializeAsync<JsonRpcRequest>(
-                ctx.Request.Body, McpSerializer.Options, ctx.RequestAborted)
+                ctx.Request.InputStream, McpSerializer.Options, ct)
                 .ConfigureAwait(false);
         }
         catch (JsonException ex)
@@ -56,7 +42,7 @@ internal sealed class McpDispatcher
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
                 Error = new JsonRpcError { Code = JsonRpcErrorCode.ParseError, Message = ex.Message }
-            }).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
             return;
         }
 
@@ -66,7 +52,7 @@ internal sealed class McpDispatcher
             {
                 Id = request?.Id,
                 Error = new JsonRpcError { Code = JsonRpcErrorCode.InvalidRequest, Message = "Missing method." }
-            }).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
             return;
         }
 
@@ -77,7 +63,7 @@ internal sealed class McpDispatcher
 
         try
         {
-            JsonRpcResponse response = await DispatchAsync(request, ctx.RequestServices, ctx.RequestAborted)
+            JsonRpcResponse response = await DispatchAsync(request, Services, ct)
                 .ConfigureAwait(false);
 
             // JSON-RPC 2.0: a notification gets no reply — not even an error.
@@ -86,16 +72,16 @@ internal sealed class McpDispatcher
             // sending an illegal reply to a notification.
             if (isNotification)
             {
-                ctx.Response.StatusCode = StatusCodes.Status204NoContent;
+                ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 return;
             }
 
             response.Id = request.Id;
-            await WriteResponseAsync(ctx, response).ConfigureAwait(false);
+            await WriteResponseAsync(ctx, response, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "MCP dispatch failed for method {Method}", request.Method);
+            RhinoApp.WriteLine($"[RhinoAI] MCP dispatch failed for method {request.Method}: {ex.GetType().Name}: {ex.Message}");
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
                 Id = request.Id,
@@ -108,7 +94,7 @@ internal sealed class McpDispatcher
                     Message = "Internal error."
 #endif
                 }
-            }).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
         }
     }
 
@@ -327,10 +313,15 @@ internal sealed class McpDispatcher
         return new JsonRpcResponse { Result = result };
     }
 
-    private static async Task WriteResponseAsync(HttpContext ctx, JsonRpcResponse response)
+    private static async Task WriteResponseAsync(
+        HttpListenerContext ctx, JsonRpcResponse response, CancellationToken ct)
     {
+        using MemoryStream buffer = new();
+        await JsonSerializer.SerializeAsync(buffer, response, McpSerializer.Options, ct).ConfigureAwait(false);
+
         ctx.Response.ContentType = "application/json";
-        await JsonSerializer.SerializeAsync(ctx.Response.Body, response, McpSerializer.Options, ctx.RequestAborted)
-            .ConfigureAwait(false);
+        ctx.Response.ContentLength64 = buffer.Length;
+        buffer.Position = 0;
+        await buffer.CopyToAsync(ctx.Response.OutputStream, ct).ConfigureAwait(false);
     }
 }

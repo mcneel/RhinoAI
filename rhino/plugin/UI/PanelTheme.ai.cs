@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Rhino.AI.WebPanel;
+namespace Rhino.AI.UI;
 
 // Rhino's own chrome colours, translated into the panel's CSS custom properties.
 //
@@ -143,13 +143,13 @@ internal static class PanelTheme
     private const string FontFallback =
         "-apple-system, BlinkMacSystemFont, \"Segoe UI Variable Text\", \"Segoe UI\", system-ui, sans-serif";
 
-    // Ratios that reproduce the stylesheet's own 10.5 / 11.5 / 12.5 / 13.5 at a 13px base.
-    private static readonly (string Token, float Ratio)[] Sizes =
+    // Offsets, not ratios: "fs" is Rhino's own size exactly, and the steps stay 1px at any host size.
+    private static readonly (string Token, float Offset)[] Sizes =
     [
-        ("fs-xs", 0.808f),
-        ("fs-sm", 0.885f),
-        ("fs", 0.962f),
-        ("fs-md", 1.038f),
+        ("fs-xs", -2f),
+        ("fs-sm", -1f),
+        ("fs", 0f),
+        ("fs-md", 1f),
     ];
 
     /// <summary>
@@ -174,8 +174,8 @@ internal static class PanelTheme
         {
             ["font"] = family.Length > 0 ? $"\"{family}\", {FontFallback}" : FontFallback,
         };
-        foreach ((string token, float ratio) in Sizes)
-            tokens[token] = $"{(px * ratio).ToString("0.##", CultureInfo.InvariantCulture)}px";
+        foreach ((string token, float offset) in Sizes)
+            tokens[token] = $"{(px + offset).ToString("0.##", CultureInfo.InvariantCulture)}px";
         return tokens;
     }
 

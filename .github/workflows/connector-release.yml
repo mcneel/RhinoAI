@@ -2,7 +2,7 @@ name: Connector Release
 
 on:
   push:
-    branches: [main]
+    branches: [rhino-9.x]
     paths:
       - 'connector/**'
       - 'shared/router-launcher.mjs'

@@ -51,7 +51,7 @@ That second sentence matters. Without it the assistant will dive straight to geo
 
 - **Illegible sketch.** If the response is vague ("a shelf-like object with some compartments"), the image isn't carrying enough information. Annotate the sketch with dimensions and labels, or describe the bits the drawing doesn't show.
 - **Wrong axis.** Plan vs. elevation vs. perspective confusion is common. State it: "this is the front elevation."
-- **Too literal.** If the model copies sketch artefacts (a wobbly line becomes a wobbly edge), tell the assistant to treat the sketch as intent, not as a digitised input.
+- **Too literal.** If the model copies sketch artifacts (a wobbly line becomes a wobbly edge), tell the assistant to treat the sketch as intent, not as a digitized input.
 
 ## Related
 

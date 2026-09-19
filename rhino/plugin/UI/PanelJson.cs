@@ -1,12 +1,10 @@
 using System.Text.Json.Serialization;
 
-namespace Rhino.AI.WebPanel;
+namespace Rhino.AI.UI;
 
 internal static class PanelJson
 {
-    // WhenWritingNull is load-bearing, not tidiness: the panel distinguishes an absent optional from
-    // a present null. `"durationMs": null` would read as a real duration and render "0ms", so an
-    // unset optional has to be missing from the payload rather than null in it.
+    // WhenWritingNull is load-bearing: the panel reads a present null as a real value, an absent key as unset.
     private static JsonSerializerOptions Options { get; } = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

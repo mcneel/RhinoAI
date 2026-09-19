@@ -3,6 +3,7 @@ import type { Child } from '../core/dom.js';
 import type { Signal } from '../core/signal.js';
 import { highlight } from '../core/highlight.js';
 import { formatDuration, prettyJson } from '../state/format.js';
+import { t } from '../i18n/t.js';
 import { iconForTool } from '../state/tools.js';
 import type { ToolCall } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
@@ -63,7 +64,7 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
         el('h4', { text: label }),
         el(
           'button',
-          { class: 'tool-copy', type: 'button', title: `Copy ${label}`, onClick: () => ctx.copy(body) },
+          { class: 'tool-copy', type: 'button', title: () => t('tool.copyNamedSection', label), onClick: () => ctx.copy(body) },
           icon('copy', 12),
         ),
       ),
@@ -120,10 +121,10 @@ export function toolCard(ctx: PanelContext, call: Signal<ToolCall>): Child {
           ? el('div', { class: 'tool-error' }, icon('alert', 13), el('span', { text: current.error }))
           : null,
         current.status === 'unknown'
-          ? el('div', { class: 'tool-note', text: 'No result reported, so this may or may not have run.' })
+          ? el('div', { class: 'tool-note', text: () => t('tool.noResult') })
           : null,
-        args ? json('arguments', args) : null,
-        result && !current.preview ? json('result', result) : null,
+        args ? json(t('tool.arguments'), args) : null,
+        result && !current.preview ? json(t('tool.result'), result) : null,
       );
     }),
   );

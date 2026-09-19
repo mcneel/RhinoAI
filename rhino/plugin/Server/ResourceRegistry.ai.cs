@@ -171,11 +171,6 @@ internal sealed class ResourceHandler
         if (pi.Name is { } pname && Array.IndexOf(_variables, pname) >= 0)
             return new ParameterDescriptor(pi, ParameterBindingKind.UriTemplate);
 
-        if (services.GetService(typeof(Microsoft.Extensions.DependencyInjection.IServiceProviderIsService))
-                is Microsoft.Extensions.DependencyInjection.IServiceProviderIsService ispis
-            && ispis.IsService(pi.ParameterType))
-            return new ParameterDescriptor(pi, ParameterBindingKind.Service);
-
         if (services.GetService(pi.ParameterType) is not null)
             return new ParameterDescriptor(pi, ParameterBindingKind.Service);
 

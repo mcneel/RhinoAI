@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatBytes, formatDuration, formatElapsed, formatTokens, prettyJson, relativeTime, summarize } from './format.ts';
+import { formatBytes, formatDuration, formatElapsed, formatTokens, imageLabel, prettyJson, relativeTime, summarize } from './format.ts';
 
 test('relative time buckets', () => {
   const now = Date.parse('2026-09-03T12:00:00Z');
@@ -52,6 +52,15 @@ test('prettyJson passes strings through and never throws on a cycle', () => {
   const cyclic: Record<string, unknown> = {};
   cyclic['self'] = cyclic;
   assert.equal(typeof prettyJson(cyclic), 'string');
+});
+
+test('a generated image gets a label, a named one keeps its name', () => {
+  assert.equal(imageLabel('exec-91909287-454a-419b-86b5-6f883204d8cd.png'), 'Generated image');
+  assert.equal(imageLabel('01a0a042-6444-7593-86ae-d6fe99ab2075.jpg'), 'Generated image');
+  assert.equal(imageLabel('d41d8cd98f00b204e9800998ecf8427e.png'), 'Generated image');
+  assert.equal(imageLabel('planarity-heatmap.png'), 'planarity-heatmap.png');
+  assert.equal(imageLabel('living room render.png'), 'living room render.png');
+  assert.equal(imageLabel('.png'), '.png');
 });
 
 test('summarize takes the first non-blank line and caps it', () => {

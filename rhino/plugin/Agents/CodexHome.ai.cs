@@ -9,13 +9,18 @@ internal static class CodexHome
 
     private static string? Prepared { get; set; }
 
+    private static string DataStash =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RhinoAI", "Codex");
+
+    // A path, not a promise the folder exists: the panel looks inside for renders without provoking the rest of Prepare.
+    public static string GeneratedImages => Path.Combine(DataStash, "generated_images");
+
     public static string Prepare()
     {
         if (Prepared is string ready)
             return ready;
 
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        string codexDataStash = Path.Combine(appData, "RhinoAI", "Codex");
+        string codexDataStash = DataStash;
 
         Directory.CreateDirectory(codexDataStash);
         File.WriteAllText(Path.Combine(codexDataStash, "config.toml"), ShippedConfig());

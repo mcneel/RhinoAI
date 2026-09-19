@@ -40,10 +40,9 @@ test('the default is 100% to the user and sits on the ladder', () => {
   assert.equal(asPercent(DEFAULT), '100%');
 });
 
-test('the stylesheet baseline is folded into the applied zoom, not into the default', () => {
-  // The panel is authored a notch large, so the user's 100% is CSS zoom 0.9.
-  assert.equal(toCssZoom(1), 0.9);
-  assert.equal(toCssZoom(stepIn(1)), 0.99, 'rounded: 1.1 x 0.9 is 0.9900000000000001');
-  assert.equal(toCssZoom(stepOut(1)), 0.81);
-  assert.equal(toCssZoom(2), 1.8);
+test('the applied zoom is the level itself, so the stylesheet renders at the size it is authored', () => {
+  assert.equal(toCssZoom(1), 1);
+  assert.equal(toCssZoom(stepIn(1)), 1.1, 'rounded: 1.1 can land on 1.1000000000000001');
+  assert.equal(toCssZoom(stepOut(1)), 0.9);
+  assert.equal(toCssZoom(2), 2);
 });

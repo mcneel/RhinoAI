@@ -1,8 +1,9 @@
 import { bind, el, onCleanup, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { signal } from '../core/signal.js';
-import { BUSY_WORDS, busyWord } from '../state/busy.js';
+import { BUSY_KEYS, busyWord } from '../state/busy.js';
 import { clockTime, formatElapsed } from '../state/format.js';
+import { t } from '../i18n/t.js';
 import { agentMenu } from './agentMenu.js';
 import { composer } from './composer.js';
 import { hostMenu } from './hostMenu.js';
@@ -21,7 +22,7 @@ function statusStrip(ctx: PanelContext): Child {
   // One clock for the whole strip, so the word and the counter can never disagree about the turn.
   bind(() => {
     if (!store.thinking()) return;
-    offset = Math.floor(Math.random() * BUSY_WORDS.length);
+    offset = Math.floor(Math.random() * BUSY_KEYS.length);
     now.set(Date.now());
     const timer = setInterval(() => now.set(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -34,7 +35,13 @@ function statusStrip(ctx: PanelContext): Child {
   };
 
   const hosted = () => store.status();
-  const text = () => hosted() ?? (store.thinking() ? `${busyWord(elapsed() ?? 0, offset)}…` : null);
+  const text = () => {
+    const hostedText = hosted();
+    if (hostedText !== null) return hostedText;
+    if (!store.thinking()) return null;
+    const key = busyWord(elapsed() ?? 0, offset);
+    return key === null ? null : `${t(key)}…`;
+  };
   const counting = () => store.thinking() && elapsed() !== null;
 
   return when(
@@ -49,7 +56,7 @@ function statusStrip(ctx: PanelContext): Child {
           'aria-hidden': () => (hosted() === null ? 'true' : false),
           text: () => text() ?? '',
         }),
-        el('span', { class: 'sr-only', text: () => (hosted() === null ? 'Working' : '') }),
+        el('span', { class: 'sr-only', text: () => (hosted() === null ? t('status.workingForScreenReader') : '') }),
         el('span', { class: 'spacer' }),
         when(
           counting,
@@ -70,25 +77,25 @@ function reviewBar(ctx: PanelContext): Child {
     'div',
     { class: 'review-bar' },
     icon('history', 14),
-    el('span', { text: () => `Read-only · ${clockTime(session()?.startedAt ?? '')}` }),
+    el('span', { text: () => t('review.readOnlyAtTime', clockTime(session()?.startedAt ?? '')) }),
     el('span', { class: 'spacer' }),
     el(
       'button',
       { class: 'btn', type: 'button', onClick: () => ctx.send({ type: 'conversation.exitReview' }) },
-      'Back to live',
+      () => t('review.backToLive'),
     ),
     el(
       'button',
       {
         class: 'btn primary',
         type: 'button',
-        title: 'Continue this conversation with its agent',
+        title: () => t('review.resumeTitle'),
         onClick: () => {
           const id = session()?.sessionId;
           if (id) ctx.send({ type: 'conversation.resume', sessionId: id });
         },
       },
-      'Resume',
+      () => t('review.resume'),
     ),
   );
 }

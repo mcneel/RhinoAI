@@ -106,7 +106,7 @@ public class SpawnSlotTool(RhinoManager manager, RhinoCrashReportFinder crashFin
         {
             OperationCanceledException => new(
                 Code: "cancelled",
-                Message: "Spawn was cancelled before Rhino finished starting."),
+                Message: "Spawn was canceled before Rhino finished starting."),
 
             InvalidOperationException ioe => new(
                 Code: "spawn_failed",

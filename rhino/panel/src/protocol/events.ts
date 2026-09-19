@@ -43,6 +43,14 @@ export interface Attachment {
   dataUrl?: string;
 }
 
+/** An image the agent put on disk. `src` is a route on the host's own listener: the page has no filesystem. */
+export interface TurnImage {
+  id: string;
+  name: string;
+  src: string;
+  bytes: number;
+}
+
 /** Live document context the user can @-mention into a prompt. */
 export type ContextKind = 'selection' | 'layer' | 'view' | 'document' | 'block' | 'grasshopper' | 'file';
 
@@ -128,6 +136,7 @@ export interface HistoryEntry {
 export type BlockSnapshot =
   | { kind: 'text'; id: string; text: string; at: string }
   | { kind: 'tool'; id: string; call: ToolCall }
+  | { kind: 'image'; id: string; image: TurnImage }
   | { kind: 'notice'; id: string; level: NoticeLevel; text: string };
 
 export interface TurnSnapshot {
@@ -171,7 +180,7 @@ export interface HostInfo {
 // ---------------------------------------------------------------- host -> panel
 
 export type HostEvent =
-  | { type: 'hello'; host: HostInfo }
+  | { type: 'hello'; host: HostInfo; language: string; strings: Readonly<Record<string, string>> }
   | { type: 'theme'; scheme: 'light' | 'dark'; tokens?: Record<string, string> }
   | { type: 'agents'; agents: AgentInfo[]; active: string | null }
   | { type: 'context'; items: ContextItem[] }
@@ -181,6 +190,7 @@ export type HostEvent =
   | { type: 'turn.text'; turnId: string; blockId: string; delta: string }
   | { type: 'turn.tool'; turnId: string; call: ToolCall }
   | { type: 'turn.tool.patch'; turnId: string; callId: string; patch: ToolPatch }
+  | { type: 'turn.image'; turnId: string; image: TurnImage }
   | { type: 'turn.plan'; turnId: string; steps: PlanStep[] }
   | { type: 'turn.usage'; turnId: string; usage: TokenUsage }
   | { type: 'turn.end'; turnId: string; status: TurnStatus; error?: string }
@@ -226,6 +236,8 @@ export type PanelCommand =
   | { type: 'turn.retry'; turnId: string }
   | { type: 'context.refresh' }
   | { type: 'context.reveal'; id: string }
+  | { type: 'image.open'; id: string }
+  | { type: 'image.save'; id: string }
   | { type: 'attachments.pick' }
   | { type: 'attachments.drop'; files: { name: string; mediaType: string; dataUrl: string }[] }
   // The panel cannot store its own level (opaque origin, so localStorage throws), so the host keeps it.

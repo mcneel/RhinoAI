@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace Rhino.AI.WebPanel;
+namespace Rhino.AI.UI;
 
 // The host -> panel half of the wire protocol. One closed union, discriminated on "type", matching
 // HostEvent in rhino/panel/src/protocol/events.ts.
@@ -20,6 +20,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(TurnTextEvent), "turn.text")]
 [JsonDerivedType(typeof(TurnToolEvent), "turn.tool")]
 [JsonDerivedType(typeof(TurnToolPatchEvent), "turn.tool.patch")]
+[JsonDerivedType(typeof(TurnImageEvent), "turn.image")]
 [JsonDerivedType(typeof(TurnUsageEvent), "turn.usage")]
 [JsonDerivedType(typeof(TurnEndEvent), "turn.end")]
 [JsonDerivedType(typeof(QuestionEvent), "question")]
@@ -31,7 +32,7 @@ namespace Rhino.AI.WebPanel;
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
 internal abstract record PanelEvent;
 
-internal sealed record HelloEvent(PanelHost Host) : PanelEvent;
+internal sealed record HelloEvent(PanelHost Host, string Language, IReadOnlyDictionary<string, string> Strings) : PanelEvent;
 internal sealed record ThemeEvent(string Scheme, IReadOnlyDictionary<string, string>? Tokens) : PanelEvent;
 internal sealed record AgentsEvent(IReadOnlyList<PanelAgent> Agents, string? Active) : PanelEvent;
 internal sealed record ContextEvent(IReadOnlyList<PanelContextItem> Items) : PanelEvent;
@@ -41,6 +42,7 @@ internal sealed record TurnBeginEvent(PanelTurn Turn) : PanelEvent;
 internal sealed record TurnTextEvent(string TurnId, string BlockId, string Delta) : PanelEvent;
 internal sealed record TurnToolEvent(string TurnId, PanelToolCall Call) : PanelEvent;
 internal sealed record TurnToolPatchEvent(string TurnId, string CallId, PanelToolPatch Patch) : PanelEvent;
+internal sealed record TurnImageEvent(string TurnId, PanelImage Image) : PanelEvent;
 internal sealed record TurnUsageEvent(string TurnId, PanelUsage Usage) : PanelEvent;
 internal sealed record TurnEndEvent(string TurnId, string Status, string? Error) : PanelEvent;
 internal sealed record QuestionEvent(PanelQuestion Question) : PanelEvent;
@@ -77,6 +79,9 @@ internal sealed record PanelAgent(
     bool Builtin = true);
 
 internal sealed record PanelUsage(int InputTokens, int OutputTokens, decimal? CostUsd);
+
+// Src is a route on the panel's own listener, never a file path: the page has no filesystem to read one with.
+internal sealed record PanelImage(string Id, string Name, string Src, long Bytes);
 
 // What the composer's @ menu offers. Kind drives the icon, so it has to be one the panel knows:
 // selection, layer, view, document, block, grasshopper or file.

@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Rhino.AI.Server;
 using Rhino.AI.Tools;
@@ -143,7 +142,7 @@ public class SchemaBuilderTests
             args[prop.Name] = prop.Value.Clone();
 
         object? value = ParameterBinder.Resolve(
-            desc, args, new ServiceCollection().BuildServiceProvider(), default);
+            desc, args, new StubServices(), default);
         Assert.That(value, Is.EqualTo(Color.Green));
     }
 

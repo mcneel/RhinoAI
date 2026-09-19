@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 
 namespace Rhino.AI.Server;
 
@@ -225,18 +224,12 @@ internal sealed class ResourceContent
 
 internal static class McpSerializer
 {
-    // WebApplication.CreateSlimBuilder turns off
-    // JsonSerializer.IsReflectionEnabledByDefault, which makes JsonNode.ToJsonString
-    // and JsonSerializer.Serialize throw unless the options expose a TypeInfoResolver.
-    // DefaultJsonTypeInfoResolver brings the reflection path back in — we're not
-    // building for AOT/trim, we just inherited the slim host's defaults.
     public static JsonSerializerOptions Options { get; } = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         // Non-finite doubles go out as "NaN"/"Infinity" strings (the protobuf and Newtonsoft convention) rather than throwing halfway through a response.
         NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.AllowNamedFloatingPointLiterals,
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         Converters = { new LenientStringConverter(), new LenientBoolConverter(), new LenientIntConverter(), new FiniteDoubleConverter() },
     };
 }

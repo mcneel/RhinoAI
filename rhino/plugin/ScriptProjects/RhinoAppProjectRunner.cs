@@ -6,6 +6,7 @@ namespace Rhino.AI.ScriptProjects;
 
 internal class RhinoAppProjectRunner : IProjectRunner
 {
+    public int CommandCount => -1;
 
     public ScriptProjectPaths Paths { get; }
 

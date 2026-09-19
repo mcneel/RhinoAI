@@ -3,13 +3,36 @@ using System.Text.Json.Serialization;
 namespace Rhino.AI;
 
 /// <summary>A definition of an AI Agent</summary>
-
-internal sealed record AgentDefinition(string Name, SearchPaths SearchPaths, IReadOnlyList<ModelSpec> Models, string DefaultModel = "default", string DefaultPrompt = "", bool Enabled = true)
+internal sealed record AgentDefinition
 {
+
+    public string Name { get; init; }
+
+    public SearchPaths SearchPaths { get; init; }
+    public IReadOnlyList<ModelSpec> Models { get; init; }
+    public string DefaultModel { get; init; }
+    public string DefaultPrompt { get; init; }
 
     public bool Available => SearchPaths.GetPaths().Any();
 
     public bool? LoggedIn { get; private set; } = null;
+
+    private bool PrivateEnabled { get; set; }
+    public bool Enabled
+    {
+        get => PrivateEnabled && RhinoApp.IsInternetAccessAllowed;
+        set => PrivateEnabled = value;
+    }
+
+    public AgentDefinition(string name, SearchPaths searchPaths, IReadOnlyList<ModelSpec> models, string defaultModel = "default", string defaultPrompt = "", bool enabled = true)
+    {
+        Name = name;
+        SearchPaths = searchPaths;
+        Models = models;
+        DefaultModel = defaultModel;
+        DefaultPrompt = defaultPrompt;
+        Enabled = enabled;
+    }
 
     public void EnsureLoggedIn()
     {

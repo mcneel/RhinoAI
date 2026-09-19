@@ -5,6 +5,6 @@ authors:
 - Callum Sykes
 - Dan Cascaval
 - Claude
-description: An MCP Server for Rhino made by McNeel
+description: An suite of AI Tooling, including an MCP Server for Rhino, made by McNeel.
 icon: icon.png
-url: https://mcneel.github.io/RhinoMCP/
+url: https://mcneel.github.io/RhinoAI/

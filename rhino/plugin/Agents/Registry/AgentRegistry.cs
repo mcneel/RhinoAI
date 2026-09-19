@@ -59,6 +59,7 @@ internal class AgentRegistry
 
     private static void LoadDefinitionsFromRemote()
     {
+        if (!RhinoApp.IsInternetAccessAllowed) return;
         string path = @"raw.githubusercontent.com/mcneel/RhinoAI/refs/heads/rhino-9.x/rhino/plugin/Agents/Definitions.json";
         HttpClient client = new ();
         client.GetStringAsync(path).ConfigureAwait(false);

@@ -181,7 +181,7 @@ internal static class AgentDispatch
         }
 
         // A user who sends something else has moved on, so an unanswered question card must not be
-        // left standing over the panel. Answers clear their own instances in AIPanel.Answer.
+        // left standing over the panel. Answers clear their own instances in AIPanelViewModel.Answer.
         if (!asAnswer && agent.Conversation.TryGetPendingQuestions(out IReadOnlyList<PendingQuestion> stale))
             agent.Conversation.ClearPendingQuestions(stale);
 

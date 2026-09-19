@@ -25,7 +25,7 @@ internal static class RunCSharpTool
         "System.Collections.Generic",
     ];
 
-    private static string InjectUsings(string script)
+    public static string InjectUsings(string script)
     {
         foreach (string @using in Usings)
         {

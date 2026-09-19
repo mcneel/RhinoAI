@@ -1,4 +1,4 @@
-namespace Rhino.AI.WebPanel;
+namespace Rhino.AI.UI;
 
 // Bytes round-trip as a data URL because the composer owns its own state and the agent has no filesystem.
 internal sealed record PanelAttachment(

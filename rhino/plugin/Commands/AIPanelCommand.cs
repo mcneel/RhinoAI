@@ -8,14 +8,14 @@ public class AIPanelCommand : RhinoCommand
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 
-    protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
+    protected override Commands.Result RunCommand(RhinoDoc doc, Commands.RunMode mode)
     {
-        Guid panelId = AIPanel.PanelId;
-        bool visible = Rhino.UI.Panels.IsPanelVisible(panelId);
+        bool visible = Rhino.UI.Panels.IsPanelVisible(UI.AIPanel.PanelId);
         if (visible)
-            Rhino.UI.Panels.ClosePanel(panelId);
+            Rhino.UI.Panels.ClosePanel(UI.AIPanel.PanelId);
         else
-            Rhino.UI.Panels.OpenPanel(panelId);
-        return Rhino.Commands.Result.Success;
+            Rhino.UI.Panels.OpenPanel(UI.AIPanel.PanelId);
+        
+        return Commands.Result.Success;
     }
 }

@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Rhino.AI.Server;
 using Rhino.AI.Tools;
@@ -66,7 +65,7 @@ public class ParameterBinderTests
     }
 
     private static IServiceProvider EmptyServices()
-        => new ServiceCollection().BuildServiceProvider();
+        => new StubServices();
 
     // ----- Argument binding ------------------------------------------------
 
@@ -366,10 +365,8 @@ public class ParameterBinderTests
     [Test]
     public void Service_resolves_from_provider()
     {
-        ServiceCollection sc = new();
         Greeter greeter = new();
-        sc.AddSingleton<IGreeter>(greeter);
-        IServiceProvider sp = sc.BuildServiceProvider();
+        IServiceProvider sp = new StubServices(greeter);
 
         object? value = ParameterBinder.Resolve(
             DescFrom(nameof(SampleMethods.Service), "greeter", ParameterBindingKind.Service),

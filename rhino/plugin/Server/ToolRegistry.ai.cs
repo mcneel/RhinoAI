@@ -125,14 +125,6 @@ internal sealed class ToolHandler
         if (pi.ParameterType == typeof(CancellationToken))
             return new ParameterDescriptor(pi, ParameterBindingKind.CancellationToken);
 
-        // Anything we can resolve from DI is treated as a service. Falls back
-        // to Argument binding for everything else (primitives + user types).
-        // This mirrors RhinoDoc-injection used by every doc-aware tool.
-        if (services.GetService(typeof(Microsoft.Extensions.DependencyInjection.IServiceProviderIsService))
-                is Microsoft.Extensions.DependencyInjection.IServiceProviderIsService ispis
-            && ispis.IsService(pi.ParameterType))
-            return new ParameterDescriptor(pi, ParameterBindingKind.Service);
-
         if (services.GetService(pi.ParameterType) is not null)
             return new ParameterDescriptor(pi, ParameterBindingKind.Service);
 

@@ -1,5 +1,6 @@
 import { el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
+import { t } from '../i18n/t.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
 
@@ -12,7 +13,7 @@ export function header(ctx: PanelContext): Child {
       class: 'agent-chip',
       type: 'button',
       'aria-expanded': () => ui.overlay() === 'agents',
-      'aria-label': 'Switch agent',
+      'aria-label': () => t('header.switchAgent'),
       onClick: () => ui.openOverlay('agents'),
     },
     el('span', {
@@ -25,10 +26,10 @@ export function header(ctx: PanelContext): Child {
     el(
       'span',
       { class: 'who' },
-      el('span', { class: 'name', text: () => store.activeAgent()?.label ?? 'No agent' }),
+      el('span', { class: 'name', text: () => store.activeAgent()?.label ?? t('header.noAgent') }),
       el('span', {
         class: 'model',
-        text: () => store.activeAgent()?.modelLabel ?? 'nothing configured',
+        text: () => store.activeAgent()?.modelLabel ?? t('header.nothingConfigured'),
       }),
     ),
     el('span', { class: 'chev' }, icon('chevron', 13)),
@@ -43,7 +44,7 @@ export function header(ctx: PanelContext): Child {
       {
         class: () => `icon-btn${ui.overlay() === 'history' ? ' on' : ''}`,
         type: 'button',
-        title: 'Conversation history',
+        title: () => t('header.history'),
         onClick: () => ui.openOverlay('history'),
       },
       icon('history'),
@@ -53,7 +54,7 @@ export function header(ctx: PanelContext): Child {
       {
         class: 'icon-btn',
         type: 'button',
-        title: 'New conversation  (Ctrl+Shift+N)',
+        title: () => t('header.newConversation'),
         disabled: () => store.running(),
         onClick: () => ctx.send({ type: 'conversation.new' }),
       },
@@ -61,7 +62,7 @@ export function header(ctx: PanelContext): Child {
     ),
     el(
       'button',
-      { class: 'icon-btn', type: 'button', title: 'AI settings', onClick: () => ctx.send({ type: 'settings.open' }) },
+      { class: 'icon-btn', type: 'button', title: () => t('header.settings'), onClick: () => ctx.send({ type: 'settings.open' }) },
       icon('settings'),
     ),
   );

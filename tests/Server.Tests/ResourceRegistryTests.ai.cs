@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Rhino.AI.Server;
 
@@ -32,7 +31,7 @@ internal sealed class NotADecoratedType
 public class ResourceRegistryTests
 {
     private static IServiceProvider EmptyServices()
-        => new ServiceCollection().BuildServiceProvider();
+        => new StubServices();
 
     private static ResourceRegistry BuildRegistry()
         => ResourceRegistry.Scan(typeof(FixtureResources).Assembly, EmptyServices());

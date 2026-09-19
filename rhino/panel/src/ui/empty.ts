@@ -1,12 +1,14 @@
 import { el, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
+import { t } from '../i18n/t.js';
+import type { StringKey } from '../i18n/strings.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
 
-const STARTERS: readonly { icon: IconName; text: string }[] = [
-  { icon: 'terminal', text: 'Create me a command that generates 100 random spheres' },
-  { icon: 'graph', text: 'Build a twisty tower in Grasshopper' },
-  { icon: 'layers', text: 'Organise the objects in the view into layers' },
+const STARTERS: readonly { icon: IconName; key: StringKey }[] = [
+  { icon: 'terminal', key: 'empty.starterCommand' },
+  { icon: 'graph', key: 'empty.starterTower' },
+  { icon: 'layers', key: 'empty.starterLayers' },
 ];
 
 export function emptyState(ctx: PanelContext): Child {
@@ -20,20 +22,18 @@ export function emptyState(ctx: PanelContext): Child {
           'div',
           { class: 'empty-title' },
           icon('sparkle', 17),
-          el('span', { text: () => `${ctx.store.activeAgent()?.label ?? 'The agent'} is ready` }),
+          el('span', { text: () => t('empty.ready', ctx.store.activeAgent()?.label ?? t('empty.theAgent')) }),
         ),
-        el('p', {
-          text: 'It can read the document, run scripts, drive Grasshopper and capture views. Mention @context to point it at something specific.',
-        }),
+        el('p', { text: () => t('empty.body') }),
         el(
           'div',
           { class: 'starters' },
           ...STARTERS.map((starter) =>
             el(
               'button',
-              { class: 'starter', type: 'button', onClick: () => ctx.submit(starter.text) },
+              { class: 'starter', type: 'button', onClick: () => ctx.submit(t(starter.key)) },
               icon(starter.icon, 15),
-              el('span', { text: starter.text }),
+              el('span', { text: () => t(starter.key) }),
             ),
           ),
         ),
@@ -42,8 +42,8 @@ export function emptyState(ctx: PanelContext): Child {
       el(
         'div',
         { class: 'empty' },
-        el('div', { class: 'empty-title' }, icon('agent', 17), el('span', { text: 'No agent available' })),
-        el('p', { text: 'Install Claude Code, Codex or Gemini CLI and sign in, then pick it here.' }),
+        el('div', { class: 'empty-title' }, icon('agent', 17), el('span', { text: () => t('empty.noAgent') })),
+        el('p', { text: () => t('empty.noAgentBody') }),
         el(
           'div',
           { class: 'starters' },
@@ -51,7 +51,7 @@ export function emptyState(ctx: PanelContext): Child {
             'button',
             { class: 'starter', type: 'button', onClick: () => ctx.send({ type: 'settings.open' }) },
             icon('settings', 15),
-            el('span', { text: 'Open AI settings' }),
+            el('span', { text: () => t('empty.openSettings') }),
           ),
           el(
             'button',
@@ -61,7 +61,7 @@ export function emptyState(ctx: PanelContext): Child {
               onClick: () => ctx.openLink('https://mcneel.github.io/RhinoAI/'),
             },
             icon('reveal', 15),
-            el('span', { text: 'Read the setup guide' }),
+            el('span', { text: () => t('empty.setupGuide') }),
           ),
         ),
       ),

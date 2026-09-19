@@ -1,6 +1,4 @@
-// Tests for shared/router-launcher.mjs (the canonical launcher; cc-plugin/ and
-// connector/ each contain a symlink to it so both packaging paths share one
-// source).
+// Tests for shared/router-launcher.mjs, the canonical launcher: cc-plugin/ ships a committed copy, connector/ stages one at pack time.
 //
 // Strategy: build synthetic yak trees under tmpdir, point the launcher at them
 // via HOME (mac) / APPDATA (windows) overrides, and assert behaviour via
@@ -12,7 +10,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { spawnSync, spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
-import { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, cpSync, chmodSync, readFileSync, lstatSync, statSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, cpSync, chmodSync, readFileSync, lstatSync, statSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +18,6 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHARED_LAUNCHER = join(HERE, "..", "..", "shared", "router-launcher.mjs");
 const CC_LAUNCHER = join(HERE, "..", "..", "cc-plugin", "router-launcher.mjs");
-const CONNECTOR_LAUNCHER = join(HERE, "..", "..", "connector", "router-launcher.mjs");
 
 const isWin = process.platform === "win32";
 const isMac = process.platform === "darwin";
@@ -47,6 +44,10 @@ function makeFakeRoot(layout) {
     env = { HOME: tmp };
   }
 
+  // RHINO_MCP_HOME isolates the staging dir; without it staging writes to the real user profile.
+  const mcpHome = join(tmp, "mcp-home");
+  env = { ...env, RHINO_MCP_HOME: mcpHome };
+
   for (const [rhinoVer, pkgVers] of Object.entries(layout)) {
     for (const [pkgVer, opts] of Object.entries(pkgVers)) {
       const routerDir = join(pkgRoot, rhinoVer, "Rhino-MCP-Platform", pkgVer, "router", RID ?? "x");
@@ -61,7 +62,7 @@ function makeFakeRoot(layout) {
       }
     }
   }
-  return { env };
+  return { env, pkgRoot, binDir: join(mcpHome, "ai", "bin") };
 }
 
 function runLauncher(env, args = []) {
@@ -78,6 +79,24 @@ test("linux reports unsupported platform and exits 1", { skip: isSupported }, ()
   const r = runLauncher({ HOME: mkdtempSync(join(tmpdir(), "rh-")) });
   assert.equal(r.status, 1);
   assert.match(r.stderr, /unsupported platform/);
+});
+
+// --- packaging copies -------------------------------------------------------
+
+// Committed copy, not a symlink: plugin install copies cc-plugin/ alone, and Windows checks symlinks out as text stubs.
+test("cc-plugin carries a byte-identical copy of the shared launcher", () => {
+  assert.ok(existsSync(CC_LAUNCHER), `missing ${CC_LAUNCHER} — run: cp shared/router-launcher.mjs cc-plugin/router-launcher.mjs`);
+  assert.ok(lstatSync(CC_LAUNCHER).isFile(), "cc-plugin/router-launcher.mjs must be a regular file, not a symlink");
+  assert.deepEqual(
+    readFileSync(CC_LAUNCHER),
+    readFileSync(SHARED_LAUNCHER),
+    "cc-plugin/router-launcher.mjs has drifted — run: cp shared/router-launcher.mjs cc-plugin/router-launcher.mjs",
+  );
+});
+
+test("cc-plugin .mcp.json spawns the launcher it ships", () => {
+  const cfg = JSON.parse(readFileSync(join(HERE, "..", "..", "cc-plugin", ".mcp.json"), "utf8"));
+  assert.deepEqual(cfg.mcpServers.rhino.args, ["${CLAUDE_PLUGIN_ROOT}/router-launcher.mjs"]);
 });
 
 // --- resolution -------------------------------------------------------------
@@ -147,6 +166,51 @@ test("no yak AND Rhino not installed → enters rhino-missing-fallback", { skip:
   assert.match(r.stderr, /entering rhino-missing-fallback mode/);
 });
 
+// --- staging ----------------------------------------------------------------
+
+test("stages the router out of the yak folder and runs the copy", { skip: !isSupported }, () => {
+  const fake = makeFakeRoot({ "9.0": { "0.1.0": { binary: "exec" } } });
+  const r = runLauncher(fake.env, ["-e", "process.exit(0)"]);
+  assert.equal(r.status, 0);
+  assert.match(r.stderr, /staged 9\.0\/0\.1\.0 into/);
+  assert.ok(r.stderr.includes(`exec ${join(fake.binDir, EXE)}`), r.stderr);
+  assert.ok(statSync(join(fake.binDir, EXE)).isFile());
+});
+
+test("runs the staged copy after the yak is uninstalled", { skip: !isSupported }, () => {
+  const fake = makeFakeRoot({ "9.0": { "0.1.0": { binary: "exec" } } });
+  assert.equal(runLauncher(fake.env, ["-e", "process.exit(0)"]).status, 0);
+
+  rmSync(fake.pkgRoot, { recursive: true, force: true });
+
+  const r = runLauncher({ ...fake.env, ...FAKE_YAK_INSTALLED }, ["-e", "process.exit(7)"]);
+  assert.equal(r.status, 7, r.stderr);
+  assert.doesNotMatch(r.stderr, /entering install-fallback mode/);
+});
+
+test("re-stages when the installed yak changes", { skip: !isSupported }, () => {
+  const fake = makeFakeRoot({ "9.0": { "0.1.0": { binary: "exec" } } });
+  assert.equal(runLauncher(fake.env, ["-e", "process.exit(0)"]).status, 0);
+
+  const payload = join(fake.pkgRoot, "9.0", "Rhino-MCP-Platform", "0.1.0", "router", RID, EXE);
+  writeFileSync(payload, "not a real binary");
+  if (!isWin) chmodSync(payload, 0o644);
+
+  const r = runLauncher(fake.env);
+  assert.equal(r.status, 1, r.stderr);
+  assert.match(r.stderr, /spawn failed/);
+});
+
+test("sweeps leftover .old copies from earlier updates", { skip: !isSupported }, () => {
+  const fake = makeFakeRoot({ "9.0": { "0.1.0": { binary: "exec" } } });
+  mkdirSync(fake.binDir, { recursive: true });
+  const leftover = join(fake.binDir, `${EXE}.deadbeef.old`);
+  writeFileSync(leftover, "stale");
+
+  assert.equal(runLauncher(fake.env, ["-e", "process.exit(0)"]).status, 0);
+  assert.equal(existsSync(leftover), false);
+});
+
 // --- spawn lifecycle --------------------------------------------------------
 
 test("non-executable binary at picked path → exit 1, not exit 0", { skip: !isSupported }, () => {
@@ -198,6 +262,7 @@ test("integration: real router answers initialize over stdio", { skip: !isSuppor
     pkgRoot = join(tmp, "McNeel", "Rhinoceros", "packages");
     env = { APPDATA: tmp };
   }
+  env = { ...env, RHINO_MCP_HOME: join(tmp, "mcp-home") };
   const routerDir = join(pkgRoot, "9.0", "Rhino-MCP-Platform", "0.0.1-test", "router", RID);
   mkdirSync(routerDir, { recursive: true });
   // Copy the whole publish output: .NET single-file/AOT still ships sidecar

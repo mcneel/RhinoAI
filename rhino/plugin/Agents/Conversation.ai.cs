@@ -32,11 +32,11 @@ internal sealed class Turn
     private object Sync { get; }
     private List<TurnEvent> EventList { get; } = new();
 
-    internal Turn(string prompt, IReadOnlyList<AttachmentInfo> attachments, object sync)
+    internal Turn(string prompt, IReadOnlyList<AttachmentInfo> attachments, object sync, DateTimeOffset? startedAt = null)
     {
         Prompt = prompt;
         Attachments = attachments;
-        StartedAt = DateTimeOffset.UtcNow;
+        StartedAt = startedAt ?? DateTimeOffset.UtcNow;
         Sync = sync;
     }
 
@@ -56,7 +56,7 @@ internal sealed class Turn
     public IReadOnlyList<TurnEvent> Events { get { lock (Sync) return EventList.ToArray(); } }
 
     internal void Add(TurnEvent ev) { lock (Sync) EventList.Add(ev); }
-    internal void Complete() { lock (Sync) CompletedAt ??= DateTimeOffset.UtcNow; }
+    internal void Complete(DateTimeOffset? at = null) { lock (Sync) CompletedAt ??= at ?? DateTimeOffset.UtcNow; }
 
     // Fold a tool's output into its originating ToolUse event (matched by id, most-recent first) so
     // it surfaces in that chip's expander rather than as a stray bubble. A missing id is dropped,
@@ -123,13 +123,14 @@ internal sealed class Conversation
 
         foreach (TurnDto turnDto in dto.Turns)
         {
-            Turn turn = new(turnDto.Prompt, turnDto.Attachments ?? [], convo.Sync);
+            Turn turn = new(turnDto.Prompt, turnDto.Attachments ?? [], convo.Sync, turnDto.StartedAt);
             foreach (TurnEventDto ev in turnDto.Events)
                 // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
                     ev.Done || !string.IsNullOrWhiteSpace(ev.Result)));
             turn.SetUsage(turnDto.Usage);
-            turn.Complete();
+            // Stamping now would date every restored turn to the restore, which is what bounds the search for images the agent wrote during it.
+            turn.Complete(turnDto.CompletedAt ?? turnDto.StartedAt);
             convo.TurnList.Add(turn);
         }
         return convo;

@@ -8,9 +8,6 @@
     <PluginOS Condition="'$(PluginOS)' == ''">osx</PluginOS>
     <RouterRids Condition="'$(RouterRids)' == '' AND '$(PluginOS)' == 'win'">win-x64;win-arm64</RouterRids>
     <RouterRids Condition="'$(RouterRids)' == ''">osx-arm64</RouterRids>
-    <AspNetCoreRuntimeVersion>8.0.30</AspNetCoreRuntimeVersion>
-    <AspNetCoreRuntimeRid Condition="'$(PluginOS)' == 'win'">win-x64</AspNetCoreRuntimeRid>
-    <AspNetCoreRuntimeRid Condition="'$(PluginOS)' == 'osx'">osx-arm64</AspNetCoreRuntimeRid>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -28,11 +25,16 @@
     <PluginOutputDir Condition="'$(PluginOutputDir)' == '' AND '$(RhinoTarget)' == 'R9' AND '$(RhinoPlugInOutputDir)' != ''">$([MSBuild]::NormalizePath('$(RhinoPlugInOutputDir)', 'RhinoAI'))</PluginOutputDir>
     <PluginOutputDir Condition="'$(PluginOutputDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</PluginOutputDir>
     <OutputPath>$(PluginOutputDir)/</OutputPath>
+    <!-- macOS: no target-framework subfolder, so the payload is flat in Plug-ins/RhinoAI
+         (RhinoAI.rhp + dependencies + router/) exactly like Plug-ins/Grasshopper2. The Mac
+         app-bundle install step in src4/BuildSolutions/MacDotNetMakefile copies that folder
+         straight into ManagedPlugIns/RhinoAI.rhp, which is the layout the Mac plug-in loader
+         expects (<Name>.rhp/<Name>.rhp). Windows keeps the net8.0 subfolder that
+         installer/msi/Features/Plug-ins/RhinoAI.wxs harvests from. -->
+    <AppendTargetFrameworkToOutputPath Condition="'$(PluginOS)' == 'osx'">false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.AspNetCore.App.Runtime.$(AspNetCoreRuntimeRid)" Version="$(AspNetCoreRuntimeVersion)" ExcludeAssets="all" PrivateAssets="all" />
     <ProjectReference Include="../acp/Acp.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
   </ItemGroup>
@@ -77,30 +79,6 @@
     <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
     <RemoveDir Directories="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
-  </Target>
-
-  <!-- Rhino does not load the ASP.NET Core shared framework, so the plug-in carries its own copy. -->
-  <Target Name="BundleAspNetCore" AfterTargets="Build">
-    <PropertyGroup>
-      <_AspNetCoreDir>$(NuGetPackageRoot)microsoft.aspnetcore.app.runtime.$(AspNetCoreRuntimeRid)/$(AspNetCoreRuntimeVersion)/runtimes/$(AspNetCoreRuntimeRid)/lib/net8.0</_AspNetCoreDir>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(_AspNetCoreDir)')" Text="ASP.NET Core runtime pack not found at $(_AspNetCoreDir). Run dotnet restore." />
-    <ItemGroup>
-      <_AspNetCoreFile Include="$(_AspNetCoreDir)/*.dll"
-                       Exclude="$(_AspNetCoreDir)/Microsoft.AspNetCore.Authentication.BearerToken.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Authentication.Cookies.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Authentication.OAuth.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Components*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Identity*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Mvc*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Razor*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Server.HttpSys.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.Server.IIS*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.SignalR*.dll;
-                                $(_AspNetCoreDir)/Microsoft.AspNetCore.StaticFiles.dll;
-                                $(_AspNetCoreDir)/Microsoft.Extensions.Identity*.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_AspNetCoreFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

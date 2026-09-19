@@ -1,5 +1,6 @@
 import { bind, each, el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
+import { t } from '../i18n/t.js';
 import type { Notice } from '../state/store.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
@@ -24,7 +25,7 @@ export function notices(ctx: PanelContext): Child {
       el('p', { text: notice.text }),
       el(
         'button',
-        { class: 'icon-btn', type: 'button', 'aria-label': 'Dismiss', onClick: () => ctx.store.dismissNotice(notice.id) },
+        { class: 'icon-btn', type: 'button', 'aria-label': () => t('notice.dismiss'), onClick: () => ctx.store.dismissNotice(notice.id) },
         icon('close', 12),
       ),
     );

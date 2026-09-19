@@ -12,7 +12,7 @@ internal static class AgentPrompts
         + "asking them one turn at a time; they are shown together and answered together. The tool "
         + "does NOT return the answers: the user's reply arrives as their next message, and you "
         + "continue from there. Never use the built-in AskUserQuestion tool: it cannot be displayed "
-        + "in this environment and will be cancelled.";
+        + "in this environment and will be canceled.";
 
     // Grounding is pull-only: no document/canvas state is injected automatically, so the agent must
     // read current state before acting rather than assuming what is selected or open.
@@ -39,7 +39,7 @@ internal static class AgentPrompts
         + "fix the offending components by Id and solve again; repeat until it solves clean, then report "
         + "what you built and any remaining warnings. "
         + "Prefer small incremental edits followed by a re-solve over assembling one large graph in a "
-        + "single shot. It is far easier to localise a fault when each step is solved and checked.";
+        + "single shot. It is far easier to localize a fault when each step is solved and checked.";
 
     // The always-on steers plus this agent's own prompt; the steers are never dropped.
     public static string Compose(string systemPrompt)

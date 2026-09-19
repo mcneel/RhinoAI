@@ -4,14 +4,9 @@
 export const STEPS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2] as const;
 export const DEFAULT = 1;
 
-// The stylesheet is authored a notch large for a docked panel, so the design's natural size is 90%
-// of what the CSS literally says. Folding that in here means the user's 100% is the intended size
-// and "Reset zoom (100%)" is honest, rather than the default being a peculiar 90%.
-const BASE = 0.9;
-
-/** The CSS zoom for a user-facing level. Rounded, or 1.1 x 0.9 lands on 0.9900000000000001. */
+/** The CSS zoom for a user-facing level. Rounded, or 1.1 lands on 1.1000000000000001. */
 export function toCssZoom(level: number): number {
-  return Math.round(level * BASE * 1000) / 1000;
+  return Math.round(level * 1000) / 1000;
 }
 
 /** Nearest ladder rung at or below `value`, so an arbitrary stored level still steps sensibly. */

@@ -259,6 +259,16 @@ function seeded(): ConversationSnapshot {
             },
           },
           {
+            kind: 'image',
+            id: 'img-seed-2',
+            image: {
+              id: 'img-seed-2',
+              name: 'planarity-heatmap.png',
+              src: viewportCapture(),
+              bytes: 486_213,
+            },
+          },
+          {
             kind: 'text',
             id: 'block-seed-2',
             at: new Date(start + 123_000).toISOString(),
@@ -279,6 +289,8 @@ function seeded(): ConversationSnapshot {
               '- 6 panels under 10 mm, which most glaziers will cold-bend without complaint',
               '',
               '> The 41.6 mm one is the corner panel at level 14. That one wants splitting into two triangles rather than bending.',
+              '',
+              'The heatmap is saved at [planarity heatmap](</Users/Scott Davidson/Rhino renders/planarity heatmap.png>).',
               '',
               'Say the word and I will split the four worst into triangles.',
             ),
@@ -332,7 +344,7 @@ interface Scenario {
 }
 
 // Order is significant: the first pattern to match wins, and the starters deliberately overlap
-// ("organise ... in the view into layers" contains "view").
+// ("organize ... in the active viewport into layers" contains "view").
 const SCENARIOS: readonly Scenario[] = [
   {
     match: /grasshopper|tower|twist|loft|canvas|\bgh\b/i,
@@ -733,6 +745,17 @@ const SCENARIOS: readonly Scenario[] = [
         result: { width: 1120, height: 680, display: 'Shaded' },
       });
 
+      host.emit({
+        type: 'turn.image',
+        turnId,
+        image: {
+          id: 'img-render',
+          name: 'exec-91909287-454a-419b-86b5-6f883204d8cd.png',
+          src: viewportCapture(),
+          bytes: 3_659_122,
+        },
+      });
+
       host.status(null);
       await host.text(
         turnId,
@@ -771,7 +794,7 @@ const SCENARIOS: readonly Scenario[] = [
           '',
           '- something with **tower** or **grasshopper**: plan steps, five tool calls, a solved-graph card',
           '- something with **spheres** or **command**: a script card with highlighted source',
-          '- something with **layers** or **organise**: a table result and a summary',
+          '- something with **layers** or **organize**: a table result and a summary',
           '- something with **selected** or **problems**: a failing tool card and an inline question',
           '- something with **capture** or **view**: an image result rendered in place',
           '',
@@ -1033,6 +1056,8 @@ export class MockHost implements Bridge {
         docTitle: 'tower-study.3dm',
         capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true },
       },
+      language: 'en-US',
+      strings: {},
     });
     const zoom = storedZoom();
     if (zoom !== null) this.emit({ type: 'zoom', action: 'set', level: zoom });

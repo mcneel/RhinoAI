@@ -1,6 +1,7 @@
 import { el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { highlight } from '../core/highlight.js';
+import { t } from '../i18n/t.js';
 import type { ToolPreview } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
@@ -12,7 +13,7 @@ export function preview(ctx: PanelContext, value: ToolPreview): Child {
       return el(
         'div',
         null,
-        el('img', { class: 'pv-image', src: value.dataUrl, alt: value.caption ?? 'Captured viewport' }),
+        el('img', { class: 'pv-image', src: value.dataUrl, alt: value.caption ?? t('preview.captured') }),
         value.caption ? el('div', { class: 'pv-caption', text: value.caption }) : null,
       );
 
@@ -33,7 +34,7 @@ export function preview(ctx: PanelContext, value: ToolPreview): Child {
             'button',
             {
               type: 'button',
-              title: 'Select and zoom to this object in Rhino',
+              title: () => t('preview.revealObject'),
               onClick: () => ctx.send({ type: 'context.reveal', id: item.id }),
             },
             icon('cube', 13),
@@ -47,13 +48,13 @@ export function preview(ctx: PanelContext, value: ToolPreview): Child {
       return el(
         'div',
         { class: 'pv-graph' },
-        el('span', { class: 'chip' }, icon('graph', 12), el('span', { text: `${value.wires} wires` })),
+        el('span', { class: 'chip' }, icon('graph', 12), el('span', { text: () => t('preview.wireCount', value.wires) })),
         ...value.components.map((name) => el('span', { class: 'chip' }, el('span', { text: name }))),
         value.errors > 0
-          ? el('span', { class: 'chip err' }, icon('alert', 12), el('span', { text: `${value.errors} errors` }))
+          ? el('span', { class: 'chip err' }, icon('alert', 12), el('span', { text: () => t('preview.errorCount', value.errors) }))
           : null,
         value.warnings > 0
-          ? el('span', { class: 'chip warn' }, icon('alert', 12), el('span', { text: `${value.warnings} warnings` }))
+          ? el('span', { class: 'chip warn' }, icon('alert', 12), el('span', { text: () => t('preview.warningCount', value.warnings) }))
           : null,
       );
 

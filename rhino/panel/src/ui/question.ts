@@ -1,10 +1,9 @@
 import { el } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
+import { t } from '../i18n/t.js';
 import type { PendingQuestion } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon } from './icons.js';
-
-const DONT_KNOW = "I don't know";
 
 interface Draft {
   picked: Set<string>;
@@ -30,7 +29,7 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
 
   const answersFor = (index: number): string[] => {
     const draft = drafts[index] as Draft;
-    if (draft.dontKnow) return [DONT_KNOW];
+    if (draft.dontKnow) return [t('ask.dontKnow')];
     const question = questions[index] as PendingQuestion;
     const picked = question.options.filter((option) => draft.picked.has(option));
     const free = draft.other.trim();
@@ -54,7 +53,7 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
   const steps = el('div', { class: 'steps', 'aria-hidden': 'true' }, ...stepBars);
   const count = el('span', { class: 'ask-count' });
   const body = el('div', { class: 'ask-body' });
-  const back = el('button', { class: 'btn', type: 'button', onClick: () => turnPage(-1) }, 'Back');
+  const back = el('button', { class: 'btn', type: 'button', onClick: () => turnPage(-1) }, t('ask.back'));
   const next = el('button', {
     class: 'btn primary',
     type: 'button',
@@ -108,7 +107,7 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
     otherInput = question.allowOther
       ? el('input', {
           type: 'text',
-          placeholder: question.options.length > 0 ? 'Something else…' : 'Your answer…',
+          placeholder: question.options.length > 0 ? t('ask.somethingElse') : t('ask.yourAnswer'),
           value: draft.other,
           onInput: (event: Event) => {
             draft.other = (event.target as HTMLInputElement).value;
@@ -126,7 +125,7 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
       el(
         'div',
         { class: 'synth' },
-        el('label', { class: draft.dontKnow ? 'on' : '' }, dontKnowInput, el('span', { text: DONT_KNOW })),
+        el('label', { class: draft.dontKnow ? 'on' : '' }, dontKnowInput, el('span', { text: t('ask.dontKnow') })),
         otherInput,
       ),
     );
@@ -137,9 +136,9 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
       bar.className = answersFor(i).length > 0 ? 'done' : i === page ? 'here' : '';
     });
     steps.hidden = !isSeries;
-    setText(count, isSeries ? `Question ${page + 1} of ${questions.length}` : '');
+    setText(count, isSeries ? t('ask.progress', page + 1, questions.length) : '');
     back.hidden = !isSeries || page === 0;
-    setText(next, isLastPage() ? (isSeries ? 'Answer all' : 'Answer') : 'Next');
+    setText(next, isLastPage() ? (isSeries ? t('ask.answerAll') : t('ask.answer')) : t('ask.next'));
     next.disabled = !isPageAnswered();
   }
 
@@ -240,7 +239,7 @@ function overlay(ctx: PanelContext, questions: readonly PendingQuestion[]): Chil
     el(
       'div',
       { class: 'ask-row' },
-      el('button', { class: 'btn ghost', type: 'button', onClick: cancelAll }, 'Cancel'),
+      el('button', { class: 'btn ghost', type: 'button', onClick: cancelAll }, t('ask.cancel')),
       el('span', { class: 'spacer' }),
       back,
       next,

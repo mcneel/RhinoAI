@@ -19,7 +19,7 @@ public sealed class RhinoMcpRouter : IAsyncDisposable
 
     // Mirrors RouterPaths.ListenersDir on the router side. Tests can drop
     // *.json announcement files here to simulate a user-started Rhino.
-    public string ListenersDir => Path.Combine(_isolatedTempDir, "rhino-mcp", "listeners");
+    public string ListenersDir => Path.Combine(_isolatedTempDir, "ai", "listeners");
 
     private RhinoMcpRouter(string isolatedTempDir, McpClient client)
     {
