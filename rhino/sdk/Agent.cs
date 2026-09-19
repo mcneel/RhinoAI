@@ -50,12 +50,13 @@ public sealed class Agent
 
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
     {
-        List<ITurn> startTurns = [];
-        startTurns.AddRange(Turns);
-        startTurns.Add(new MessageTurn(DefaultPrompt));
+        List<ITurn> startTurns = new (Turns);
+        if (startTurns.Count == 0)
+            startTurns.Add(new SystemTurn(DefaultPrompt));
+
         startTurns.Add(new MessageTurn(message));
 
-        IEnumerable<ITurn> turns = await Harness.LoopAsync(Model, startTurns, token);
+        IEnumerable<ITurn> turns = await Harness.LoopAsync(Model, startTurns, token).ConfigureAwait(false);
         PrivateTurns.Clear();
         PrivateTurns.AddRange(turns);
 
@@ -65,7 +66,7 @@ public sealed class Agent
     public static Agent GetClaudeDesktopAgent()
         => new Agent(new ClaudeDesktopModel("opus"), new ClaudeHarness());
 
-    public static Agent GetClaudeAgent(string model = "claude-opus-5")
+    public static Agent GetClaudeAgent(string model)
         => new Agent(new ClaudeModel(model), new GenericHarness());
 
     public static Agent GetChatGptAgent(string model)

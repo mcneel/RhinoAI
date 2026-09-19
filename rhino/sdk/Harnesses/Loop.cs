@@ -14,30 +14,36 @@ public sealed class Loop(IHarness harness)
 
     public async Task<IEnumerable<ITurn>> StartAsync(IModel model, IEnumerable<ITurn> start, CancellationToken token)
     {
-        List<ITurn> conversation = [];
-        List<ITurn> nextTurn = new (start);
-        
-        while (nextTurn.Count > 0)
+        List<ITurn> conversation = new(start);
+        List<ITurn> results = [];
+
+        do
         {
-            IEnumerable<ITurn> turns = await model.SendAsync(Harness, nextTurn, token);
-            nextTurn.Clear();
-            foreach (ITurn turn in turns)
+            // Endpoints validate the transcript as a whole, so results have to be sent behind the calls they answer, never on their own.
+            conversation.AddRange(results);
+            results.Clear();
+
+            foreach (ITurn turn in await model.SendAsync(Harness, conversation, token).ConfigureAwait(false))
             {
                 if (turn is TurnEnd) continue;
                 conversation.Add(turn);
 
                 if (turn is ToolTurn tool)
-                {
-                    IMcp? mcp = Harness.Mcps.Values.FirstOrDefault(m => m.Tools.Any(t => string.Equals(t.Key, tool.Name)));
-                    if (mcp is null) continue; // TODO : Handle better
-
-                    ToolReturn result = await Harness.UseToolAsync(mcp.Name, tool.Name, tool.Args.ToList(), token).ConfigureAwait(false);
-                    nextTurn.Add(new ToolResultTurn(tool.Id, tool.Name, result));
-                }
+                    results.Add(new ToolResultTurn(tool.Id, tool.Name, await UseAsync(tool, token).ConfigureAwait(false)));
             }
         }
+        while (results.Count > 0);
 
         return conversation;
+    }
+
+    private async Task<ToolReturn> UseAsync(ToolTurn tool, CancellationToken token)
+    {
+        IMcp? mcp = Harness.Mcps.Values.FirstOrDefault(m => m.Tools.ContainsKey(tool.Name));
+        if (mcp is null)
+            return ToolReturn.Failure($"No tool named {tool.Name} is registered.", "Call one of the declared tools instead.");
+
+        return await Harness.UseToolAsync(mcp.Name, tool.Name, tool.Args.ToList(), token).ConfigureAwait(false);
     }
 
 }
