@@ -75,6 +75,9 @@ public sealed class Agent
     public static Agent GetGeminiAgent(string model)
         => new Agent(new GeminiModel(model, "Google"), new GenericHarness());
 
+    public static Agent GetDeepSeekAgent(string model)
+        => new Agent(new DeepSeekModel(model), new GenericHarness());
+
     // public static Agent GetCodexDesktopAgent()
     //     => new Agent(new CodexDesktopModel("gpt-6"), new CodexHarness());
 
