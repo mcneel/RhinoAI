@@ -27,6 +27,24 @@ public class PermissionSet
 
         return result;
     }
+    
+    public IEnumerable<Permission> AllowedTools()
+    {
+        foreach(KeyValuePair<string, Permission> permission in Permissions)
+        {
+            if (permission.Value.Permissability != Permissability.Always) continue;
+            yield return permission.Value;
+        }
+    }
+    
+    public IEnumerable<Permission> ProhibitedTools()
+    {
+        foreach(KeyValuePair<string, Permission> permission in Permissions)
+        {
+            if (permission.Value.Permissability != Permissability.Deny) continue;
+            yield return permission.Value;
+        }
+    }
 
     private Permissability ResolvePermissions(Permission permission, IReadOnlyList<IToolArg> args)
     {

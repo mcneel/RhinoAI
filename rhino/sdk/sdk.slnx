@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../../tests/sdk.tests/sdk.tests.csproj" />
+  <Project Path="/Users/sykes/gits/RAI/rhino/sdk/sdk.csproj" />
+</Solution>

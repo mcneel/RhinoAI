@@ -35,6 +35,9 @@ dotnet_style_namespace_match_folder = true:suggestion
 # IDE0028: Simplify collection initialization
 dotnet_diagnostic.IDE0028.severity = none
 
+# IDE0306: Simplify collection initialization
+dotnet_style_prefer_collection_expression = never
+
 [*.cs]
 # New line preferences
 csharp_new_line_before_open_brace = all

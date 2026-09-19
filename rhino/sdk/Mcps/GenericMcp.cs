@@ -13,7 +13,7 @@ namespace Rhino.AI;
 public abstract class GenericMcp : IMcp
 {
 
-    public string Name { get; } = "Default Tools";
+    public string Name { get; } = "Unnamed MCP";
 
     private Dictionary<string, ITool> PrivateTools { get; } = [];
 

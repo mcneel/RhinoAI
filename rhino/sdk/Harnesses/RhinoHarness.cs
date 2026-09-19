@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,21 +11,29 @@ public sealed class RhinoHarness : GenericHarness
 
     public RhinoHarness() : base()
     {
-        StdioMcp rhinoMcp = new ("rhino", new Uri(ResolveRouter));
+        StdioMcp rhinoMcp = new("rhino", new Uri(ResolveRouter));
         AddMcp(rhinoMcp);
     }
 
-    public string ResolveRouter => throw new NotImplementedException("Where is the Router?");
-
-    public override Task<bool> RequestPermissionFromUser(string name, List<IToolArg> args, CancellationToken token)
+    // '/Users/sykes/Library/Application Support/McNeel/Rhinoceros/ai/bin/rhino-mcp-router'
+    private string? PrivateResolvedRouter { get; set; }
+    public string ResolveRouter
     {
-        throw new NotImplementedException();
+        get
+        {
+            if (string.IsNullOrEmpty(PrivateResolvedRouter))
+            {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string mcneel = Path.Combine(appData, "McNeel");
+                string rhinoceros = Path.Combine(mcneel, "Rhinoceros");
+                string ai = Path.Combine(rhinoceros, "ai");
+                string bin = Path.Combine(ai, "bin");
+                string router = Path.Combine(bin, "rhino-mcp-router");
+                PrivateResolvedRouter = router;
+            }
+
+            return PrivateResolvedRouter;
+        }
     }
 
-    public override Task<IEnumerable<ITurn>> SendAsync(IEnumerable<ITurn> turn, CancellationToken token)
-    {
-        // TODO : Ask the Model!
-        throw new NotImplementedException();
-    }
-    
 }
