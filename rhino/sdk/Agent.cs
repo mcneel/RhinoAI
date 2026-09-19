@@ -23,7 +23,7 @@ public sealed class Agent
     
     public IHarness Harness { get; }
     
-    public string DefaultPrompt { get; set; } = "You are a Rhino Expert.";
+    public string DefaultPrompt { get; set; } = "";
 
     // TODO : Enum ??
     // public string Effort { get; set; }
@@ -51,7 +51,7 @@ public sealed class Agent
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
     {
         List<ITurn> startTurns = new (Turns);
-        if (startTurns.Count == 0)
+        if (!string.IsNullOrEmpty(DefaultPrompt))
             startTurns.Add(new SystemTurn(DefaultPrompt));
 
         startTurns.Add(new MessageTurn(message));

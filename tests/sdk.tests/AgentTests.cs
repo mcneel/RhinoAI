@@ -4,7 +4,7 @@ using Rhino.AI.Models;
 
 namespace sdk.tests;
 
-public class Tests
+public class AgentTests
 {
 
     [Test]

@@ -65,6 +65,9 @@ public class PermissionSet
         // All args passed the sniff test
         return permission.Permissability;
     }
+
+    public bool AddPermission(string name, Permission permission)
+        => Permissions.TryAdd(name, permission);
     
 
     // All rules can amtch * as ANYTHING

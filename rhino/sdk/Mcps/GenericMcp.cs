@@ -10,12 +10,13 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
+/// <summary>A simple Mcp</summary>
 public abstract class GenericMcp : IMcp
 {
 
     public string Name { get; } = "Unnamed MCP";
 
-    private Dictionary<string, ITool> PrivateTools { get; } = [];
+    protected Dictionary<string, ITool> PrivateTools { get; } = [];
 
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
 
