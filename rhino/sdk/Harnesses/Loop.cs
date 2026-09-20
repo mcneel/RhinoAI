@@ -12,7 +12,7 @@ public sealed class Loop(IHarness harness)
 
     private IHarness Harness { get; } = harness;
 
-    public async Task<IEnumerable<ITurn>> StartAsync(IModel model, IEnumerable<ITurn> start, CancellationToken token)
+    public async Task<IEnumerable<ITurn>> StartAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
@@ -23,7 +23,7 @@ public sealed class Loop(IHarness harness)
             conversation.AddRange(results);
             results.Clear();
 
-            foreach (ITurn turn in await model.SendAsync(Harness, conversation, token).ConfigureAwait(false))
+            foreach (ITurn turn in await agent.Model.SendAsync(Harness, conversation, token).ConfigureAwait(false))
             {
                 if (turn is TurnEnd) continue;
                 conversation.Add(turn);

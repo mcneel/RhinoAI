@@ -5,12 +5,20 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-public abstract class DesktopModel(string name, string vendor) : IModel
+internal abstract class DesktopModel(string name, string vendor) : IModel
 {
 
     public string Name { get; } = name;
     public string Vendor { get; } = vendor;
 
-    public abstract Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token);
+    protected abstract Task<IEnumerable<ITurn>> SendPrivateAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token);
+    
+    public async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
+    {
+        if (!UserPermissions.IsPermitted(Vendor, Name))
+            throw new PermissionException("Model or Vendor does not have permission.");
+        
+        return await SendPrivateAsync(harness, turns, token);
+    }
     
 }

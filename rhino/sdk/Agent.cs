@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using Rhino.AI.Models;
+using System;
 
 namespace Rhino.AI;
 
@@ -23,15 +24,17 @@ public sealed class Agent
     
     public IHarness Harness { get; }
     
-    public string DefaultPrompt { get; set; } = "";
+    // TODO: Make set and re
+    public string DefaultPrompt { get; }
 
     // TODO : Enum ??
     // public string Effort { get; set; }
 
-    public Agent(IModel model, IHarness harness)
+    public Agent(IModel model, IHarness harness, string defaultPrompt = "")
     {
         Model = model;
         Harness = harness;
+        DefaultPrompt = defaultPrompt;
     }
 
     internal Agent Fork() => WithNewModel(Model);
@@ -43,42 +46,60 @@ public sealed class Agent
     /// <returns>A freshly made agent with all of the state copied safely</returns>
     internal Agent WithNewModel(IModel model)
     {
-        Agent agent = new (model, Harness);
+        Agent agent = new (model, Harness, DefaultPrompt);
+        agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
+        return agent;
+    }
+
+    /// <summary>
+    /// Create a new Agent that has permission.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns>A freshly made agent with all of the state copied safely</returns>
+    internal Agent WithPermission()
+    {
+        // Finds the first Agent or Vendor that has permission
+        // TODO : Check existing models
+        IModel model = default!;
+        Agent agent = new (model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;
     }
 
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
     {
+        if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
+            throw new PermissionException("Model or Vendor does not have permission.");
+
         List<ITurn> startTurns = new (Turns);
         if (!string.IsNullOrEmpty(DefaultPrompt))
             startTurns.Add(new SystemTurn(DefaultPrompt));
 
         startTurns.Add(new MessageTurn(message));
 
-        IEnumerable<ITurn> turns = await Harness.LoopAsync(Model, startTurns, token).ConfigureAwait(false);
+        IEnumerable<ITurn> turns = await Harness.LoopAsync(this, startTurns, token).ConfigureAwait(false);
         PrivateTurns.Clear();
         PrivateTurns.AddRange(turns);
 
         return turns;
     }
 
-    public static Agent GetClaudeDesktopAgent()
-        => new Agent(new ClaudeDesktopModel("opus"), new ClaudeHarness());
-
-    public static Agent GetClaudeAgent(string model)
-        => new Agent(new ClaudeModel(model), new GenericHarness());
-
-    public static Agent GetChatGptAgent(string model)
-        => new Agent(new ChatGptModel(model), new GenericHarness());
-
-    public static Agent GetGeminiAgent(string model)
-        => new Agent(new GeminiModel(model, "Google"), new GenericHarness());
-
-    public static Agent GetDeepSeekAgent(string model)
-        => new Agent(new DeepSeekModel(model), new GenericHarness());
+    public static Agent GetClaudeDesktopAgent(string prompt = "")
+        => new Agent(new ClaudeDesktopModel("opus"), new ClaudeHarness(), prompt);
 
     // public static Agent GetCodexDesktopAgent()
     //     => new Agent(new CodexDesktopModel("gpt-6"), new CodexHarness());
+
+    public static Agent GetClaudeAgent(string model, string prompt)
+        => new Agent(new ClaudeModel(model), new GenericHarness(), prompt);
+
+    public static Agent GetChatGptAgent(string model, string prompt)
+        => new Agent(new ChatGptModel(model), new GenericHarness(), prompt);
+
+    public static Agent GetGeminiAgent(string model, string prompt)
+        => new Agent(new GeminiModel(model, "Google"), new GenericHarness(), prompt);
+
+    public static Agent GetDeepSeekAgent(string model, string prompt)
+        => new Agent(new DeepSeekModel(model), new GenericHarness(), prompt);
 
 }

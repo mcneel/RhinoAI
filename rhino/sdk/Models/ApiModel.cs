@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-public abstract class ApiModel(string name, string vendor, ITurnConverter converter) : IModel
+internal abstract class ApiModel(string name, string vendor, ITurnConverter converter) : IModel
 {
 
     public string Name { get; } = name;
@@ -29,6 +29,9 @@ public abstract class ApiModel(string name, string vendor, ITurnConverter conver
 
     public virtual async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
+        if (!UserPermissions.IsPermitted(Vendor, Name))
+            throw new PermissionException("Model or Vendor does not have permission.");
+
         JsonObject body = Converter.ToRequest(new RequestSettings(Name, MaxOutputTokens), harness, turns);
 
         using HttpRequestMessage request = GetRequest(body);

@@ -6,7 +6,7 @@ namespace Rhino.AI.Models;
 
 // https://api-docs.deepseek.com/api/create-chat-completion
 
-public sealed class DeepSeekModel : ApiModel
+internal sealed class DeepSeekModel : ApiModel
 {
 
     private const string Host = "https://api.deepseek.com/chat/completions";

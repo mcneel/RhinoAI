@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace Rhino.AI.Models;
 
-public sealed class ClaudeModel : ApiModel
+internal sealed class ClaudeModel : ApiModel
 {
 
     private const string Host = "https://api.anthropic.com/v1/messages";

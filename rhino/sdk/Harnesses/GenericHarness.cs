@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+
 using Rhino.AI.Models;
 
 namespace Rhino.AI;
@@ -29,8 +29,8 @@ public class GenericHarness : IHarness
         AddMcp(new DefaultToolsMcp());
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(IModel model, IEnumerable<ITurn> start, CancellationToken token)
-    => await Loop.StartAsync(model, start, token);
+    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    => await Loop.StartAsync(agent, start, token);
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {

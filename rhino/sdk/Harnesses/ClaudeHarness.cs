@@ -20,9 +20,9 @@ internal sealed class ClaudeHarness : IHarness
 
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
     
-    public async Task<IEnumerable<ITurn>> LoopAsync(IModel model, IEnumerable<ITurn> start, CancellationToken token)
+    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
-        if (model is not ClaudeDesktopModel claudeModel) return [];
+        if (agent.Model is not ClaudeDesktopModel claudeModel) return [];
         return await claudeModel.SendAsync(this, start, token);
     }
 

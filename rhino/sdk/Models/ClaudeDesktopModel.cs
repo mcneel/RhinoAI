@@ -12,7 +12,7 @@ namespace Rhino.AI.Models;
 internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anthropic")
 {
 
-    public async override Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
+    protected async override Task<IEnumerable<ITurn>> SendPrivateAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
     {
         Process process = new()
         {
@@ -66,9 +66,13 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
         process.StartInfo.ArgumentList.Add("--model");
         process.StartInfo.ArgumentList.Add(name);
-        // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
-        process.StartInfo.ArgumentList.Add("--fallback-model");
-        process.StartInfo.ArgumentList.Add("opus");
+
+        if (UserPermissions.IsPermitted("anthropic", "opus"))
+        {
+            // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
+            process.StartInfo.ArgumentList.Add("--fallback-model");
+            process.StartInfo.ArgumentList.Add("opus");
+        }
 
         // --no-session-persistence              Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)
         process.StartInfo.ArgumentList.Add("--no-session-persistence");

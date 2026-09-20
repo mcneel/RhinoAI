@@ -5,7 +5,7 @@ namespace Rhino.AI.Models;
 
 // https://ai.google.dev/gemini-api/docs#rest
 
-public sealed class GeminiModel : ApiModel
+internal sealed class GeminiModel : ApiModel
 {
 
     private const string Host = "https://generativelanguage.googleapis.com/v1beta/models";

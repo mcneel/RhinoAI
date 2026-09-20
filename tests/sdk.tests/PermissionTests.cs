@@ -38,7 +38,6 @@ public class PermissionTests
         CancellationTokenSource source = new(100_000);
         IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", source.Token);
         Assert.That(turns.Any(t => t is ToolResultTurn result && result.Return.Result == ToolResult.Failure));
-        
     }
 
 }

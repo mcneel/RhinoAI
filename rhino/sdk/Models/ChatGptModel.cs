@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace Rhino.AI.Models;
 
-public sealed class ChatGptModel : ApiModel
+internal sealed class ChatGptModel : ApiModel
 {
 
     private const string Host = "https://api.openai.com/v1/responses";
