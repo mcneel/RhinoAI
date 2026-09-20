@@ -11,7 +11,7 @@ namespace Rhino.AI.Router;
 public static class SpawnDiagnostics
 {
     // `BaseMessage` is the diagnosis without the next-action suffix the caller adds.
-    public readonly record struct SpawnDiagnosis(string Code, string BaseMessage, string? CrashReportPath = null);
+    public record struct SpawnDiagnosis(string Code, string BaseMessage, string? CrashReportPath = null);
 
     public static bool TryClassify(Exception ex, RhinoCrashReportFinder crashFinder, out SpawnDiagnosis diagnosis)
     {

@@ -8,7 +8,7 @@ namespace Rhino.AI.Tools;
 [McpServerToolType]
 internal static class GH2_SearchComponentsTool
 {
-    public readonly record struct ProxyHit(
+    public record struct ProxyHit(
         Guid Guid,
         string Name,
         string Category,

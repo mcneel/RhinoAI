@@ -34,7 +34,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     private SemaphoreSlim WriteGate { get; } = new(1, 1);
     private SemaphoreSlim TurnGate { get; } = new(1, 1);
 
-    private readonly record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
+    private record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
 
     // Resolved by the read-loop exit, so a one-turn-per-process CLI cannot hand the next prompt a stdin it already closed.
     private TurnCompletion? PendingCompletion { get; set; }

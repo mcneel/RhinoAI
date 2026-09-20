@@ -5,7 +5,7 @@ using Rhino.AI.Router;
 
 namespace Rhino.AI;
 
-internal readonly record struct RouterStagingResult(string RouterPath, string? StagingError);
+internal record struct RouterStagingResult(string RouterPath, string? StagingError);
 
 // Windows locks a running exe, so executing the installer-owned payload would block yak updates.
 internal static class RouterStaging
