@@ -16,5 +16,6 @@
    curl -fsSL "https://raw.githubusercontent.com/zed-industries/agent-client-protocol/$TAG/schema/meta.json"   -o rhino/acp/schema/meta.json
    ```
 2. Regenerate the C#: `dotnet run --project rhino/acp/codegen`
-3. Build + test: `dotnet test tests/Acp.Tests`
-4. Review the `src/Generated/` diff before committing.
+3. The output under `src/Generated/` is committed and compiled as ordinary source; the regen wipes and recreates that directory.
+4. Build + test: `dotnet test tests/Acp.Tests`
+5. Review the `src/Generated/` diff before committing.
