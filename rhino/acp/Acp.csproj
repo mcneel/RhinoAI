@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <Compile Remove="codegen/**/*.cs;src/Generated/**/*.cs" />
-    <Compile Include="../../../../../version.cs">
+    <Compile Include="../../../../../version.cs" Condition="Exists('../../../../../version.cs')">
       <Link>Properties\version.cs</Link>
     </Compile>
   </ItemGroup>

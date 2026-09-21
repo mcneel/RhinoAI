@@ -37,7 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
-    <Compile Include="../../../../../version.cs">
+    <Compile Include="../../../../../version.cs" Condition="Exists('../../../../../version.cs')">
       <Link>Properties\version.cs</Link>
     </Compile>
   </ItemGroup>
