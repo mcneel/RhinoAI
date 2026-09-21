@@ -45,7 +45,7 @@ internal static class RhinoCodeProjects
                 return match.Value;
 
             int start = value.Index - match.Index;
-            return match.Value[..start] + inverted + match.Value[(start + value.Length)..];
+            return match.Value.Substring(0, start) + inverted + match.Value.Substring(start + value.Length);
         });
     }
 

@@ -96,8 +96,8 @@ internal static class McpConfigEdit
         if (env.Count > 0)
         {
             section += $"\n[mcp_servers.{serverName}.env]\n";
-            foreach ((string key, string value) in env)
-                section += $"{key} = {TomlBasicString(value)}\n";
+            foreach (KeyValuePair<string, string> pair in env)
+                section += $"{pair.Key} = {TomlBasicString(pair.Value)}\n";
         }
 
         string separator = original.Length == 0 || original.EndsWith('\n') ? "\n" : "\n\n";
@@ -153,8 +153,8 @@ internal static class McpConfigEdit
         if (env.Count == 0)
             return null;
         JsonObject block = new();
-        foreach ((string key, string value) in env)
-            block[key] = value;
+        foreach (KeyValuePair<string, string> pair in env)
+            block[pair.Key] = pair.Value;
         return block;
     }
 

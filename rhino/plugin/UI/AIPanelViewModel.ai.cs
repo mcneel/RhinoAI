@@ -122,7 +122,7 @@ internal partial class AIPanelViewModel : IDisposable
                 await response.OutputStream.WriteAsync(page).ConfigureAwait(false);
             }
             else if (route.StartsWith(ServedImages.Route, StringComparison.Ordinal)
-                && ServedImages.Resolve(route[ServedImages.Route.Length..]) is { } file)
+                && ServedImages.Resolve(route.Substring(ServedImages.Route.Length)) is { } file)
             {
                 response.ContentType = ServedImages.MediaType(file);
                 using FileStream bytes = File.OpenRead(file);
@@ -554,7 +554,7 @@ internal partial class AIPanelViewModel : IDisposable
         string line = prompt.Split('\n').FirstOrDefault(static l => l.Trim().Length > 0)?.Trim() ?? string.Empty;
         if (line.Length == 0)
             return "(no prompt)";
-        return line.Length > 80 ? line[..80].TrimEnd() + "…" : line;
+        return line.Length > 80 ? line.Substring(0, 80).TrimEnd() + "…" : line;
     }
 
     private static bool Resumable(string agentName) =>
@@ -625,7 +625,7 @@ internal partial class AIPanelViewModel : IDisposable
     }
 
     private bool IsTurnRunning =>
-        ActiveConversation?.Turns is { Count: > 0 } turns && !turns[^1].Completed;
+        ActiveConversation?.Turns is { Count: > 0 } turns && !turns[turns.Count - 1].Completed;
 
 #endregion
 
