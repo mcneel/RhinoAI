@@ -15,4 +15,10 @@
     <Compile Remove="codegen/**/*.cs" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>
