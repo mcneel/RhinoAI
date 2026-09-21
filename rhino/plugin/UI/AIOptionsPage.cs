@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Drawing;
+
 using Rhino.UI;
 using Rhino.Runtime;
 
@@ -18,6 +19,7 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     public AIOptionsPage() : base(LOC.STR("AI"))
     {
         Panel.Width = 800;
+        Panel.UseRhinoStyle();
     }
 
     public override object PageControl => Panel;
