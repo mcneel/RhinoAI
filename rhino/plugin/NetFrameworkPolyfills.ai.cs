@@ -51,7 +51,7 @@ namespace Rhino.AI
             return true;
         }
 
-        public static bool Remove<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, [MaybeNullWhen(false)] out TValue value)
+        public static bool Remove<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, out TValue value)
             where TKey : notnull
         {
             if (!dictionary.TryGetValue(key, out value))
@@ -60,7 +60,7 @@ namespace Rhino.AI
             return true;
         }
 
-        public static bool TryDequeue<T>(this Queue<T> queue, [MaybeNullWhen(false)] out T result)
+        public static bool TryDequeue<T>(this Queue<T> queue, out T result)
         {
             if (queue.Count == 0)
             {

@@ -142,9 +142,9 @@ internal static class GetViewportImageTool
 
     private sealed class CaptureMetadata
     {
-        public required GetContextTool.ViewportSummary Viewport { get; init; }
-        public required int ImageWidth { get; init; }
-        public required int ImageHeight { get; init; }
+        public GetContextTool.ViewportSummary Viewport { get; set; }
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
         public BoundingBox SceneBoundingBox { get; set; } = BoundingBox.Empty;
         public int VisibleObjectCount { get; set; }
         public int TotalObjectCount { get; set; }
