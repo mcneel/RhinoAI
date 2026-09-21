@@ -54,7 +54,7 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         }
     }
 
-    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
+    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume, IReadOnlyList<ContentBlock> prompt)
     {
         // Same {"mcpServers":{...}} shape Claude Code expects; rhino points at this doc's HTTP
         // listener (not the router) so the agent always operates on the exact doc. Extra servers the
