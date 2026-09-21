@@ -57,6 +57,9 @@
     <ProjectReference Include="codegen/Router.Codegen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
     <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
+    <Compile Include="../../../../../version.cs" Condition="Exists('../../../../../version.cs')">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <!-- dlopen looks next to the AOT binary in native/, not in $(OutDir). -->
