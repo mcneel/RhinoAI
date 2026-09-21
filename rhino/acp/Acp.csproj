@@ -13,6 +13,9 @@
 
   <ItemGroup>
     <Compile Remove="codegen/**/*.cs;src/Generated/**/*.cs" />
+    <Compile Include="../../../../../version.cs">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <Target Name="GenerateAcpCode"

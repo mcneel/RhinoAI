@@ -37,6 +37,9 @@
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
+    <Compile Include="../../../../../version.cs">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->
