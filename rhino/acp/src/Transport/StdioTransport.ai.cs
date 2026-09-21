@@ -24,15 +24,24 @@ public sealed class StdioTransport : IAcpTransport
     }
 
     public async ValueTask<string?> ReadLineAsync(CancellationToken cancellationToken = default) =>
+#if NET48
+        await Reader.ReadLineAsync().ConfigureAwait(false);
+#else
         await Reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+#endif
 
     public async ValueTask WriteLineAsync(string json, CancellationToken cancellationToken = default)
     {
         await WriteGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+#if NET48
+            await Writer.WriteLineAsync(json).ConfigureAwait(false);
+            await Writer.FlushAsync().ConfigureAwait(false);
+#else
             await Writer.WriteLineAsync(json.AsMemory(), cancellationToken).ConfigureAwait(false);
             await Writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+#endif
         }
         finally
         {
