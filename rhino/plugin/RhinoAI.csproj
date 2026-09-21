@@ -40,6 +40,10 @@
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->
   <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
     <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
