@@ -3,6 +3,7 @@
   <Import Project="$(RhinoSrc4Dir)RhinoProjectPropertySheets/Rhino.CS.Dll.props" Condition="'$(IsInRhino)' == 'true'" />
 
   <PropertyGroup>
+    <TargetFrameworks>net8.0;net48</TargetFrameworks>
     <AssemblyName>Acp</AssemblyName>
     <RootNamespace>Acp</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>

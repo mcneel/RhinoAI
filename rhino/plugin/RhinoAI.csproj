@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <TargetFrameworks>net8.0;net48</TargetFrameworks>
     <AssemblyName>RhinoAI</AssemblyName>
     <RootNamespace>Rhino.AI</RootNamespace>
     <Title>Rhino AI</Title>

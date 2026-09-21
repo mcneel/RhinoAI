@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <AssemblyName>rhino-mcp-router</AssemblyName>
     <RootNamespace>Rhino.AI.Router</RootNamespace>
