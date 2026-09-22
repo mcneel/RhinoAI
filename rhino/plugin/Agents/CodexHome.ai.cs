@@ -17,16 +17,16 @@ internal static class CodexHome
 
     public static string Prepare()
     {
-        if (Prepared is string ready)
-            return ready;
-
         string codexDataStash = DataStash;
 
-        Directory.CreateDirectory(codexDataStash);
-        File.WriteAllText(Path.Combine(codexDataStash, "config.toml"), ShippedConfig());
-        LinkAuth(codexDataStash);
+        if (Prepared is null)
+        {
+            Directory.CreateDirectory(codexDataStash);
+            File.WriteAllText(Path.Combine(codexDataStash, "config.toml"), ShippedConfig());
+            Prepared = codexDataStash;
+        }
 
-        Prepared = codexDataStash;
+        CopyAuth(codexDataStash);
         return codexDataStash;
     }
 
@@ -38,38 +38,22 @@ internal static class CodexHome
         return reader.ReadToEnd();
     }
 
-    // A link, never a copy: it keeps a refreshed token writing through to the user's one real login.
-    private static void LinkAuth(string home)
+    private static void CopyAuth(string home)
     {
         string real = Path.Combine(UserCodexHome(), "auth.json");
-        string link = Path.Combine(home, "auth.json");
+        string copy = Path.Combine(home, "auth.json");
 
         if (!File.Exists(real))
             return;
-        if (File.Exists(link) && ResolvesTo(link, real))
-            return;
 
         try
         {
-            File.Delete(link);
-            File.CreateSymbolicLink(link, real);
+            File.Delete(copy);
+            File.Copy(real, copy);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            RhinoApp.WriteLine($"[codex] could not link auth.json ({ex.Message}); copied it instead, so a refreshed login may need re-running.");
-            File.Copy(real, link, overwrite: true);
-        }
-    }
-
-    private static bool ResolvesTo(string link, string target)
-    {
-        try
-        {
-            return new FileInfo(link).LinkTarget == target;
-        }
-        catch (IOException)
-        {
-            return false;
+            RhinoApp.WriteLine($"[codex] could not copy auth.json ({ex.Message}); the agent may ask you to sign in again.");
         }
     }
 
