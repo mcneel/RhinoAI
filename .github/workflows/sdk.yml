@@ -1,0 +1,59 @@
+name: SDK
+
+on:
+  push:
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
+    paths:
+      - 'rhino/sdk/**'
+      - 'tests/sdk.tests/**'
+      - 'rhino/Directory.Build.props'
+      - '.github/workflows/sdk.yml'
+  pull_request:
+    branches:
+      - main
+      - rhino-9.x
+      - 'rhino-9.x/**'
+    paths:
+      - 'rhino/sdk/**'
+      - 'tests/sdk.tests/**'
+      - 'rhino/Directory.Build.props'
+      - '.github/workflows/sdk.yml'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Setup .NET (8.0 for sdk, 10.0 for sdk.tests)
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build sdk and sdk.tests
+        run: dotnet build tests/sdk.tests/sdk.tests.csproj --configuration Release
+
+      # Category=Manual marks tests that drive a locally installed desktop app.
+      - name: Test sdk
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: >
+          dotnet test tests/sdk.tests/sdk.tests.csproj
+          --configuration Release
+          --no-build
+          --filter "TestCategory!=Manual"
+          --verbosity normal

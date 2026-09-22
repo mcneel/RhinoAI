@@ -39,7 +39,7 @@ public class UserPermissionTests
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 
-        UserPermissions.BlockedVendors.Add(deepSeek.Name);
+        UserPermissions.BlockedModels.Add(deepSeek.Name);
 
         CancellationTokenSource source = new(10_000);
 

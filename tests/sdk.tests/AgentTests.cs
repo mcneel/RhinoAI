@@ -43,7 +43,7 @@ public class AgentTests
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
     }
 
-    [Test]
+    [Test, Category("Manual")]
     public async Task DesktopClaude()
     {
         MemoryMcp mcp = new("Weather MCP");
