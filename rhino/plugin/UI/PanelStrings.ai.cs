@@ -21,7 +21,7 @@ internal static class PanelStrings
         ["empty.starterTower"] = LOC.STR("Build a twisty tower in Grasshopper"),
         ["empty.starterLayers"] = LOC.STR("Organize the objects in the active viewport into layers"),
         ["empty.noAgent"] = LOC.STR("No agent available"),
-        ["empty.noAgentBody"] = LOC.STR("Install Claude Code, Codex or Gemini CLI and sign in, then pick it here."),
+        ["empty.noAgentBody"] = LOC.STR("Install Claude Code or Codex and sign in, then pick it here."),
         ["empty.openSettings"] = LOC.STR("Open AI settings"),
         ["empty.setupGuide"] = LOC.STR("Read the setup guide"),
 
