@@ -7,8 +7,8 @@ namespace sdk.tests;
 public class PermissionTests
 {
 
-    [Test]
-    public async Task PermissionRequested()
+    [Test, CancelAfter(5000)]
+    public async Task PermissionRequested(CancellationToken token)
     {
         bool permissionRequested = false;
         DeepSeekModel deepSeek = DeepSeekModel.Default();
@@ -24,15 +24,14 @@ public class PermissionTests
 
         harness.PermissionRequested += (_, __) => permissionRequested = true;
 
-        CancellationTokenSource source = new(100_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
 
         Assert.That(turns.Any(t => t is ToolTurn), "The model answered without calling a tool, so the permission gate was never reached.");
         Assert.That(permissionRequested);
     }
 
-    [Test]
-    public async Task BlockedTool()
+    [Test, CancelAfter(5000)]
+    public async Task BlockedTool(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
@@ -44,8 +43,7 @@ public class PermissionTests
 
         Assert.That(harness.Permissions.AddPermission("Smoople", new Permission("Smoople", Permissability.Deny, [])));
 
-        CancellationTokenSource source = new(100_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
         Assert.That(turns.Any(t => t is ToolResultTurn result && result.Return.Result == ToolResult.Failure));
     }
 

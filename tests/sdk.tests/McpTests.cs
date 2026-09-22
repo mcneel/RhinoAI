@@ -9,8 +9,6 @@ public class McpTests
 
     private Agent Agent { get; }
 
-    private CancellationTokenSource Source => new(10_000);
-
     private MemoryMcp Mcp { get; } = new("AnyMCP");
 
     public McpTests()
@@ -33,8 +31,8 @@ public class McpTests
         Mcp.ClearTools();
     }
 
-    [Test]
-    public async Task NoArgs()
+    [Test, CancelAfter(5000)]
+    public async Task NoArgs(CancellationToken token)
     {
         TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [])
         {
@@ -42,15 +40,15 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", Source.Token);
+        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
         AssertTurns(turns.Last(), "cat", "small", "red");
     }
 
-    [Test]
-    public async Task OneOptionalArg()
+    [Test, CancelAfter(5000)]
+    public async Task OneOptionalArg(CancellationToken token)
     {
         TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Pointless Arg", "DO NOT USE THIS ITS BAD", ToolArgType.String, false)])
         {
@@ -62,15 +60,15 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", Source.Token);
+        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
         AssertTurns(turns.Last(), "cat", "small", "red");
     }
 
-    [Test]
-    public async Task OneRequiredArg()
+    [Test, CancelAfter(5000)]
+    public async Task OneRequiredArg(CancellationToken token)
     {
         TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Shmargle Arg", "Pass Shmargle as a string", ToolArgType.String, true)])
         {
@@ -82,7 +80,7 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", Source.Token);
+        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
@@ -97,7 +95,8 @@ public class McpTests
     [TestCase(ToolArgType.Boolean, typeof(IToolBoolean))]
     // [TestCase(ToolArgType.Array, typeof(IToolArray))]
     // [TestCase(ToolArgType.Object, typeof(IToolObject))]
-    public async Task StringArg(ToolArgType arg, Type argType)
+    [CancelAfter(5000)]
+    public async Task StringArg(ToolArgType arg, Type argType, CancellationToken token)
     {
         TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Shmargle Arg", $"Pass Shmargle as a {arg}", arg, true)])
         {
@@ -109,7 +108,7 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", Source.Token);
+        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));

@@ -10,7 +10,8 @@ public class AgentTests
     [TestCase("completions")]
     [TestCase("anthropic")]
     [TestCase("responses")]
-    public async Task DeepSeekApi(string protocol)
+    [CancelAfter(5000)]
+    public async Task DeepSeekApi(string protocol, CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
@@ -28,15 +29,14 @@ public class AgentTests
         harness.AddMcp(mcp);
         Agent agent = new(deepSeek, harness);
 
-        CancellationTokenSource source = new(100_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
         Assert.That(turns.Any(t => t is ToolResultTurn), "The model answered without calling the weather tool.");
         Assert.That(turns.Last(), Is.InstanceOf<MessageTurn>());
     }
 
-    [Test]
-    public async Task Denied()
+    [Test, CancelAfter(5000)]
+    public async Task Denied(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
@@ -50,12 +50,12 @@ public class AgentTests
 
         harness.PermissionRequested += (_, e) => e.HasPermission = false;
 
-        CancellationTokenSource source = new(100_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
 
     [Test, Category("Manual")]
-    public async Task LMStudioApi()
+    [CancelAfter(5000)]
+    public async Task LMStudioApi(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
@@ -67,12 +67,12 @@ public class AgentTests
         harness.AddMcp(mcp);
         Agent agent = new(lmStudio, harness);
 
-        CancellationTokenSource source = new(300_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
 
     [Test, Category("Manual")]
-    public async Task DesktopClaude()
+    [CancelAfter(5000)]
+    public async Task DesktopClaude(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
@@ -83,8 +83,7 @@ public class AgentTests
         Agent agent = Agent.GetClaudeDesktopAgent();
         agent.Harness.AddMcp(mcp);
 
-        CancellationTokenSource source = new(100_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
         ;
     }
 

@@ -18,8 +18,8 @@ public class UserPermissionTests
 
     // TODO : Use TestCase and switch out vendors/models
 
-    [TestCase]
-    public void DenyVendor()
+    [Test, CancelAfter(5000)]
+    public void DenyVendor(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
@@ -27,13 +27,11 @@ public class UserPermissionTests
 
         UserPermissions.BlockedVendors.Add(deepSeek.Vendor);
 
-        CancellationTokenSource source = new(10_000);
-
-        Assert.ThrowsAsync<PermissionException>(() => agent.SendAsync("What is the value of PI?", source.Token));
+        Assert.ThrowsAsync<PermissionException>(() => agent.SendAsync("What is the value of PI?", token));
     }
 
-    [Test]
-    public void DenyModel()
+    [Test, CancelAfter(5000)]
+    public void DenyModel(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
@@ -41,9 +39,7 @@ public class UserPermissionTests
 
         UserPermissions.BlockedModels.Add(deepSeek.Name);
 
-        CancellationTokenSource source = new(10_000);
-
-        Assert.ThrowsAsync<PermissionException>(() => agent.SendAsync("What is the value of PI?", source.Token));
+        Assert.ThrowsAsync<PermissionException>(() => agent.SendAsync("What is the value of PI?", token));
     }
 
 }
