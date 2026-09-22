@@ -123,9 +123,18 @@ internal sealed class McpServer : IDisposable
     private static string DescribeException(Exception ex)
     {
         List<string> parts = [];
+        Exception deepest = ex;
         for (Exception? cur = ex; cur is not null; cur = cur.InnerException)
+        {
             parts.Add($"{cur.GetType().FullName}: {cur.Message}");
-        return string.Join(" --> ", parts);
+            deepest = cur;
+        }
+
+        string described = string.Join(" --> ", parts);
+
+        return deepest is HttpListenerException || deepest.StackTrace is null
+            ? described
+            : $"{described}{Environment.NewLine}{deepest.StackTrace}";
     }
 
     public void Stop()

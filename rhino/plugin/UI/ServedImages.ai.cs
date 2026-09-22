@@ -56,6 +56,10 @@ internal static class ServedImages
             return ByIdentity.TryGetValue(id, out string? path) ? path : null;
     }
 
-    private static string Identify(string path) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path)), 0, 12).ToLowerInvariant();
+    private static string Identify(string path)
+    {
+        using SHA256 sha = SHA256.Create();
+        byte[] digest = sha.ComputeHash(Encoding.UTF8.GetBytes(path));
+        return BitConverter.ToString(digest, 0, 12).Replace("-", string.Empty).ToLowerInvariant();
+    }
 }

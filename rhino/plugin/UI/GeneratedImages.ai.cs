@@ -11,7 +11,7 @@ internal sealed class GeneratedImages
     private DateTimeOffset ListedAt { get; set; } = DateTimeOffset.MinValue;
     private Dictionary<string, Folder> Folders { get; } = new(StringComparer.Ordinal);
 
-    private readonly record struct Produced(string Path, DateTimeOffset WrittenAt);
+    private record struct Produced(string Path, DateTimeOffset WrittenAt);
 
     private sealed record Folder(DateTimeOffset TouchedAt, bool IsSettled, IReadOnlyList<Produced> Files);
 

@@ -4,3 +4,6 @@
 *.3dm filter=lfs diff=lfs merge=lfs -text
 *.gh filter=lfs diff=lfs merge=lfs -text
 *.ghz filter=lfs diff=lfs merge=lfs -text
+
+# Acp.Codegen writes LF; keep the checkout LF so a regen on Windows never shows a line-ending diff.
+rhino/acp/src/Generated/*.cs text eol=lf

@@ -267,8 +267,10 @@ internal sealed class ConnectDialog : Dialog
     private IReadOnlyDictionary<string, string> CurrentEnv()
     {
         Dictionary<string, string> env = [];
-        foreach ((RouterEnvOverride ov, TextBox field) in _fields)
+        foreach (KeyValuePair<RouterEnvOverride, TextBox> pair in _fields)
         {
+            RouterEnvOverride ov = pair.Key;
+            TextBox field = pair.Value;
             if (!ov.IsSet(field.Text))
                 continue;
 

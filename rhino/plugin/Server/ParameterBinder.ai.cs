@@ -76,7 +76,7 @@ internal static class ParameterBinder
     private static string Compact(JsonElement element)
     {
         string raw = element.GetRawText();
-        return raw.Length <= 80 ? raw : raw[..80] + "...";
+        return raw.Length <= 80 ? raw : raw.Substring(0, 80) + "...";
     }
 
     private static object? ConvertString(string raw, Type target)

@@ -46,18 +46,18 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
     {
         psi.Environment["CODEX_HOME"] = CodexHome;
 
-        psi.ArgumentList.Add("exec");
+        psi.AddArgument("exec");
         if (resume)
         {
-            psi.ArgumentList.Add("resume");
-            psi.ArgumentList.Add(agentSessionId);
+            psi.AddArgument("resume");
+            psi.AddArgument(agentSessionId);
         }
 
-        psi.ArgumentList.Add("--json");
-        psi.ArgumentList.Add("--skip-git-repo-check");
+        psi.AddArgument("--json");
+        psi.AddArgument("--skip-git-repo-check");
 
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"mcp_servers.rhino.url={EncodeString(mcpUrl)}");
+        psi.AddArgument("-c");
+        psi.AddArgument($"mcp_servers.rhino.url={EncodeString(mcpUrl)}");
 
         foreach (string entry in mcpServers)
         {
@@ -70,34 +70,34 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
                 foreach (KeyValuePair<string, JsonNode?> field in config)
                     if (field.Value is JsonValue value)
                     {
-                        psi.ArgumentList.Add("-c");
-                        psi.ArgumentList.Add($"mcp_servers.{server.Key}.{field.Key}={EncodeValue(value)}");
+                        psi.AddArgument("-c");
+                        psi.AddArgument($"mcp_servers.{server.Key}.{field.Key}={EncodeValue(value)}");
                     }
                 // Without this every call to a user-added server dies on "approval policy is never", the same pre-approval the shipped config gives rhino.
-                psi.ArgumentList.Add("-c");
-                psi.ArgumentList.Add($"mcp_servers.{server.Key}.default_tools_approval_mode=\"approve\"");
+                psi.AddArgument("-c");
+                psi.AddArgument($"mcp_servers.{server.Key}.default_tools_approval_mode=\"approve\"");
             }
         }
 
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
+        psi.AddArgument("-c");
+        psi.AddArgument($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
 
         if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
-            psi.ArgumentList.Add("-m");
-            psi.ArgumentList.Add(model);
+            psi.AddArgument("-m");
+            psi.AddArgument(model);
         }
         // foreach (string arg in Definition.ExtraArgs)
-        //     psi.ArgumentList.Add(arg);
+        //     psi.AddArgument(arg);
 
         // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
         foreach (string image in SpillImages(prompt))
         {
-            psi.ArgumentList.Add("-i");
-            psi.ArgumentList.Add(image);
+            psi.AddArgument("-i");
+            psi.AddArgument(image);
         }
 
-        psi.ArgumentList.Add("-"); // the positional PROMPT, so it has to stay last
+        psi.AddArgument("-"); // the positional PROMPT, so it has to stay last
     }
 
     // Only paths that actually wrote: codex silently runs the turn when --image names a missing file.

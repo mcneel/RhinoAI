@@ -31,9 +31,9 @@ internal sealed class ConversationFeed
     private List<PosedQuestion> Posed { get; } = new();
     private int QuestionSeq { get; set; }
 
-    private readonly record struct PosedQuestion(PendingQuestion Question, string Id);
+    private record struct PosedQuestion(PendingQuestion Question, string Id);
 
-    private readonly record struct ToolOutcome(string Result, bool Done);
+    private record struct ToolOutcome(string Result, bool Done);
 
     private sealed class TurnCursor
     {

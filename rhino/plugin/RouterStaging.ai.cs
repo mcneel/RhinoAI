@@ -5,7 +5,7 @@ using Rhino.AI.Router;
 
 namespace Rhino.AI;
 
-internal readonly record struct RouterStagingResult(string RouterPath, string? StagingError);
+internal record struct RouterStagingResult(string RouterPath, string? StagingError);
 
 // Windows locks a running exe, so executing the installer-owned payload would block yak updates.
 internal static class RouterStaging
@@ -65,7 +65,7 @@ internal static class RouterStaging
             if (File.Exists(payload))
             {
                 foreach (string source in PayloadFilesExeLast(payloadDir))
-                    Replace(source, Path.Combine(binDir, Path.GetRelativePath(payloadDir, source)));
+                    Replace(source, Path.Combine(binDir, RelativeToPayload(payloadDir, source)));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -93,6 +93,10 @@ internal static class RouterStaging
         yield return exe;
     }
 
+    private static string RelativeToPayload(string payloadDir, string source) =>
+        source.Substring(payloadDir.Length)
+            .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
     private static void Replace(string source, string destination)
     {
         if (IsUpToDate(source, destination))
@@ -105,18 +109,30 @@ internal static class RouterStaging
         File.Copy(source, temp, overwrite: true);
         File.SetLastWriteTimeUtc(temp, File.GetLastWriteTimeUtc(source));
 
+#if !NET48
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(temp, File.GetUnixFileMode(source));
+#endif
 
         try
         {
-            File.Move(temp, destination, overwrite: true);
+            Move(temp, destination, true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MoveRunningCopyAside(destination);
-            File.Move(temp, destination, overwrite: true);
+            Move(temp, destination, true);
         }
+    }
+
+    private static void Move(string sourceFileName, string destFileName, bool overwrite)
+    {
+        if (overwrite && System.IO.File.Exists(destFileName))
+        {
+            System.IO.File.Delete(destFileName);
+        }
+
+        System.IO.File.Move(sourceFileName, destFileName);
     }
 
     // Windows forbids overwriting a running exe but allows renaming one, which live sessions survive.

@@ -3,33 +3,26 @@
   <Import Project="$(RhinoSrc4Dir)RhinoProjectPropertySheets/Rhino.CS.Dll.props" Condition="'$(IsInRhino)' == 'true'" />
 
   <PropertyGroup>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <AssemblyName>Acp</AssemblyName>
     <RootNamespace>Acp</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <AcpGeneratedDir>$(MSBuildProjectDirectory)/src/Generated</AcpGeneratedDir>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="codegen/**/*.cs;src/Generated/**/*.cs" />
+    <Compile Remove="codegen/**/*.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
     </Compile>
   </ItemGroup>
 
-  <Target Name="GenerateAcpCode"
-          BeforeTargets="BeforeCompile;CoreCompile"
-          Inputs="schema/schema.json;schema/meta.json;codegen/Program.cs"
-          Outputs="$(AcpGeneratedDir)/Enums.g.cs;$(AcpGeneratedDir)/Unions.g.cs;$(AcpGeneratedDir)/Types.g.cs;$(AcpGeneratedDir)/Methods.g.cs">
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="dotnet run --project codegen/Acp.Codegen.csproj --configuration Debug --verbosity quiet -- schema/schema.json schema/meta.json src/Generated" />
-  </Target>
-
-  <!-- The generated files do not exist when the default glob runs, so they are added after generation. -->
-  <Target Name="IncludeAcpGeneratedCode" DependsOnTargets="GenerateAcpCode" BeforeTargets="BeforeCompile;CoreCompile">
-    <ItemGroup>
-      <Compile Include="$(AcpGeneratedDir)/*.g.cs" />
-    </ItemGroup>
-  </Target>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" />
+  </ItemGroup>
 
 </Project>

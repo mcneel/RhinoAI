@@ -53,7 +53,7 @@ internal static class GetViewportImageTool
 
         try
         {
-            if (!string.IsNullOrEmpty(view))
+            if (!String.IsNullOrEmpty(view))
             {
                 DefinedViewportProjection proj = ParseProjection(view);
                 if (proj == DefinedViewportProjection.None)
@@ -62,7 +62,7 @@ internal static class GetViewportImageTool
                 vp.SetProjection(proj, null, true);
             }
 
-            if (!string.IsNullOrEmpty(displayMode))
+            if (!String.IsNullOrEmpty(displayMode))
             {
                 DisplayModeDescription? mode = FindDisplayMode(displayMode);
                 if (mode is null)
@@ -140,11 +140,11 @@ internal static class GetViewportImageTool
             coerced.Guidance);
     }
 
-    private sealed class CaptureMetadata
+    private sealed class CaptureMetadata(GetContextTool.ViewportSummary viewport)
     {
-        public required GetContextTool.ViewportSummary Viewport { get; init; }
-        public required int ImageWidth { get; init; }
-        public required int ImageHeight { get; init; }
+        public GetContextTool.ViewportSummary Viewport { get; } = viewport;
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
         public BoundingBox SceneBoundingBox { get; set; } = BoundingBox.Empty;
         public int VisibleObjectCount { get; set; }
         public int TotalObjectCount { get; set; }
@@ -155,9 +155,8 @@ internal static class GetViewportImageTool
         RhinoViewport vp = activeView.ActiveViewport;
         RhinoDoc doc = activeView.Document;
 
-        CaptureMetadata meta = new()
+        CaptureMetadata meta = new(GetContextTool.SummarizeViewport(vp))
         {
-            Viewport = GetContextTool.SummarizeViewport(vp),
             ImageWidth = width,
             ImageHeight = height,
         };

@@ -11,6 +11,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <AssemblyName>RhinoAI</AssemblyName>
     <RootNamespace>Rhino.AI</RootNamespace>
     <Title>Rhino AI</Title>
@@ -40,6 +42,11 @@
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->

@@ -46,7 +46,7 @@ internal sealed class McpDispatcher
             return;
         }
 
-        if (string.IsNullOrEmpty(request?.Method))
+        if (String.IsNullOrEmpty(request?.Method))
         {
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
@@ -322,6 +322,10 @@ internal sealed class McpDispatcher
         ctx.Response.ContentType = "application/json";
         ctx.Response.ContentLength64 = buffer.Length;
         buffer.Position = 0;
+        #if NET48
+        await buffer.CopyToAsync(ctx.Response.OutputStream).ConfigureAwait(false);
+        #else
         await buffer.CopyToAsync(ctx.Response.OutputStream, ct).ConfigureAwait(false);
+        #endif
     }
 }

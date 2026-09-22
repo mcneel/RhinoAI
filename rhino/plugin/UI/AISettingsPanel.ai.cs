@@ -529,7 +529,7 @@ internal sealed class AISettingsPanel : Panel
     }
 
     // Immutable scan result for one tool row in the Tools tree.
-    private readonly record struct ToolInfo(string Name, string Title, string Description, string Category);
+    private record struct ToolInfo(string Name, string Title, string Description, string Category);
 
     // TreeGridView node for the Tools tab. Group nodes carry the category label in column 1 and a
     // roll-up checkbox in column 0; leaf nodes carry [enabled, title, description] and the tool name.

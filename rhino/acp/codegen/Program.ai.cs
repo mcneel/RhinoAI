@@ -5,7 +5,7 @@ using System.Text.Json;
 // src/Generated/. Run from the repo root: `dotnet run --project rhino/acp/codegen`.
 // Output is deterministic (defs iterated in sorted order) so a clean regen produces no diff.
 
-// Committed Generated/*.g.cs are pure LF; force LF on write so a Windows regen (where
+// Committed Generated/*.cs are pure LF; force LF on write so a Windows regen (where
 // StringBuilder.AppendLine emits Environment.NewLine = CRLF) does not produce a spurious diff.
 static void WriteGenerated(string path, string content) =>
     File.WriteAllText(path, content.Replace("\r\n", "\n"));
@@ -13,6 +13,8 @@ static void WriteGenerated(string path, string content) =>
 string root = args.Length > 0 ? args[0] : "rhino/acp/schema/schema.json";
 string metaPath = args.Length > 1 ? args[1] : "rhino/acp/schema/meta.json";
 string outDir = args.Length > 2 ? args[2] : "rhino/acp/src/Generated";
+// The build compiles whatever is in outDir, so stale files from a previous schema must not survive a regen.
+if (Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true);
 Directory.CreateDirectory(outDir);
 
 using JsonDocument schemaDoc = JsonDocument.Parse(File.ReadAllText(root));
@@ -176,7 +178,7 @@ static bool IsPlainEnum(JsonElement s) =>
 
 List<string> names = defs.EnumerateObject().Select(d => d.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-// ---- Enums.g.cs ----------------------------------------------------------------------------
+// ---- Enums.cs ----------------------------------------------------------------------------
 {
     StringBuilder sb = new(Header());
     foreach (string name in names)
@@ -211,10 +213,10 @@ List<string> names = defs.EnumerateObject().Select(d => d.Name).OrderBy(n => n, 
         sb.AppendLine("    });");
         sb.AppendLine("}");
     }
-    WriteGenerated(Path.Combine(outDir, "Enums.g.cs"), sb.ToString());
+    WriteGenerated(Path.Combine(outDir, "Enums.cs"), sb.ToString());
 }
 
-// ---- Unions.g.cs (4 discriminated + McpServer) ---------------------------------------------
+// ---- Unions.cs (4 discriminated + McpServer) ---------------------------------------------
 void EmitUnion(StringBuilder sb, string baseName, string discProp, IEnumerable<(string Tag, string Variant, JsonElement Payload, JsonElement Branch)> variants)
 {
     string discMember = Pascal(discProp);
@@ -301,7 +303,7 @@ JsonElement PayloadOf(JsonElement branch) =>
         EmitUnionWithDefault(sb, "McpServer", "type", variants, "stdio");
     }
 
-    WriteGenerated(Path.Combine(outDir, "Unions.g.cs"), sb.ToString());
+    WriteGenerated(Path.Combine(outDir, "Unions.cs"), sb.ToString());
 }
 
 // Variant of EmitUnion whose converter tolerates a missing discriminator (falls back to defaultTag).
@@ -347,7 +349,7 @@ void EmitUnionWithDefault(StringBuilder sb, string baseName, string discProp, Li
     sb.AppendLine("}");
 }
 
-// ---- Types.g.cs (plain object records + merged/aliased anyOf) ------------------------------
+// ---- Types.cs (plain object records + merged/aliased anyOf) ------------------------------
 {
     StringBuilder sb = new(Header());
     foreach (string name in names)
@@ -408,10 +410,10 @@ void EmitUnionWithDefault(StringBuilder sb, string baseName, string discProp, Li
             sb.AppendLine("}");
         }
     }
-    WriteGenerated(Path.Combine(outDir, "Types.g.cs"), sb.ToString());
+    WriteGenerated(Path.Combine(outDir, "Types.cs"), sb.ToString());
 }
 
-// ---- Methods.g.cs (constants, protocol version, role interfaces) ---------------------------
+// ---- Methods.cs (constants, protocol version, role interfaces) ---------------------------
 {
     // method path -> (Request?, Response?, Notification?) from x-method carriers.
     Dictionary<string, (string? Req, string? Resp, string? Notif)> byMethod = new();
@@ -477,7 +479,7 @@ void EmitUnionWithDefault(StringBuilder sb, string baseName, string discProp, Li
     EmitConstants(sb, "ClientMethods", clientMethods);
     EmitInterface(sb, "IAcpAgent", agentMethods);
     EmitInterface(sb, "IAcpClient", clientMethods);
-    WriteGenerated(Path.Combine(outDir, "Methods.g.cs"), sb.ToString());
+    WriteGenerated(Path.Combine(outDir, "Methods.cs"), sb.ToString());
 }
 
 Console.WriteLine($"Generated 4 files in {outDir}");

@@ -17,7 +17,7 @@ internal static class ToolSummary
             return toolName;
 
         int separator = toolName.IndexOf("__", prefix.Length, StringComparison.Ordinal);
-        return separator < 0 ? toolName : toolName[(separator + 2)..];
+        return separator < 0 ? toolName : toolName.Substring(separator + 2);
     }
 
     // result is empty while the call is still in flight; show the in-progress verb without a verdict.
@@ -207,6 +207,6 @@ internal static class ToolSummary
     private static string FileName(string path)
     {
         int slash = path.LastIndexOfAny(['/', '\\']);
-        return slash >= 0 && slash + 1 < path.Length ? path[(slash + 1)..] : path;
+        return slash >= 0 && slash + 1 < path.Length ? path.Substring(slash + 1) : path;
     }
 }

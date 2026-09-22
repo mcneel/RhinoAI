@@ -13,7 +13,7 @@ internal abstract record GH2_ProxyResolution
     private GH2_ProxyResolution() { }
 }
 
-internal readonly record struct GH2_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
+internal record struct GH2_Candidate(Guid Guid, string Name, string Category, string SubCategory, bool IsObsolete, bool IsHidden);
 
 internal static class GH2_ProxyResolver
 {

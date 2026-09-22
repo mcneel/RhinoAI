@@ -31,7 +31,7 @@ internal static class GetCommandsTool
     private static List<string> FindMatching(string? filter)
     {
         IEnumerable<string> commands = Command.GetCommandNames(true, false).OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrEmpty(filter)) return commands.ToList();
+        if (String.IsNullOrEmpty(filter)) return commands.ToList();
 
         return commands.Where(n => n.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
     }

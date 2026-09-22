@@ -25,9 +25,9 @@ internal static class GeminiConnection
         };
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
-        psi.ArgumentList.Add("--experimental-acp");
+        psi.AddArgument("--experimental-acp");
         // foreach (string arg in def.ExtraArgs)
-        //     psi.ArgumentList.Add(arg);
+        //     psi.AddArgument(arg);
 
         Process proc = new() { StartInfo = psi };
         proc.ErrorDataReceived += (_, e) =>
@@ -53,7 +53,9 @@ internal static class GeminiConnection
             try
             {
                 if (!proc.HasExited)
+                {
                     proc.Kill(entireProcessTree: true);
+                }
             }
             catch
             {

@@ -45,7 +45,7 @@ internal static class CreateTool
 
         if (parsedAction is PluginCommandAction.Add or PluginCommandAction.Update)
         {
-            if (string.IsNullOrWhiteSpace(script))
+            if (String.IsNullOrWhiteSpace(script))
                 return Failure(ToolError.BadArgument, $"A C# script is required to {action.ToLowerInvariant()} a command.");
 
             IToolResult addResult = runner.AddCommandToProject(commandName, script, svg);

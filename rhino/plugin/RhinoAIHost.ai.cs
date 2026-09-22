@@ -15,6 +15,8 @@ internal static class RhinoAIHost
     private static bool _heartbeatHooked;
     private static long _lastAnnounceTick;
 
+    private static readonly Stopwatch _clock = Stopwatch.StartNew();
+
     // Re-advertise live listeners on this interval. Lets a spuriously-reaped slot
     // re-adopt on its own instead of staying gone until the user re-runs MCPStart.
     // Re-dropping a already-adopted listener is a no-op.
@@ -218,7 +220,7 @@ internal static class RhinoAIHost
     {
         if (_heartbeatHooked)
             return;
-        _lastAnnounceTick = Environment.TickCount64;
+        _lastAnnounceTick = _clock.ElapsedMilliseconds;
         RhinoApp.Idle += Heartbeat;
         _heartbeatHooked = true;
     }
@@ -241,7 +243,7 @@ internal static class RhinoAIHost
     // snapshot keeps a re-entrant WriteLine from invalidating the enumerator.
     private static void Heartbeat(object? sender, EventArgs e)
     {
-        long now = Environment.TickCount64;
+        long now = _clock.ElapsedMilliseconds;
         if (now - _lastAnnounceTick < HeartbeatIntervalMs)
             return;
         _lastAnnounceTick = now;

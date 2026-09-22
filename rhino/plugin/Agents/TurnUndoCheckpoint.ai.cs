@@ -65,11 +65,11 @@ internal sealed class TurnUndoCheckpoint
         string firstLine = (prompt ?? string.Empty).Trim();
         int newline = firstLine.IndexOfAny(['\n', '\r']);
         if (newline >= 0)
-            firstLine = firstLine[..newline].Trim();
+            firstLine = firstLine.Substring(0, newline).Trim();
 
         const int max = 60;
         if (firstLine.Length > max)
-            firstLine = firstLine[..max].TrimEnd() + "…";
+            firstLine = firstLine.Substring(0, max).TrimEnd() + "…";
 
         return firstLine.Length == 0 ? "AI turn" : $"AI: {firstLine}";
     }

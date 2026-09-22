@@ -85,33 +85,34 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
         // Force a Load every MCP tool into context up front
         psi.Environment["ENABLE_TOOL_SEARCH"] = "false";
 
-        psi.ArgumentList.Add("-p");
-        psi.ArgumentList.Add("--input-format");
-        psi.ArgumentList.Add("stream-json");
-        psi.ArgumentList.Add("--output-format");
-        psi.ArgumentList.Add("stream-json");
-        psi.ArgumentList.Add("--verbose");
-        psi.ArgumentList.Add("--mcp-config");
-        psi.ArgumentList.Add(mcpConfig);
-        psi.ArgumentList.Add("--strict-mcp-config");
+        psi.AddArgument("-p");
+        psi.AddArgument("--input-format");
+        psi.AddArgument("stream-json");
+        psi.AddArgument("--output-format");
+        psi.AddArgument("stream-json");
+        psi.AddArgument("--verbose");
+        psi.AddArgument("--mcp-config");
+        psi.AddArgument(mcpConfig);
+        psi.AddArgument("--strict-mcp-config");
         // The agent's cwd is the folder holding the user's .3dm, so Bash/Write/Edit point at it.
-        psi.ArgumentList.Add("--tools");
-        psi.ArgumentList.Add(string.Empty);
-        psi.ArgumentList.Add("--allowedTools");
-        psi.ArgumentList.Add(allowedTools);
-        psi.ArgumentList.Add("--append-system-prompt");
-        psi.ArgumentList.Add(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)));
-        psi.ArgumentList.Add("--disable-slash-commands");
-        psi.ArgumentList.Add(resume ? "--resume" : "--session-id");
-        psi.ArgumentList.Add(agentSessionId);
+        psi.AddArgument("--tools");
+        psi.AddArgument(string.Empty);
+        psi.AddArgument("--allowedTools");
+        psi.AddArgument(allowedTools);
+        psi.AddArgument("--append-system-prompt");
+        psi.AddArgument(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)));
+        psi.AddArgument("--disable-slash-commands");
+        psi.AddArgument(resume ? "--resume" : "--session-id");
+        psi.AddArgument(agentSessionId);
 
         if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
-            psi.ArgumentList.Add("--model");
-            psi.ArgumentList.Add(model);
+            psi.AddArgument("--model");
+            psi.AddArgument(model);
         }
+
         // foreach (string arg in Definition.ExtraArgs)
-        //     psi.ArgumentList.Add(arg);
+        //     psi.AddArgument(arg);
     }
 
     // ACP content blocks -> Claude's stream-json user content (text + base64 image). Underscored
