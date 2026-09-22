@@ -26,7 +26,7 @@ public class GenericHarness : IHarness
     public GenericHarness()
     {
         Loop = new(this);
-        AddMcp(new DefaultToolsMcp());
+        AddMcp(new DefaultToolsMcp(this));
     }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
@@ -64,6 +64,8 @@ public class GenericHarness : IHarness
     }
 
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
+
+    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
 
     public event EventHandler<PermissionRequested>? PermissionRequested;
 

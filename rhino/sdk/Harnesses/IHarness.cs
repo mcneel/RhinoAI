@@ -26,7 +26,7 @@ public interface IHarness
 
     public bool AddMcp(IMcp mcp);
     
-    // public bool AddSkill(ISkill skill);
+    public bool AddSkill(ISkill skill);
 
 #endregion
 

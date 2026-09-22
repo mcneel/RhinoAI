@@ -19,7 +19,9 @@ internal sealed class ClaudeHarness : IHarness
     public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
 
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
-    
+
+    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
+
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) return [];

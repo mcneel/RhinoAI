@@ -44,7 +44,7 @@ public class McpTests
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
-        AssertTurns(turns.Last(), "cat", "small", "red");
+        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -64,7 +64,7 @@ public class McpTests
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
-        AssertTurns(turns.Last(), "cat", "small", "red");
+        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -84,7 +84,7 @@ public class McpTests
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
-        AssertTurns(turns.Last(), "cat", "small", "red");
+        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
     [TestCase(ToolArgType.String, typeof(IToolString))]
@@ -112,27 +112,7 @@ public class McpTests
 
         Assert.That(turns.Any(t => t is ToolTurn));
         Assert.That(turns.Any(t => t is ToolResultTurn));
-        AssertTurns(turns.Last(), "cat", "small", "red");
-    }
-
-    private static void AssertTurns(ITurn turn, params string[] keywords)
-    {
-        if (turn is not MessageTurn message)
-        {
-            Assert.Fail("Last turn is not a MessageTurn");
-            return;
-        }
-        if (MessageContains(message.Message, keywords)) return;
-    }
-
-    private static bool MessageContains(string message, string[] keywords)
-    {
-        foreach (string keyword in keywords)
-        {
-            if (!message.Contains(keyword, StringComparison.OrdinalIgnoreCase)) return false;
-        }
-
-        return true;
+        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
     private record TestTool(string Name, string Description, ToolArg[] Args) : ITool
