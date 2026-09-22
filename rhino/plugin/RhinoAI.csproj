@@ -38,6 +38,9 @@
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
+    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

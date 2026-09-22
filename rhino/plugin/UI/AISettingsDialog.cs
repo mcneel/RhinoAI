@@ -1,5 +1,6 @@
 using Eto.Drawing;
 using Eto.Forms;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
@@ -14,6 +15,8 @@ internal sealed class AISettingsDialog : Dialog
         Size = new Size(720, 680);
         MinimumSize = new Size(560, 440);
         Resizable = true;
+
+        this.UseRhinoStyle();
 
         Button saveButton = new() { Text = Rhino.UI.LOC.STR("Save") };
         saveButton.Click += (_, _) =>

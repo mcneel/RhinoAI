@@ -2,11 +2,11 @@
 
 using System.IO;
 using System.Text;
+
+using Rhino.AI.Tools;
 using Rhino.Runtime.Code;
 using Rhino.Runtime.Code.Execution;
 using Rhino.Runtime.Code.Languages;
-using Rhino.AI.ScriptProjects;
-using Rhino.AI.Tools;
 
 namespace Rhino.AI.ScriptProjects;
 
@@ -16,9 +16,15 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
     public IToolResult RunScript(RhinoDoc doc, Lang lang, string script)
     {
         if (lang == Lang.Python3)
-            ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
+        {
+            IToolResult result = ScriptingEnvironment.EnsurePythonRuntimeIsAvailable();
+            if (result.IsFailure) return result;
+        }
         else if (lang == Lang.CSharp)
-            ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+        {
+            IToolResult result = ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+            if (result.IsFailure) return result;
+        }
 
         LanguageSpec spec = lang switch
         {

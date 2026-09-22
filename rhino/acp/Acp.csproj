@@ -12,7 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="codegen/**/*.cs" />
+    <Compile Remove="codegen/**/*.cs;src/Generated/**/*.cs" />
+    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

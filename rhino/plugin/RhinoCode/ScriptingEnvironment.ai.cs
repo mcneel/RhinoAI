@@ -3,6 +3,7 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
+using Rhino.AI.Tools;
 using Rhino.PlugIns;
 using Rhino.Runtime.Code.Languages;
 
@@ -14,7 +15,7 @@ namespace Rhino.AI;
 // free to call this before every script run.
 internal static class ScriptingEnvironment
 {
-    private static readonly Guid RhinoCodePluginId = new Guid("c9cba87a-23ce-4f15-a918-97645c05cde7");
+    private static Guid RhinoCodePluginId { get; } = new("c9cba87a-23ce-4f15-a918-97645c05cde7");
 
     private static MethodInfo? Starter { get; set; }
 
@@ -22,18 +23,21 @@ internal static class ScriptingEnvironment
 
     public static dynamic? Host => CachedHost ??= ResolveHost();
 
-    public static void EnsurePythonRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.Python3);
+    public static IToolResult EnsurePythonRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.Python3);
 
-    internal static void EnsureCSharpRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.CSharp);
+    internal static IToolResult EnsureCSharpRuntimeIsAvailable() => StartScriptingLanguages(LanguageSpec.CSharp);
 
     private static bool StartedPython { get; set; } = false;
     private static bool StartedCsharp { get; set; } = false;
 
-    private static void StartScriptingLanguages(LanguageSpec spec)
+    private static IToolResult StartScriptingLanguages(LanguageSpec spec)
     {
+        if (!PlugIn.LoadPlugIn(RhinoCodePluginId, true, true))
+            return Failure(ToolError.Unsupported, "The RhinoCode plug-in would not load, so no scripting language is available.");
+
         if (spec == LanguageSpec.Python3)
         {
-            if (StartedPython) return;
+            if (StartedPython) return Success();
             StartedPython = true;
             // TODO : Make this a debug line
             // RhinoApp.WriteLine("Loading Python 3 for Script Server");
@@ -41,7 +45,7 @@ internal static class ScriptingEnvironment
 
         if (spec == LanguageSpec.CSharp)
         {
-            if (StartedCsharp) return;
+            if (StartedCsharp) return Success();
             StartedCsharp = true;
             // TODO : Make this a debug line
             // RhinoApp.WriteLine("Loading C# for Script Server");
@@ -51,10 +55,12 @@ internal static class ScriptingEnvironment
         {
             MethodInfo? starter = Starter ??= ResolveStarter();
             starter?.Invoke(null, [spec, true]);
+            return Success();
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
             ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            return Failure(ex);
         }
     }
 

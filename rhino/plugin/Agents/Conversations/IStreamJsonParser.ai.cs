@@ -42,7 +42,7 @@ internal interface IStreamJsonParser
     // continuity token. mcpServers is the resolved MCP server set the runner read from AISettings.
     // The parser owns the resume-vs-fresh flag names so the session/resume contract is one CLI's
     // concern, not the runner's.
-    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume);
+    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume, IReadOnlyList<Acp.ContentBlock> prompt);
 
     // The single newline-framed stdin line that carries one user turn (a JSON envelope for Claude,
     // plain text for Codex). Pure: built only from the ACP prompt blocks the runner already has.
