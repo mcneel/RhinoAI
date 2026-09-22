@@ -40,8 +40,8 @@ internal static class CliProcess
         if (OperatingSystem.IsWindows() && IsBatchShim(path))
         {
             psi.FileName = ComSpec();
-            psi.ArgumentList.Add("/c");
-            psi.ArgumentList.Add(path);
+            psi.AddArgument("/c");
+            psi.AddArgument(path);
         }
         else
         {

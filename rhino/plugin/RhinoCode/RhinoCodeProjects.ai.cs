@@ -15,7 +15,7 @@ internal static class RhinoCodeProjects
 
     public static void SetIcon(ProjectCode code, string? svg)
     {
-        if (string.IsNullOrEmpty(svg))
+        if (String.IsNullOrEmpty(svg))
             return;
 
         try

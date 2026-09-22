@@ -46,7 +46,7 @@ internal sealed class McpDispatcher
             return;
         }
 
-        if (string.IsNullOrEmpty(request?.Method))
+        if (String.IsNullOrEmpty(request?.Method))
         {
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {

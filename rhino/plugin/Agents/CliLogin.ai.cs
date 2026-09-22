@@ -41,7 +41,7 @@ internal static class CliLogin
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, cliPath);
         foreach (string argument in statusArguments)
-            psi.ArgumentList.Add(argument);
+            psi.AddArgument(argument);
 
         try
         {
@@ -82,7 +82,7 @@ internal static class CliLogin
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, cliPath);
         foreach (string argument in loginArguments)
-            psi.ArgumentList.Add(argument);
+            psi.AddArgument(argument);
 
         cancellationToken.ThrowIfCancellationRequested();
         using Process proc = Process.Start(psi) ?? throw new InvalidOperationException("Could not start sign-in.");

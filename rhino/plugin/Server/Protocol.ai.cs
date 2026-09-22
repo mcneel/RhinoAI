@@ -294,14 +294,14 @@ internal sealed class FiniteDoubleConverter : JsonConverter<double>
             _ => throw new JsonException($"Cannot convert {reader.TokenType} to a number."),
         };
 
-        return double.IsFinite(value)
+        return Double.IsFinite(value)
             ? value
             : throw new JsonException($"must be a finite number but was {Named(value)}");
     }
 
     public override void Write(Utf8JsonWriter writer, double value, JsonSerializerOptions options)
     {
-        if (double.IsFinite(value))
+        if (Double.IsFinite(value))
             writer.WriteNumberValue(value);
         else
             writer.WriteStringValue(Named(value));

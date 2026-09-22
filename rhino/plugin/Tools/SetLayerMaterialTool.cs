@@ -62,7 +62,7 @@ internal static class SetLayerMaterialTool
 
     private static Color? ParseColor(string? s)
     {
-        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (String.IsNullOrWhiteSpace(s)) return null;
         s = s.Trim();
 
         if (s.StartsWith("#", StringComparison.Ordinal))

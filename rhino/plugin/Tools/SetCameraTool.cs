@@ -29,7 +29,7 @@ internal static class SetCameraTool
         RhinoViewport vp = view.ActiveViewport;
         Coercions coerced = new();
 
-        if (!string.IsNullOrEmpty(projection))
+        if (!String.IsNullOrEmpty(projection))
         {
             if (projection.Equals("parallel", StringComparison.OrdinalIgnoreCase))
                 vp.ChangeToParallelProjection(true);

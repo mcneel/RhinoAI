@@ -21,9 +21,66 @@ namespace Rhino.AI
 
     internal static class MathF
     {
-        public static float Pow(float x, float y) => (float)Math.Pow(x, y);
-        public static float Max(float x, float y) => Math.Max(x, y);
-        public static float Min(float x, float y) => Math.Min(x, y);
+        public static float Pow(float x, float y) => (float)System.Math.Pow(x, y);
+        public static float Max(float x, float y) => System.Math.Max(x, y);
+        public static float Min(float x, float y) => System.Math.Min(x, y);
+    }
+
+    internal static class Math
+    {
+        
+        public static float Clamp(float input, float min, float max)
+            => input switch
+            {
+                _ when input > max => max,
+                _ when input < min => min,
+                
+                _ => input
+            };
+        
+        public static double Clamp(double input, double min, double max)
+            => input switch
+            {
+                _ when input > max => max,
+                _ when input < min => min,
+                
+                _ => input
+            };
+            
+        public static decimal Clamp(decimal input, decimal min, decimal max)
+            => input switch
+            {
+                _ when input > max => max,
+                _ when input < min => min,
+                
+                _ => input
+            };
+            
+        public static int Clamp(int input, int min, int max)
+            => input switch
+            {
+                _ when input > max => max,
+                _ when input < min => min,
+                
+                _ => input
+            };
+
+        public static int Max(int one, int two) => one > two ? one : two;
+
+        public static double Round(double input) => System.Math.Round(input);
+
+    }
+
+    internal static class Double
+    {
+        public static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+    }
+
+    internal static class String
+    {
+        public static bool IsNullOrEmpty(string? value) => string.IsNullOrEmpty(value);
+
+        public static bool IsNullOrWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value);
     }
 
     internal static class NetFrameworkExtensions
@@ -64,7 +121,7 @@ namespace Rhino.AI
         {
             if (queue.Count == 0)
             {
-                result = default;
+                result = default!;
                 return false;
             }
             result = queue.Dequeue();
