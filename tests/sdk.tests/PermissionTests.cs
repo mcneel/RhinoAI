@@ -15,10 +15,19 @@ public class PermissionTests
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 
+        MemoryMcp mcp = new("Smoople");
+        mcp.RegisterTool(new TestUtils.TestTool("Smoople", "The Smoople Tool", [])
+        {
+            Func = (_, _) => Task.FromResult(ToolReturn.Success("Smoopled")),
+        });
+        harness.AddMcp(mcp);
+
         harness.PermissionRequested += (_, __) => permissionRequested = true;
 
-        CancellationTokenSource source = new(10_000);
-        IEnumerable<ITurn> turns = await agent.SendAsync("What is the value of PI?", source.Token);
+        CancellationTokenSource source = new(100_000);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", source.Token);
+
+        Assert.That(turns.Any(t => t is ToolTurn), "The model answered without calling a tool, so the permission gate was never reached.");
         Assert.That(permissionRequested);
     }
 
