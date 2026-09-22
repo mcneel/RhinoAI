@@ -162,7 +162,7 @@ public class RhinoManager(
                 int port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
                 log.LogInformation("Spawning Rhino {Version} as slot '{Slot}' on port {Port} (exe: {Exe})",
                     version, slotId, port, rhinoExe);
-                Process proc = LaunchWindows(rhinoExe, port);
+                Process proc = LaunchWindows(rhinoExe, port, config.WindowMode);
                 switch (WaitForPort(port, TimeSpan.FromSeconds(StartupTimeoutSeconds), proc))
                 {
                     case WaitResult.Bound:
@@ -174,11 +174,20 @@ public class RhinoManager(
                             $"plugin load failure.");
                     case WaitResult.Timeout:
                         // Refresh: MainWindowHandle is cached on first access. Zero handle
-                        // means no interactive-desktop access (e.g. spawned from IDE extension host).
+                        // means no interactive-desktop access (e.g. spawned from IDE extension host),
+                        // except under SpawnWindowMode.Hidden: Process only ever reports a visible
+                        // top-level window, so there a zero handle is what we asked for and says
+                        // nothing about the desktop. A minimized window still counts as visible.
                         proc.Refresh();
                         bool hasWindow = proc.MainWindowHandle != IntPtr.Zero;
+                        bool windowHidden = config.WindowMode == SpawnWindowMode.Hidden;
                         try { proc.Kill(); } catch { /* best effort */ }
-                        throw new TimeoutException(hasWindow
+                        throw new TimeoutException(
+                            windowHidden
+                            ? $"Rhino {version} (pid {proc.Id}) was spawned with a hidden window and did not bind port {port} " +
+                              $"within {StartupTimeoutSeconds}s. Possible causes: license/EULA dialog blocking out of sight, " +
+                              $"plugin failed to load, runscript stuck. Re-run the router without --hidden to see what the window shows."
+                            : hasWindow
                             ? $"Rhino {version} (pid {proc.Id}) has a main window but did not bind port {port} within {StartupTimeoutSeconds}s. " +
                               $"Possible causes: license/EULA dialog blocking, plugin failed to load, runscript stuck."
                             : $"Rhino {version} (pid {proc.Id}) is running but never created a main window. " +
@@ -602,12 +611,13 @@ public class RhinoManager(
     private const string PortEnvVar = "RHINO_MCP_AUTOSTART_PORT";
 
     // Uses CreateProcess + CREATE_BREAKAWAY_FROM_JOB; see WinSpawn for the rationale.
-    private static Process LaunchWindows(string rhinoExe, int port)
+    private static Process LaunchWindows(string rhinoExe, int port, SpawnWindowMode windowMode)
     {
         return WinSpawn.Start(
             rhinoExe,
             "/nosplash /runscript=\"_MCPSpawn\"",
-            new Dictionary<string, string> { [PortEnvVar] = port.ToString() });
+            new Dictionary<string, string> { [PortEnvVar] = port.ToString() },
+            windowMode);
     }
 
     // `open -a` exits immediately, so we resolve the Rhino pid via lsof later.
