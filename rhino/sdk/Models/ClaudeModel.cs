@@ -1,27 +1,25 @@
 using System;
-using System.Net.Http;
-using System.Text.Json.Nodes;
 
 namespace Rhino.AI.Models;
 
+/// <summary>A Claude API Model</summary>
 internal sealed class ClaudeModel : ApiModel
 {
 
-    private const string Host = "https://api.anthropic.com/v1/messages";
+    private static Uri Host { get; } = new("https://api.anthropic.com");
 
-    public ClaudeModel(string name) : base(name, "Anthropic", new ClaudeSerializationConverter())
+    private ClaudeModel(string name, Protocol protocol) : base(name, "Anthropic", Host, protocol)
     {
         ApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
     }
 
-    protected override HttpRequestMessage GetRequest(JsonObject body) => new(HttpMethod.Post, Host)
-    {
-        Headers =
-        {
-            { "x-api-key", Key },
-            { "anthropic-version", "2023-06-01" },
-        },
-        Content = Payload(body),
-    };
+    /// <summary>A Claude Model using the default protocol.</summary>
+    public static ClaudeModel Default(string modelName) => Messages(modelName);
+    
+    /// <summary>A Claude Model using the Anthropic protocol.</summary>
+    public static ClaudeModel Messages(string modelName) => new(modelName, Protocol.Messages("/v1/messages"));
+    
+    /// <summary>A Claude Model using the completions protocol.</summary>
+    public static ClaudeModel Completions(string modelName) => new(modelName, Protocol.ChatCompletions("/v1/chat/completions"));
 
 }

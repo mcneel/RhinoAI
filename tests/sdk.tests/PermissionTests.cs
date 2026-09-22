@@ -11,7 +11,7 @@ public class PermissionTests
     public async Task PermissionRequested()
     {
         bool permissionRequested = false;
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 
@@ -34,7 +34,7 @@ public class PermissionTests
     [Test]
     public async Task BlockedTool()
     {
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 

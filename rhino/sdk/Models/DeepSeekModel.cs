@@ -1,25 +1,32 @@
 using System;
-using System.Net.Http;
-using System.Text.Json.Nodes;
 
 namespace Rhino.AI.Models;
 
-// https://api-docs.deepseek.com/api/create-chat-completion
+// https://api-docs.deepseek.com/
 
+/// <summary>
+/// The DeepSeek AI Model
+/// </summary>
 internal sealed class DeepSeekModel : ApiModel
 {
 
-    private const string Host = "https://api.deepseek.com/chat/completions";
+    private static Uri Host { get; } = new("https://api.deepseek.com");
 
-    public DeepSeekModel(string name) : base(name, "DeepSeek", new DeepSeekSerializationConverter())
+    private DeepSeekModel(string name, Protocol protocol) : base(name, "DeepSeek", Host, protocol)
     {
         ApiKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
     }
 
-    protected override HttpRequestMessage GetRequest(JsonObject body) => new(HttpMethod.Post, Host)
-    {
-        Headers = { { "Authorization", $"Bearer {Key}" } },
-        Content = Payload(body),
-    };
+    /// <summary>A DeepSeek Model using the default protocol.</summary>
+    public static DeepSeekModel Default(string modelName = "deepseek-flash") => Completions(modelName);
+    
+    /// <summary>A DeepSeek Model using the completions protocol.</summary>
+    public static DeepSeekModel Completions(string modelName) => new(modelName, Protocol.ChatCompletions("/chat/completions"));
+    
+    /// <summary>A DeepSeek Model using the Anthropic protocol.</summary>
+    public static DeepSeekModel Anthropic(string modelName) => new(modelName, Protocol.Messages("/anthropic/v1/messages"));
+    
+    /// <summary>A DeepSeek Model using the responses protocol.</summary>
+    public static DeepSeekModel Responses(string modelName) => new(modelName, Protocol.Responses("/responses"));
 
 }

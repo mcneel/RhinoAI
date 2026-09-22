@@ -6,10 +6,10 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-internal sealed class GeminiSerializationConverter : ITurnConverter
+internal sealed class GeminiSerializationConverter(string vendor = "Google") : ITurnConverter
 {
 
-    public string Vendor => "Google";
+    public string Vendor { get; } = vendor;
 
     public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
     {

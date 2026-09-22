@@ -91,15 +91,18 @@ public sealed class Agent
     //     => new Agent(new CodexDesktopModel("gpt-6"), new CodexHarness());
 
     public static Agent GetClaudeAgent(string model, string prompt)
-        => new Agent(new ClaudeModel(model), new GenericHarness(), prompt);
+        => new Agent(ClaudeModel.Default(model), new GenericHarness(), prompt);
 
     public static Agent GetChatGptAgent(string model, string prompt)
-        => new Agent(new ChatGptModel(model), new GenericHarness(), prompt);
+        => new Agent(ChatGptModel.Default(model), new GenericHarness(), prompt);
 
     public static Agent GetGeminiAgent(string model, string prompt)
-        => new Agent(new GeminiModel(model, "Google"), new GenericHarness(), prompt);
+        => new Agent(GeminiModel.Default(model, "Google"), new GenericHarness(), prompt);
 
     public static Agent GetDeepSeekAgent(string model, string prompt)
-        => new Agent(new DeepSeekModel(model), new GenericHarness(), prompt);
+        => new Agent(DeepSeekModel.Default(model), new GenericHarness(), prompt);
+
+    public static Agent GetLMStudioAgent(string model, string prompt)
+        => new Agent(LMStudioModel.Default(model), new GenericHarness(), prompt);
 
 }

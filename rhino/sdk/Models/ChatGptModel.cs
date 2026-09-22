@@ -1,23 +1,25 @@
 using System;
-using System.Net.Http;
-using System.Text.Json.Nodes;
 
 namespace Rhino.AI.Models;
 
+/// <summary>A ChatGPT API Model</summary>
 internal sealed class ChatGptModel : ApiModel
 {
 
-    private const string Host = "https://api.openai.com/v1/responses";
+    private static Uri Host { get; } = new("https://api.openai.com");
 
-    public ChatGptModel(string name) : base(name, "OpenAI", new ChatGptSerializationConverter())
+    private ChatGptModel(string name, Protocol protocol) : base(name, "OpenAI", Host, protocol)
     {
         ApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
     }
-
-    protected override HttpRequestMessage GetRequest(JsonObject body) => new(HttpMethod.Post, Host)
-    {
-        Headers = { { "Authorization", $"Bearer {Key}" } },
-        Content = Payload(body),
-    };
+    
+    /// <summary>A ChatGPT Model using the default protocol.</summary>
+    public static ChatGptModel Default(string modelName) => Responses(modelName);
+    
+    /// <summary>A ChatGPT Model using the responses protocol.</summary>
+    public static ChatGptModel Responses(string modelName) => new(modelName, Protocol.Responses("/v1/responses"));
+    
+    /// <summary>A ChatGPT Model using the completions protocol.</summary>
+    public static ChatGptModel Completions(string modelName) => new(modelName, Protocol.ChatCompletions("/v1/chat/completions"));
 
 }

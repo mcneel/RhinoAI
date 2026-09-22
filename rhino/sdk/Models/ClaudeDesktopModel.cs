@@ -9,6 +9,7 @@ using System.Text;
 
 namespace Rhino.AI.Models;
 
+/// <summary>A Claude Desktop Model</summary>
 internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anthropic")
 {
 

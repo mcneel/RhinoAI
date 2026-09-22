@@ -21,7 +21,7 @@ public class UserPermissionTests
     [TestCase]
     public void DenyVendor()
     {
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 
@@ -35,7 +35,7 @@ public class UserPermissionTests
     [Test]
     public void DenyModel()
     {
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         Agent agent = new(deepSeek, harness);
 

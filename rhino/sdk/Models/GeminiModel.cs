@@ -1,23 +1,27 @@
-using System.Net.Http;
-using System.Text.Json.Nodes;
+using System;
 
 namespace Rhino.AI.Models;
 
 // https://ai.google.dev/gemini-api/docs#rest
 
+/// <summary>
+/// The Gemini Model.
+/// </summary>
 internal sealed class GeminiModel : ApiModel
 {
 
-    private const string Host = "https://generativelanguage.googleapis.com/v1beta/models";
+    private static Uri Host { get; } = new("https://generativelanguage.googleapis.com");
 
-    public GeminiModel(string name, string vendor) : base(name, vendor, new GeminiSerializationConverter())
+    private GeminiModel(string name, string vendor, Protocol protocol) : base(name, vendor, Host, protocol)
     {
     }
 
-    protected override HttpRequestMessage GetRequest(JsonObject body) => new(HttpMethod.Post, $"{Host}/{Name}:generateContent")
-    {
-        Headers = { { "x-goog-api-key", Key } },
-        Content = Payload(body),
-    };
+    /// <summary>A Gemini Model using the default protocol.</summary>
+    public static GeminiModel Default(string modelName, string vendor) => GenerateContent(modelName, vendor);
+    
+    public static GeminiModel GenerateContent(string modelName, string vendor) => new(modelName, vendor, Protocol.GenerateContent("/v1beta/models"));
+    
+    /// <summary>A Gemini Model using the completions protocol.</summary>
+    public static GeminiModel Completions(string modelName, string vendor) => new(modelName, vendor, Protocol.ChatCompletions("/v1beta/openai/chat/completions"));
 
 }

@@ -6,10 +6,10 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-internal sealed class ClaudeSerializationConverter : ITurnConverter
+internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") : ITurnConverter
 {
 
-    public string Vendor => "Anthropic";
+    public string Vendor { get; } = vendor;
 
     public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
     {

@@ -7,21 +7,32 @@ namespace sdk.tests;
 public class AgentTests
 {
 
-    [Test]
-    public async Task DeepSeekApi()
+    [TestCase("completions")]
+    [TestCase("anthropic")]
+    [TestCase("responses")]
+    public async Task DeepSeekApi(string protocol)
     {
         MemoryMcp mcp = new("Weather MCP");
 
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = protocol switch
+        {
+            "completions" => DeepSeekModel.Completions("deepseek-flash"),
+            "anthropic" => DeepSeekModel.Anthropic("deepseek-flash"),
+            "responses" => DeepSeekModel.Responses("deepseek-flash"),
+            _ => throw new ArgumentOutOfRangeException(nameof(protocol)),
+        };
         GenericHarness harness = new();
         harness.AddMcp(mcp);
         Agent agent = new(deepSeek, harness);
 
         CancellationTokenSource source = new(100_000);
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+
+        Assert.That(turns.Any(t => t is ToolResultTurn), "The model answered without calling the weather tool.");
+        Assert.That(turns.Last(), Is.InstanceOf<MessageTurn>());
     }
 
     [Test]
@@ -32,7 +43,7 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         harness.AddMcp(mcp);
         Agent agent = new(deepSeek, harness);
@@ -40,6 +51,23 @@ public class AgentTests
         harness.PermissionRequested += (_, e) => e.HasPermission = false;
 
         CancellationTokenSource source = new(100_000);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
+    }
+
+    [Test, Category("Manual")]
+    public async Task LMStudioApi()
+    {
+        MemoryMcp mcp = new("Weather MCP");
+
+        WeatherTool tool = new();
+        mcp.RegisterTool(tool);
+
+        LMStudioModel lmStudio = LMStudioModel.Default("qwen/qwen3-8b");
+        GenericHarness harness = new();
+        harness.AddMcp(mcp);
+        Agent agent = new(lmStudio, harness);
+
+        CancellationTokenSource source = new(300_000);
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
     }
 

@@ -6,10 +6,10 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-internal sealed class DeepSeekSerializationConverter : ITurnConverter
+internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITurnConverter
 {
 
-    public string Vendor => "DeepSeek";
+    public string Vendor { get; } = vendor;
 
     public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
     {
@@ -86,13 +86,13 @@ internal sealed class DeepSeekSerializationConverter : ITurnConverter
     public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response)
     {
         if (response is not JsonObject payload)
-            throw new JsonException("DeepSeek returned something other than a completion object.");
+            throw new JsonException($"{Vendor} returned something other than a completion object.");
 
         if ((payload["choices"] as JsonArray)?[0] is not JsonObject choice)
-            throw new JsonException("DeepSeek returned no choices.");
+            throw new JsonException($"{Vendor} returned no choices.");
 
         if (choice["message"] is not JsonObject message)
-            throw new JsonException("DeepSeek returned a choice with no message.");
+            throw new JsonException($"{Vendor} returned a choice with no message.");
 
         List<ITurn> turns = [];
 

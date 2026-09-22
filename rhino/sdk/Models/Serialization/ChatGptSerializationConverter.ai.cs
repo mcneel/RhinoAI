@@ -6,10 +6,10 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-internal sealed class ChatGptSerializationConverter : ITurnConverter
+internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : ITurnConverter
 {
 
-    public string Vendor => "OpenAI";
+    public string Vendor { get; } = vendor;
 
     public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
     {

@@ -15,7 +15,7 @@ public class McpTests
 
     public McpTests()
     {
-        DeepSeekModel deepSeek = new("deepseek-chat");
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new();
         harness.AddMcp(Mcp);
         Agent = new(deepSeek, harness);

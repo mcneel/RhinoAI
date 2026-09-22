@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
 
-internal abstract class ApiModel(string name, string vendor, ITurnConverter converter) : IModel
+internal abstract class ApiModel(string name, string vendor, Uri host, Protocol protocol) : IModel
 {
 
     public string Name { get; } = name;
@@ -19,13 +19,15 @@ internal abstract class ApiModel(string name, string vendor, ITurnConverter conv
 
     public int MaxOutputTokens { get; set; } = 8192;
 
-    protected ITurnConverter Converter { get; } = converter;
+    private Uri Host { get; } = host;
+
+    private Protocol Protocol { get; } = protocol;
+
+    private ITurnConverter Converter { get; } = protocol.Converter(vendor);
 
     protected HttpClient Http { get; } = new();
 
     protected string? ApiKey { get; set; }
-
-    protected string Key => ApiKey ?? throw new InvalidOperationException($"No API key is configured for {Vendor}.");
 
     public virtual async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
@@ -46,10 +48,16 @@ internal abstract class ApiModel(string name, string vendor, ITurnConverter conv
         return Converter.FromResponse(harness, node);
     }
 
-    protected abstract HttpRequestMessage GetRequest(JsonObject body);
+    private HttpRequestMessage GetRequest(JsonObject body)
+    {
+        HttpRequestMessage request = new(HttpMethod.Post, new Uri(Host, Protocol.Route(Name))) { Content = Payload(body) };
+        if (ApiKey is string key)
+            Protocol.Authorize(request.Headers, key);
+        return request;
+    }
 
     private static JsonSerializerOptions Wire { get; } = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
-    protected static StringContent Payload(JsonObject body) => new(body.ToJsonString(Wire), Encoding.UTF8, "application/json");
+    private static StringContent Payload(JsonObject body) => new(body.ToJsonString(Wire), Encoding.UTF8, "application/json");
 
 }
