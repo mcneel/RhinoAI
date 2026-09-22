@@ -70,7 +70,7 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task OneRequiredArg(CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Shmargle Arg", "Pass Shmargle as a string", ToolArgType.String, true)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("shmargle", "Pass shmargle as a string", ToolArgType.String, true)])
         {
             Func = async (a, t) =>
             {
