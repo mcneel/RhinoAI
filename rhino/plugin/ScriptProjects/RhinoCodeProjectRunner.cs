@@ -16,8 +16,6 @@ namespace Rhino.AI.ScriptProjects;
 internal class RhinoCodeProjectRunner : IProjectRunner
 {
 
-    public int CommandCount => CachedProject?.GetCodes().Count() ?? -1;
-
     private IProject? CachedProject { get; set; }
 
     public ScriptProjectPaths Paths { get; }
@@ -53,7 +51,8 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
         if (CachedProject is null)
         {
-            ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+            IToolResult result = ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+            if (result.IsFailure) return result;
             
             Uri projectFilePath = new(Paths.ProjectFile);
 
@@ -216,10 +215,12 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
     public IToolResult Build(bool reloadOnly)
     {
-        ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+        IToolResult result = ScriptingEnvironment.EnsureCSharpRuntimeIsAvailable();
+        if (result.IsFailure) return result;
+
         try
         {
-            IToolResult result = TryGetProject(out IProject project);
+            result = TryGetProject(out IProject project);
             if (result.Error is not null)
                 return result;
 

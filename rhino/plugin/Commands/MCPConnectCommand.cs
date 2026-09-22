@@ -1,5 +1,6 @@
 using Eto.Drawing;
 using Eto.Forms;
+
 using RhinoCommand = Rhino.Commands.Command;
 
 namespace Rhino.AI;
@@ -37,6 +38,8 @@ internal sealed class ConnectDialog : Dialog
         Resizable = true;
         Padding = new Padding(12);
         Size = new Size(460, 420);
+
+        Rhino.UI.EtoExtensions.UseRhinoStyle(this);
 
         _promptTextArea = new TextArea
         {

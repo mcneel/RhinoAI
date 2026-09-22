@@ -42,8 +42,6 @@ internal static class ScriptProjectRunner
         if (result.Error is not null)
             return result;
 
-        if (runner.CommandCount < 1) return result;
-
         return runner?.Build(true) ?? Failure(ToolError.Failed, "Runner not found");
     }
 

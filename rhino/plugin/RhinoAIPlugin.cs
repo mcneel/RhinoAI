@@ -28,8 +28,9 @@ public class RhinoAIPlugin : PlugIn
         {
             CommandInterceptors = new CommandInterceptorHost();
             RhinoAIHost.RegisterDocumentWatcher();
-            ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
         }
+        
+        ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
         return base.OnLoad(ref errorMessage);
     }

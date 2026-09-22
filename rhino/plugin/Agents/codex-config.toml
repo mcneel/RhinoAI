@@ -5,7 +5,6 @@ shell_tool = false
 unified_exec = false
 
 [mcp_servers.rhino]
-type = "http"
 tool_timeout_sec = 3600
 # "approve" pre-approves the tools; "auto" defers to the policy `codex exec` pins to "never", blocking every call.
 default_tools_approval_mode = "approve"

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -41,7 +42,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         return CliLogin.State.Unknown;
     }
 
-    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
+    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume, IReadOnlyList<ContentBlock> prompt)
     {
         psi.Environment["CODEX_HOME"] = CodexHome;
 
@@ -89,8 +90,45 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         // foreach (string arg in Definition.ExtraArgs)
         //     psi.AddArgument(arg);
 
+        // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
+        foreach (string image in SpillImages(prompt))
+        {
+            psi.AddArgument("-i");
+            psi.AddArgument(image);
+        }
+
         psi.AddArgument("-"); // the positional PROMPT, so it has to stay last
     }
+
+    // Only paths that actually wrote: codex silently runs the turn when --image names a missing file.
+    private static IReadOnlyList<string> SpillImages(IReadOnlyList<ContentBlock> prompt)
+    {
+        List<string> paths = [];
+        foreach (ContentBlock block in prompt)
+        {
+            if (block is not ImageContentBlock image)
+                continue;
+            try
+            {
+                string path = Path.Combine(Path.GetTempPath(), $"rhinoai-{Guid.NewGuid():N}{ExtensionFor(image.MimeType)}");
+                File.WriteAllBytes(path, Convert.FromBase64String(image.Data));
+                paths.Add(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
+            {
+            }
+        }
+        return paths;
+    }
+
+    private static string ExtensionFor(string mimeType) => mimeType.ToLowerInvariant() switch
+    {
+        "image/jpeg" or "image/jpg" => ".jpg",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        "image/bmp" => ".bmp",
+        _ => ".png",
+    };
 
     private static string EncodeValue(JsonValue value) =>
         value.TryGetValue(out string? text) ? EncodeString(text) : value.ToJsonString();
@@ -106,7 +144,6 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
             string piece = block switch
             {
                 TextContentBlock text => text.Text,
-                ImageContentBlock => "[image omitted: this agent has no inline-image support]",
                 _ => string.Empty,
             };
             if (piece.Length == 0)
