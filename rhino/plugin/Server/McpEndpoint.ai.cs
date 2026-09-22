@@ -322,6 +322,10 @@ internal sealed class McpDispatcher
         ctx.Response.ContentType = "application/json";
         ctx.Response.ContentLength64 = buffer.Length;
         buffer.Position = 0;
+        #if NET48
+        await buffer.CopyToAsync(ctx.Response.OutputStream).ConfigureAwait(false);
+        #else
         await buffer.CopyToAsync(ctx.Response.OutputStream, ct).ConfigureAwait(false);
+        #endif
     }
 }

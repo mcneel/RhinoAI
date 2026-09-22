@@ -119,7 +119,7 @@ internal partial class AIPanelViewModel : IDisposable
             {
                 response.ContentType = "text/html; charset=utf-8";
                 response.ContentLength64 = page.Length;
-                await response.OutputStream.WriteAsync(page).ConfigureAwait(false);
+                await response.OutputStream.WriteAsync(page, 0, page.Length).ConfigureAwait(false);
             }
             else if (route.StartsWith(ServedImages.Route, StringComparison.Ordinal)
                 && ServedImages.Resolve(route.Substring(ServedImages.Route.Length)) is { } file)

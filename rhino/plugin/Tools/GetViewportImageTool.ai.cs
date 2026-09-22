@@ -140,9 +140,9 @@ internal static class GetViewportImageTool
             coerced.Guidance);
     }
 
-    private sealed class CaptureMetadata
+    private sealed class CaptureMetadata(GetContextTool.ViewportSummary viewport)
     {
-        public GetContextTool.ViewportSummary Viewport { get; set; }
+        public GetContextTool.ViewportSummary Viewport { get; } = viewport;
         public int ImageWidth { get; set; }
         public int ImageHeight { get; set; }
         public BoundingBox SceneBoundingBox { get; set; } = BoundingBox.Empty;
@@ -155,9 +155,8 @@ internal static class GetViewportImageTool
         RhinoViewport vp = activeView.ActiveViewport;
         RhinoDoc doc = activeView.Document;
 
-        CaptureMetadata meta = new()
+        CaptureMetadata meta = new(GetContextTool.SummarizeViewport(vp))
         {
-            Viewport = GetContextTool.SummarizeViewport(vp),
             ImageWidth = width,
             ImageHeight = height,
         };

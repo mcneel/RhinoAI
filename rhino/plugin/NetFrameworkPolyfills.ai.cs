@@ -78,9 +78,9 @@ namespace Rhino.AI
 
     internal static class String
     {
-        public static bool IsNullOrEmpty(string? value) => string.IsNullOrEmpty(value);
+        public static bool IsNullOrEmpty([NotNullWhen(false)] string? value) => string.IsNullOrEmpty(value);
 
-        public static bool IsNullOrWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value);
+        public static bool IsNullOrWhiteSpace([NotNullWhen(false)] string? value) => string.IsNullOrWhiteSpace(value);
     }
 
     internal static class NetFrameworkExtensions
@@ -127,13 +127,38 @@ namespace Rhino.AI
             result = queue.Dequeue();
             return true;
         }
+
+        public static void Kill(this Process proc, bool entireProcessTree)
+        {
+            
+#if NET48
+                    proc.Kill();
+#else
+                    proc.Kill(entireProcessTree);
+#endif
+        }
+
     }
+
 }
 
 namespace System.Runtime.CompilerServices
 {
 
     internal static class IsExternalInit { }
+
+}
+
+namespace System.Diagnostics.CodeAnalysis
+{
+
+    [AttributeUsage(AttributeTargets.Parameter)]
+    internal sealed class NotNullWhenAttribute : Attribute
+    {
+        public NotNullWhenAttribute(bool returnValue) => ReturnValue = returnValue;
+
+        public bool ReturnValue { get; }
+    }
 
 }
 

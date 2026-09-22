@@ -52,7 +52,11 @@ internal static class CliLogin
             // otherwise block on a full buffer and be killed as a false timeout.
             Task<string> stdout = proc.StandardOutput.ReadToEndAsync();
             Task<string> stderr = proc.StandardError.ReadToEndAsync();
+#if NET48
+            proc.WaitForExit((int)ProbeTimeout.TotalMilliseconds);
+#else
             await proc.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+#endif
 
             return read(await stdout.ConfigureAwait(false) + await stderr.ConfigureAwait(false), proc.ExitCode);
         }
@@ -90,13 +94,24 @@ internal static class CliLogin
         // instead of leaving an invisible prompt waiting forever.
         proc.StandardInput.Close();
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        TimeSpan delay = TimeSpan.FromMinutes(5);
+        timeout.CancelAfter(delay);
+#if NET48
+        Task stdout = proc.StandardOutput.BaseStream.CopyToAsync(System.IO.Stream.Null, (int)delay.TotalMilliseconds);
+        Task stderr = proc.StandardError.BaseStream.CopyToAsync(System.IO.Stream.Null, (int)delay.TotalMilliseconds);
+#else
         Task stdout = proc.StandardOutput.BaseStream.CopyToAsync(System.IO.Stream.Null, timeout.Token);
         Task stderr = proc.StandardError.BaseStream.CopyToAsync(System.IO.Stream.Null, timeout.Token);
+#endif
         try
         {
+#if NET48
+            proc.WaitForExit((int)delay.TotalMilliseconds);
+            // TODO : Fill in?
+#else
             await proc.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
             await Task.WhenAll(stdout, stderr).WaitAsync(timeout.Token).ConfigureAwait(false);
+#endif
             if (proc.ExitCode != 0)
                 throw new InvalidOperationException("The browser sign-in did not complete.");
         }
@@ -111,7 +126,11 @@ internal static class CliLogin
             if (!proc.HasExited)
             {
                 proc.Kill(entireProcessTree: true);
+#if NET48
+                proc.WaitForExit();
+#else
                 await proc.WaitForExitAsync().ConfigureAwait(false);
+#endif
             }
             try
             {

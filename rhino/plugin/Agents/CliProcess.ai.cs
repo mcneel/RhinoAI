@@ -57,8 +57,10 @@ internal static class CliProcess
     public static void ConfigureEncoding(ProcessStartInfo psi)
     {
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         if (psi.RedirectStandardInput)
             psi.StandardInputEncoding = utf8;
+#endif
         if (psi.RedirectStandardOutput)
             psi.StandardOutputEncoding = utf8;
         if (psi.RedirectStandardError)

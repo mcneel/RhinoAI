@@ -53,7 +53,9 @@ internal static class GeminiConnection
             try
             {
                 if (!proc.HasExited)
+                {
                     proc.Kill(entireProcessTree: true);
+                }
             }
             catch
             {

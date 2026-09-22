@@ -116,7 +116,7 @@ internal static class McpConfigEdit
             if (!removing)
                 kept.Add(line);
         }
-        return string.Join('\n', kept).TrimEnd() + "\n";
+        return string.Join("\n", kept).TrimEnd() + "\n";
     }
 
     private static string TomlEntryPattern(string serverName) =>
