@@ -82,11 +82,11 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(PluginOutputDir)" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="BundleRouter" AfterTargets="Build">
+  <Target Name="BundleRouter" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net8.0'">
     <ItemGroup>
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
-    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
+    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -p:UseSharedCompilation=false -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
     <RemoveDir Directories="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
   </Target>
