@@ -45,6 +45,18 @@ The router defaults to Rhino 8. To target Rhino 9:
 - **Claude Desktop:** Open the settings for the connector and change 8 to 9
 - **Claude Code / custom config:** Add `"args": ["-v", "9"]` to the `mcpServers` -> `rhino` key in `~/.claude.json`.
 
+## Spawned Rhino windows are burying my desktop
+
+Every slot the assistant spawns is a full Rhino window, so a batch of ten is ten windows fighting for the screen. The router can start them with the window hidden instead:
+
+- **Claude Code / custom config:** add `"args": ["--hidden"]` to the `mcpServers` -> `rhino` key in `~/.claude.json`, alongside any `-v` you already pass.
+- **Prefer to keep them reachable?** `--hidden=minimized` sends them to the taskbar rather than out of sight, and they never steal focus.
+- The environment variable `RHINO_MCP_HIDDEN=1` does the same thing where passing arguments is awkward. An argument beats the variable.
+
+The Rhino behind a hidden slot is still a full Rhino: it loads plugins, opens documents, and `get_viewport_image` renders from it exactly as it would from a window you can see. Only the window is hidden, and only on Windows.
+
+Two things to know before you turn it on. A Rhino you cannot see is one you cannot close by hand, so if a run leaks a slot you will need `list_slots` and `close_slot` to clear it. And a dialog that would normally block startup in plain sight, a license prompt for instance, now blocks it invisibly; if slots stop appearing, drop `--hidden` and watch a spawn happen.
+
 ## Grasshopper tools aren't working
 
 - Grasshopper 2 tools (`gh2_`) require **Rhino 9 WIP/BETA**.
