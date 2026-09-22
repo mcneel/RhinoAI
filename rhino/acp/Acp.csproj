@@ -14,6 +14,9 @@
 
   <ItemGroup>
     <Compile Remove="codegen/**/*.cs" />
+    <!-- Branches that generated *.g.cs here at build time leave them behind: they are gitignored,
+         so a checkout never removes them and they collide with the committed sources. -->
+    <Compile Remove="src/Generated/**/*.g.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
     </Compile>
