@@ -83,6 +83,80 @@ namespace Rhino.AI
         public static bool IsNullOrWhiteSpace([NotNullWhen(false)] string? value) => string.IsNullOrWhiteSpace(value);
     }
 
+    internal enum NullabilityState { Unknown, NotNull, Nullable }
+
+    internal sealed class NullabilityInfo
+    {
+        public NullabilityInfo(NullabilityState state) => ReadState = WriteState = state;
+
+        public NullabilityState ReadState { get; }
+
+        public NullabilityState WriteState { get; }
+    }
+
+    // Top-level parameter nullability only, which is all IsRequired/IsNullable ask for. The real
+    // BCL type also walks generic arguments and array ranks; nothing here needs that. The
+    // NullableAttribute/NullableContextAttribute Roslyn emits are internal to the assembly that
+    // carries them, so they are matched by name through CustomAttributeData rather than referenced.
+    internal sealed class NullabilityInfoContext
+    {
+        private const string NullableAttributeName = "System.Runtime.CompilerServices.NullableAttribute";
+        private const string NullableContextAttributeName = "System.Runtime.CompilerServices.NullableContextAttribute";
+
+        public NullabilityInfo Create(ParameterInfo parameter)
+        {
+            Type parameterType = parameter.ParameterType;
+            if (parameterType.IsValueType)
+                return new NullabilityInfo(System.Nullable.GetUnderlyingType(parameterType) is not null
+                    ? NullabilityState.Nullable
+                    : NullabilityState.NotNull);
+
+            // An explicit [Nullable] on the parameter wins; otherwise the nearest enclosing
+            // [NullableContext] - method, declaring types outwards, then module.
+            if (Flag(parameter.GetCustomAttributesData(), NullableAttributeName) is byte own)
+                return new NullabilityInfo(State(own));
+
+            MemberInfo member = parameter.Member;
+            if (Flag(member.GetCustomAttributesData(), NullableContextAttributeName) is byte method)
+                return new NullabilityInfo(State(method));
+
+            for (Type? declaring = member.DeclaringType; declaring is not null; declaring = declaring.DeclaringType)
+                if (Flag(declaring.GetCustomAttributesData(), NullableContextAttributeName) is byte enclosing)
+                    return new NullabilityInfo(State(enclosing));
+
+            if (Flag(member.Module.GetCustomAttributesData(), NullableContextAttributeName) is byte module)
+                return new NullabilityInfo(State(module));
+
+            return new NullabilityInfo(NullabilityState.Unknown);
+        }
+
+        private static NullabilityState State(byte flag) => flag switch
+        {
+            1 => NullabilityState.NotNull,
+            2 => NullabilityState.Nullable,
+            _ => NullabilityState.Unknown, // 0 = oblivious
+        };
+
+        private static byte? Flag(IList<CustomAttributeData> attributes, string fullName)
+        {
+            foreach (CustomAttributeData attribute in attributes)
+            {
+                if (attribute.AttributeType.FullName != fullName || attribute.ConstructorArguments.Count != 1)
+                    continue;
+
+                object? value = attribute.ConstructorArguments[0].Value;
+                if (value is byte flag)
+                    return flag;
+
+                // Generic and array shapes pass byte[]; the first entry is the top-level annotation.
+                if (value is IList<CustomAttributeTypedArgument> flags && flags.Count > 0 && flags[0].Value is byte first)
+                    return first;
+            }
+
+            return null;
+        }
+    }
+
     internal static class NetFrameworkExtensions
     {
         public static bool Contains(this string s, string value, StringComparison comparison) => s.IndexOf(value, comparison) >= 0;
@@ -116,6 +190,8 @@ namespace Rhino.AI
             dictionary.Remove(key);
             return true;
         }
+
+        public static ReadOnlyCollection<T> AsReadOnly<T>(this IList<T> list) => new ReadOnlyCollection<T>(list);
 
         public static bool TryDequeue<T>(this Queue<T> queue, out T result)
         {
