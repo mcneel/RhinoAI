@@ -8,17 +8,17 @@ public class AgentTests
 {
 
     [Test]
-    public async Task GeminiApi()
+    public async Task DeepSeekApi()
     {
         MemoryMcp mcp = new("Weather MCP");
 
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
         harness.AddMcp(mcp);
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
         CancellationTokenSource source = new(100_000);
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", source.Token);
@@ -32,10 +32,10 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
         harness.AddMcp(mcp);
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
         harness.PermissionRequested += (_, e) => e.HasPermission = false;
 

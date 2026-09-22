@@ -15,10 +15,10 @@ public class McpTests
 
     public McpTests()
     {
-        GeminiModel gemini = new("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
         harness.AddMcp(Mcp);
-        Agent = new(gemini, harness);
+        Agent = new(deepSeek, harness);
     }
 
     [OneTimeTearDown]

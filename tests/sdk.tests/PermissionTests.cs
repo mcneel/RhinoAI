@@ -11,9 +11,9 @@ public class PermissionTests
     public async Task PermissionRequested()
     {
         bool permissionRequested = false;
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
         harness.PermissionRequested += (_, __) => permissionRequested = true;
 
@@ -25,9 +25,9 @@ public class PermissionTests
     [Test]
     public async Task BlockedTool()
     {
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
         MemoryMcp mcp = new ("Smoople");
         mcp.RegisterTool(new TestUtils.TestTool("Smoople", "The Smoople Tool", []));

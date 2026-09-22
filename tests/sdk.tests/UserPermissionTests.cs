@@ -21,11 +21,11 @@ public class UserPermissionTests
     [TestCase]
     public void DenyVendor()
     {
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
-        UserPermissions.BlockedVendors.Add(gemini.Vendor);
+        UserPermissions.BlockedVendors.Add(deepSeek.Vendor);
 
         CancellationTokenSource source = new(10_000);
 
@@ -35,11 +35,11 @@ public class UserPermissionTests
     [Test]
     public void DenyModel()
     {
-        GeminiModel gemini = new ("gemini-3.5-flash-lite", "Google");
+        DeepSeekModel deepSeek = new("deepseek-chat");
         GenericHarness harness = new();
-        Agent agent = new(gemini, harness);
+        Agent agent = new(deepSeek, harness);
 
-        UserPermissions.BlockedVendors.Add(gemini.Name);
+        UserPermissions.BlockedVendors.Add(deepSeek.Name);
 
         CancellationTokenSource source = new(10_000);
 
