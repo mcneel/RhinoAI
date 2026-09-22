@@ -73,30 +73,6 @@
         { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
         { "display": "GPT 5.5", "id": "gpt-5.5" }
       ]
-    },
-    {
-      "name": "Gemini",
-      "company": "Google",
-      "defaultModel": "gemini-2.5-flash",
-      "isBuiltIn": true,
-      "defaultPrompt" : "",
-      "searchPaths": {
-        "win": [
-          "%APPDATA%/npm/gemini.cmd",
-          "%APPDATA%/npm/gemini.ps1"
-        ],
-        "mac": [
-          "%USERPROFILE%/.nvm/versions/node/**/bin/gemini",
-          "%USERPROFILE%/.local/bin/gemini",
-          "/opt/homebrew/bin/gemini",
-          "/usr/local/bin/gemini"
-        ]
-      },
-      "models": [
-        { "display": "Gemini 2.5 Pro", "id": "gemini-2.5-pro" },
-        { "display": "Gemini 2.5 Flash", "id": "gemini-2.5-flash" },
-        { "display": "Gemini 2.5 Flash Lite", "id": "gemini-2.5-flash-lite" }
-      ]
     }
   ]
 }
