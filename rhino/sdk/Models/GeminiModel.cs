@@ -14,6 +14,8 @@ internal sealed class GeminiModel : ApiModel
 
     private GeminiModel(string name, string vendor, Protocol protocol) : base(name, vendor, Host, protocol)
     {
+        ApiKey ??= Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        ApiKey ??= Secrets.Stasher.GetSecret("GEMINI_API_KEY");
     }
 
     /// <summary>A Gemini Model using the default protocol.</summary>

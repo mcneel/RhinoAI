@@ -14,7 +14,8 @@ internal sealed class DeepSeekModel : ApiModel
 
     private DeepSeekModel(string name, Protocol protocol) : base(name, "DeepSeek", Host, protocol)
     {
-        ApiKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
+        ApiKey ??= Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
+        ApiKey ??= Secrets.Stasher.GetSecret("DEEPSEEK_API_KEY");
     }
 
     /// <summary>A DeepSeek Model using the default protocol.</summary>

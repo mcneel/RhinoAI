@@ -10,7 +10,8 @@ internal sealed class ChatGptModel : ApiModel
 
     private ChatGptModel(string name, Protocol protocol) : base(name, "OpenAI", Host, protocol)
     {
-        ApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        ApiKey ??= Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        ApiKey ??= Secrets.Stasher.GetSecret("OPENAI_API_KEY");
     }
     
     /// <summary>A ChatGPT Model using the default protocol.</summary>

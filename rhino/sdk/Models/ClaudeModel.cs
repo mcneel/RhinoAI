@@ -10,7 +10,8 @@ internal sealed class ClaudeModel : ApiModel
 
     private ClaudeModel(string name, Protocol protocol) : base(name, "Anthropic", Host, protocol)
     {
-        ApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        ApiKey ??= Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        ApiKey ??= Secrets.Stasher.GetSecret("ANTHROPIC_API_KEY");
     }
 
     /// <summary>A Claude Model using the default protocol.</summary>
