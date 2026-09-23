@@ -49,8 +49,7 @@ public class DelegateTool : ITool
 
         if (!Agent.Models.TryGetValue(modelName, out Models.IModel? model))
         {
-            IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.ToLowerInvariant().Contains(modelName.ToLowerInvariant()));
-            // TODO : This is not a good check and needs improving.
+            IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.Contains(modelName, StringComparison.InvariantCultureIgnoreCase) && m.Available);
             IEnumerable<Models.IModel> availableModels = (models.Any() ? models : Agent.Models.Values).Where(m => m.Available);
 
             string modelList = string.Join(";", availableModels);
