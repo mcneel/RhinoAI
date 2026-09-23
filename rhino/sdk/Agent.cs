@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -72,8 +73,16 @@ public sealed class Agent
             throw new PermissionException("Model or Vendor does not have permission.");
 
         List<ITurn> startTurns = new (Turns);
-        if (!string.IsNullOrEmpty(DefaultPrompt))
-            startTurns.Add(new SystemTurn(DefaultPrompt));
+
+        // The loop hands back the whole transcript, so system turns added on every send would stack up.
+        if (startTurns.Count == 0)
+        {
+            if (!string.IsNullOrEmpty(DefaultPrompt))
+                startTurns.Add(new SystemTurn(DefaultPrompt));
+
+            if (SkillsPrompt(Harness.Skills) is string skillsPrompt)
+                startTurns.Add(new SystemTurn(skillsPrompt));
+        }
 
         startTurns.Add(new MessageTurn(message));
 
@@ -82,6 +91,20 @@ public sealed class Agent
         PrivateTurns.AddRange(turns);
 
         return turns;
+    }
+
+    private string? SkillsPrompt(IReadOnlyDictionary<string, ISkill> skills)
+    {
+        if (skills.Count == 0) return null;
+        
+        // If read_skill is not available, return null.
+        if (!Harness.Mcps.Values.Any(m => m.Tools.ContainsKey("read_skill"))) return null;
+
+        StringBuilder prompt = new("The following skills are available. Call read_skill with a skill's name to load its full instructions before using it.\n");
+        foreach (ISkill skill in skills.Values)
+            prompt.Append($"\n- {skill.Name}: {skill.Description}");
+
+        return prompt.ToString();
     }
 
     public static Agent GetClaudeDesktopAgent(string prompt = "")
