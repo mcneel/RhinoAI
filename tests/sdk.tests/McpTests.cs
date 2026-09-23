@@ -115,6 +115,20 @@ public class McpTests
         Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
+    [Test, CancelAfter(5000)]
+    public async Task FuzzyTool(CancellationToken token)
+    {
+        GenericHarness harness = new();
+
+        TestTool tool = new("read", "", []);
+        Mcp.RegisterTool(tool);
+        harness.AddMcp(Mcp);
+
+        ToolReturn result = await harness.UseToolAsync("AnyMCP", "reed", [], token);
+        Assert.That(result.Guidance, Does.Contain(tool.Name));
+        Assert.That(result.Result == ToolResult.Failure);
+    }
+
     private record TestTool(string Name, string Description, ToolArg[] Args) : ITool
     {
         public bool ReadOnly => true;

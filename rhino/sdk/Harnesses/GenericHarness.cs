@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-using Rhino.AI.Models;
+using FuzzySharp;
+using FuzzySharp.PreProcess;
 
 namespace Rhino.AI;
 
@@ -38,8 +40,12 @@ public class GenericHarness : IHarness
         
         if (!mcp.Tools.TryGetValue(toolName, out ITool? tool) || tool is null)
         {
-            // TODO : Fuzzy check
-            return ToolReturn.Failure($"Tool named {mcpName} is not available in {mcpName}", "");
+            IEnumerable<ITool> likelyTools = mcp.Tools.Values
+                .OrderByDescending(t => Fuzz.WeightedRatio(toolName, t.Name, PreprocessMode.Full))
+                .Take(3);
+            IEnumerable<string> likelyToolNames = likelyTools.Select(t => t.Name);
+            string likelyToolString = string.Join(" or ", likelyToolNames);
+            return ToolReturn.Failure($"Tool named {toolName} is not available in {mcpName}", $"Did you mean {likelyToolString}?");
         }
 
         Permissability permissability = Permissions.HasPermission(tool, args);

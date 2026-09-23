@@ -6,6 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using FuzzySharp;
+using FuzzySharp.PreProcess;
+
 namespace Rhino.AI.Tools;
 
 public class DelegateTool : ITool
@@ -44,12 +47,17 @@ public class DelegateTool : ITool
         if (Agent.Models.Count <= 0)
             return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
 
-        // TODO : Use a fuzzy match
         if (!Agent.Models.TryGetValue(modelName, out Models.IModel? model))
         {
             IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.ToLowerInvariant().Contains(modelName.ToLowerInvariant()));
             string modelList = string.Join(";", models.Any() ? models : Agent.Models.Values);
-            return ToolReturn.Failure($"{modelName} is not available", "Try a different model, such as {}");
+
+            IEnumerable<Models.IModel> likelyModels = Agent.Models.Values
+                .OrderByDescending(m => Fuzz.WeightedRatio(modelName, m.Name, PreprocessMode.Full))
+                .Take(3);
+            IEnumerable<string> likelyModelNames = likelyModels.Select(t => t.Name);
+            string likelyModelString = string.Join(" or ", likelyModelNames);
+            return ToolReturn.Failure($"{modelName} is not available", $"Did you mean {likelyModelString}?");
         }
 
         Agent agent = Agent.FromModel(model, prompt);
