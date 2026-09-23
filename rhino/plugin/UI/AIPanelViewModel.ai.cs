@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Rhino.UI;
 
 using Eto.Forms;
 
@@ -193,7 +194,7 @@ internal partial class AIPanelViewModel : IDisposable
             if (sent.ToAttachment() is { } attachment)
                 attachments.Add(attachment);
             else
-                Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Could not attach {0}."), sent.Name)));
+                Bridge.Post(new NoticeEvent("error", string.Format(LOC.STR("Could not attach {0}."), sent.Name)));
         }
 
         if ((text.Length == 0 && attachments.Count == 0) || Document is not { } doc)
@@ -201,7 +202,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryFor(doc, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return false;
         }
 
@@ -237,7 +238,7 @@ internal partial class AIPanelViewModel : IDisposable
     {
         if (!ConversationStore.TryLoad(sessionId, out ConversationDto dto))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("That conversation could not be loaded.")));
+            Bridge.Post(new NoticeEvent("error", LOC.STR("That conversation could not be loaded.")));
             return false;
         }
 
@@ -260,7 +261,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (IsTurnRunning)
         {
-            Bridge.Post(new NoticeEvent("warn", Rhino.UI.LOC.STR("Stop the running turn before resuming another conversation.")));
+            Bridge.Post(new NoticeEvent("warn", LOC.STR("Stop the running turn before resuming another conversation.")));
             return false;
         }
 
@@ -268,7 +269,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
+            Bridge.Post(new NoticeEvent("error", string.Format(LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
             return false;
         }
 
@@ -302,12 +303,12 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
         if (!AgentHost.TryFor(doc, out IAgentRunner agent))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", LOC.STR("No AI agent available. Open AI settings to configure one.")));
             return false;
         }
         if (!AgentDispatch.TryEnsureListener(doc, out int port))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("Could not start an MCP server for this document.")));
+            Bridge.Post(new NoticeEvent("error", LOC.STR("Could not start an MCP server for this document.")));
             return false;
         }
 
@@ -394,7 +395,7 @@ internal partial class AIPanelViewModel : IDisposable
         Application.Instance.AsyncInvoke(() =>
         {
             string name = Path.GetFileName(path);
-            SaveFileDialog dialog = new() { Title = "Save image", FileName = name };
+            Eto.Forms.SaveFileDialog dialog = new() { Title = "Save image", FileName = name };
             dialog.Filters.Add(new FileFilter(Path.GetExtension(path).TrimStart('.').ToUpperInvariant(), Path.GetExtension(path)));
 
             if (dialog.ShowDialog(View) != DialogResult.Ok)
