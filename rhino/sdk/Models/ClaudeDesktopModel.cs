@@ -6,12 +6,20 @@ using System.Text.Json.Nodes;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text;
+using System.IO;
+using System;
 
 namespace Rhino.AI.Models;
 
 /// <summary>A Claude Desktop Model</summary>
 internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anthropic")
 {
+
+    public override bool Available => File.Exists(ClaudeExePath);
+
+    // TODO : Check Definitions.json
+    private static string ClaudeExePath
+        => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin", "claude");
 
     protected async override Task<IEnumerable<ITurn>> SendPrivateAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
     {
@@ -24,7 +32,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
 
-                FileName = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin", "claude"),
+                FileName = ClaudeExePath,
                 WorkingDirectory = "/Users/sykes/Desktop",
                 CreateNoWindow = true,
                 // ArgumentList

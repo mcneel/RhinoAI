@@ -16,6 +16,9 @@ public interface IModel
 
     /// <summary>The Vendor of the Model</summary>
     public string Vendor { get; }
+
+    /// <summary>Is the Model available?</summary>
+    public bool Available { get; }
     
     /// <summary>Send a series of messages to the Model</summary>
     /// <param name="harness">The Harness to use with the model</param>

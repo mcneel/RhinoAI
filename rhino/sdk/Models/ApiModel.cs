@@ -19,6 +19,8 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     public int MaxOutputTokens { get; set; } = 8192;
 
+    public bool Available => !string.IsNullOrEmpty(ApiKey);
+
     private Uri Host { get; } = host;
 
     private Protocol Protocol { get; } = protocol;
