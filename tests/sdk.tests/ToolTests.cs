@@ -70,4 +70,15 @@ public class ToolTests
         Assert.That(turns, Turns.EndsWith("resign"));
     }
 
+    [Test, CancelAfter(10_000)]
+    public async Task FuzzyDelegation(CancellationToken token)
+    {
+        DeepSeekModel deepSeek = DeepSeekModel.Default();
+        GenericHarness harness = new();
+        Agent agent = new(deepSeek, harness);
+
+        IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a subagent to write a letter of resignation from its job as a subagent", token);
+        Assert.That(turns, Turns.EndsWith("resign"));
+    }
+
 }

@@ -58,6 +58,8 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
 
     public static IReadOnlyDictionary<string, IModel> Models => PrivateModelMakers;
 
+    public static IEnumerable<IModel> AvailableModels => Models.Values.Where(m => m.Available);
+
     public IHarness Harness { get; } = harness;
 
     public string DefaultPrompt { get; } = defaultPrompt;

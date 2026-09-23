@@ -12,6 +12,8 @@ public class SkillTests
 
         public string Vendor => "test";
 
+        public bool Available => true;
+
         public List<IReadOnlyList<ITurn>> Received { get; } = [];
 
         public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)

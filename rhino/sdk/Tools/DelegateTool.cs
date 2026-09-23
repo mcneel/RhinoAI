@@ -50,7 +50,10 @@ public class DelegateTool : ITool
         if (!Agent.Models.TryGetValue(modelName, out Models.IModel? model))
         {
             IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.ToLowerInvariant().Contains(modelName.ToLowerInvariant()));
-            string modelList = string.Join(";", models.Any() ? models : Agent.Models.Values);
+            // TODO : This is not a good check and needs improving.
+            IEnumerable<Models.IModel> availableModels = (models.Any() ? models : Agent.Models.Values).Where(m => m.Available);
+
+            string modelList = string.Join(";", availableModels);
 
             IEnumerable<Models.IModel> likelyModels = Agent.Models.Values
                 .OrderByDescending(m => Fuzz.WeightedRatio(modelName, m.Name, PreprocessMode.Full))
@@ -58,6 +61,11 @@ public class DelegateTool : ITool
             IEnumerable<string> likelyModelNames = likelyModels.Select(t => t.Name);
             string likelyModelString = string.Join(" or ", likelyModelNames);
             return ToolReturn.Failure($"{modelName} is not available", $"Did you mean {likelyModelString}?");
+        }
+        
+        if (!model.Available)
+        {
+            return ToolReturn.Failure($"{model.Name} is not available", $"Try one of {string.Join(", ", Agent.AvailableModels.Select(m => m.Name))}");
         }
 
         Agent agent = Agent.FromModel(model, prompt);
