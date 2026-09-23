@@ -11,8 +11,10 @@ internal static class Stasher
     private static ISecretVault? Vault { get; } =
         OperatingSystem.IsWindows() ? new CredentialVault(Service)
         : OperatingSystem.IsMacOS() ? new KeychainVault(Service)
-        : OperatingSystem.IsLinux() ? new SecretServiceVault(Service)
+        : OperatingSystem.IsLinux() ? SecretServiceVault.TryCreate(Service)
         : null;
+
+    public static bool IsAvailable => Vault is not null;
 
     public static bool TryGetSecret(string key, [NotNullWhen(true)] out string? secret)
     {

@@ -9,6 +9,7 @@ public class StasherTests
     [SetUp]
     public void SetUp()
     {
+        Assume.That(Stasher.IsAvailable, "No OS vault on this machine.");
         Key = $"test-{Guid.NewGuid():N}";
     }
 

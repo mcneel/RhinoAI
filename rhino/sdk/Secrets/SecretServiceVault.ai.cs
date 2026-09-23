@@ -17,19 +17,29 @@ internal sealed class SecretServiceVault : ISecretVault
     // SecretSchema is a name, flags, then 32 (name, type) attribute slots and reserved padding, all zero-terminated.
     private const int SchemaSize = 8 + 8 + (32 * 16) + 8 + (7 * 8);
 
-    private static IntPtr GLibHandle { get; } = NativeLibrary.Load(GLib);
-    private static IntPtr StrHash { get; } = NativeLibrary.GetExport(GLibHandle, "g_str_hash");
-    private static IntPtr StrEqual { get; } = NativeLibrary.GetExport(GLibHandle, "g_str_equal");
-
-    public SecretServiceVault(string service)
+    private SecretServiceVault(string service, IntPtr strHash, IntPtr strEqual)
     {
         Service = service;
+        StrHash = strHash;
+        StrEqual = strEqual;
         Schema = CreateSchema(service);
     }
 
     private string Service { get; }
 
+    private IntPtr StrHash { get; }
+
+    private IntPtr StrEqual { get; }
+
     private IntPtr Schema { get; }
+
+    public static SecretServiceVault? TryCreate(string service)
+    {
+        if (!NativeLibrary.TryLoad(SecretLib, out _)) return null;
+        if (!NativeLibrary.TryLoad(GLib, out IntPtr glib)) return null;
+
+        return new SecretServiceVault(service, NativeLibrary.GetExport(glib, "g_str_hash"), NativeLibrary.GetExport(glib, "g_str_equal"));
+    }
 
     public bool TryGet(string key, [NotNullWhen(true)] out string? secret)
     {
