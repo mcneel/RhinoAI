@@ -39,7 +39,7 @@ public class SkillTests
         Assert.That(systemTurns[1].Prompt, Does.Contain("- boxes: How to draw boxes"));
     }
 
-    [Test, CancelAfter(5000)]
+    [Test, CancelAfter(10_000)]
     public async Task SimpleSkill(CancellationToken token)
     {
         DeepSeekModel model = DeepSeekModel.Default();

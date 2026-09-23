@@ -79,7 +79,6 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        // TODO : How to add an MCP?
         Agent agent = Agent.GetClaudeDesktopAgent();
         agent.Harness.AddMcp(mcp);
 
