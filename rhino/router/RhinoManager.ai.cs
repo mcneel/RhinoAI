@@ -22,8 +22,13 @@ public class RhinoManager(
     RouterConfig config,
     RhinoControlClient control,
     SlotStore store,
-    ILogger<RhinoManager> log)
+    ILogger<RhinoManager> log,
+    IWindowProbe? windowProbe = null)
 {
+    // Injectable so CloseAsync's adopted-slot policy is unit-testable without a
+    // real Rhino; production callers get the DI registration in Program.ai.cs.
+    private readonly IWindowProbe _windowProbe = windowProbe ?? new WindowProbe();
+
     // Manually-started Rhino lives on 10500; children walk forward from there.
     private const int ChildPortBase = 10500;
     private int StartupTimeoutSeconds { get; } = config.StartupTimeoutSeconds;
@@ -282,8 +287,25 @@ public class RhinoManager(
 
         if (child.Adopted)
         {
-            // User started this Rhino, so the router doesn't get to kill it.
-            throw new AdoptedSlotCloseException(slotId);
+            // A spawned slot that outlived its router (e.g. a --hidden slot) gets
+            // adopted by the next router's announcement scan, same as a
+            // user-started Rhino. The two are indistinguishable from Adopted
+            // alone; a visible top-level window is the signal that separates
+            // them -- if there's a window, a human might be looking at it and
+            // the router doesn't get to kill it out from under them. If not,
+            // there is nothing left for anyone to close by hand, so treat it
+            // like an ordinary router-owned slot and fall through to the same
+            // cooperative close path below.
+            WindowVisibility visibility = child.Pid is { } adoptedPid
+                ? _windowProbe.Probe(adoptedPid)
+                : WindowVisibility.Unknown;
+
+            if (visibility != WindowVisibility.Hidden)
+                throw new AdoptedSlotCloseException(slotId, visibility);
+
+            log.LogInformation(
+                "Closing adopted slot '{Slot}' (pid {Pid}) cooperatively; no visible window found.",
+                slotId, child.Pid);
         }
 
         // A launching placeholder has no pid/port to act on; the leader/follower
@@ -726,10 +748,16 @@ public class RhinoManager(
 }
 
 // Tools layer catches this and turns it into a structured `cannot_close_adopted` payload.
-public sealed class AdoptedSlotCloseException(string slotId)
-    : InvalidOperationException($"Slot '{slotId}' was adopted from a user-started Rhino and cannot be closed by the router.")
+// Thrown for the two cases the router refuses to touch an adopted slot: it still
+// has a visible window (someone may be looking at it), or visibility could not
+// be determined at all (no probe on this OS, or the slot has no pid yet).
+public sealed class AdoptedSlotCloseException(string slotId, WindowVisibility reason)
+    : InvalidOperationException(reason == WindowVisibility.Visible
+        ? $"Slot '{slotId}' was adopted from a user-started Rhino and still has a visible window; the router won't close it."
+        : $"Slot '{slotId}' was adopted from a user-started Rhino and its window visibility could not be determined on this OS; the router won't close it.")
 {
     public string SlotId { get; } = slotId;
+    public WindowVisibility Reason { get; } = reason;
 }
 
 // `Adopted` slots are never killed by the router — the user started them.

@@ -55,7 +55,7 @@ Every slot the assistant spawns is a full Rhino window, so a batch of ten is ten
 
 The Rhino behind a hidden slot is still a full Rhino: it loads plugins, opens documents, and `get_viewport_image` renders from it exactly as it would from a window you can see. Only the window is hidden, and only on Windows.
 
-Two things to know before you turn it on. A Rhino you cannot see is one you cannot close by hand, so if a run leaks a slot you will need `list_slots` and `close_slot` to clear it. And a dialog that would normally block startup in plain sight, a license prompt for instance, now blocks it invisibly; if slots stop appearing, drop `--hidden` and watch a spawn happen.
+Two things to know before you turn it on. A Rhino you cannot see is one you cannot close by hand, so if a run leaks a slot you will need `list_slots` and `close_slot` to clear it. That still works even if the slot outlived the router that spawned it and got adopted by a later one: `close_slot` refuses an adopted Rhino only when it still has a window someone might be looking at, and a hidden slot never does. And a dialog that would normally block startup in plain sight, a license prompt for instance, now blocks it invisibly; if slots stop appearing, drop `--hidden` and watch a spawn happen.
 
 ## Grasshopper tools aren't working
 
