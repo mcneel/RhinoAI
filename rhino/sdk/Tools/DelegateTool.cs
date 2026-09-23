@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+
 using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,34 +16,43 @@ public class DelegateTool : ITool
     public bool ReadOnly { get; } = true;
     public bool Destructive { get; } = false;
     public ToolArg[] Args { get; } = [
+        
+        // Agent
         new ToolArg("model", "The Model for the SubAgent", ToolArgType.String, true),
-        new ToolArg("context", "The Context for the SubAgent", ToolArgType.String, true),
-    ];
 
-    private Func<string, Agent>? SubAgent { get; }
+        // Context
+        new ToolArg("prompt", "The default prompt for the agent", ToolArgType.String, true),
+        
+        // TODO : Skills + Tools to enable
+    ];
 
     public DelegateTool()
     {
 
     }
 
-    public DelegateTool(Func<string, Agent> subAgent)
-    {
-        SubAgent = subAgent;
-    }
-
     public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!args.TryGetString(Args[0].Name, out string model))
+        string context = string.Empty;
+
+        if (!args.TryGetString(Args[0].Name, out string modelName))
             return ToolReturn.Failure("model parameter is mandatory", "Call delegate again with model set to the model the sub agent should run on.");
 
-        if (!args.TryGetString(Args[1].Name, out string context))
-            return ToolReturn.Failure("context parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
+        if (!args.TryGetString(Args[1].Name, out string prompt))
+            return ToolReturn.Failure("prompt parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
 
-        if (SubAgent is null)
+        if (Agent.Models.Count <= 0)
             return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
 
-        Agent agent = SubAgent(model);
+        // TODO : Use a fuzzy match
+        if (!Agent.Models.TryGetValue(modelName, out Models.IModel? model))
+        {
+            IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.ToLowerInvariant().Contains(modelName.ToLowerInvariant()));
+            string modelList = string.Join(";", models.Any() ? models : Agent.Models.Values);
+            return ToolReturn.Failure($"{modelName} is not available", "Try a different model, such as {}");
+        }
+
+        Agent agent = Agent.FromModel(model, prompt);
         IEnumerable<ITurn> turns = await agent.SendAsync(context, token).ConfigureAwait(false);
 
         StringBuilder report = new();

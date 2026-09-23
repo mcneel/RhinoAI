@@ -12,7 +12,7 @@ namespace Rhino.AI;
 /// <summary>
 /// The Agent is the controller of all the AI parts.
 /// </summary>
-public sealed class Agent
+public sealed class Agent(IModel model, IHarness harness, string defaultPrompt = "")
 {
 
     public List<ITurn> PrivateTurns { get; } = [];
@@ -21,23 +21,54 @@ public sealed class Agent
     /// <summary>
     /// The Model in use by the agent
     /// </summary>
-    public IModel Model { get; }
-    
-    public IHarness Harness { get; }
-    
-    // TODO: Make set and re
-    public string DefaultPrompt { get; }
+    public IModel Model { get; } = model;
+
+    private static Dictionary<string, IModel> PrivateModelMakers { get; } = new(StringComparer.OrdinalIgnoreCase) {
+        { "default", DeepSeekModel.Default() },
+
+        { "claude-fable-5-1", ClaudeModel.Default("claude-fable-5-1") },
+        { "claude-fable-5", ClaudeModel.Default("claude-fable-5") },
+        { "claude-mythos-5-1", ClaudeModel.Default("claude-mythos-5-1") },
+        { "claude-mythos-5", ClaudeModel.Default("claude-mythos-5") },
+        { "claude-opus-5", ClaudeModel.Default("claude-opus-5") },
+        { "claude-opus-4-8", ClaudeModel.Default("claude-opus-4-8") },
+        { "claude-opus-4-7", ClaudeModel.Default("claude-opus-4-7") },
+        { "claude-opus-4-6", ClaudeModel.Default("claude-opus-4-6") },
+        { "claude-opus-4-5", ClaudeModel.Default("claude-opus-4-5") },
+        { "claude-opus-4-1", ClaudeModel.Default("claude-opus-4-1") },
+        { "claude-opus-4", ClaudeModel.Default("claude-opus-4") },
+        { "claude-sonnet-5", ClaudeModel.Default("claude-sonnet-5") },
+        { "claude-sonnet-4-6", ClaudeModel.Default("claude-sonnet-4-6") },
+        { "claude-sonnet-4-5", ClaudeModel.Default("claude-sonnet-4-5") },
+        { "claude-sonnet-4", ClaudeModel.Default("claude-sonnet-4") },
+        { "claude-haiku-4-5", ClaudeModel.Default("claude-haiku-4-5") },
+
+        { "gpt-6-astra", ChatGptModel.Default("gpt-6-astra") },
+        { "gpt-5.6-sol", ChatGptModel.Default("gpt-5.6-sol") },
+        { "gpt-5.6-terra", ChatGptModel.Default("gpt-5.6-terra") },
+        { "gpt-5.6-luna", ChatGptModel.Default("gpt-5.6-luna") },
+        { "gpt-5.5", ChatGptModel.Default("gpt-5.5") },
+
+        { "gemini-2.5-pro", GeminiModel.Default("gemini-2.5-pro", "Google") },
+        { "gemini-2.5-flash", GeminiModel.Default("gemini-2.5-flash", "Google") },
+        { "gemini-2.5-flash-lite", GeminiModel.Default("gemini-2.5-flash-lite", "Google") },
+
+        { "deepseek-flash", DeepSeekModel.Default("deepseek-flash") },
+    };
+
+    public static IReadOnlyDictionary<string, IModel> Models => PrivateModelMakers;
+
+    public IHarness Harness { get; } = harness;
+
+    public string DefaultPrompt { get; } = defaultPrompt;
 
     // TODO : Enum ??
     // public string Effort { get; set; }
 
-    public Agent(IModel model, IHarness harness, string defaultPrompt = "")
-    {
-        Model = model;
-        Harness = harness;
-        DefaultPrompt = defaultPrompt;
-    }
-
+    /// <summary>
+    /// Forks an agent at a point in a conversation.
+    /// </summary>
+    /// <returns>A freshly made agent with all of the state copied safely</returns>
     internal Agent Fork() => WithNewModel(Model);
 
     /// <summary>
@@ -47,7 +78,7 @@ public sealed class Agent
     /// <returns>A freshly made agent with all of the state copied safely</returns>
     internal Agent WithNewModel(IModel model)
     {
-        Agent agent = new (model, Harness, DefaultPrompt);
+        Agent agent = new(model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;
     }
@@ -62,7 +93,7 @@ public sealed class Agent
         // Finds the first Agent or Vendor that has permission
         // TODO : Check existing models
         IModel model = default!;
-        Agent agent = new (model, Harness, DefaultPrompt);
+        Agent agent = new(model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;
     }
@@ -72,7 +103,7 @@ public sealed class Agent
         if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
             throw new PermissionException("Model or Vendor does not have permission.");
 
-        List<ITurn> startTurns = new (Turns);
+        List<ITurn> startTurns = new(Turns);
 
         // The loop hands back the whole transcript, so system turns added on every send would stack up.
         if (startTurns.Count == 0)
@@ -96,7 +127,7 @@ public sealed class Agent
     private string? SkillsPrompt(IReadOnlyDictionary<string, ISkill> skills)
     {
         if (skills.Count == 0) return null;
-        
+
         // If read_skill is not available, return null.
         if (!Harness.Mcps.Values.Any(m => m.Tools.ContainsKey("read_skill"))) return null;
 
@@ -127,5 +158,21 @@ public sealed class Agent
 
     public static Agent GetLMStudioAgent(string model, string prompt)
         => new Agent(LMStudioModel.Default(model), new GenericHarness(), prompt);
+
+    public static Agent FromModel(IModel model, string prompt) => model switch
+    {
+        ClaudeDesktopModel => GetClaudeDesktopAgent(prompt),
+        // CodexDesktopModel => GetCodexDesktopAgent(prompt),
+
+        // TODO : fallthrough might be sufficient
+        DeepSeekModel => GetDeepSeekAgent(model.Name, prompt),
+        ClaudeModel => GetClaudeAgent(model.Name, prompt),
+        ChatGptModel => GetChatGptAgent(model.Name, prompt),
+        GeminiModel => GetGeminiAgent(model.Name, prompt),
+        LMStudioModel => GetLMStudioAgent(model.Name, prompt),
+
+        _ => new Agent(model, new GenericHarness(), prompt),
+    };
+
 
 }
