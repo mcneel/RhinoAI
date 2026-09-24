@@ -26,6 +26,11 @@ internal static class RhinoAIHost
     // Re-bound by the replacing document, so a swap doesn't strand clients on a fixed port.
     private static int? PortFreedByLastClose { get; set; }
 
+    // Once any server has run this session, MCP is wanted even with auto-load off, so new documents get one too.
+    private static bool HasStartedThisSession { get; set; }
+
+    private static bool McpRequested => HasStartedThisSession || AIAutoLoad.ShouldAutoLoad();
+
     private static void OpenServer(object? sender, DocumentOpenEventArgs e)
     {
         if (e.Merge)
@@ -43,6 +48,9 @@ internal static class RhinoAIHost
             return;
 
         if (HasStarted(e.Document))
+            return;
+
+        if (!McpRequested)
             return;
 
         int? wanted = PortFreedByLastClose;
@@ -154,6 +162,7 @@ internal static class RhinoAIHost
         bool ok = server.Start(doc, port);
         if (ok)
         {
+            HasStartedThisSession = true;
             WriteAnnouncement(port);
             EnsureHeartbeat();
             return true;
