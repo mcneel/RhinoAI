@@ -3,6 +3,7 @@ using Rhino.AI.Models;
 
 namespace sdk.tests;
 
+[NonParallelizable]
 public class UserPermissionTests
 {
 
