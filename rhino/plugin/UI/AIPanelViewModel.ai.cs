@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 
 using Eto.Forms;
 
+using Rhino.Runtime;
+
 namespace Rhino.AI.UI;
 
 internal partial class AIPanelViewModel : IDisposable
@@ -73,7 +75,7 @@ internal partial class AIPanelViewModel : IDisposable
         }
         catch (HttpListenerException ex)
         {
-            RhinoApp.WriteLine($"[rhino-ai] the AI panel could not start its page server: {ex.Message}");
+            HostUtils.LogDebugEvent($"[rhino-ai] the AI panel could not start its page server: {ex.Message}.\n");
             return;
         }
 
@@ -136,7 +138,7 @@ internal partial class AIPanelViewModel : IDisposable
         }
         catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or UnauthorizedAccessException)
         {
-            RhinoApp.WriteLine($"[rhino-ai] the AI panel could not serve its page: {ex.Message}");
+            HostUtils.LogDebugEvent($"[rhino-ai] the AI panel could not serve its page: {ex.Message}.\n");
         }
         finally
         {

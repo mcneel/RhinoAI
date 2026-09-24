@@ -39,7 +39,6 @@ internal sealed class McpServer : IDisposable
 
             StartTime = DateTime.UtcNow;
 
-            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
             return true;
         }
         catch (Exception ex)

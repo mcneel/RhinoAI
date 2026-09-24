@@ -1,5 +1,8 @@
 using System.Threading.Tasks;
+
 using Eto.Forms;
+
+using Rhino.Runtime;
 
 namespace Rhino.AI.UI;
 
@@ -30,7 +33,7 @@ internal class PanelBridge
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
-            RhinoApp.WriteLine($"[rhino-ai] panel sent a command this build does not handle: {ex.Message}");
+            HostUtils.LogDebugEvent($"[rhino-ai] panel sent a command this build does not handle: {ex.Message}.\n");
             return;
         }
     }
@@ -62,7 +65,7 @@ internal class PanelBridge
         string script = $"window.rhinoAI && window.rhinoAI.receive({PanelJson.Serialize(value)});";
         Task task = View.ExecuteScriptAsync(script);
         task.ContinueWith(
-            static t => RhinoApp.WriteLine($"[rhino-ai] panel script failed: {t.Exception?.GetBaseException().Message}"),
+            static t => HostUtils.LogDebugEvent($"[rhino-ai] panel script failed: {t.Exception?.GetBaseException().Message}.\n"),
             TaskContinuationOptions.OnlyOnFaulted);
     }
 
