@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Rhino.Runtime;
+
 namespace Rhino.AI.Server;
 
 // McpServer gives each listener prefix one dispatcher, handling MCP-flavoured
@@ -81,7 +83,7 @@ internal sealed class McpDispatcher
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[RhinoAI] MCP dispatch failed for method {request.Method}: {ex.GetType().Name}: {ex.Message}");
+            HostUtils.LogDebugEvent($"[RhinoAI] MCP dispatch failed for method {request.Method}: {ex.GetType().Name}: {ex.Message}.\n");
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
                 Id = request.Id,

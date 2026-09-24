@@ -1,5 +1,7 @@
 using System.IO;
 
+using Rhino.Runtime;
+
 namespace Rhino.AI;
 
 // A plugin-owned CODEX_HOME, which is what keeps the user's own ~/.codex/config.toml and its MCP servers out of the Rhino agent.
@@ -53,7 +55,7 @@ internal static class CodexHome
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            RhinoApp.WriteLine($"[codex] could not copy auth.json ({ex.Message}); the agent may ask you to sign in again.");
+            HostUtils.LogDebugEvent($"[codex] could not copy auth.json ({ex.Message}); the agent may ask you to sign in again.\n");
         }
     }
 

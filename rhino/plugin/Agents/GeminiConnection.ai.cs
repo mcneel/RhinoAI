@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.IO;
+
 using Acp;
+
+using Rhino.Runtime;
 
 namespace Rhino.AI;
 
@@ -33,7 +36,7 @@ internal static class GeminiConnection
         proc.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
-                RhinoApp.WriteLine($"[{def.Name}:err] {e.Data}");
+                HostUtils.LogDebugEvent($"[{def.Name}:err] {e.Data}.\n");
         };
         proc.Start();
         proc.BeginErrorReadLine();

@@ -1,5 +1,6 @@
-using System;
 using System.Threading.Tasks;
+
+using Rhino.Runtime;
 
 namespace Rhino.AI;
 
@@ -50,7 +51,7 @@ internal sealed class TurnUndoCheckpoint
             uint serial = Doc.RuntimeSerialNumber;
             if (RhinoDoc.FromRuntimeSerialNumber(serial) is null)
             {
-                RhinoApp.WriteLine($"[rhino-ai] undo record {RecordSerial} could not be closed: doc {serial} is gone.");
+                HostUtils.LogDebugEvent($"[rhino-ai] undo record {RecordSerial} could not be closed: doc {serial} is gone.\n");
                 return true;
             }
             Doc.EndUndoRecord(RecordSerial);

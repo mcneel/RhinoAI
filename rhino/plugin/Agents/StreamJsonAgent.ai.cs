@@ -1,13 +1,15 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
+
 using System.Text.Json.Nodes;
+
 using System.Threading;
 using System.Threading.Tasks;
+
 using Acp;
 using ContentBlock = Acp.ContentBlock; // disambiguate from Rhino.AI.Server.ContentBlock
+
+using Rhino.Runtime;
 
 namespace Rhino.AI;
 
@@ -213,7 +215,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         proc.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
-                RhinoApp.WriteLine($"[{Parser.DisplayName}:err] {e.Data}");
+                HostUtils.LogDebugEvent($"[{Parser.DisplayName}:err] {e.Data}.\n");
         };
         proc.Start();
         proc.BeginErrorReadLine();
@@ -320,7 +322,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    RhinoApp.WriteLine($"[{Parser.DisplayName}] parse error: {ex.Message}");
+                    HostUtils.LogDebugEvent($"[{Parser.DisplayName}] parse error: {ex.Message}.\n");
                 }
             }
         }

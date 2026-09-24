@@ -1,8 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
+
+using Rhino.Runtime;
 
 namespace Rhino.AI;
 
@@ -53,7 +52,7 @@ internal class AgentRegistry
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"Failed to load Agent Definitions {ex.Message}");
+            HostUtils.LogDebugEvent($"Failed to load Agent Definitions {ex.Message}.\n");
         }
     }
 
