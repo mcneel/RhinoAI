@@ -12,9 +12,7 @@ public class RhinoAIPlugin : PlugIn
     private const string IconResourceName = "Rhino.AI.Panel_dark.ico";
     private const string DarkIconResourceName = "Rhino.AI.Panel_dark.ico";
 
-    private CommandInterceptorHost? CommandInterceptors { get; set; }
-
-    public bool WasStartedViaAgent { get; private set; }
+    // private CommandInterceptorHost? CommandInterceptors { get; set; }
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
@@ -25,14 +23,8 @@ public class RhinoAIPlugin : PlugIn
 
         Panels.RegisterPanel(this, typeof(UI.AIPanel), LOC.STR("AI"), LoadPanelIcon(), PanelType.PerDoc);
 
-        WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
-
-        if (WasStartedViaAgent || AIAutoLoad.ShouldAutoLoad())
-        {
-            CommandInterceptors = new CommandInterceptorHost();
-            RhinoAIHost.RegisterDocumentWatcher();
-        }
-        
+        // CommandInterceptors = new CommandInterceptorHost();
+        RhinoAIHost.RegisterDocumentWatcher();
         ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
         return base.OnLoad(ref errorMessage);
@@ -67,7 +59,7 @@ public class RhinoAIPlugin : PlugIn
 
     protected override void OnShutdown()
     {
-        CommandInterceptors?.Dispose();
+        // CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
     }
 

@@ -31,7 +31,7 @@ internal sealed class AIOptionsPage : OptionsDialogPage
         _ => LightCachedImage ??= LoadIcon(IconResourceName),
     };
 
-    public override bool OnApply() => true; // Panel.TryCommit(out _);
+    public override bool OnApply() => Panel.TryCommit(out _);
 
     public override bool OnActivate(bool active)
     {

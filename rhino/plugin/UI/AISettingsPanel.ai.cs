@@ -26,6 +26,9 @@ internal sealed class AISettingsPanel : Panel
     private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Eto.Drawing.Fonts.Monospace(11) };
     private Label McpErrorLabel { get; } = new() { TextColor = Colors.Red, Visible = false };
 
+    private CheckBox AutoLoadMcpBox { get; } = new() { Text = LOC.STR("Load MCP server at startup") };
+    private CheckBox AutoLoadScriptPlugInBox { get; } = new() { Text = LOC.STR("Load AI-created script plug-in at startup") };
+
     // Leaf tool rows in the Tools tree, kept flat so Commit can read each checkbox back
     // without re-walking the grouped tree.
     private List<ToolNode> ToolLeaves { get; } = [];
@@ -52,6 +55,7 @@ internal sealed class AISettingsPanel : Panel
         tabs.Pages.Add(new TabPage { Text = LOC.STR("AI Agents"), Content = AgentsTab() });
         tabs.Pages.Add(new TabPage { Text = LOC.STR("MCP Servers"), Content = McpServersTab() });
         tabs.Pages.Add(new TabPage { Text = LOC.STR("Tools"), Content = ToolsTab() });
+        tabs.Pages.Add(new TabPage { Text = LOC.STR("Loading"), Content = LoadingTab() });
 
         Content = tabs;
     }
@@ -82,6 +86,8 @@ internal sealed class AISettingsPanel : Panel
             AISettings.DefaultAgentName = defaultRow.Name;
 
         AISettings.ExtraMcpServersJson = normalizedJson;
+        AISettings.AutoLoadMCP = AutoLoadMcpBox.Checked == true;
+        AISettings.AutoLoadScriptPlugIn = AutoLoadScriptPlugInBox.Checked == true;
 
         // ScanTools hides router-internal underscore tools from the grid, so they have no checkbox to
         // round-trip; carry forward any that were already disabled instead of silently dropping them.
@@ -413,6 +419,32 @@ internal sealed class AISettingsPanel : Panel
             {
                 new TableRow(help),
                 new TableRow(tree) { ScaleHeight = true },
+            },
+        };
+    }
+
+    private Control LoadingTab()
+    {
+        AutoLoadMcpBox.Checked = AISettings.AutoLoadMCP;
+        AutoLoadScriptPlugInBox.Checked = AISettings.AutoLoadScriptPlugIn;
+
+        Label help = new()
+        {
+            Wrap = WrapMode.Word,
+            Text = LOC.STR("What RhinoAI starts when Rhino launches. Changes take effect the next time Rhino starts."),
+            TextColor = Colors.Gray,
+        };
+
+        return new TableLayout
+        {
+            Padding = new Padding(8),
+            Spacing = new Size(0, 8),
+            Rows =
+            {
+                new TableRow(help),
+                new TableRow(AutoLoadMcpBox),
+                new TableRow(AutoLoadScriptPlugInBox),
+                new TableRow { ScaleHeight = true },
             },
         };
     }
