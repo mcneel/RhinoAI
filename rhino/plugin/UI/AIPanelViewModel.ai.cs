@@ -196,7 +196,7 @@ internal partial class AIPanelViewModel : IDisposable
             if (sent.ToAttachment() is { } attachment)
                 attachments.Add(attachment);
             else
-                Bridge.Post(new NoticeEvent("error", string.Format(LOC.STR("Could not attach {0}."), sent.Name)));
+                Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Could not attach {0}.", 3), sent.Name)));
         }
 
         if ((text.Length == 0 && attachments.Count == 0) || Document is not { } doc)
@@ -204,7 +204,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryFor(doc, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 4)));
             return false;
         }
 
@@ -240,7 +240,7 @@ internal partial class AIPanelViewModel : IDisposable
     {
         if (!ConversationStore.TryLoad(sessionId, out ConversationDto dto))
         {
-            Bridge.Post(new NoticeEvent("error", LOC.STR("That conversation could not be loaded.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("That conversation could not be loaded.", 5)));
             return false;
         }
 
@@ -263,7 +263,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (IsTurnRunning)
         {
-            Bridge.Post(new NoticeEvent("warn", LOC.STR("Stop the running turn before resuming another conversation.")));
+            Bridge.Post(new NoticeEvent("warn", Localization.LocalizeString("Stop the running turn before resuming another conversation.", 6)));
             return false;
         }
 
@@ -271,7 +271,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", string.Format(LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
+            Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Cannot resume: agent '{0}' is no longer available.", 7), dto.AgentName)));
             return false;
         }
 
@@ -305,12 +305,12 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
         if (!AgentHost.TryFor(doc, out IAgentRunner agent))
         {
-            Bridge.Post(new NoticeEvent("error", LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 8)));
             return false;
         }
         if (!AgentDispatch.TryEnsureListener(doc, out int port))
         {
-            Bridge.Post(new NoticeEvent("error", LOC.STR("Could not start an MCP server for this document.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("Could not start an MCP server for this document.", 9)));
             return false;
         }
 

@@ -24,10 +24,10 @@ internal static class AttachmentPicker
 
     public static IReadOnlyList<PanelAttachment> Pick(Control parent, Action<string> warn)
     {
-        Eto.Forms.OpenFileDialog dialog = new() { Title = LOC.STR("Attach files"), MultiSelect = true };
-        dialog.Filters.Add(new FileFilter(LOC.STR("Images and text"), [.. ImageTypes.Keys, .. TextExtensions]));
-        dialog.Filters.Add(new FileFilter(LOC.STR("Images"), [.. ImageTypes.Keys]));
-        dialog.Filters.Add(new FileFilter(LOC.STR("All files"), ".*"));
+        Eto.Forms.OpenFileDialog dialog = new() { Title = Localization.LocalizeString("Attach files", 43), MultiSelect = true };
+        dialog.Filters.Add(new FileFilter(Localization.LocalizeString("Images and text", 44), [.. ImageTypes.Keys, .. TextExtensions]));
+        dialog.Filters.Add(new FileFilter(Localization.LocalizeString("Images", 45), [.. ImageTypes.Keys]));
+        dialog.Filters.Add(new FileFilter(Localization.LocalizeString("All files", 46), ".*"));
 
         if (dialog.ShowDialog(parent) != DialogResult.Ok)
             return [];
@@ -48,7 +48,7 @@ internal static class AttachmentPicker
             if (length > MaxBytes)
             {
                 warn(string.Format(
-                    LOC.STR("{0} is {1} MB, over the {2} MB attachment limit."),
+                    Localization.LocalizeString("{0} is {1} MB, over the {2} MB attachment limit.", 47),
                     name,
                     length / (1024 * 1024),
                     MaxBytes / (1024 * 1024)));
@@ -61,14 +61,14 @@ internal static class AttachmentPicker
 
             if (!PanelAttachment.LooksLikeText(data))
             {
-                warn(string.Format(LOC.STR("{0} is neither an image nor a text file, so it cannot be attached."), name));
+                warn(string.Format(Localization.LocalizeString("{0} is neither an image nor a text file, so it cannot be attached.", 48), name));
                 return null;
             }
             return PanelAttachment.From(NextId(), AttachmentKind.TextFile, name, "text/plain", data);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
-            warn(string.Format(LOC.STR("Could not read {0}: {1}"), name, ex.Message));
+            warn(string.Format(Localization.LocalizeString("Could not read {0}: {1}", 49), name, ex.Message));
             return null;
         }
     }

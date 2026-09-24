@@ -19,19 +19,19 @@ internal static class PanelMenu
 
         if (request.Selection.Trim().Length > 0)
         {
-            menu.Items.Add(Item(LOC.STR("Copy"), Keys.Application | Keys.C, true, () => Clipboard.Instance.Text = request.Selection));
+            menu.Items.Add(Item(Localization.LocalizeString("Copy", 55), Keys.Application | Keys.C, true, () => Clipboard.Instance.Text = request.Selection));
             menu.Items.Add(new SeparatorMenuItem());
         }
 
-        menu.Items.Add(Item(LOC.STR("Zoom In"), Keys.Application | Keys.Equal, request.CanZoomIn, () => post(new ZoomEvent("in"))));
-        menu.Items.Add(Item(LOC.STR("Zoom Out"), Keys.Application | Keys.Minus, request.CanZoomOut, () => post(new ZoomEvent("out"))));
+        menu.Items.Add(Item(Localization.LocalizeString("Zoom In", 56), Keys.Application | Keys.Equal, request.CanZoomIn, () => post(new ZoomEvent("in"))));
+        menu.Items.Add(Item(Localization.LocalizeString("Zoom Out", 57), Keys.Application | Keys.Minus, request.CanZoomOut, () => post(new ZoomEvent("out"))));
         // No accelerator: the label already carries the current level.
-        menu.Items.Add(Item(string.Format(LOC.STR("Reset Zoom ({0})"), request.ZoomLabel), Keys.None, request.CanResetZoom, () => post(new ZoomEvent("reset"))));
+        menu.Items.Add(Item(string.Format(Localization.LocalizeString("Reset Zoom ({0})", 58), request.ZoomLabel), Keys.None, request.CanResetZoom, () => post(new ZoomEvent("reset"))));
 
         menu.Items.Add(new SeparatorMenuItem());
         // No accelerator either: advertising one would claim a chord Rhino may already own, and
         // reload is a recovery action rather than something worth a shortcut.
-        menu.Items.Add(Item(LOC.STR("Reload"), Keys.None, true, reload));
+        menu.Items.Add(Item(Localization.LocalizeString("Reload", 59), Keys.None, true, reload));
 
         // The panel sends viewport pixels, which are already this control's coordinates.
         menu.Show(owner, new PointF((float)request.X, (float)request.Y));

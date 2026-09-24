@@ -21,7 +21,7 @@ public class RhinoAIPlugin : PlugIn
             HostUtils.LogDebugEvent($"RhinoAI: could not stage the MCP router ({stagingError}).\n");
         }
 
-        Panels.RegisterPanel(this, typeof(UI.AIPanel), LOC.STR("AI"), LoadPanelIcon(), PanelType.PerDoc);
+        Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
 
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();
