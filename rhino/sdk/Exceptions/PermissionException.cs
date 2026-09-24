@@ -2,4 +2,8 @@ using System;
 
 namespace Rhino.AI;
 
-public class PermissionException(string message) : Exception(message) { }
+/// <summary>
+/// A permission exception
+/// </summary>
+/// <param name="message">The exception reason</param>
+public sealed class PermissionException(string message) : Exception(message) { }

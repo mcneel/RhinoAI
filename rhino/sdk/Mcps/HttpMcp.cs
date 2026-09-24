@@ -11,15 +11,18 @@ using System.Diagnostics;
 
 namespace Rhino.AI;
 
-public sealed class HttpMcp : IMcp
+/// <summary>
+/// A HTTP MCP that drives a server
+/// </summary>
+public sealed class HttpMcp(string name, Uri url) : IMcp
 {
 
-    public string Name { get; }
+    public string Name { get; } = name;
 
     private Dictionary<string, ITool> PrivateTools { get; } = [];
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
 
-    public Uri Url { get; }
+    public Uri Url { get; } = url;
 
     private Process? Process { get; set; }
     private bool Disposed { get; set; }
@@ -28,13 +31,6 @@ public sealed class HttpMcp : IMcp
     private StreamReader? Output => Process?.StandardOutput;
     private StreamReader? Error => Process?.StandardError;
     private StreamWriter? Input => Process?.StandardInput;
-
-
-    public HttpMcp(string name, Uri url)
-    {
-        Name = name;
-        Url = url;
-    }
 
     public async Task<bool> InitAsync(CancellationToken token)
     {
@@ -46,8 +42,8 @@ public sealed class HttpMcp : IMcp
         return ToolReturn.Refused();
     }
 
-    public void RegisterTool(ITool tool)
-        => PrivateTools.Add(tool.Name, tool);
+    public bool RegisterTool(ITool tool)
+        => PrivateTools.TryAdd(tool.Name, tool);
 
     public void Dispose()
     {

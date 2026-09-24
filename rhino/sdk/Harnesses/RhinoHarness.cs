@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
+/// <summary>
+/// A Rhino specific harness, including all Rhino tooling
+/// </summary>
 public sealed class RhinoHarness : GenericHarness
 {
 
@@ -16,12 +19,12 @@ public sealed class RhinoHarness : GenericHarness
     }
 
     // '/Users/sykes/Library/Application Support/McNeel/Rhinoceros/ai/bin/rhino-mcp-router'
-    private string? PrivateResolvedRouter { get; set; }
-    public string ResolveRouter
+    private string? CachedResolvedRouter { get; set; }
+    private string ResolveRouter
     {
         get
         {
-            if (string.IsNullOrEmpty(PrivateResolvedRouter))
+            if (string.IsNullOrEmpty(CachedResolvedRouter))
             {
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string mcneel = Path.Combine(appData, "McNeel");
@@ -29,10 +32,10 @@ public sealed class RhinoHarness : GenericHarness
                 string ai = Path.Combine(rhinoceros, "ai");
                 string bin = Path.Combine(ai, "bin");
                 string router = Path.Combine(bin, "rhino-mcp-router");
-                PrivateResolvedRouter = router;
+                CachedResolvedRouter = router;
             }
 
-            return PrivateResolvedRouter;
+            return CachedResolvedRouter;
         }
     }
 

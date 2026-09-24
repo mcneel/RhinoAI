@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Rhino.AI;
 
 /// <summary>
-/// User specified permissions.
+/// User specified permissions
 /// </summary>
-internal class UserPermissions
+internal static class UserPermissions
 {
 
     public static bool BlockAll { get; set; } = false;

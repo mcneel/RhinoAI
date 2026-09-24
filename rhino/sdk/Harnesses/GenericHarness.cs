@@ -80,7 +80,7 @@ public class GenericHarness : IHarness
 /// <summary>
 /// A request for permission
 /// </summary>
-public class PermissionRequested : EventArgs
+public sealed class PermissionRequested : EventArgs
 {
 
     public bool HasPermission { get; set; } = true;

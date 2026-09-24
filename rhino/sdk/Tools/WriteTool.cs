@@ -6,25 +6,20 @@ using System;
 
 namespace Rhino.AI.Tools;
 
-public class WriteTool : ITool
+/// <summary>
+/// An MCP tool for writing a file to disk. This tool will overwrite any existing file in its place.
+/// </summary>
+public sealed record WriteTool() : Tool("write",
+                                "Used for writing a file to disk. Creates the file if it does not exist, and overwrites it whole if it does",
+                                false,
+                                true,
+                                [
+                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                    new ("data", "The data to write", ToolArgType.String, true),
+                                ])
 {
 
-    public string Name { get; } = "write";
-    public string Description { get; } = "Used for writing a file to disk. Creates the file if it does not exist, and overwrites it whole if it does";
-    public bool ReadOnly { get; } = false;
-    public bool Destructive { get; } = true;
-    public ToolParameter[] Args { get; } = [
-        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
-        new ToolParameter("data", "The data to write", ToolArgType.String, true),
-    ];
-
-    public WriteTool()
-    {
-
-    }
-
-
-    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+    public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call write again with file set to an absolute path.");

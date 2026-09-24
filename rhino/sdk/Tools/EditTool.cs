@@ -6,20 +6,21 @@ using System;
 
 namespace Rhino.AI.Tools;
 
-public class EditTool : ITool
+/// <summary>
+/// A tool for replacing text in a file.
+/// </summary>
+public sealed record EditTool() : Tool("edit",
+                                "Used for replacing an exact piece of text in a file on disk. The old text must appear exactly once in the file",
+                                false,
+                                true,
+                                [
+                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                    new ("old", "The exact text to replace", ToolArgType.String, true),
+                                    new ("new", "The text to replace it with", ToolArgType.String, true),
+                                ])
 {
 
-    public string Name { get; } = "edit";
-    public string Description { get; } = "Used for replacing an exact piece of text in a file on disk. The old text must appear exactly once in the file";
-    public bool ReadOnly { get; } = false;
-    public bool Destructive { get; } = true;    
-    public ToolParameter[] Args { get; } = [
-        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
-        new ToolParameter("old", "The exact text to replace", ToolArgType.String, true),
-        new ToolParameter("new", "The text to replace it with", ToolArgType.String, true),
-    ];
-
-    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+    public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call edit again with file set to an absolute path.");

@@ -11,30 +11,25 @@ using FuzzySharp.PreProcess;
 
 namespace Rhino.AI.Tools;
 
-public class DelegateTool : ITool
+/// <summary>
+/// An MCP tool used for delegating tasks to a SubAgent.
+/// </summary>
+public sealed record DelegateTool() : Tool("delegate",
+                                "Used for delegating tasks with 0 context. This tool creates a sub agent with read-only permissions",
+                                true,
+                                false,
+                                [
+                                    // Agent
+                                    new ("model", "The Model for the SubAgent", ToolArgType.String, true),
+
+                                    // Context
+                                    new ("prompt", "The default prompt for the agent", ToolArgType.String, true),
+
+                                    // TODO : Skills + Tools to enable
+                                ])
 {
 
-    public string Name { get; } = "delegate";
-    public string Description { get; } = "Used for delegating tasks with 0 context. This tool creates a sub agent with read-only permissions";
-    public bool ReadOnly { get; } = true;
-    public bool Destructive { get; } = false;
-    public ToolParameter[] Args { get; } = [
-        
-        // Agent
-        new ToolParameter("model", "The Model for the SubAgent", ToolArgType.String, true),
-
-        // Context
-        new ToolParameter("prompt", "The default prompt for the agent", ToolArgType.String, true),
-        
-        // TODO : Skills + Tools to enable
-    ];
-
-    public DelegateTool()
-    {
-
-    }
-
-    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+    public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         string context = string.Empty;
 

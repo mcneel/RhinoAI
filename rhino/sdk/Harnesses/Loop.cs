@@ -7,6 +7,10 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
+/// <summary>
+/// A harness loop
+/// </summary>
+/// <param name="harness">The harness</param>
 public sealed class Loop(IHarness harness)
 {
 

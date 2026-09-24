@@ -6,24 +6,19 @@ using System;
 
 namespace Rhino.AI.Tools;
 
-public class ReadTool : ITool
+/// <summary>
+/// An MCP tool to read files from disk
+/// </summary>
+public sealed record ReadTool() : Tool("read",
+                                "Used for reading a file on disk",
+                                true,
+                                false,
+                                [
+                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                ])
 {
 
-    public string Name { get; } = "read";
-    public string Description { get; } = "Used for reading a file on disk";
-    public bool ReadOnly { get; } = true;
-    public bool Destructive { get; } = false;
-    public ToolParameter[] Args { get; } = [
-        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
-    ];
-
-    public ReadTool()
-    {
-
-    }
-
-
-    public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+    public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
             return ToolReturn.Failure("file parameter is mandatory", "Call read again with file set to an absolute path.");

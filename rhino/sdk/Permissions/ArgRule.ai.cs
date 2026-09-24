@@ -3,9 +3,9 @@ using System.Globalization;
 
 namespace Rhino.AI;
 
-public enum RuleOperator { Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
+internal enum RuleOperator { Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
 
-public readonly record struct ArgRule(RuleOperator Operator, string Operand)
+internal readonly record struct ArgRule(RuleOperator Operator, string Operand)
 {
 
     public const string Anything = "*";

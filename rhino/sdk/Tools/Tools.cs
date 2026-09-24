@@ -13,11 +13,25 @@ public interface ITool
 
     /// <summary>1-128 characters, case-insensitive, only ASCII characters, No spaces, commas or other special characters besides _</summary>
     public string Name { get; }
+    
+    /// <summary>A description of the tool</summary>
     public string Description { get; }
+    
+    /// <summary>A readonly tool does not make any changes to anything it interacts with</summary>
     public bool ReadOnly { get; }
+
+    /// <summary></summary>
     public bool Destructive { get; }
+
+    /// <summary></summary>
     public ToolParameter[] Args { get; }
 
+    /// <summary>
+    /// A call to 
+    /// </summary>
+    /// <param name="args">The arguments for the tool call</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns></returns>
     public Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token);
 
 }
@@ -72,5 +86,12 @@ public abstract record Tool : ITool
 
 }
 
+/// <summary>
+/// A parameter 
+/// </summary>
+/// <param name="Name">The name of the tool. Please ensure the name uses between 1-128 characters, only ASCII characters, No spaces, commas or other special characters besides _</param>
+/// <param name="Description">A description of the tool type</param>
+/// <param name="Type">The argument type</param>
+/// <param name="Required">Required parameters will be </param>
 public record struct ToolParameter(string Name, string Description, ToolArgType Type, bool Required);
 

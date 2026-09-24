@@ -24,4 +24,7 @@ public sealed record TurnEnd(StopReason Reason = StopReason.EndTurn, int? tokenC
 
 }
 
+/// <summary>
+/// The reason for the turns end
+/// </summary>
 public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other }

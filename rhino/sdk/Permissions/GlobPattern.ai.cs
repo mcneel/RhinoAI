@@ -2,7 +2,7 @@ using System;
 
 namespace Rhino.AI;
 
-public readonly record struct GlobPattern(string Pattern, char Separator, bool IgnoreCase)
+internal readonly record struct GlobPattern(string Pattern, char Separator, bool IgnoreCase)
 {
 
     public bool IsMatch(string text) => IsMatch(Pattern.AsSpan(), text.AsSpan());

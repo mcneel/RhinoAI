@@ -1,8 +1,15 @@
 namespace Rhino.AI;
 
+/// <summary>
+/// A simple default mcp with all the basic tools
+/// </summary>
 public sealed class DefaultToolsMcp : GenericMcp
 {
 
+    /// <summary>
+    /// Creates a default MCP for the given Harness
+    /// </summary>
+    /// <param name="harness">The harness</param>
     public DefaultToolsMcp(IHarness harness) : base("Default Tools")
     {
         RegisterTool(new Tools.DelegateTool());

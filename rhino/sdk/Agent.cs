@@ -15,7 +15,11 @@ namespace Rhino.AI;
 public sealed class Agent(IModel model, IHarness harness, string defaultPrompt = "")
 {
 
-    public List<ITurn> PrivateTurns { get; } = [];
+    private List<ITurn> PrivateTurns { get; } = [];
+
+    /// <summary>
+    /// All turns in the conversation thus far
+    /// </summary>
     public IReadOnlyList<ITurn> Turns => PrivateTurns;
 
     /// <summary>

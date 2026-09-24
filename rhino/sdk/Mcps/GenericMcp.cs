@@ -10,27 +10,23 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
-/// <summary>A simple Mcp</summary>
-public abstract class GenericMcp : IMcp
+/// <summary>A generic MCP</summary>
+public abstract class GenericMcp(string name) : IMcp
 {
 
-    public string Name { get; } = "Unnamed MCP";
+    public string Name { get; } = name;
 
     protected Dictionary<string, ITool> PrivateTools { get; } = [];
 
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
 
-    public GenericMcp(string name)
-    {
-        Name = name;
-    }
-
-    public void RegisterTool(ITool tool)
+    public bool RegisterTool(ITool tool)
     {
         if (!PrivateTools.TryAdd(tool.Name, tool))
-            throw new ArgumentException($"MCP '{Name}' already has a tool called '{tool.Name}'.", nameof(tool));
+            return false;
 
         PrivateTools[tool.Name] = tool;
+        return true;
     }
 
     public Task<bool> InitAsync(CancellationToken token) => Task.FromResult(true);

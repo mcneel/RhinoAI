@@ -3,7 +3,10 @@ using System.Collections.Generic;
 
 namespace Rhino.AI;
 
-public class PermissionSet
+/// <summary>
+/// A set of permissions
+/// </summary>
+public sealed class PermissionSet
 {
 
     public Permissability DefaultPermission { get; set; } = Permissability.Ask;
@@ -97,4 +100,4 @@ public enum Permissability { Always, Ask, Deny };
 
 public record struct ToolArgPermission(string ArgName, Permissability Permissability, string Value);
 
-public record Permission(string ToolName, Permissability Permissability, Dictionary<string, ToolArgPermission> ArgumentPermissions);
+public sealed record Permission(string ToolName, Permissability Permissability, Dictionary<string, ToolArgPermission> ArgumentPermissions);

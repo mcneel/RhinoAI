@@ -11,19 +11,22 @@ using System.Diagnostics;
 
 namespace Rhino.AI;
 
-public sealed class StdioMcp : IMcp
+/// <summary>
+/// A standard input output MCP that drives an executable MCP
+/// </summary>
+public sealed class StdioMcp(string name, Uri process) : IMcp
 {
 
     private const string ProtocolVersion = "2025-06-18";
     private const int RememberedErrorLines = 20;
     private const int GracefulExitMilliseconds = 2000;
 
-    public string Name { get; }
+    public string Name { get; } = name;
 
-    private Dictionary<string, ITool> PrivateTools { get; } = [];
+    private Dictionary<string, ITool> PrivateTools { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
 
-    public Uri ProcessPath { get; }
+    public Uri ProcessPath { get; } = process;
 
     private Process? Process { get; set; }
     private bool Disposed { get; set; }
@@ -35,12 +38,6 @@ public sealed class StdioMcp : IMcp
 
     private Queue<string> RecentErrors { get; } = new(RememberedErrorLines);
     private Task ErrorDrain { get; set; } = Task.CompletedTask;
-
-    public StdioMcp(string name, Uri process)
-    {
-        Name = name;
-        ProcessPath = process;
-    }
 
     public async Task<bool> InitAsync(CancellationToken token)
     {
@@ -332,12 +329,10 @@ public sealed class StdioMcp : IMcp
         PrivateTools.Clear();
     }
 
-    public void RegisterTool(ITool tool)
-    {
-        throw new NotImplementedException();
-    }
+    public bool RegisterTool(ITool tool)
+        => PrivateTools.TryAdd(tool.Name, tool);
 
-    private record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
+    private sealed record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
     {
         public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused();
     }
