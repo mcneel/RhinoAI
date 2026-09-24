@@ -12,7 +12,7 @@ public class RhinoAIPlugin : PlugIn
     private const string IconResourceName = "Rhino.AI.Panel_dark.ico";
     private const string DarkIconResourceName = "Rhino.AI.Panel_dark.ico";
 
-    private CommandInterceptorHost? CommandInterceptors { get; set; }
+    // private CommandInterceptorHost? CommandInterceptors { get; set; }
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
@@ -23,7 +23,7 @@ public class RhinoAIPlugin : PlugIn
 
         Panels.RegisterPanel(this, typeof(UI.AIPanel), LOC.STR("AI"), LoadPanelIcon(), PanelType.PerDoc);
 
-        CommandInterceptors = new CommandInterceptorHost();
+        // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();
         ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
