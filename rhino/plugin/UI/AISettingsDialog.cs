@@ -10,7 +10,7 @@ internal sealed class AISettingsDialog : Dialog
 
     public AISettingsDialog()
     {
-        Title = Rhino.UI.LOC.STR("AI Settings");
+        Title = LOC.STR("AI Settings");
         Padding = new Padding(12);
         Size = new Size(720, 680);
         MinimumSize = new Size(560, 440);
@@ -18,7 +18,7 @@ internal sealed class AISettingsDialog : Dialog
 
         this.UseRhinoStyle();
 
-        Button saveButton = new() { Text = Rhino.UI.LOC.STR("Save") };
+        Button saveButton = new() { Text = LOC.STR("Save") };
         saveButton.Click += (_, _) =>
         {
             if (Panel.TryCommit(out _))
@@ -27,7 +27,7 @@ internal sealed class AISettingsDialog : Dialog
             }
         };
 
-        Button closeButton = new() { Text = Rhino.UI.LOC.STR("Cancel") };
+        Button closeButton = new() { Text = LOC.STR("Cancel") };
         closeButton.Click += (_, _) => Close();
 
         StackLayout buttons = new()
