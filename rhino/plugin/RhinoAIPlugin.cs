@@ -59,7 +59,7 @@ public class RhinoAIPlugin : PlugIn
 
     protected override void OnShutdown()
     {
-        CommandInterceptors?.Dispose();
+        // CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
     }
 
