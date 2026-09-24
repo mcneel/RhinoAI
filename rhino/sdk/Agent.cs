@@ -60,12 +60,24 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
         { "deepseek-flash", DeepSeekModel.Default("deepseek-flash") },
     };
 
+    /// <summary>
+    /// All <see cref="Models.IModel"/>s
+    /// </summary>
     public static IReadOnlyDictionary<string, IModel> Models => PrivateModelMakers;
 
+    /// <summary>
+    /// All available <see cref="Models.IModel"/>s
+    /// </summary>
     public static IEnumerable<IModel> AvailableModels => Models.Values.Where(m => m.Available);
 
+    /// <summary>
+    /// The current <see cref="IHarness"/>
+    /// </summary>
     public IHarness Harness { get; } = harness;
 
+    /// <summary>
+    /// The default prompt of the agent
+    /// </summary>
     public string DefaultPrompt { get; } = defaultPrompt;
 
     // TODO : Enum ??
@@ -104,6 +116,13 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
         return agent;
     }
 
+    /// <summary>
+    /// Sends a message to the assigned model
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
     {
         if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
@@ -144,27 +163,67 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
         return prompt.ToString();
     }
 
+    /// <summary>
+    /// Returns a claude desktop agent that uses the desktop harness
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetClaudeDesktopAgent(string prompt = "")
         => new Agent(new ClaudeDesktopModel("opus"), new ClaudeHarness(), prompt);
 
+    /// <summary>
+    /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     // public static Agent GetCodexDesktopAgent()
     //     => new Agent(new CodexDesktopModel("gpt-6"), new CodexHarness());
 
+    /// <summary>
+    /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetClaudeAgent(string model, string prompt)
         => new Agent(ClaudeModel.Default(model), new GenericHarness(), prompt);
 
+    /// <summary>
+    /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetChatGptAgent(string model, string prompt)
         => new Agent(ChatGptModel.Default(model), new GenericHarness(), prompt);
 
+    /// <summary>
+    /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetGeminiAgent(string model, string prompt)
         => new Agent(GeminiModel.Default(model, "Google"), new GenericHarness(), prompt);
 
+    /// <summary>
+    /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetDeepSeekAgent(string model, string prompt)
         => new Agent(DeepSeekModel.Default(model), new GenericHarness(), prompt);
 
+    /// <summary>
+    /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent GetLMStudioAgent(string model, string prompt)
         => new Agent(LMStudioModel.Default(model), new GenericHarness(), prompt);
 
+    /// <summary>
+    /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
+    /// </summary>
+    /// <param name="prompt">The default prompt</param>
+    /// <returns>An Agent</returns>
     public static Agent FromModel(IModel model, string prompt) => model switch
     {
         ClaudeDesktopModel => GetClaudeDesktopAgent(prompt),

@@ -24,7 +24,7 @@ public interface IModel
     /// <param name="harness">The Harness to use with the model</param>
     /// <param name="turn">The messages to start the conversation with</param>
     /// <param name="token">A Cancellation token</param>
-    /// <returns>The reseponse from the AI Model</returns>
+    /// <returns>The response from the AI Model</returns>
     public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token);
     
 }

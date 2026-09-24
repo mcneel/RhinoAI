@@ -31,7 +31,7 @@ public class CodegenTests
             }
             """);
 
-        Assert.That(output, Does.Contain("public class XToolProxy"));
+        Assert.That(output, Does.Contain("public sealed class XToolProxy"));
         Assert.That(output, Does.Contain("Name = \"x\""));
         Assert.That(output, Does.Contain("Title = \"X\""));
         Assert.That(output, Does.Contain("ReadOnly = true"));

@@ -24,8 +24,18 @@ public interface IHarness
     /// <summary>All of the registered Skills</summary>
     public IReadOnlyDictionary<string, ISkill> Skills { get; }
 
+    /// <summary>
+    /// Adds an <see cref="IMcp"/> to the <see cref="IHarness"/>
+    /// </summary>
+    /// <param name="mcp">An mcp</param>
+    /// <returns><see cref="true"> on success</returns>
     public bool AddMcp(IMcp mcp);
     
+    /// <summary>
+    /// Adds an <see cref="ISkill"/> to the <see cref="IHarness"/>
+    /// </summary>
+    /// <param name="skill">An mcp</param>
+    /// <returns><see cref="true"> on success</returns>
     public bool AddSkill(ISkill skill);
 
 #endregion

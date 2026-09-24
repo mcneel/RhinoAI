@@ -20,18 +20,18 @@ public interface ITool
     /// <summary>A readonly tool does not make any changes to anything it interacts with</summary>
     public bool ReadOnly { get; }
 
-    /// <summary></summary>
+    /// <summary>A destructive tool can alter a file, potentially irrevocably</summary>
     public bool Destructive { get; }
 
-    /// <summary></summary>
+    /// <summary>The available arguments for the <see cref="ITool"/></summary>
     public ToolParameter[] Args { get; }
 
     /// <summary>
-    /// A call to 
+    /// A call to run the tool
     /// </summary>
     /// <param name="args">The arguments for the tool call</param>
     /// <param name="token">A cancellation token</param>
-    /// <returns></returns>
+    /// <returns>The <see cref="ToolReturn"/></returns>
     public Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token);
 
 }
