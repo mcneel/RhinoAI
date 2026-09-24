@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
@@ -35,40 +36,40 @@ internal static class ToolSummary
     private static string Phrase(string toolName, string argsJson, string resultJson, bool failed)
     {
         if (failed)
-            return string.Format(Rhino.UI.LOC.STR("{0} failed"), Verb(toolName));
+            return string.Format(LOC.STR("{0} failed"), Verb(toolName));
 
         return toolName switch
         {
-            "run_python" => Rhino.UI.LOC.STR("ran python"),
-            "run_csharp" => Rhino.UI.LOC.STR("ran C#"),
+            "run_python" => LOC.STR("ran python"),
+            "run_csharp" => LOC.STR("ran C#"),
             "run_command" => RunCommand(argsJson),
             "open_doc" => Opened(argsJson),
-            "save_doc" => Rhino.UI.LOC.STR("saved document"),
-            "close_doc" => Rhino.UI.LOC.STR("closed document"),
-            "get_selection" => Rhino.UI.LOC.STR("read selection"),
-            "set_selection" => Rhino.UI.LOC.STR("set selection"),
-            "list_objects" => Rhino.UI.LOC.STR("listed objects"),
-            "get_commands" => Rhino.UI.LOC.STR("listed commands"),
-            "get_viewport_image" => Rhino.UI.LOC.STR("captured viewport"),
-            "set_camera" => Rhino.UI.LOC.STR("set camera"),
-            "zoom_to_object" => Rhino.UI.LOC.STR("zoomed to object"),
-            "zoom_to_layer" => Rhino.UI.LOC.STR("zoomed to layer"),
-            "set_layer_material" => Rhino.UI.LOC.STR("set layer material"),
-            "ask_user" => Rhino.UI.LOC.STR("asked a question"),
+            "save_doc" => LOC.STR("saved document"),
+            "close_doc" => LOC.STR("closed document"),
+            "get_selection" => LOC.STR("read selection"),
+            "set_selection" => LOC.STR("set selection"),
+            "list_objects" => LOC.STR("listed objects"),
+            "get_commands" => LOC.STR("listed commands"),
+            "get_viewport_image" => LOC.STR("captured viewport"),
+            "set_camera" => LOC.STR("set camera"),
+            "zoom_to_object" => LOC.STR("zoomed to object"),
+            "zoom_to_layer" => LOC.STR("zoomed to layer"),
+            "set_layer_material" => LOC.STR("set layer material"),
+            "ask_user" => LOC.STR("asked a question"),
 
-            "g1_start" or "g2_start" => Rhino.UI.LOC.STR("opened Grasshopper"),
-            "g1_clear_canvas" or "g2_clear_canvas" => Rhino.UI.LOC.STR("cleared the canvas"),
-            "g1_get_canvas_graph" or "g2_get_canvas_graph" => Rhino.UI.LOC.STR("read the canvas"),
-            "g1_search_components" or "g2_search_components" => Rhino.UI.LOC.STR("searched components"),
-            "g1_describe_component" or "g2_describe_component" => Rhino.UI.LOC.STR("described a component"),
+            "g1_start" or "g2_start" => LOC.STR("opened Grasshopper"),
+            "g1_clear_canvas" or "g2_clear_canvas" => LOC.STR("cleared the canvas"),
+            "g1_get_canvas_graph" or "g2_get_canvas_graph" => LOC.STR("read the canvas"),
+            "g1_search_components" or "g2_search_components" => LOC.STR("searched components"),
+            "g1_describe_component" or "g2_describe_component" => LOC.STR("described a component"),
             "g1_place_component" or "g2_place_component" => Placed(argsJson),
-            "g1_place_slider" or "g2_place_slider" => Rhino.UI.LOC.STR("placed a slider"),
-            "g1_connect" or "g2_connect" => Rhino.UI.LOC.STR("wired a connection"),
-            "g1_connect_many" or "g2_connect_many" => Rhino.UI.LOC.STR("wired connections"),
-            "g1_apply_graph" or "g2_apply_graph" => Rhino.UI.LOC.STR("applied a graph"),
+            "g1_place_slider" or "g2_place_slider" => LOC.STR("placed a slider"),
+            "g1_connect" or "g2_connect" => LOC.STR("wired a connection"),
+            "g1_connect_many" or "g2_connect_many" => LOC.STR("wired connections"),
+            "g1_apply_graph" or "g2_apply_graph" => LOC.STR("applied a graph"),
             "g1_solve_graph" or "g2_solve_canvas" => Solved(resultJson),
 
-            null => Rhino.UI.LOC.STR("unknown tool"),
+            null => LOC.STR("unknown tool"),
 
             _ => toolName.Replace("_", ""),
 
@@ -78,29 +79,29 @@ internal static class ToolSummary
     private static string RunCommand(string argsJson)
     {
         return TryGetString(argsJson, "command", out string command) && command.Length > 0
-            ? string.Format(Rhino.UI.LOC.STR("ran {0}"), command)
-            : Rhino.UI.LOC.STR("ran a command");
+            ? string.Format(LOC.STR("ran {0}"), command)
+            : LOC.STR("ran a command");
     }
 
     private static string Opened(string argsJson)
     {
         if (TryGetString(argsJson, "path", out string path) && path.Length > 0)
-            return string.Format(Rhino.UI.LOC.STR("opened {0}"), FileName(path));
-        return Rhino.UI.LOC.STR("opened a document");
+            return string.Format(LOC.STR("opened {0}"), FileName(path));
+        return LOC.STR("opened a document");
     }
 
     private static string Placed(string argsJson)
     {
         if (TryGetString(argsJson, "selector", out string selector) && selector.Length > 0)
-            return string.Format(Rhino.UI.LOC.STR("placed {0}"), selector);
-        return Rhino.UI.LOC.STR("placed a component");
+            return string.Format(LOC.STR("placed {0}"), selector);
+        return LOC.STR("placed a component");
     }
 
     // g*_solve returns { solved, errors, warnings, ... }; surface the diagnostic counts when present.
     private static string Solved(string resultJson)
     {
         if (Parse(resultJson) is not { } doc)
-            return Rhino.UI.LOC.STR("solved the graph");
+            return LOC.STR("solved the graph");
         using (doc)
         {
             JsonElement root = doc.RootElement;
@@ -108,13 +109,13 @@ internal static class ToolSummary
             int warnings = TryGetInt(root, "Warnings", out int w) ? w : 0;
             if (errors > 0)
                 return string.Format(
-                    errors == 1 ? Rhino.UI.LOC.STR("solved: {0} error") : Rhino.UI.LOC.STR("solved: {0} errors"),
+                    errors == 1 ? LOC.STR("solved: {0} error") : LOC.STR("solved: {0} errors"),
                     errors);
             if (warnings > 0)
                 return string.Format(
-                    warnings == 1 ? Rhino.UI.LOC.STR("solved: {0} warning") : Rhino.UI.LOC.STR("solved: {0} warnings"),
+                    warnings == 1 ? LOC.STR("solved: {0} warning") : LOC.STR("solved: {0} warnings"),
                     warnings);
-            return Rhino.UI.LOC.STR("solved the graph");
+            return LOC.STR("solved the graph");
         }
     }
 
@@ -126,10 +127,10 @@ internal static class ToolSummary
         {
             "run_python" => "python",
             "run_csharp" => "C#",
-            "run_command" => Rhino.UI.LOC.STR("command"),
-            "open_doc" => Rhino.UI.LOC.STR("open"),
-            "save_doc" => Rhino.UI.LOC.STR("save"),
-            "close_doc" => Rhino.UI.LOC.STR("close"),
+            "run_command" => LOC.STR("command"),
+            "open_doc" => LOC.STR("open"),
+            "save_doc" => LOC.STR("save"),
+            "close_doc" => LOC.STR("close"),
 
             _ when toolName.StartsWith("g1_") || toolName.StartsWith("g2_") => "Grasshopper",
 

@@ -3,6 +3,7 @@ using System.Reflection;
 
 using Rhino.PlugIns;
 using Rhino.Runtime;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
@@ -22,7 +23,7 @@ public class RhinoAIPlugin : PlugIn
             HostUtils.LogDebugEvent($"RhinoAI: could not stage the MCP router ({stagingError}).\n");
         }
 
-        Rhino.UI.Panels.RegisterPanel(this, typeof(UI.AIPanel), Rhino.UI.LOC.STR("AI"), LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
+        Panels.RegisterPanel(this, typeof(UI.AIPanel), LOC.STR("AI"), LoadPanelIcon(), PanelType.PerDoc);
 
         WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
 
@@ -39,7 +40,7 @@ public class RhinoAIPlugin : PlugIn
 
     // Adds the "AI" settings page to the Rhino Options dialog. Called each time Options is opened, so a
     // fresh page (and panel) is built per open and its state reflects the current settings.
-    protected override void OptionsDialogPages(List<Rhino.UI.OptionsDialogPage> pages)
+    protected override void OptionsDialogPages(List<OptionsDialogPage> pages)
     {
         pages.Add(new AIOptionsPage());
     }
