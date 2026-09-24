@@ -23,6 +23,8 @@ public abstract record ToolArg : IToolArg
 
 public sealed record ToolBoolean(string Name, bool Value) : ToolArg(Name) { }
 
+public record struct ToolNumber(string Name, double Value) : IToolArg;
+
 public sealed record ToolInt(string Name, int Value) : ToolArg(Name) { }
 
 public sealed record ToolPath(string Name, string Value) : ToolArg(Name) { }
