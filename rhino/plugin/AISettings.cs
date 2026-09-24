@@ -44,7 +44,7 @@ internal static class AISettings
 
     public static bool AutoLoadMCP
     {
-        get => Settings.GetBool(nameof(AutoLoadMCP), true);
+        get => Settings.GetBool(nameof(AutoLoadMCP), false);
         set => Settings.SetBool(nameof(AutoLoadMCP), value);
     }
 
