@@ -13,9 +13,9 @@ public class WriteTool : ITool
     public string Description { get; } = "Used for writing a file to disk. Creates the file if it does not exist, and overwrites it whole if it does";
     public bool ReadOnly { get; } = false;
     public bool Destructive { get; } = true;
-    public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
-        new ToolArg("data", "The data to write", ToolArgType.String, true),
+    public ToolParameter[] Args { get; } = [
+        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
+        new ToolParameter("data", "The data to write", ToolArgType.String, true),
     ];
 
     public WriteTool()

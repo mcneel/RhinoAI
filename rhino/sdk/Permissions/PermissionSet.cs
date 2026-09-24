@@ -81,12 +81,12 @@ public class PermissionSet
 
     private static bool MatchesRule(ArgRule rule, IToolArg value) => value switch
     {
-        IToolBoolean boolean => rule.MatchesBoolean(boolean.Value),
-        IToolInt integer => rule.MatchesNumber(integer.Value),
-        IToolNumber number => rule.MatchesNumber(number.Value),
-        IToolPath path => rule.MatchesPath(path.Value),
-        IToolUrl url => rule.MatchesUrl(url.Value),
-        IToolString text => rule.MatchesText(text.Value),
+        ToolBoolean boolean => rule.MatchesBoolean(boolean.Value),
+        ToolInt integer => rule.MatchesNumber(integer.Value),
+        ToolNumber number => rule.MatchesNumber(number.Value),
+        ToolPath path => rule.MatchesPath(path.Value),
+        ToolUrl url => rule.MatchesUrl(url.Value),
+        ToolString text => rule.MatchesText(text.Value),
 
         _ => false
     };

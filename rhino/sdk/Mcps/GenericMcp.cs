@@ -43,13 +43,13 @@ public abstract class GenericMcp : IMcp
         List<IToolArg> supplied = new(args.Count);
         foreach (IToolArg argument in args)
         {
-            if (Declared(tool, argument.Name) is not ToolArg declared)
+            if (Declared(tool, argument.Name) is not ToolParameter declared)
                 return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
 
             supplied.Add(argument);
         }
 
-        foreach (ToolArg declared in tool.Args)
+        foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !supplied.Any(s => string.Equals(s.Name, declared.Name)))
                 return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
@@ -58,9 +58,9 @@ public abstract class GenericMcp : IMcp
         return await tool.UseAsync(supplied, token).ConfigureAwait(false);
     }
 
-    private static ToolArg? Declared(ITool tool, string name)
+    private static ToolParameter? Declared(ITool tool, string name)
     {
-        foreach (ToolArg arg in tool.Args)
+        foreach (ToolParameter arg in tool.Args)
         {
             if (arg.Name == name)
                 return arg;
@@ -70,7 +70,7 @@ public abstract class GenericMcp : IMcp
     }
 
     // Boxing by hand is load bearing: without it every arm converts to JsonNode instead, and a string argument reaches the tool as a JsonValue.
-    private static object? ToValue(ToolArg arg, string value) => arg.Type switch
+    private static object? ToValue(ToolParameter arg, string value) => arg.Type switch
     {
         ToolArgType.String => value,
         ToolArgType.Number => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) ? (object)number : null,

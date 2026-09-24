@@ -13,8 +13,8 @@ public class ReadTool : ITool
     public string Description { get; } = "Used for reading a file on disk";
     public bool ReadOnly { get; } = true;
     public bool Destructive { get; } = false;
-    public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
+    public ToolParameter[] Args { get; } = [
+        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
     ];
 
     public ReadTool()

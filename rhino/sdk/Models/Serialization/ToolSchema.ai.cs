@@ -21,7 +21,7 @@ internal static class ToolSchema
         JsonObject properties = [];
         JsonArray required = [];
 
-        foreach (ToolArg arg in tool.Args)
+        foreach (ToolParameter arg in tool.Args)
         {
             properties[arg.Name] = new JsonObject
             {

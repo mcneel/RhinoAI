@@ -15,7 +15,7 @@ public class ReadSkill : ITool
 
     public bool Destructive => false;
 
-    public ToolArg[] Args => [new ToolArg("name", "The name of the skill.", ToolArgType.String, true)];
+    public ToolParameter[] Args => [new ToolParameter("name", "The name of the skill.", ToolArgType.String, true)];
 
     private Func<string, ISkill?> GetSkillFromKey { get; }
 

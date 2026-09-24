@@ -13,10 +13,10 @@ public class EditTool : ITool
     public string Description { get; } = "Used for replacing an exact piece of text in a file on disk. The old text must appear exactly once in the file";
     public bool ReadOnly { get; } = false;
     public bool Destructive { get; } = true;    
-    public ToolArg[] Args { get; } = [
-        new ToolArg("file", "The absolute file path", ToolArgType.FilePath, true),
-        new ToolArg("old", "The exact text to replace", ToolArgType.String, true),
-        new ToolArg("new", "The text to replace it with", ToolArgType.String, true),
+    public ToolParameter[] Args { get; } = [
+        new ToolParameter("file", "The absolute file path", ToolArgType.FilePath, true),
+        new ToolParameter("old", "The exact text to replace", ToolArgType.String, true),
+        new ToolParameter("new", "The text to replace it with", ToolArgType.String, true),
     ];
 
     public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)

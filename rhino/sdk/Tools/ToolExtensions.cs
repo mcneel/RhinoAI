@@ -9,7 +9,7 @@ internal static class ToolExtensions
     public static bool TryGetString(this IReadOnlyList<IToolArg> args, string name, out string value)
     {
         value = string.Empty;
-        if (Find(args, name) is not IToolString text) return false;
+        if (Find(args, name) is not ToolString text) return false;
 
         value = text.Value;
         return true;
@@ -18,7 +18,7 @@ internal static class ToolExtensions
     public static bool TryGetPath(this IReadOnlyList<IToolArg> args, string name, out string value)
     {
         value = string.Empty;
-        if (Find(args, name) is not IToolPath path) return false;
+        if (Find(args, name) is not ToolPath path) return false;
 
         value = path.Value;
         return true;
@@ -27,7 +27,7 @@ internal static class ToolExtensions
     public static bool TryGetUrl(this IReadOnlyList<IToolArg> args, string name, out string value)
     {
         value = string.Empty;
-        if (Find(args, name) is not IToolUrl url) return false;
+        if (Find(args, name) is not ToolUrl url) return false;
 
         value = url.Value;
         return true;
@@ -36,7 +36,7 @@ internal static class ToolExtensions
     public static bool TryGetSecret(this IReadOnlyList<IToolArg> args, string name, out string value)
     {
         value = string.Empty;
-        if (Find(args, name) is not IToolSecret secret) return false;
+        if (Find(args, name) is not ToolSecret secret) return false;
 
         value = secret.Value;
         return true;
@@ -45,7 +45,7 @@ internal static class ToolExtensions
     public static bool TryGetInt(this IReadOnlyList<IToolArg> args, string name, out int value)
     {
         value = 0;
-        if (Find(args, name) is not IToolInt integer) return false;
+        if (Find(args, name) is not ToolInt integer) return false;
 
         value = integer.Value;
         return true;
@@ -54,7 +54,7 @@ internal static class ToolExtensions
     public static bool TryGetNumber(this IReadOnlyList<IToolArg> args, string name, out double value)
     {
         value = 0;
-        if (Find(args, name) is not IToolNumber number) return false;
+        if (Find(args, name) is not ToolNumber number) return false;
 
         value = number.Value;
         return true;
@@ -63,7 +63,7 @@ internal static class ToolExtensions
     public static bool TryGetBoolean(this IReadOnlyList<IToolArg> args, string name, out bool value)
     {
         value = false;
-        if (Find(args, name) is not IToolBoolean boolean) return false;
+        if (Find(args, name) is not ToolBoolean boolean) return false;
 
         value = boolean.Value;
         return true;

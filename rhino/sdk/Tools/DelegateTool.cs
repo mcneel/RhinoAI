@@ -18,13 +18,13 @@ public class DelegateTool : ITool
     public string Description { get; } = "Used for delegating tasks with 0 context. This tool creates a sub agent with read-only permissions";
     public bool ReadOnly { get; } = true;
     public bool Destructive { get; } = false;
-    public ToolArg[] Args { get; } = [
+    public ToolParameter[] Args { get; } = [
         
         // Agent
-        new ToolArg("model", "The Model for the SubAgent", ToolArgType.String, true),
+        new ToolParameter("model", "The Model for the SubAgent", ToolArgType.String, true),
 
         // Context
-        new ToolArg("prompt", "The default prompt for the agent", ToolArgType.String, true),
+        new ToolParameter("prompt", "The default prompt for the agent", ToolArgType.String, true),
         
         // TODO : Skills + Tools to enable
     ];

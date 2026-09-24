@@ -16,8 +16,8 @@ public class ToolTests
             WriteTool write = new();
 
             IToolArg[] args = [
-                new IToolPath("file", filePath),
-                new IToolString("data", "shmoople")
+                new ToolPath("file", filePath),
+                new ToolString("data", "shmoople")
             ];
 
             ToolReturn result = await write.UseAsync(args, token);
@@ -34,8 +34,8 @@ public class ToolTests
             ReadTool read = new();
 
             IToolArg[] args = [
-                new IToolPath("file", filePath),
-                new IToolString("data", "shmoople")
+                new ToolPath("file", filePath),
+                new ToolString("data", "shmoople")
             ];
 
             ToolReturn result = await read.UseAsync(args, token);

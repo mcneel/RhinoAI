@@ -96,8 +96,8 @@ public class AgentTests
 
         public bool Destructive => false;
 
-        public ToolArg[] Args { get; } = [
-          new ToolArg("city", "The City to check", ToolArgType.String, true)  
+        public ToolParameter[] Args { get; } = [
+          new ToolParameter("city", "The City to check", ToolArgType.String, true)  
         ];
 
         public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)

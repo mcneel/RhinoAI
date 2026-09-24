@@ -16,13 +16,13 @@ internal static class ToolArgs
         {
             arguments[arg.Name] = arg switch
             {
-                IToolBoolean boolean => JsonValue.Create(boolean.Value),
-                IToolInt integer => JsonValue.Create(integer.Value),
-                IToolNumber number => JsonValue.Create(number.Value),
-                IToolPath path => JsonValue.Create(path.Value),
-                IToolUrl url => JsonValue.Create(url.Value),
-                IToolString text => JsonValue.Create(text.Value),
-                IToolSecret secret => JsonValue.Create(secret.Value),
+                ToolBoolean boolean => JsonValue.Create(boolean.Value),
+                ToolInt integer => JsonValue.Create(integer.Value),
+                ToolNumber number => JsonValue.Create(number.Value),
+                ToolPath path => JsonValue.Create(path.Value),
+                ToolUrl url => JsonValue.Create(url.Value),
+                ToolString text => JsonValue.Create(text.Value),
+                ToolSecret secret => JsonValue.Create(secret.Value),
                 
                 _ => throw new NotSupportedException($"{arg.GetType().Name} has no JSON form."),
             };
@@ -60,12 +60,12 @@ internal static class ToolArgs
 
         return type switch
         {
-            ToolArgType.FilePath => new IToolPath(name, text),
-            ToolArgType.URL => new IToolUrl(name, text),
-            ToolArgType.Integer when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer) => new IToolInt(name, integer),
-            ToolArgType.Number when double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) => new IToolNumber(name, number),
-            ToolArgType.Boolean when bool.TryParse(text, out bool flag) => new IToolBoolean(name, flag),
-            _ => new IToolString(name, text),
+            ToolArgType.FilePath => new ToolPath(name, text),
+            ToolArgType.URL => new ToolUrl(name, text),
+            ToolArgType.Integer when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer) => new ToolInt(name, integer),
+            ToolArgType.Number when double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) => new ToolNumber(name, number),
+            ToolArgType.Boolean when bool.TryParse(text, out bool flag) => new ToolBoolean(name, flag),
+            _ => new ToolString(name, text),
         };
     }
 
@@ -82,7 +82,7 @@ internal static class ToolArgs
 
     private static ToolArgType? DeclaredType(ITool? tool, string name)
     {
-        foreach (ToolArg arg in tool?.Args ?? [])
+        foreach (ToolParameter arg in tool?.Args ?? [])
         {
             if (string.Equals(arg.Name, name, StringComparison.OrdinalIgnoreCase) && arg.Type != ToolArgType.Unknown)
                 return arg.Type;

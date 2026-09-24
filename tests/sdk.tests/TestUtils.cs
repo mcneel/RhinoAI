@@ -5,7 +5,7 @@ namespace sdk.tests;
 internal class TestUtils
 {
 
-    public record TestTool(string Name, string Description, ToolArg[] Args) : ITool
+    public record TestTool(string Name, string Description, ToolParameter[] Args) : ITool
     {
         public bool ReadOnly => true;
 

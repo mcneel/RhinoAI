@@ -50,7 +50,7 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task OneOptionalArg(CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Pointless Arg", "DO NOT USE THIS ITS BAD", ToolArgType.String, false)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Pointless Arg", "DO NOT USE THIS ITS BAD", ToolArgType.String, false)])
         {
             Func = async (a, t) =>
             {
@@ -70,7 +70,7 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task OneRequiredArg(CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("shmargle", "Pass shmargle as a string", ToolArgType.String, true)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("shmargle", "Pass shmargle as a string", ToolArgType.String, true)])
         {
             Func = async (a, t) =>
             {
@@ -87,18 +87,18 @@ public class McpTests
         Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
     }
 
-    [TestCase(ToolArgType.String, typeof(IToolString))]
-    [TestCase(ToolArgType.URL, typeof(IToolUrl))]
-    [TestCase(ToolArgType.FilePath, typeof(IToolPath))]
-    [TestCase(ToolArgType.Number, typeof(IToolNumber))]
-    [TestCase(ToolArgType.Integer, typeof(IToolInt))]
-    [TestCase(ToolArgType.Boolean, typeof(IToolBoolean))]
-    // [TestCase(ToolArgType.Array, typeof(IToolArray))]
-    // [TestCase(ToolArgType.Object, typeof(IToolObject))]
+    [TestCase(ToolArgType.String, typeof(ToolString))]
+    [TestCase(ToolArgType.URL, typeof(ToolUrl))]
+    [TestCase(ToolArgType.FilePath, typeof(ToolPath))]
+    [TestCase(ToolArgType.Number, typeof(ToolNumber))]
+    [TestCase(ToolArgType.Integer, typeof(ToolInt))]
+    [TestCase(ToolArgType.Boolean, typeof(ToolBoolean))]
+    // [TestCase(ToolArgType.Array, typeof(ToolArray))]
+    // [TestCase(ToolArgType.Object, typeof(ToolObject))]
     [CancelAfter(5000)]
     public async Task StringArg(ToolArgType arg, Type argType, CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolArg("Shmargle Arg", $"Pass Shmargle as a {arg}", arg, true)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Shmargle Arg", $"Pass Shmargle as a {arg}", arg, true)])
         {
             Func = async (a, t) =>
             {
@@ -129,15 +129,12 @@ public class McpTests
         Assert.That(result.Result == ToolResult.Failure);
     }
 
-    private record TestTool(string Name, string Description, ToolArg[] Args) : ITool
+    private record TestTool(string Name, string Description, ToolParameter[] Args) : Tool(Name, Description, true, false, Args)
     {
-        public bool ReadOnly => true;
-
-        public bool Destructive => false;
 
         public Func<IReadOnlyList<IToolArg>, CancellationToken, Task<ToolReturn>>? Func { get; set; }
 
-        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+        public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
         {
             Task<ToolReturn>? task = (Func?.Invoke(args, token)) ?? throw new NotImplementedException("Misshing Func!");
             return await task;

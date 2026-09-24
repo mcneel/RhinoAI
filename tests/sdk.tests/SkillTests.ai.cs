@@ -39,7 +39,7 @@ public class SkillTests
         Assert.That(systemTurns[1].Prompt, Does.Contain("- boxes: How to draw boxes"));
     }
 
-    [Test, CancelAfter(10_000)]
+    [Test, CancelAfter(5000)]
     public async Task SimpleSkill(CancellationToken token)
     {
         DeepSeekModel model = DeepSeekModel.Default();
@@ -57,7 +57,7 @@ public class SkillTests
         GenericHarness harness = new();
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
-        ToolReturn result = await harness.UseToolAsync("Default Tools", "read_skill", [new IToolString("name", "Boxes")], token);
+        ToolReturn result = await harness.UseToolAsync("Default Tools", "read_skill", [new ToolString("name", "Boxes")], token);
 
         Assert.That(result.Result, Is.EqualTo(ToolResult.Success));
         Assert.That(result.Message, Is.EqualTo("Use the Box command."));

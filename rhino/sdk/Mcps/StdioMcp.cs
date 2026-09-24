@@ -98,7 +98,7 @@ public sealed class StdioMcp : IMcp
         JsonObject arguments = [];
         foreach (IToolArg argument in args)
         {
-            if (Declared(tool, argument.Name) is not ToolArg declared)
+            if (Declared(tool, argument.Name) is not ToolParameter declared)
                 return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
 
             if (ToJson(declared, argument) is not JsonNode value)
@@ -107,7 +107,7 @@ public sealed class StdioMcp : IMcp
             arguments[declared.Name] = value;
         }
 
-        foreach (ToolArg declared in tool.Args)
+        foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !arguments.ContainsKey(declared.Name))
                 return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
@@ -134,9 +134,9 @@ public sealed class StdioMcp : IMcp
             : ToolReturn.Success(message);
     }
 
-    private static ToolArg? Declared(ITool tool, string name)
+    private static ToolParameter? Declared(ITool tool, string name)
     {
-        foreach (ToolArg arg in tool.Args)
+        foreach (ToolParameter arg in tool.Args)
         {
             if (arg.Name == name)
                 return arg;
@@ -145,25 +145,25 @@ public sealed class StdioMcp : IMcp
         return null;
     }
 
-    private static JsonNode? ToJson(ToolArg arg, IToolArg value) => arg.Type switch
+    private static JsonNode? ToJson(ToolParameter arg, IToolArg value) => arg.Type switch
     {
         ToolArgType.String or ToolArgType.URL or ToolArgType.FilePath => Text(value) is string text
             ? JsonValue.Create(text)
             : null,
         ToolArgType.Number => value switch
         {
-            IToolNumber number => JsonValue.Create(number.Value),
-            IToolInt integer => JsonValue.Create((double)integer.Value),
+            ToolNumber number => JsonValue.Create(number.Value),
+            ToolInt integer => JsonValue.Create((double)integer.Value),
             _ => double.TryParse(Text(value), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? JsonValue.Create(parsed) : null,
         },
         ToolArgType.Integer => value switch
         {
-            IToolInt integer => JsonValue.Create(integer.Value),
+            ToolInt integer => JsonValue.Create(integer.Value),
             _ => long.TryParse(Text(value), NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed) ? JsonValue.Create(parsed) : null,
         },
         ToolArgType.Boolean => value switch
         {
-            IToolBoolean boolean => JsonValue.Create(boolean.Value),
+            ToolBoolean boolean => JsonValue.Create(boolean.Value),
             _ => bool.TryParse(Text(value), out bool parsed) ? JsonValue.Create(parsed) : null,
         },
 
@@ -175,19 +175,19 @@ public sealed class StdioMcp : IMcp
 
     private static string? Text(IToolArg arg) => arg switch
     {
-        IToolString text => text.Value,
-        IToolPath path => path.Value,
-        IToolUrl url => url.Value,
-        IToolSecret secret => secret.Value,
+        ToolString text => text.Value,
+        ToolPath path => path.Value,
+        ToolUrl url => url.Value,
+        ToolSecret secret => secret.Value,
         _ => null,
     };
 
     private static string Describe(IToolArg arg) => arg switch
     {
-        IToolSecret => "a secret",
-        IToolBoolean boolean => boolean.Value ? "true" : "false",
-        IToolInt integer => integer.Value.ToString(CultureInfo.InvariantCulture),
-        IToolNumber number => number.Value.ToString(CultureInfo.InvariantCulture),
+        ToolSecret => "a secret",
+        ToolBoolean boolean => boolean.Value ? "true" : "false",
+        ToolInt integer => integer.Value.ToString(CultureInfo.InvariantCulture),
+        ToolNumber number => number.Value.ToString(CultureInfo.InvariantCulture),
         _ => Text(arg) is string text ? $"\"{text}\"" : arg.GetType().Name,
     };
 
@@ -203,7 +203,7 @@ public sealed class StdioMcp : IMcp
         }
     }
 
-    private static ToolArg[] ToArgs(JsonNode? inputSchema)
+    private static ToolParameter[] ToArgs(JsonNode? inputSchema)
     {
         if (inputSchema?["properties"] is not JsonObject properties)
             return [];
@@ -215,7 +215,7 @@ public sealed class StdioMcp : IMcp
                 required.Add(value);
         }
 
-        List<ToolArg> args = new(properties.Count);
+        List<ToolParameter> args = new(properties.Count);
         foreach (KeyValuePair<string, JsonNode?> property in properties)
         {
             args.Add(new(
@@ -337,7 +337,7 @@ public sealed class StdioMcp : IMcp
         throw new NotImplementedException();
     }
 
-    private record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolArg[] Args) : ITool
+    private record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
     {
         public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused();
     }
