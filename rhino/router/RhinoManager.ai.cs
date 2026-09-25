@@ -105,7 +105,7 @@ public class RhinoManager(
 #if DEBUG
         return config.DefaultVersion;
 #else
-        IReadOnlyList<string> usable = RhinoLocator.ListVersionsWithPlugin();
+        IReadOnlyList<string> usable = [.. RhinoLocator.ListInstalledVersions()];
         return usable.Contains(config.DefaultVersion)
             ? config.DefaultVersion
             : usable.FirstOrDefault() ?? config.DefaultVersion;
@@ -151,11 +151,6 @@ public class RhinoManager(
         {
             IReadOnlyDictionary<string, string>? overrides = config.RhinoExeOverrides;
             string rhinoExe = RhinoLocator.ResolveRhinoExe(version, overrides);
-
-#if !DEBUG
-            if (!RhinoLocator.IsPluginInstalled(version))
-                throw new PluginNotInstalledException(version, RhinoLocator.ListVersionsWithPlugin());
-#endif
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
