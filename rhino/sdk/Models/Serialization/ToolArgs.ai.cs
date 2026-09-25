@@ -34,6 +34,21 @@ internal static class ToolArgs
     public static string Describe(string name, IReadOnlyList<IToolArg> args)
         => new JsonObject { ["name"] = name, ["args"] = ToJson(args) }.ToJsonString();
 
+    public static JsonNode? Parse(string vendor, string toolName, string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+
+        try
+        {
+            return JsonNode.Parse(json);
+        }
+        catch (JsonException e)
+        {
+            throw new JsonException($"{vendor} sent malformed arguments for tool '{toolName}': {json}", e);
+        }
+    }
+
     public static IReadOnlyList<IToolArg> FromJson(IHarness harness, string toolName, JsonNode? args)
     {
         if (args is not JsonObject arguments)

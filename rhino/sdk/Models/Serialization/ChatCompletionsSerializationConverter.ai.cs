@@ -134,12 +134,12 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         },
     };
 
-    private static ToolTurn ToolCall(IHarness harness, JsonObject call)
+    private ToolTurn ToolCall(IHarness harness, JsonObject call)
     {
         JsonObject? function = call["function"] as JsonObject;
 
         string name = (string?)function?["name"] ?? string.Empty;
-        JsonNode? arguments = (string?)function?["arguments"] is string json && json.Length > 0 ? JsonNode.Parse(json) : null;
+        JsonNode? arguments = ToolArgs.Parse(Vendor, name, (string?)function?["arguments"]);
 
         return new ToolTurn((string?)call["id"] ?? string.Empty, name, ToolArgs.FromJson(harness, name, arguments));
     }

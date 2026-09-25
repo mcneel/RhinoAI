@@ -117,10 +117,10 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         _ => null,
     };
 
-    private static ToolTurn ToolCall(IHarness harness, JsonObject item)
+    private ToolTurn ToolCall(IHarness harness, JsonObject item)
     {
         string name = (string?)item["name"] ?? string.Empty;
-        JsonNode? arguments = (string?)item["arguments"] is string json && json.Length > 0 ? JsonNode.Parse(json) : null;
+        JsonNode? arguments = ToolArgs.Parse(Vendor, name, (string?)item["arguments"]);
 
         return new ToolTurn((string?)item["call_id"] ?? string.Empty, name, ToolArgs.FromJson(harness, name, arguments));
     }
