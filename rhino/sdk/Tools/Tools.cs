@@ -93,5 +93,21 @@ public abstract record Tool : ITool
 /// <param name="Description">A description of the tool type</param>
 /// <param name="Type">The argument type</param>
 /// <param name="Required">Required parameters will be </param>
-public record struct ToolParameter(string Name, string Description, ToolArgType Type, bool Required);
+public record struct ToolParameter
+{
+    public string Name { get; }
+    public string Description { get; }
+    public ToolArgType Type { get; }
+    public bool Required { get;  }
+    
 
+    public ToolParameter(string name, string description, ToolArgType type, bool required)
+    {
+        Tool.ValidateName(name);
+        Name = name;
+        Description = description;
+        Type = type;
+        Required = required;
+    }
+    
+}

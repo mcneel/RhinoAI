@@ -52,7 +52,7 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task OneOptionalArg(CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Pointless Arg", "DO NOT USE THIS ITS BAD", ToolArgType.String, false)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Pointless", "DO NOT USE THIS ITS BAD", ToolArgType.String, false)])
         {
             Func = async (a, t) =>
             {
@@ -100,7 +100,7 @@ public class McpTests
     [CancelAfter(5000)]
     public async Task StringArg(ToolArgType arg, Type argType, CancellationToken token)
     {
-        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Shmargle Arg", $"Pass Shmargle as a {arg}", arg, true)])
+        TestTool tool = new("Bloogle", "Tells you what the Bloogle is", [new ToolParameter("Arg", $"Pass Shmargle as a {arg}", arg, true)])
         {
             Func = async (a, t) =>
             {
