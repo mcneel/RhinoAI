@@ -14,7 +14,7 @@ namespace Rhino.AI.Tools;
 /// <summary>
 /// An MCP tool used for delegating tasks to a SubAgent.
 /// </summary>
-public sealed record DelegateTool() : Tool("delegate",
+public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
                                 "Used for delegating tasks with 0 context. This tool creates a sub agent with read-only permissions",
                                 true,
                                 false,
@@ -28,6 +28,8 @@ public sealed record DelegateTool() : Tool("delegate",
                                     // TODO : Skills + Tools to enable
                                 ])
 {
+
+    private PlugIns.PlugInToken Token { get; } = token;
 
     public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
@@ -62,7 +64,7 @@ public sealed record DelegateTool() : Tool("delegate",
             return ToolReturn.Failure($"{model.Name} is not available", $"Try one of {string.Join(", ", Agent.AvailableModels.Select(m => m.Name))}");
         }
 
-        Agent agent = Agent.FromModel(model, prompt);
+        Agent agent = Agent.FromModel(Token, model, prompt);
         IEnumerable<ITurn> turns = await agent.SendAsync(context, token).ConfigureAwait(false);
 
         StringBuilder report = new();

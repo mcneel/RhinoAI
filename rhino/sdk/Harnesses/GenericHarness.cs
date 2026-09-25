@@ -25,10 +25,10 @@ public class GenericHarness : IHarness
 
     public PermissionSet Permissions { get; } = new PermissionSet();
 
-    public GenericHarness()
+    public GenericHarness(PlugIns.PlugInToken token)
     {
         Loop = new(this);
-        AddMcp(new DefaultToolsMcp(this));
+        AddMcp(new DefaultToolsMcp(this, token));
     }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)

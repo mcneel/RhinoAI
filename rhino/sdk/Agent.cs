@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -5,15 +6,17 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using Rhino.AI.Models;
-using System;
+using Rhino.AI.PlugIns;
 
 namespace Rhino.AI;
 
 /// <summary>
 /// The Agent is the controller of all the AI parts.
 /// </summary>
-public sealed class Agent(IModel model, IHarness harness, string defaultPrompt = "")
+public sealed class Agent(PlugInToken token, IModel model, IHarness harness, string defaultPrompt = "")
 {
+
+    private PlugInToken Token { get; } = token;
 
     private List<ITurn> PrivateTurns { get; } = [];
 
@@ -96,7 +99,7 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
     /// <returns>A freshly made agent with all of the state copied safely</returns>
     internal Agent WithNewModel(IModel model)
     {
-        Agent agent = new(model, Harness, DefaultPrompt);
+        Agent agent = new(Token, model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;
     }
@@ -111,7 +114,7 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
         // Finds the first Agent or Vendor that has permission
         // TODO : Check existing models
         IModel model = default!;
-        Agent agent = new(model, Harness, DefaultPrompt);
+        Agent agent = new(Token, model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;
     }
@@ -125,6 +128,9 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
     {
+        if (!PlugInRegistry.HasPermission(Token))
+            throw new PermissionException($"PlugIn {2} does not have permission");
+
         if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
             throw new PermissionException("Model or Vendor does not have permission.");
 
@@ -168,75 +174,75 @@ public sealed class Agent(IModel model, IHarness harness, string defaultPrompt =
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeDesktopAgent(string prompt = "")
-        => new Agent(new ClaudeDesktopModel("opus"), new ClaudeHarness(), prompt);
+    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string prompt = "")
+        => new Agent(token, new ClaudeDesktopModel("opus"), new ClaudeHarness(), prompt);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    // public static Agent GetCodexDesktopAgent()
-    //     => new Agent(new CodexDesktopModel("gpt-6"), new CodexHarness());
+    // public static Agent GetCodexDesktopAgent(PlugIns.PlugInPermission token, )
+    //     => new Agent(token, new CodexDesktopModel("gpt-6"), new CodexHarness());
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeAgent(string model, string prompt)
-        => new Agent(ClaudeModel.Default(model), new GenericHarness(), prompt);
+    public static Agent GetClaudeAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new Agent(token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetChatGptAgent(string model, string prompt)
-        => new Agent(ChatGptModel.Default(model), new GenericHarness(), prompt);
+    public static Agent GetChatGptAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new Agent(token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetGeminiAgent(string model, string prompt)
-        => new Agent(GeminiModel.Default(model, "Google"), new GenericHarness(), prompt);
+    public static Agent GetGeminiAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new Agent(token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetDeepSeekAgent(string model, string prompt)
-        => new Agent(DeepSeekModel.Default(model), new GenericHarness(), prompt);
+    public static Agent GetDeepSeekAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new Agent(token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetLMStudioAgent(string model, string prompt)
-        => new Agent(LMStudioModel.Default(model), new GenericHarness(), prompt);
+    public static Agent GetLMStudioAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new Agent(token, LMStudioModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent FromModel(IModel model, string prompt) => model switch
+    public static Agent FromModel(PlugInToken token, IModel model, string prompt) => model switch
     {
-        ClaudeDesktopModel => GetClaudeDesktopAgent(prompt),
+        ClaudeDesktopModel => GetClaudeDesktopAgent(token, prompt),
         // CodexDesktopModel => GetCodexDesktopAgent(prompt),
 
         // TODO : fallthrough might be sufficient
-        DeepSeekModel => GetDeepSeekAgent(model.Name, prompt),
-        ClaudeModel => GetClaudeAgent(model.Name, prompt),
-        ChatGptModel => GetChatGptAgent(model.Name, prompt),
-        GeminiModel => GetGeminiAgent(model.Name, prompt),
-        LMStudioModel => GetLMStudioAgent(model.Name, prompt),
+        DeepSeekModel => GetDeepSeekAgent(token, model.Name, prompt),
+        ClaudeModel => GetClaudeAgent(token, model.Name, prompt),
+        ChatGptModel => GetChatGptAgent(token, model.Name, prompt),
+        GeminiModel => GetGeminiAgent(token, model.Name, prompt),
+        LMStudioModel => GetLMStudioAgent(token, model.Name, prompt),
 
-        _ => new Agent(model, new GenericHarness(), prompt),
+        _ => new Agent(token, model, new GenericHarness(token), prompt),
     };
 
 

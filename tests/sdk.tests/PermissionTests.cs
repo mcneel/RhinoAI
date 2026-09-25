@@ -6,14 +6,16 @@ namespace sdk.tests;
 
 public class PermissionTests
 {
+    
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
     [Test, CancelAfter(5000)]
     public async Task PermissionRequested(CancellationToken token)
     {
         bool permissionRequested = false;
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         MemoryMcp mcp = new("Smoople");
         mcp.RegisterTool(new TestUtils.TestTool("Smoople", "The Smoople Tool", [])
@@ -34,8 +36,8 @@ public class PermissionTests
     public async Task BlockedTool(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         MemoryMcp mcp = new ("Smoople");
         mcp.RegisterTool(new TestUtils.TestTool("Smoople", "The Smoople Tool", []));

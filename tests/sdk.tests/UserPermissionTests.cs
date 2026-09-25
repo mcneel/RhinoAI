@@ -6,6 +6,8 @@ namespace sdk.tests;
 [NonParallelizable]
 public class UserPermissionTests
 {
+    
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
     [SetUp]
     public void SetUp()
@@ -23,8 +25,8 @@ public class UserPermissionTests
     public void DenyVendor(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         UserPermissions.BlockedVendors.Add(deepSeek.Vendor);
 
@@ -35,8 +37,8 @@ public class UserPermissionTests
     public void DenyModel(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         UserPermissions.BlockedModels.Add(deepSeek.Name);
 

@@ -7,6 +7,8 @@ namespace sdk.tests;
 public class AgentTests
 {
 
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
+
     [TestCase("completions")]
     [TestCase("anthropic")]
     [TestCase("responses")]
@@ -25,9 +27,9 @@ public class AgentTests
             "responses" => DeepSeekModel.Responses("deepseek-flash"),
             _ => throw new ArgumentOutOfRangeException(nameof(protocol)),
         };
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddMcp(mcp);
-        Agent agent = new(deepSeek, harness);
+        Agent agent = new(Token, deepSeek, harness);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
@@ -44,9 +46,9 @@ public class AgentTests
         mcp.RegisterTool(tool);
 
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddMcp(mcp);
-        Agent agent = new(deepSeek, harness);
+        Agent agent = new(Token, deepSeek, harness);
 
         harness.PermissionRequested += (_, e) => e.HasPermission = false;
 
@@ -63,9 +65,9 @@ public class AgentTests
         mcp.RegisterTool(tool);
 
         LMStudioModel lmStudio = LMStudioModel.Default("qwen/qwen3-8b");
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddMcp(mcp);
-        Agent agent = new(lmStudio, harness);
+        Agent agent = new(Token, lmStudio, harness);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
@@ -79,7 +81,7 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetClaudeDesktopAgent();
+        Agent agent = Agent.GetClaudeDesktopAgent(Token);
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);

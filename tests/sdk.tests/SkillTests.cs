@@ -5,6 +5,7 @@ namespace sdk.tests;
 
 public class SkillTests
 {
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
     private sealed class RecordingModel : IModel
     {
@@ -27,9 +28,9 @@ public class SkillTests
     public async Task SkillsAreListedOnce(CancellationToken token)
     {
         RecordingModel model = new();
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
-        Agent agent = new(model, harness, "Be helpful.");
+        Agent agent = new(Token, model, harness, "Be helpful.");
 
         await agent.SendAsync("first", token);
         await agent.SendAsync("second", token);
@@ -43,9 +44,9 @@ public class SkillTests
     public async Task SimpleSkill(CancellationToken token)
     {
         DeepSeekModel model = DeepSeekModel.Default();
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddSkill(new Skill("Smoofle", "Teaches you about a Smoofle.", "A Smoofle is a large orange chicken with wheels."));
-        Agent agent = new(model, harness, "Be helpful.");
+        Agent agent = new(Token, model, harness, "Be helpful.");
 
         IEnumerable<ITurn> turns = await agent.SendAsync("What is a Smoofle?", token);
         Assert.That(turns, Turns.EndsWith("large", "orange", "chicken", "wheels"));
@@ -54,7 +55,7 @@ public class SkillTests
     [Test, CancelAfter(5000)]
     public async Task ReadSkillReturnsSkillData(CancellationToken token)
     {
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
         ToolReturn result = await harness.UseToolAsync("Default Tools", "read_skill", [new ToolString("name", "Boxes")], token);
@@ -66,7 +67,7 @@ public class SkillTests
     [Test]
     public void DuplicateSkillIsRejected()
     {
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         Assert.That(harness.AddSkill(new Skill("boxes", "a", "a")), Is.True);
         Assert.That(harness.AddSkill(new Skill("Boxes", "b", "b")), Is.False);
     }

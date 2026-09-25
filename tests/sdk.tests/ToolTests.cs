@@ -7,6 +7,8 @@ namespace sdk.tests;
 public class ToolTests
 {
 
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
+
     [Test, CancelAfter(5000)]
     public async Task ReadWriteToolSuccess(CancellationToken token)
     {
@@ -63,8 +65,8 @@ public class ToolTests
     public async Task simpleDelegation(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a {DeepSeekModel.Default().Name} subagent to write a letter of resignation from its job as a subagent", token);
         Assert.That(turns, Turns.EndsWith("resign"));
@@ -74,8 +76,8 @@ public class ToolTests
     public async Task FuzzyDelegation(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
-        Agent agent = new(deepSeek, harness);
+        GenericHarness harness = new(Token);
+        Agent agent = new(Token, deepSeek, harness);
 
         IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a subagent to write a letter of resignation from its job as a subagent", token);
         Assert.That(turns, Turns.EndsWith("resign"));

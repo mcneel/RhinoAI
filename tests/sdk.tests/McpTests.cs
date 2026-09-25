@@ -6,6 +6,8 @@ namespace sdk.tests;
 
 public class McpTests
 {
+    
+    private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
     private Agent Agent { get; }
 
@@ -14,9 +16,9 @@ public class McpTests
     public McpTests()
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
         harness.AddMcp(Mcp);
-        Agent = new(deepSeek, harness);
+        Agent = new(Token, deepSeek, harness);
     }
 
     [OneTimeTearDown]
@@ -118,7 +120,7 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task FuzzyTool(CancellationToken token)
     {
-        GenericHarness harness = new();
+        GenericHarness harness = new(Token);
 
         TestTool tool = new("read", "", []);
         Mcp.RegisterTool(tool);

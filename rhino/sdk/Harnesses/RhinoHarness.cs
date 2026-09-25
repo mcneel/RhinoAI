@@ -12,7 +12,7 @@ namespace Rhino.AI;
 public sealed class RhinoHarness : GenericHarness
 {
 
-    public RhinoHarness() : base()
+    public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
         StdioMcp rhinoMcp = new("rhino", new Uri(ResolveRouter));
         AddMcp(rhinoMcp);
