@@ -15,7 +15,7 @@ public static class PlugInRegistry
     private static Dictionary<Assembly, PlugInToken> Tokens { get; } = [];
 
     /// <summary>
-    /// Register a PlugIn in the permissions
+    /// Register a PlugIn in the permissions system. This method will always return the same token instance to the assembly that calls it.
     /// </summary>
     /// <returns>A Token for the requesting Assembly</returns>
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization | MethodImplOptions.Synchronized)]
