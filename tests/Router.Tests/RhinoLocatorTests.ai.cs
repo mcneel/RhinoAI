@@ -18,13 +18,6 @@ public class RhinoLocatorTests
         Assert.That(RhinoLocator.KnownVersionTokens, Is.EquivalentTo(new[] { "8", "9", "BETA", "WIP" }));
     }
 
-    [Test]
-    public void Versions_with_plugin_are_a_subset_of_installed_versions()
-    {
-        Assert.That(RhinoLocator.ListVersionsWithPlugin(),
-            Is.SubsetOf(RhinoLocator.ListInstalledVersions()));
-    }
-
     // "9" and "WIP" are deliberate aliases for the current WIP install; the
     // documented "8" token is distinct. This pins the aliasing so a future
     // edit can't silently make "9" mean a non-WIP install on one platform only.
@@ -34,15 +27,5 @@ public class RhinoLocatorTests
         Assert.That(RhinoLocator.KnownVersionTokens, Does.Contain("9"));
         Assert.That(RhinoLocator.KnownVersionTokens, Does.Contain("WIP"));
         Assert.That(RhinoLocator.KnownVersionTokens, Does.Contain("8"));
-    }
-
-    // WIP/BETA share Rhino 9's "9.0" folder; a literal "WIP" folder was the plugin_not_installed bug.
-    [TestCase("9", "9.0")]
-    [TestCase("WIP", "9.0")]
-    [TestCase("BETA", "9.0")]
-    [TestCase("8", "8.0")]
-    public void Maps_version_token_to_yak_packages_folder(string version, string expected)
-    {
-        Assert.That(RhinoLocator.YakPackagesFolder(version), Is.EqualTo(expected));
     }
 }

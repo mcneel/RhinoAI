@@ -128,42 +128,4 @@ public static class RhinoLocator
                 yield return version;
         }
     }
-
-    public static IReadOnlyList<string> ListVersionsWithPlugin() =>
-        [.. ListInstalledVersions().Where(IsPluginInstalled)];
-
-    // Must match rhino/plugin/manifest.yml `name`.
-    private const string PluginPackageName = "Rhino-MCP-Platform";
-
-    public static bool IsPluginInstalled(string version)
-    {
-        string? packagesRoot = YakPackagesRoot();
-        if (packagesRoot is null)
-            return true; // unknown platform: can't check, so don't block a launch
-
-        return Directory.Exists(Path.Combine(packagesRoot, YakPackagesFolder(version), PluginPackageName));
-    }
-
-    // The Rhino 9 family (9/BETA/WIP) is one install sharing yak's "9.0" folder, so WIP must probe there.
-    internal static string YakPackagesFolder(string version)
-    {
-        if (VersionMatch.IsCompatible(version, "9"))
-            return "9.0";
-        return double.TryParse(version, out double major) ? $"{(int)major}.0" : version;
-    }
-
-    private static string? YakPackagesRoot()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "McNeel", "Rhinoceros", "packages");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Application Support", "McNeel", "Rhinoceros", "packages");
-
-        return null;
-    }
 }

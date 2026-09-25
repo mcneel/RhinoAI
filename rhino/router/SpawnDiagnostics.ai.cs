@@ -21,10 +21,6 @@ public static class SpawnDiagnostics
                 diagnosis = new("rhino_not_installed", fnf.Message);
                 return true;
 
-            case PluginNotInstalledException pnie:
-                diagnosis = new("plugin_not_installed", pnie.Message);
-                return true;
-
             case TimeoutException te:
                 diagnosis = new(
                     "startup_timeout",
