@@ -72,7 +72,7 @@ public class ToolTests
         Assert.That(turns, Turns.EndsWith("resign"));
     }
 
-    [Test, CancelAfter(10_000)]
+    [Test, CancelAfter(40_000)]
     public async Task FuzzyDelegation(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();

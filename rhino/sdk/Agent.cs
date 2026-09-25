@@ -30,6 +30,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     public IModel Model { get; } = model;
 
+    // TODO : Deserialize the Definitions.json
     private static Dictionary<string, IModel> PrivateModelMakers { get; } = new(StringComparer.OrdinalIgnoreCase) {
         { "default", DeepSeekModel.Default() },
 
