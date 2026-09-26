@@ -1,3 +1,0 @@
-[submodule "tests/ngentic"]
-	path = tests/ngentic
-	url = https://github.com/clicky/ngentic.git

@@ -10,8 +10,7 @@ namespace Rhino.AI.Integration.Tests.Harness;
 // fail loud.
 //
 // `Payload` is JsonElement? (vs the router's JsonNode?) because tests only
-// read; JsonElement is the natural shape for inspection and plugs into the
-// Ngentic Json.* constraints without conversion.
+// read; JsonElement is the natural shape for inspection.
 public sealed record ReturnResult(
     [property: JsonPropertyName("payload")] JsonElement? Payload,
     [property: JsonPropertyName("error")] ErrorInfo? Error = null,
