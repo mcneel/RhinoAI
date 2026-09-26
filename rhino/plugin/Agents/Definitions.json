@@ -18,7 +18,7 @@
           "%USERPROFILE%/.local/share/claude/versions/*",
           "%USERPROFILE%/Library/Application Support/Claude/claude-code/**/claude.app/Contents/MacOS/claude",
           "/opt/homebrew/bin/claude",
-          "/usr/local/bin/claude",
+          "/usr/local/bin/claude"
         ]
       },
       "models": [

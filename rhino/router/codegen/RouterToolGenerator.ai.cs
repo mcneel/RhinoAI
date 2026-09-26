@@ -160,7 +160,7 @@ public class RouterToolGenerator : IIncrementalGenerator
         var className = $"{tool.ClassName}Proxy";
 
         sb.AppendLine("[global::ModelContextProtocol.Server.McpServerToolType]");
-        sb.AppendLine($"public class {className}(global::Rhino.AI.Router.ProxyDispatcher proxy)");
+        sb.AppendLine($"public sealed class {className}(global::Rhino.AI.Router.ProxyDispatcher proxy)");
         sb.AppendLine("{");
         // Always emit ReadOnly + Destructive so every router proxy carries the
         // hint annotations Anthropic's connector-submission policy requires.
