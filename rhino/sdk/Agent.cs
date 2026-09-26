@@ -150,6 +150,9 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         startTurns.Add(new MessageTurn(message));
 
         IEnumerable<ITurn> turns = await Harness.LoopAsync(this, startTurns, token).ConfigureAwait(false);
+
+        Statistics.PlugInStatistics.Collect(this, Token, turns);
+
         PrivateTurns.Clear();
         PrivateTurns.AddRange(turns);
 
