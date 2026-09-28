@@ -67,7 +67,8 @@ internal sealed record PanelCapabilities(
     bool Attachments,
     bool ViewportCapture,
     bool UndoTurn,
-    bool Grasshopper);
+    bool Grasshopper,
+    bool PluginCommands);
 
 internal sealed record PanelAgent(
     string Name,
