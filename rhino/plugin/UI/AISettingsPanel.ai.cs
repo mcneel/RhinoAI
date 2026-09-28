@@ -545,6 +545,8 @@ internal sealed class AISettingsPanel : Panel
                 error = Localization.LocalizeString("MCP config must be a JSON object.", 40);
                 return false;
             }
+            if (!doc.RootElement.EnumerateObject().Any())
+                return true;
             if (!doc.RootElement.TryGetProperty("mcpServers", out JsonElement servers)
                 || servers.ValueKind != JsonValueKind.Object)
             {
