@@ -61,6 +61,7 @@ public class RhinoAIPlugin : PlugIn
     {
         // CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
+        ScriptProjects.ScriptProjectStartup.DeleteRegistryCache();
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;
