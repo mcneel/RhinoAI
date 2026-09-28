@@ -469,6 +469,12 @@ internal partial class AIPanelViewModel : IDisposable
 
 #region TO THE PANEL
 
+#if R9 && NETCOREAPP
+    private const bool PluginCommandsAvailable = true;
+#else
+    private const bool PluginCommandsAvailable = false;
+#endif
+
     private void SendEnvironment()
     {
         Bridge.Post(new HelloEvent(
@@ -477,7 +483,7 @@ internal partial class AIPanelViewModel : IDisposable
                 RhinoApp.Version.ToString(),
                 OperatingSystem.IsWindows() ? "windows" : "macos",
                 Document is { } doc ? DocTitle(doc) : "Untitled",
-                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true)),
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true, PluginCommands: PluginCommandsAvailable)),
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 

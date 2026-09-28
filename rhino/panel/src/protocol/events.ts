@@ -174,6 +174,7 @@ export interface HostInfo {
     viewportCapture: boolean;
     undoTurn: boolean;
     grasshopper: boolean;
+    pluginCommands: boolean;
   };
 }
 

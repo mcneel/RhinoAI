@@ -2,11 +2,14 @@ import { el, when } from '../core/dom.js';
 import type { Child } from '../core/dom.js';
 import { t } from '../i18n/t.js';
 import type { StringKey } from '../i18n/strings.js';
+import type { HostInfo } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
 
-const STARTERS: readonly { icon: IconName; key: StringKey }[] = [
-  { icon: 'terminal', key: 'empty.starterCommand' },
+type Capability = keyof HostInfo['capabilities'];
+
+const STARTERS: readonly { icon: IconName; key: StringKey; requires?: Capability }[] = [
+  { icon: 'terminal', key: 'empty.starterCommand', requires: 'pluginCommands' },
   { icon: 'graph', key: 'empty.starterTower' },
   { icon: 'layers', key: 'empty.starterLayers' },
 ];
@@ -28,7 +31,9 @@ export function emptyState(ctx: PanelContext): Child {
         el(
           'div',
           { class: 'starters' },
-          ...STARTERS.map((starter) =>
+          ...STARTERS.filter(
+            (starter) => !starter.requires || ctx.store.host()?.capabilities[starter.requires] === true,
+          ).map((starter) =>
             el(
               'button',
               { class: 'starter', type: 'button', onClick: () => ctx.submit(t(starter.key)) },
