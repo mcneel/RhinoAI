@@ -1,4 +1,4 @@
-#if R9
+#if R9 && NETCOREAPP
 using Rhino.AI.ScriptProjects;
 
 namespace Rhino.AI.Tools;
