@@ -89,7 +89,7 @@ public class AgentTests
         List<ITurn> transcript = turns.ToList();
 
         Assert.That(transcript, Is.Not.Empty);
-        Assert.That(transcript.Last(), Is.EqualTo(new TurnEnd(StopReason.EndTurn)));
+        Assert.That(transcript.Last(), Is.InstanceOf<TurnEnd>().With.Property(nameof(TurnEnd.Reason)).EqualTo(StopReason.EndTurn));
         Assert.That(transcript[^2], Is.InstanceOf<MessageTurn>());
 
         MessageTurn answer = (MessageTurn)transcript[^2];
