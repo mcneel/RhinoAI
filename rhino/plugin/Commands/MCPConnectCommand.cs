@@ -1,14 +1,13 @@
 using Eto.Drawing;
 using Eto.Forms;
 
-using Rhino.UI;
 using RhinoCommand = Rhino.Commands.Command;
 
 namespace Rhino.AI;
 
 public class MCPConnectCommand : RhinoCommand
 {
-    public override string EnglishName => LOC.COMMANDNAME("MCPConnect");
+    public override string EnglishName => Rhino.UI.LOC.COMMANDNAME("MCPConnect");
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 
