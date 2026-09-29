@@ -17,7 +17,10 @@ public sealed record SystemTurn(string Prompt) : ITurn
     public int? TokenCount => null;
 
     [JsonIgnore]
-    public TimeSpan Duration => TimeSpan.Zero;
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
+
+    [JsonIgnore]
+    public TimeSpan? Duration => null;
 
     public string Data => Prompt;
 

@@ -6,7 +6,7 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-public sealed record ToolTurn(string Id, string Name, IReadOnlyList<IToolArg> Args, ThoughtSignature? Signature = null, TimeSpan span = default, int? tokenCount = null) : ITurn
+public sealed record ToolTurn(string Id, string Name, IReadOnlyList<IToolArg> Args, ThoughtSignature? Signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
 {
 
     [JsonPropertyName("role")]
@@ -19,10 +19,13 @@ public sealed record ToolTurn(string Id, string Name, IReadOnlyList<IToolArg> Ar
     public int? TokenCount { get; } = tokenCount;
 
     [JsonIgnore]
-    public TimeSpan Duration { get; } = span;
+    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
+
+    [JsonIgnore]
+    public TimeSpan? Duration { get; } = duration;
 
     public string Data => ToolArgs.Describe(Name, Args);
 
-    public ITurn Copy() => new ToolTurn(Id, Name, [.. Args], Signature, Duration, TokenCount);
+    public ITurn Copy() => new ToolTurn(Id, Name, [.. Args], Signature, Timestamp, Duration, TokenCount);
 
 }

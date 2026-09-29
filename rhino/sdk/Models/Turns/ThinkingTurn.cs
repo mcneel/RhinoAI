@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record ThinkingTurn(string Thinking, ThoughtSignature? Signature = null, TimeSpan span = default, int? tokenCount = null) : ITurn
+public sealed record ThinkingTurn(string Thinking, ThoughtSignature? Signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
 {
 
     [JsonPropertyName("role")]
@@ -16,10 +16,13 @@ public sealed record ThinkingTurn(string Thinking, ThoughtSignature? Signature =
     public int? TokenCount { get; } = tokenCount;
 
     [JsonIgnore]
-    public TimeSpan Duration { get; } = span;
+    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
+
+    [JsonIgnore]
+    public TimeSpan? Duration { get; } = duration;
 
     public string Data => Thinking;
 
-    public ITurn Copy() => new ThinkingTurn(Thinking, Signature, Duration, TokenCount);
+    public ITurn Copy() => new ThinkingTurn(Thinking, Signature, Timestamp, Duration, TokenCount);
 
 }

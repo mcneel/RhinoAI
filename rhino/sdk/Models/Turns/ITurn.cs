@@ -25,12 +25,17 @@ public interface ITurn
     /// </summary>
     [JsonIgnore]
     public int? TokenCount { get; }
-    
+
     /// <summary>
-    /// The turn time
+    /// When the turn was created, in UTC
     /// </summary>
     [JsonIgnore]
-    public TimeSpan Duration { get; }
+    public DateTime Timestamp { get; }
+
+    /// <summary>
+    /// The duration of the turn
+    /// </summary>
+    public TimeSpan? Duration { get; }
 
     /// <summary>
     /// The turn payload
