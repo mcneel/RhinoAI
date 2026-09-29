@@ -102,6 +102,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <returns>A freshly made agent with all of the state copied safely</returns>
     internal Agent WithNewModel(IModel model)
     {
+        // TODO : Desktop models are messy here
+        // if (model is DesktopModel desktopModel)
         Agent agent = new(Token, model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         return agent;

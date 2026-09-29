@@ -25,7 +25,7 @@ public class GenericHarness : IHarness
 
     public PermissionSet Permissions { get; } = new PermissionSet();
 
-    public HarnessConfig config { get; } = new();
+    public HarnessConfig Config { get; } = new();
 
     public GenericHarness(PlugIns.PlugInToken token)
     {
