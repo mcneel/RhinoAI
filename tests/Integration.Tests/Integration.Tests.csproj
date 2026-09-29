@@ -21,9 +21,4 @@
     <PackageReference Include="ModelContextProtocol" Version="1.3.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../ngentic/src/Ngentic.Core/Ngentic.Core.csproj" />
-    <ProjectReference Include="../ngentic/src/Ngentic.NUnit/Ngentic.NUnit.csproj" />
-  </ItemGroup>
-
 </Project>

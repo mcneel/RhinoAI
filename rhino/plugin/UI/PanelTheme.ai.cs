@@ -14,14 +14,14 @@ namespace Rhino.AI.UI;
 // separate from the Eto lookup so it can be tested without a UI thread.
 internal static class PanelTheme
 {
-    internal readonly record struct Rgb(float R, float G, float B)
+    internal record struct Rgb(float R, float G, float B)
     {
         public float Luminance => (0.2126f * R) + (0.7152f * G) + (0.0722f * B);
     }
 
     // Named so the mapping is reviewable. Most of these come from Rhino's own paint palette rather
     // than from Eto's system colours, because that palette is what Rhino paints its panels with.
-    internal readonly record struct Palette(
+    internal record struct Palette(
         Rgb Chrome,
         Rgb Field,
         Rgb Text,

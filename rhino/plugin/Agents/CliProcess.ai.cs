@@ -40,8 +40,8 @@ internal static class CliProcess
         if (OperatingSystem.IsWindows() && IsBatchShim(path))
         {
             psi.FileName = ComSpec();
-            psi.ArgumentList.Add("/c");
-            psi.ArgumentList.Add(path);
+            psi.AddArgument("/c");
+            psi.AddArgument(path);
         }
         else
         {
@@ -57,8 +57,10 @@ internal static class CliProcess
     public static void ConfigureEncoding(ProcessStartInfo psi)
     {
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         if (psi.RedirectStandardInput)
             psi.StandardInputEncoding = utf8;
+#endif
         if (psi.RedirectStandardOutput)
             psi.StandardOutputEncoding = utf8;
         if (psi.RedirectStandardError)

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -41,22 +42,22 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
         return CliLogin.State.Unknown;
     }
 
-    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume)
+    public void ConfigureArguments(ProcessStartInfo psi, string mcpUrl, string agentSessionId, IReadOnlyList<string> mcpServers, bool resume, IReadOnlyList<ContentBlock> prompt)
     {
         psi.Environment["CODEX_HOME"] = CodexHome;
 
-        psi.ArgumentList.Add("exec");
+        psi.AddArgument("exec");
         if (resume)
         {
-            psi.ArgumentList.Add("resume");
-            psi.ArgumentList.Add(agentSessionId);
+            psi.AddArgument("resume");
+            psi.AddArgument(agentSessionId);
         }
 
-        psi.ArgumentList.Add("--json");
-        psi.ArgumentList.Add("--skip-git-repo-check");
+        psi.AddArgument("--json");
+        psi.AddArgument("--skip-git-repo-check");
 
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"mcp_servers.rhino.url={EncodeString(mcpUrl)}");
+        psi.AddArgument("-c");
+        psi.AddArgument($"mcp_servers.rhino.url={EncodeString(mcpUrl)}");
 
         foreach (string entry in mcpServers)
         {
@@ -69,28 +70,65 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
                 foreach (KeyValuePair<string, JsonNode?> field in config)
                     if (field.Value is JsonValue value)
                     {
-                        psi.ArgumentList.Add("-c");
-                        psi.ArgumentList.Add($"mcp_servers.{server.Key}.{field.Key}={EncodeValue(value)}");
+                        psi.AddArgument("-c");
+                        psi.AddArgument($"mcp_servers.{server.Key}.{field.Key}={EncodeValue(value)}");
                     }
                 // Without this every call to a user-added server dies on "approval policy is never", the same pre-approval the shipped config gives rhino.
-                psi.ArgumentList.Add("-c");
-                psi.ArgumentList.Add($"mcp_servers.{server.Key}.default_tools_approval_mode=\"approve\"");
+                psi.AddArgument("-c");
+                psi.AddArgument($"mcp_servers.{server.Key}.default_tools_approval_mode=\"approve\"");
             }
         }
 
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
+        psi.AddArgument("-c");
+        psi.AddArgument($"developer_instructions={EncodeString(AgentPrompts.Compose(AISettings.EffectivePrompt(Definition)))}");
 
         if (AISettings.EffectiveModel(Definition) is { Length: > 0 } model)
         {
-            psi.ArgumentList.Add("-m");
-            psi.ArgumentList.Add(model);
+            psi.AddArgument("-m");
+            psi.AddArgument(model);
         }
         // foreach (string arg in Definition.ExtraArgs)
-        //     psi.ArgumentList.Add(arg);
+        //     psi.AddArgument(arg);
 
-        psi.ArgumentList.Add("-"); // the positional PROMPT, so it has to stay last
+        // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
+        foreach (string image in SpillImages(prompt))
+        {
+            psi.AddArgument("-i");
+            psi.AddArgument(image);
+        }
+
+        psi.AddArgument("-"); // the positional PROMPT, so it has to stay last
     }
+
+    // Only paths that actually wrote: codex silently runs the turn when --image names a missing file.
+    private static IReadOnlyList<string> SpillImages(IReadOnlyList<ContentBlock> prompt)
+    {
+        List<string> paths = [];
+        foreach (ContentBlock block in prompt)
+        {
+            if (block is not ImageContentBlock image)
+                continue;
+            try
+            {
+                string path = Path.Combine(Path.GetTempPath(), $"rhinoai-{Guid.NewGuid():N}{ExtensionFor(image.MimeType)}");
+                File.WriteAllBytes(path, Convert.FromBase64String(image.Data));
+                paths.Add(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
+            {
+            }
+        }
+        return paths;
+    }
+
+    private static string ExtensionFor(string mimeType) => mimeType.ToLowerInvariant() switch
+    {
+        "image/jpeg" or "image/jpg" => ".jpg",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        "image/bmp" => ".bmp",
+        _ => ".png",
+    };
 
     private static string EncodeValue(JsonValue value) =>
         value.TryGetValue(out string? text) ? EncodeString(text) : value.ToJsonString();
@@ -106,7 +144,6 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
             string piece = block switch
             {
                 TextContentBlock text => text.Text,
-                ImageContentBlock => "[image omitted: this agent has no inline-image support]",
                 _ => string.Empty,
             };
             if (piece.Length == 0)

@@ -22,13 +22,13 @@ internal sealed record PanelAttachment(
             return null;
 
         int comma = url.IndexOf(',');
-        if (comma < 0 || !url[..comma].EndsWith(";base64", StringComparison.Ordinal))
+        if (comma < 0 || !url.Substring(0, comma).EndsWith(";base64", StringComparison.Ordinal))
             return null;
 
         byte[] data;
         try
         {
-            data = Convert.FromBase64String(url[(comma + 1)..]);
+            data = Convert.FromBase64String(url.Substring(comma + 1));
         }
         catch (FormatException)
         {

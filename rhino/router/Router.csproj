@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <AssemblyName>rhino-mcp-router</AssemblyName>
     <RootNamespace>Rhino.AI.Router</RootNamespace>
@@ -57,6 +58,9 @@
     <ProjectReference Include="codegen/Router.Codegen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
     <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
+    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
+      <Link>Properties\version.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <!-- dlopen looks next to the AOT binary in native/, not in $(OutDir). -->

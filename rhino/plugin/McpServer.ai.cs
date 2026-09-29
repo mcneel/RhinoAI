@@ -39,7 +39,6 @@ internal sealed class McpServer : IDisposable
 
             StartTime = DateTime.UtcNow;
 
-            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
             return true;
         }
         catch (Exception ex)
@@ -123,9 +122,18 @@ internal sealed class McpServer : IDisposable
     private static string DescribeException(Exception ex)
     {
         List<string> parts = [];
+        Exception deepest = ex;
         for (Exception? cur = ex; cur is not null; cur = cur.InnerException)
+        {
             parts.Add($"{cur.GetType().FullName}: {cur.Message}");
-        return string.Join(" --> ", parts);
+            deepest = cur;
+        }
+
+        string described = string.Join(" --> ", parts);
+
+        return deepest is HttpListenerException || deepest.StackTrace is null
+            ? described
+            : $"{described}{Environment.NewLine}{deepest.StackTrace}";
     }
 
     public void Stop()

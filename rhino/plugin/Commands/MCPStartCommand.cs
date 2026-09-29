@@ -28,6 +28,12 @@ public class MCPStartCommand : Command
         if (res is not (GetResult.Number or GetResult.Nothing)) return Result.Cancel;
         int port = go.Number();
 
-        return RhinoAIHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
+        if (RhinoAIHost.StartOrRestart(doc, port))
+        {
+            RhinoApp.WriteLine($"[RhinoAI] MCP server currently running on http://localhost:{port}/ (in-Rhino agents use /agent)");
+            return Result.Success;
+        }
+
+        return Result.Failure;
     }
 }

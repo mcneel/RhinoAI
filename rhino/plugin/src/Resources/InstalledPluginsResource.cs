@@ -69,7 +69,7 @@ internal static class InstalledPluginsResource
 
     private static bool IsMcNeel(string? organization)
     {
-        if (string.IsNullOrWhiteSpace(organization))
+        if (String.IsNullOrWhiteSpace(organization))
             return false;
         return organization.IndexOf("McNeel", StringComparison.OrdinalIgnoreCase) >= 0;
     }

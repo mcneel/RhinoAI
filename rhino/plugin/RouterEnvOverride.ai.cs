@@ -9,7 +9,7 @@ internal sealed record RouterEnvOverride(IReadOnlyList<string> EnvVars, string L
     // A trimmed value that differs from the default is a real override worth
     // emitting into the env block; anything else means "leave it at the default".
     public bool IsSet(string? value) =>
-        !string.IsNullOrWhiteSpace(value) && value.Trim() != Default;
+        !String.IsNullOrWhiteSpace(value) && value.Trim() != Default;
 
     // Placeholder text shown in the empty field: the default value, or a hint
     // when the default is "unset".

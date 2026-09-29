@@ -65,7 +65,7 @@ internal static class SetSelectionTool
             };
 
             bool typeResolved = true;
-            if (!string.IsNullOrEmpty(geometryType))
+            if (!String.IsNullOrEmpty(geometryType))
             {
                 if (TryParseObjectType(geometryType, out ObjectType objectType))
                 {

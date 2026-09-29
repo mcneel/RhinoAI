@@ -11,6 +11,7 @@ internal static class ScriptProjectStartup
 
     public static void ReloadWhenIdle()
     {
+        if (!AISettings.AutoLoadScriptPlugIn) return;
         if (Scheduled) return;
         Scheduled = true;
         

@@ -17,13 +17,16 @@ internal static class RunningRhino
         {
             if (!RhinoIsDebugBuild)
                 return null;
-
+#if NET48
+            return null;
+#else
             string? exe = Environment.ProcessPath;
             if (string.IsNullOrEmpty(exe))
                 return null;
 
             string? target = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? EnclosingAppBundle(exe) : exe;
             return target is null ? null : (EnvVar, target);
+#endif
         }
         catch
         {

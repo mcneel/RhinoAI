@@ -29,7 +29,7 @@ internal static class ListObjectsTool
             IncludeGrips = false,
         };
 
-        if (!string.IsNullOrEmpty(geometryType))
+        if (!String.IsNullOrEmpty(geometryType))
         {
             if (TryParseObjectType(geometryType, out ObjectType filter))
                 settings.ObjectTypeFilter = filter;

@@ -42,6 +42,18 @@ internal static class AISettings
         set => Settings.SetInteger(nameof(ZoomLevel), value);
     }
 
+    public static bool AutoLoadMCP
+    {
+        get => Settings.GetBool(nameof(AutoLoadMCP), false);
+        set => Settings.SetBool(nameof(AutoLoadMCP), value);
+    }
+
+    public static bool AutoLoadScriptPlugIn
+    {
+        get => Settings.GetBool(nameof(AutoLoadScriptPlugIn), true);
+        set => Settings.SetBool(nameof(AutoLoadScriptPlugIn), value);
+    }
+
     public static bool IsEnabled(AgentDefinition def) =>
         def.Enabled && !DisabledAgents.Contains(def.Name, StringComparer.OrdinalIgnoreCase);
 

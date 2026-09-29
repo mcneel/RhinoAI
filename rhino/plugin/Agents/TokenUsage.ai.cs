@@ -8,7 +8,7 @@ namespace Rhino.AI;
 // "zero". Tokens default to 0 so a terminal event that omits a count still yields a valid record.
 // Persisted inside TurnDto, so the two derived readings are [JsonIgnore]'d to keep the stored shape
 // to just the three source fields.
-internal readonly record struct TokenUsage(int InputTokens, int OutputTokens, decimal? CostUsd = null)
+internal record struct TokenUsage(int InputTokens, int OutputTokens, decimal? CostUsd = null)
 {
     public static TokenUsage Empty { get; } = new(0, 0, null);
 

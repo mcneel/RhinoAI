@@ -114,7 +114,17 @@ internal static class McpClientConfigInstaller
         string directory = Path.GetDirectoryName(path) ?? Directory.GetCurrentDirectory();
         string temp = Path.Combine(directory, $".rhmcp-{Guid.NewGuid():N}.tmp");
         File.WriteAllText(temp, content);
-        File.Move(temp, path, overwrite: true);
+        Move(temp, path, overwrite: true);
+    }
+
+    private static void Move(string sourceFileName, string destFileName, bool overwrite)
+    {
+        if (overwrite && System.IO.File.Exists(destFileName))
+        {
+            System.IO.File.Delete(destFileName);
+        }
+
+        System.IO.File.Move(sourceFileName, destFileName);
     }
 
     private static string ResolvePath(string relative)

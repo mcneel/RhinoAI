@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>Rhino.AI.Router.Codegen</AssemblyName>
     <RootNamespace>Rhino.AI.Router.Codegen</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>

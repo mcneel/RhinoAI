@@ -15,7 +15,7 @@ export const EN = {
   'empty.starterTower': 'Build a twisty tower in Grasshopper',
   'empty.starterLayers': 'Organize the objects in the active viewport into layers',
   'empty.noAgent': 'No agent available',
-  'empty.noAgentBody': 'Install Claude Code, Codex or Gemini CLI and sign in, then pick it here.',
+  'empty.noAgentBody': 'Install Claude Code or Codex and sign in, then pick it here.',
   'empty.openSettings': 'Open AI settings',
   'empty.setupGuide': 'Read the setup guide',
 

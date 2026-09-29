@@ -1,8 +1,11 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Rhino.UI;
 
 using Eto.Forms;
+
+using Rhino.Runtime;
 
 namespace Rhino.AI.UI;
 
@@ -73,7 +76,7 @@ internal partial class AIPanelViewModel : IDisposable
         }
         catch (HttpListenerException ex)
         {
-            RhinoApp.WriteLine($"[rhino-ai] the AI panel could not start its page server: {ex.Message}");
+            HostUtils.LogDebugEvent($"[rhino-ai] the AI panel could not start its page server: {ex.Message}.\n");
             return;
         }
 
@@ -119,10 +122,10 @@ internal partial class AIPanelViewModel : IDisposable
             {
                 response.ContentType = "text/html; charset=utf-8";
                 response.ContentLength64 = page.Length;
-                await response.OutputStream.WriteAsync(page).ConfigureAwait(false);
+                await response.OutputStream.WriteAsync(page, 0, page.Length).ConfigureAwait(false);
             }
             else if (route.StartsWith(ServedImages.Route, StringComparison.Ordinal)
-                && ServedImages.Resolve(route[ServedImages.Route.Length..]) is { } file)
+                && ServedImages.Resolve(route.Substring(ServedImages.Route.Length)) is { } file)
             {
                 response.ContentType = ServedImages.MediaType(file);
                 using FileStream bytes = File.OpenRead(file);
@@ -136,7 +139,7 @@ internal partial class AIPanelViewModel : IDisposable
         }
         catch (Exception ex) when (ex is HttpListenerException or IOException or ObjectDisposedException or UnauthorizedAccessException)
         {
-            RhinoApp.WriteLine($"[rhino-ai] the AI panel could not serve its page: {ex.Message}");
+            HostUtils.LogDebugEvent($"[rhino-ai] the AI panel could not serve its page: {ex.Message}.\n");
         }
         finally
         {
@@ -193,7 +196,7 @@ internal partial class AIPanelViewModel : IDisposable
             if (sent.ToAttachment() is { } attachment)
                 attachments.Add(attachment);
             else
-                Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Could not attach {0}."), sent.Name)));
+                Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Could not attach {0}.", 3), sent.Name)));
         }
 
         if ((text.Length == 0 && attachments.Count == 0) || Document is not { } doc)
@@ -201,7 +204,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryFor(doc, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 4)));
             return false;
         }
 
@@ -237,7 +240,7 @@ internal partial class AIPanelViewModel : IDisposable
     {
         if (!ConversationStore.TryLoad(sessionId, out ConversationDto dto))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("That conversation could not be loaded.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("That conversation could not be loaded.", 5)));
             return false;
         }
 
@@ -260,7 +263,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (IsTurnRunning)
         {
-            Bridge.Post(new NoticeEvent("warn", Rhino.UI.LOC.STR("Stop the running turn before resuming another conversation.")));
+            Bridge.Post(new NoticeEvent("warn", Localization.LocalizeString("Stop the running turn before resuming another conversation.", 6)));
             return false;
         }
 
@@ -268,7 +271,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
         {
-            Bridge.Post(new NoticeEvent("error", string.Format(Rhino.UI.LOC.STR("Cannot resume: agent '{0}' is no longer available."), dto.AgentName)));
+            Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Cannot resume: agent '{0}' is no longer available.", 7), dto.AgentName)));
             return false;
         }
 
@@ -302,12 +305,12 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
         if (!AgentHost.TryFor(doc, out IAgentRunner agent))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("No AI agent available. Open AI settings to configure one.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 8)));
             return false;
         }
         if (!AgentDispatch.TryEnsureListener(doc, out int port))
         {
-            Bridge.Post(new NoticeEvent("error", Rhino.UI.LOC.STR("Could not start an MCP server for this document.")));
+            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("Could not start an MCP server for this document.", 9)));
             return false;
         }
 
@@ -394,7 +397,7 @@ internal partial class AIPanelViewModel : IDisposable
         Application.Instance.AsyncInvoke(() =>
         {
             string name = Path.GetFileName(path);
-            SaveFileDialog dialog = new() { Title = "Save image", FileName = name };
+            Eto.Forms.SaveFileDialog dialog = new() { Title = "Save image", FileName = name };
             dialog.Filters.Add(new FileFilter(Path.GetExtension(path).TrimStart('.').ToUpperInvariant(), Path.GetExtension(path)));
 
             if (dialog.ShowDialog(View) != DialogResult.Ok)
@@ -466,6 +469,12 @@ internal partial class AIPanelViewModel : IDisposable
 
 #region TO THE PANEL
 
+#if R9 && NETCOREAPP
+    private const bool PluginCommandsAvailable = true;
+#else
+    private const bool PluginCommandsAvailable = false;
+#endif
+
     private void SendEnvironment()
     {
         Bridge.Post(new HelloEvent(
@@ -474,7 +483,7 @@ internal partial class AIPanelViewModel : IDisposable
                 RhinoApp.Version.ToString(),
                 OperatingSystem.IsWindows() ? "windows" : "macos",
                 Document is { } doc ? DocTitle(doc) : "Untitled",
-                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true)),
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true, PluginCommands: PluginCommandsAvailable)),
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 
@@ -554,7 +563,7 @@ internal partial class AIPanelViewModel : IDisposable
         string line = prompt.Split('\n').FirstOrDefault(static l => l.Trim().Length > 0)?.Trim() ?? string.Empty;
         if (line.Length == 0)
             return "(no prompt)";
-        return line.Length > 80 ? line[..80].TrimEnd() + "…" : line;
+        return line.Length > 80 ? line.Substring(0, 80).TrimEnd() + "…" : line;
     }
 
     private static bool Resumable(string agentName) =>
@@ -625,7 +634,7 @@ internal partial class AIPanelViewModel : IDisposable
     }
 
     private bool IsTurnRunning =>
-        ActiveConversation?.Turns is { Count: > 0 } turns && !turns[^1].Completed;
+        ActiveConversation?.Turns is { Count: > 0 } turns && !turns[turns.Count - 1].Completed;
 
 #endregion
 

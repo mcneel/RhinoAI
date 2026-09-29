@@ -7,8 +7,13 @@ namespace Rhino.AI;
 internal static class AIAutoLoad
 {
 
+    private static bool WasStartedViaAgent { get; } =
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
+
     public static bool ShouldAutoLoad()
     {
+        if (WasStartedViaAgent) return true;
+        if (!AISettings.AutoLoadMCP) return false;
         foreach(AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
         {
             if (!definition.Available) continue;

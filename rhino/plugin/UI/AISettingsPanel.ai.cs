@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
@@ -15,15 +16,18 @@ internal sealed class AISettingsPanel : Panel
 
     // Right-hand property list for the selected agent. Model/Enabled/Available used to live in the grid;
     // they moved here so the grid stays a plain selection list and every editable property reads top-down.
-    private Label NameHeader { get; } = new() { Font = Fonts.Sans(13, FontStyle.Bold) };
+    private Label NameHeader { get; } = new() { Font = Eto.Drawing.Fonts.Sans(13, FontStyle.Bold) };
     private Label AvailableLabel { get; } = new();
-    private CheckBox EnabledBox { get; } = new() { Text = Rhino.UI.LOC.STR("Enabled") };
+    private CheckBox EnabledBox { get; } = new() { Text = Localization.LocalizeString("Enabled", 13) };
     private DropDown ModelBox { get; } = new();
     private TextArea SearchPathsBox { get; } = new() { Wrap = false, Height = 70, ReadOnly = true };
     private TextArea SystemPromptBox { get; } = new() { Wrap = true, Height = 90 };
 
-    private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Fonts.Monospace(11) };
+    private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Eto.Drawing.Fonts.Monospace(11) };
     private Label McpErrorLabel { get; } = new() { TextColor = Colors.Red, Visible = false };
+
+    private CheckBox AutoLoadMcpBox { get; } = new() { Text = Localization.LocalizeString("Load MCP server at startup", 14) };
+    private CheckBox AutoLoadScriptPlugInBox { get; } = new() { Text = Localization.LocalizeString("Load AI-created script plug-in at startup", 15) };
 
     // Leaf tool rows in the Tools tree, kept flat so Commit can read each checkbox back
     // without re-walking the grouped tree.
@@ -34,7 +38,7 @@ internal sealed class AISettingsPanel : Panel
 
     // Sentinel shown in the grid's Model dropdown for an empty model. Picking it stores an empty
     // string, i.e. "pass no --model, let the CLI choose its own default".
-    private static string DefaultModelLabel => Rhino.UI.LOC.STR("(default)");
+    private static string DefaultModelLabel => Localization.LocalizeString("(default)", 16);
 
     // Suppresses the editor->row write-back while we are programmatically loading
     // the editor from a freshly selected row.
@@ -48,9 +52,10 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("AI Agents"), Content = AgentsTab() });
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("MCP Servers"), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Rhino.UI.LOC.STR("Tools"), Content = ToolsTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
 
         Content = tabs;
     }
@@ -81,6 +86,8 @@ internal sealed class AISettingsPanel : Panel
             AISettings.DefaultAgentName = defaultRow.Name;
 
         AISettings.ExtraMcpServersJson = normalizedJson;
+        AISettings.AutoLoadMCP = AutoLoadMcpBox.Checked == true;
+        AISettings.AutoLoadScriptPlugIn = AutoLoadScriptPlugInBox.Checked == true;
 
         // ScanTools hides router-internal underscore tools from the grid, so they have no checkbox to
         // round-trip; carry forward any that were already disabled instead of silently dropping them.
@@ -117,7 +124,7 @@ internal sealed class AISettingsPanel : Panel
         AgentGrid.DataStore = Rows;
         AgentGrid.Columns.Add(new GridColumn
         {
-            HeaderText = Rhino.UI.LOC.STR("Default"),
+            HeaderText = Localization.LocalizeString("Default", 21),
             HeaderTextAlignment = TextAlignment.Center,
             DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.DefaultGlyph), TextAlignment = TextAlignment.Center },
             Editable = false,
@@ -126,7 +133,7 @@ internal sealed class AISettingsPanel : Panel
         });
         AgentGrid.Columns.Add(new GridColumn
         {
-            HeaderText = Rhino.UI.LOC.STR("Agent"),
+            HeaderText = Localization.LocalizeString("Agent", 22),
             HeaderTextAlignment = TextAlignment.Center,
             DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.Name), TextAlignment = TextAlignment.Center },
             Editable = false,
@@ -160,9 +167,9 @@ internal sealed class AISettingsPanel : Panel
                 new TableRow(NameHeader),
                 new TableRow(AvailableLabel),
                 new TableRow(EnabledBox),
-                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Model:"), ModelBox)),
-                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Found at:"), SearchPathsBox)),
-                new TableRow(LabeledColumn(Rhino.UI.LOC.STR("Prompt:"), SystemPromptBox)),
+                new TableRow(LabeledColumn(Localization.LocalizeString("Model:", 23), ModelBox)),
+                new TableRow(LabeledColumn(Localization.LocalizeString("Found at:", 24), SearchPathsBox)),
+                new TableRow(LabeledColumn(Localization.LocalizeString("Prompt:", 25), SystemPromptBox)),
                 new TableRow { ScaleHeight = true },
             },
         };
@@ -195,9 +202,9 @@ internal sealed class AISettingsPanel : Panel
 
     private ContextMenu BuildGridContextMenu()
     {
-        ButtonMenuItem setDefault = new() { Text = Rhino.UI.LOC.STR("Set Default") };
+        ButtonMenuItem setDefault = new() { Text = Localization.LocalizeString("Set Default", 26) };
         setDefault.Click += (_, _) => SetSelectedDefault();
-        ButtonMenuItem reset = new() { Text = Rhino.UI.LOC.STR("Restore Defaults") };
+        ButtonMenuItem reset = new() { Text = Localization.LocalizeString("Restore Defaults", 27) };
         reset.Click += (_, _) => ResetSelected();
 
         ContextMenu menu = new() { Items = { setDefault, reset } };
@@ -218,9 +225,9 @@ internal sealed class AISettingsPanel : Panel
         DialogResult confirm = MessageBox.Show(
             this,
             string.Format(
-                Rhino.UI.LOC.STR("Reset \"{0}\" to its default settings? This clears its model and prompt, and re-enables it."),
+                Localization.LocalizeString("Reset \"{0}\" to its default settings? This clears its model and prompt, and re-enables it.", 28),
                 row.Name),
-            Rhino.UI.LOC.STR("Reset Agent"),
+            Localization.LocalizeString("Reset Agent", 29),
             MessageBoxButtons.YesNo,
             MessageBoxType.Question);
         if (confirm != DialogResult.Yes)
@@ -252,7 +259,7 @@ internal sealed class AISettingsPanel : Panel
             }
             else
             {
-                NameHeader.Text = Rhino.UI.LOC.STR("No agent selected");
+                NameHeader.Text = Localization.LocalizeString("No agent selected", 30);
                 AvailableLabel.Text = string.Empty;
                 EnabledBox.Checked = false;
                 ModelBox.Items.Clear();
@@ -335,7 +342,7 @@ internal sealed class AISettingsPanel : Panel
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = Rhino.UI.LOC.STR("Extra MCP servers merged into every agent alongside the built-in \"rhino\" server."),
+            Text = Localization.LocalizeString("Extra MCP servers merged into every agent alongside the built-in \"rhino\" server.", 31),
             TextColor = Colors.Gray,
         };
 
@@ -376,9 +383,9 @@ internal sealed class AISettingsPanel : Panel
         }
 
         TreeGridView tree = new() { ShowHeader = true, DataStore = roots };
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("On"), DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Tool"), DataCell = new TextBoxCell(1), Width = 210 });
-        tree.Columns.Add(new GridColumn { HeaderText = Rhino.UI.LOC.STR("Description"), DataCell = new TextBoxCell(2), Width = 380 });
+        tree.Columns.Add(new GridColumn { HeaderText = Localization.LocalizeString("On", 32), DataCell = new CheckBoxCell(0), Editable = true, Width = 44 });
+        tree.Columns.Add(new GridColumn { HeaderText = Localization.LocalizeString("Tool", 33), DataCell = new TextBoxCell(1), Width = 210 });
+        tree.Columns.Add(new GridColumn { HeaderText = Localization.LocalizeString("Description", 34), DataCell = new TextBoxCell(2), Width = 380 });
         tree.CellEdited += (_, e) =>
         {
             if (e.Column != 0 || e.Item is not ToolNode node)
@@ -400,7 +407,7 @@ internal sealed class AISettingsPanel : Panel
         Label help = new()
         {
             Wrap = WrapMode.Word,
-            Text = Rhino.UI.LOC.STR("Tools the built-in \"rhino\" server exposes, grouped by behavior. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool."),
+            Text = Localization.LocalizeString("Tools the built-in \"rhino\" server exposes, grouped by behavior. Unchecking a tool hides it from in-Rhino agents only; external clients still see every tool.", 35),
             TextColor = Colors.Gray,
         };
 
@@ -416,6 +423,32 @@ internal sealed class AISettingsPanel : Panel
         };
     }
 
+    private Control LoadingTab()
+    {
+        AutoLoadMcpBox.Checked = AISettings.AutoLoadMCP;
+        AutoLoadScriptPlugInBox.Checked = AISettings.AutoLoadScriptPlugIn;
+
+        Label help = new()
+        {
+            Wrap = WrapMode.Word,
+            Text = Localization.LocalizeString("What RhinoAI starts when Rhino launches. Changes take effect the next time Rhino starts.", 36),
+            TextColor = Colors.Gray,
+        };
+
+        return new TableLayout
+        {
+            Padding = new Padding(8),
+            Spacing = new Size(0, 8),
+            Rows =
+            {
+                new TableRow(help),
+                new TableRow(AutoLoadMcpBox),
+                new TableRow(AutoLoadScriptPlugInBox),
+                new TableRow { ScaleHeight = true },
+            },
+        };
+    }
+
     private static int CategoryOrder(string category) => category switch
     {
         "Read-only" => 0,
@@ -426,9 +459,9 @@ internal sealed class AISettingsPanel : Panel
 
     private static string CategoryLabel(string category) => category switch
     {
-        "Read-only" => Rhino.UI.LOC.STR("Read-only"),
-        "Modify" => Rhino.UI.LOC.STR("Modify"),
-        "Destructive" => Rhino.UI.LOC.STR("Destructive"),
+        "Read-only" => Localization.LocalizeString("Read-only", 37),
+        "Modify" => Localization.LocalizeString("Modify", 38),
+        "Destructive" => Localization.LocalizeString("Destructive", 39),
         _ => category,
     };
 
@@ -509,13 +542,15 @@ internal sealed class AISettingsPanel : Panel
             using JsonDocument doc = JsonDocument.Parse(json);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
-                error = Rhino.UI.LOC.STR("MCP config must be a JSON object.");
+                error = Localization.LocalizeString("MCP config must be a JSON object.", 40);
                 return false;
             }
+            if (!doc.RootElement.EnumerateObject().Any())
+                return true;
             if (!doc.RootElement.TryGetProperty("mcpServers", out JsonElement servers)
                 || servers.ValueKind != JsonValueKind.Object)
             {
-                error = Rhino.UI.LOC.STR("MCP config must contain an \"mcpServers\" object.");
+                error = Localization.LocalizeString("MCP config must contain an \"mcpServers\" object.", 41);
                 return false;
             }
             normalized = JsonSerializer.Serialize(doc.RootElement, IndentedJson);
@@ -523,13 +558,13 @@ internal sealed class AISettingsPanel : Panel
         }
         catch (JsonException ex)
         {
-            error = string.Format(Rhino.UI.LOC.STR("Invalid JSON: {0}"), ex.Message);
+            error = string.Format(Localization.LocalizeString("Invalid JSON: {0}", 42), ex.Message);
             return false;
         }
     }
 
     // Immutable scan result for one tool row in the Tools tree.
-    private readonly record struct ToolInfo(string Name, string Title, string Description, string Category);
+    private record struct ToolInfo(string Name, string Title, string Description, string Category);
 
     // TreeGridView node for the Tools tab. Group nodes carry the category label in column 1 and a
     // roll-up checkbox in column 0; leaf nodes carry [enabled, title, description] and the tool name.

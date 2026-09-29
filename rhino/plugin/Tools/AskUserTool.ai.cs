@@ -55,7 +55,7 @@ internal static class AskUserTool
         }, coercions.Guidance);
     }
 
-    private readonly record struct ConversationLookup(bool Attached, Conversation Conversation);
+    private record struct ConversationLookup(bool Attached, Conversation Conversation);
 
     private static Task<ConversationLookup> ResolveConversationAsync(RhinoDoc doc)
     {

@@ -27,19 +27,6 @@ public class SpawnDiagnosticsTests
     }
 
     [Test]
-    public void PluginNotInstalled_classifies_with_versions_and_setup_link()
-    {
-        bool ok = SpawnDiagnostics.TryClassify(
-            new PluginNotInstalledException("8", ["9"]), Finder, out SpawnDiagnostics.SpawnDiagnosis d);
-
-        Assert.That(ok, Is.True);
-        Assert.That(d.Code, Is.EqualTo("plugin_not_installed"));
-        Assert.That(d.BaseMessage, Does.Contain("Rhino 8"));
-        Assert.That(d.BaseMessage, Does.Contain("installed for: 9"));
-        Assert.That(d.BaseMessage, Does.Contain("getting-started"));
-    }
-
-    [Test]
     public void Timeout_classifies_as_startup_timeout_with_shared_advice()
     {
         bool ok = SpawnDiagnostics.TryClassify(

@@ -3,6 +3,7 @@ using System.Reflection;
 
 using Rhino.PlugIns;
 using Rhino.Runtime;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
@@ -11,25 +12,19 @@ public class RhinoAIPlugin : PlugIn
     private const string IconResourceName = "Rhino.AI.Panel_dark.ico";
     private const string DarkIconResourceName = "Rhino.AI.Panel_dark.ico";
 
-    private CommandInterceptorHost? CommandInterceptors { get; set; }
-
-    public bool WasStartedViaAgent { get; private set; }
+    // private CommandInterceptorHost? CommandInterceptors { get; set; }
 
     protected override LoadReturnCode OnLoad(ref string errorMessage)
     {
         if (RouterStaging.EnsureStaged().StagingError is string stagingError)
-            RhinoApp.WriteLine($"RhinoAI: could not stage the MCP router ({stagingError}).");
-
-        Rhino.UI.Panels.RegisterPanel(this, typeof(UI.AIPanel), Rhino.UI.LOC.STR("AI"), LoadPanelIcon(), Rhino.UI.PanelType.PerDoc);
-
-        WasStartedViaAgent = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar));
-
-        if (WasStartedViaAgent || AIAutoLoad.ShouldAutoLoad())
         {
-            CommandInterceptors = new CommandInterceptorHost();
-            RhinoAIHost.RegisterDocumentWatcher();
+            HostUtils.LogDebugEvent($"RhinoAI: could not stage the MCP router ({stagingError}).\n");
         }
-        
+
+        Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
+
+        // CommandInterceptors = new CommandInterceptorHost();
+        RhinoAIHost.RegisterDocumentWatcher();
         ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
         return base.OnLoad(ref errorMessage);
@@ -37,7 +32,7 @@ public class RhinoAIPlugin : PlugIn
 
     // Adds the "AI" settings page to the Rhino Options dialog. Called each time Options is opened, so a
     // fresh page (and panel) is built per open and its state reflects the current settings.
-    protected override void OptionsDialogPages(List<Rhino.UI.OptionsDialogPage> pages)
+    protected override void OptionsDialogPages(List<OptionsDialogPage> pages)
     {
         pages.Add(new AIOptionsPage());
     }
@@ -64,7 +59,7 @@ public class RhinoAIPlugin : PlugIn
 
     protected override void OnShutdown()
     {
-        CommandInterceptors?.Dispose();
+        // CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
     }
 

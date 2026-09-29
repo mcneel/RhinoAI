@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Drawing;
+
 using Rhino.UI;
 using Rhino.Runtime;
 
@@ -15,9 +16,10 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private Image? LightCachedImage { get; set; }
     private Image? DarkCachedImage { get; set; }
 
-    public AIOptionsPage() : base(LOC.STR("AI"))
+    public AIOptionsPage() : base(Localization.LocalizeString("AI", 2))
     {
         Panel.Width = 800;
+        Panel.UseRhinoStyle();
     }
 
     public override object PageControl => Panel;
@@ -29,7 +31,7 @@ internal sealed class AIOptionsPage : OptionsDialogPage
         _ => LightCachedImage ??= LoadIcon(IconResourceName),
     };
 
-    public override bool OnApply() => true; // Panel.TryCommit(out _);
+    public override bool OnApply() => Panel.TryCommit(out _);
 
     public override bool OnActivate(bool active)
     {

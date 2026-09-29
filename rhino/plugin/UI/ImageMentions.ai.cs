@@ -59,7 +59,7 @@ internal static class ImageMentions
         }
         else if (spelling.Length > 1 && spelling[0] == '~' && (spelling[1] == '/' || spelling[1] == '\\'))
         {
-            spelling = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), spelling[2..]);
+            spelling = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), spelling.Substring(2));
         }
 
         return Existing(spelling)

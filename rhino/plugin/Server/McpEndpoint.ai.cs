@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Rhino.Runtime;
+
 namespace Rhino.AI.Server;
 
 // McpServer gives each listener prefix one dispatcher, handling MCP-flavoured
@@ -46,7 +48,7 @@ internal sealed class McpDispatcher
             return;
         }
 
-        if (string.IsNullOrEmpty(request?.Method))
+        if (String.IsNullOrEmpty(request?.Method))
         {
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
@@ -81,7 +83,7 @@ internal sealed class McpDispatcher
         }
         catch (Exception ex)
         {
-            RhinoApp.WriteLine($"[RhinoAI] MCP dispatch failed for method {request.Method}: {ex.GetType().Name}: {ex.Message}");
+            HostUtils.LogDebugEvent($"[RhinoAI] MCP dispatch failed for method {request.Method}: {ex.GetType().Name}: {ex.Message}.\n");
             await WriteResponseAsync(ctx, new JsonRpcResponse
             {
                 Id = request.Id,
@@ -322,6 +324,10 @@ internal sealed class McpDispatcher
         ctx.Response.ContentType = "application/json";
         ctx.Response.ContentLength64 = buffer.Length;
         buffer.Position = 0;
+        #if NET48
+        await buffer.CopyToAsync(ctx.Response.OutputStream).ConfigureAwait(false);
+        #else
         await buffer.CopyToAsync(ctx.Response.OutputStream, ct).ConfigureAwait(false);
+        #endif
     }
 }

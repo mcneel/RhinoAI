@@ -11,6 +11,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <AssemblyName>RhinoAI</AssemblyName>
     <RootNamespace>Rhino.AI</RootNamespace>
     <Title>Rhino AI</Title>
@@ -37,6 +39,14 @@
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
+    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
+      <Link>Properties\version.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->
@@ -60,6 +70,31 @@
     <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="Rhino.AI.panel.html" />
   </ItemGroup>
 
+<!-- Localization-->
+
+  <ItemGroup Condition="'$(IsInRhino)' == 'true'">
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\cs-cz\XML\cs-czRhinoAI.xml" Link="Localization\cs-czRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\de-de\XML\de-deRhinoAI.xml" Link="Localization\de-deRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\en-us\XML\en-usRhinoAI.xml" Link="Localization\en-usRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\es-es\XML\es-esRhinoAI.xml" Link="Localization\es-esRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\fr-fr\XML\fr-frRhinoAI.xml" Link="Localization\fr-frRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\it-it\XML\it-itRhinoAI.xml" Link="Localization\it-itRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\ja-jp\XML\ja-jpRhinoAI.xml" Link="Localization\ja-jpRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\ko-kr\XML\ko-krRhinoAI.xml" Link="Localization\ko-krRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\pl-pl\XML\pl-plRhinoAI.xml" Link="Localization\pl-plRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\pt-pt\XML\pt-ptRhinoAI.xml" Link="Localization\pt-ptRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\ru-ru\XML\ru-ruRhinoAI.xml" Link="Localization\ru-ruRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\tr-tr\XML\tr-trRhinoAI.xml" Link="Localization\tr-trRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\zh-cn\XML\zh-cnRhinoAI.xml" Link="Localization\zh-cnRhinoAI.xml" />
+    <EmbeddedResource Include="..\..\..\..\..\..\Localization\Rhino\zh-tw\XML\zh-twRhinoAI.xml" Link="Localization\zh-twRhinoAI.xml" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsInRhino)' == 'true'">
+    <Folder Include="Localization\" />
+  </ItemGroup>
+
+  <!-- Localization-->
+
   <Target Name="BuildPanel" BeforeTargets="BeforeBuild" Condition="'$(SkipPanelBuild)' != 'true' AND Exists('$(MSBuildProjectDirectory)/../panel/node_modules/esbuild')">
     <Exec Command="node build.mjs" WorkingDirectory="$(MSBuildProjectDirectory)/../panel" ContinueOnError="true" />
   </Target>
@@ -72,11 +107,11 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(PluginOutputDir)" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="BundleRouter" AfterTargets="Build">
+  <Target Name="BundleRouter" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net8.0'">
     <ItemGroup>
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
-    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
+    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -p:UseSharedCompilation=false -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
     <RemoveDir Directories="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
   </Target>

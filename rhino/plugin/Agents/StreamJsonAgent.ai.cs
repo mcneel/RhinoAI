@@ -1,13 +1,15 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
+
 using System.Text.Json.Nodes;
+
 using System.Threading;
 using System.Threading.Tasks;
+
 using Acp;
 using ContentBlock = Acp.ContentBlock; // disambiguate from Rhino.AI.Server.ContentBlock
+
+using Rhino.Runtime;
 
 namespace Rhino.AI;
 
@@ -34,7 +36,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     private SemaphoreSlim WriteGate { get; } = new(1, 1);
     private SemaphoreSlim TurnGate { get; } = new(1, 1);
 
-    private readonly record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
+    private record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
 
     // Resolved by the read-loop exit, so a one-turn-per-process CLI cannot hand the next prompt a stdin it already closed.
     private TurnCompletion? PendingCompletion { get; set; }
@@ -102,7 +104,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     public async ValueTask<PromptResponse> SessionPromptAsync(PromptRequest request, CancellationToken cancellationToken = default)
     {
-        await EnsureStartedAsync().ConfigureAwait(false);
+        await EnsureStartedAsync(request.Prompt).ConfigureAwait(false);
 
         await TurnGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -163,17 +165,17 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
 
     // ---- launch + stdin -----------------------------------------------------------------------
 
-    private Task EnsureStartedAsync()
+    private Task EnsureStartedAsync(IReadOnlyList<ContentBlock> prompt)
     {
         lock (Gate)
-            return StartTask ??= StartGuardedAsync();
+            return StartTask ??= StartGuardedAsync(prompt);
     }
 
-    private async Task StartGuardedAsync()
+    private async Task StartGuardedAsync(IReadOnlyList<ContentBlock> prompt)
     {
         try
         {
-            await StartAsync().ConfigureAwait(false);
+            await StartAsync(prompt).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -184,7 +186,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         }
     }
 
-    private async Task StartAsync()
+    private async Task StartAsync(IReadOnlyList<ContentBlock> prompt)
     {
         if (!CliProcess.TryResolve(Definition.SearchPaths.GetPaths(), out string path))
             throw new FileNotFoundException(Parser.NotFoundMessage);
@@ -207,13 +209,13 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         };
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
-        Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), HasEverStarted);
+        Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), HasEverStarted, prompt);
 
         Process proc = new() { StartInfo = psi };
         proc.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
-                RhinoApp.WriteLine($"[{Parser.DisplayName}:err] {e.Data}");
+                HostUtils.LogDebugEvent($"[{Parser.DisplayName}:err] {e.Data}.\n");
         };
         proc.Start();
         proc.BeginErrorReadLine();
@@ -320,7 +322,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    RhinoApp.WriteLine($"[{Parser.DisplayName}] parse error: {ex.Message}");
+                    HostUtils.LogDebugEvent($"[{Parser.DisplayName}] parse error: {ex.Message}.\n");
                 }
             }
         }

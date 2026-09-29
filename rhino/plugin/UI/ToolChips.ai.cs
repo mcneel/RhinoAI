@@ -10,7 +10,7 @@ internal static class ToolChips
     public static IReadOnlyList<PanelToolChip> None { get; } = [];
 
     private static IReadOnlyList<PanelToolChip> CancelOnly =>
-        [new PanelToolChip(CancelId, LOC.STR("Cancel"), "stop", "danger")];
+        [new PanelToolChip(CancelId, Localization.LocalizeString("Cancel", 175), "stop", "danger")];
 
     public static IReadOnlyList<PanelToolChip> For(string toolName, bool isRunning) =>
         isRunning && IsCancellable(toolName) ? CancelOnly : None;

@@ -50,6 +50,11 @@ internal record struct Glob(string GlobPath, bool IncludeDirs = true)
         List<string> paths = [];
         if (string.IsNullOrEmpty(nextPart)) return paths;
 
+#if NET48
+        if (OperatingSystem.IsWindows() && fullPath.Length == 2 && fullPath[1] == ':')
+            fullPath += Path.DirectorySeparatorChar;
+#endif
+
         if (!nextPart.Contains('*'))
         {
             string path = Path.Combine(fullPath, nextPart);
