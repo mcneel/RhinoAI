@@ -84,6 +84,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     public string DefaultPrompt { get; } = defaultPrompt;
 
+    public AgentConfig Config { get; } = new();
+
     // TODO : Enum ??
     // public string Effort { get; set; }
 
@@ -249,5 +251,12 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         _ => new Agent(token, model, new GenericHarness(token), prompt),
     };
 
+
+}
+
+public sealed class AgentConfig
+{
+    
+    public bool UseLocalSettings { get; set; } = false;
 
 }

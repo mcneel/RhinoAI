@@ -1,8 +1,7 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-
-using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
@@ -15,6 +14,8 @@ public interface IHarness
 
     /// <summary>Permissions for the MCPs and Tools</summary>
     public PermissionSet Permissions { get; }
+
+    public HarnessConfig Config { get; }
 
 #region Extensions
 
@@ -67,5 +68,12 @@ public interface IHarness
     public Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token);
 
 #endregion
+
+}
+
+public sealed class HarnessConfig
+{
+    
+    public string CurrentWorkingDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
 }

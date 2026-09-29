@@ -18,6 +18,8 @@ internal sealed class ClaudeHarness : IHarness
     private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
 
+    public HarnessConfig Config { get; } = new();
+
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
 
     public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);

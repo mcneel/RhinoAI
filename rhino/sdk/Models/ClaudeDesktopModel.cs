@@ -15,17 +15,17 @@ namespace Rhino.AI.Models;
 internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anthropic")
 {
 
-    private List<ITurn> Turns { get; } = [];
-
     public override bool Available => File.Exists(ClaudeExePath);
+
+    public Guid? SessionId { get; set; }
 
     // TODO : Check Definitions.json
     private static string ClaudeExePath
         => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin", "claude");
-
-    protected async override Task<IEnumerable<ITurn>> SendPrivateAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
+    
+    // TODO : this should be in the Claude Harness?
+    protected async override Task<IEnumerable<ITurn>> SendPrivateAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
-        Turns.Clear();
         Process process = new()
         {
             EnableRaisingEvents = true,
@@ -36,7 +36,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
                 RedirectStandardOutput = true,
 
                 FileName = ClaudeExePath,
-                WorkingDirectory = "/Users/sykes/Desktop",
+                WorkingDirectory = harness.Config.CurrentWorkingDirectory,
                 CreateNoWindow = true,
                 // ArgumentList
             }
@@ -49,6 +49,20 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
 
         process.StartInfo.ArgumentList.Add("-p");
 
+        if (SessionId is not null)
+        {
+            process.StartInfo.ArgumentList.Add("--resume");
+        }
+        else
+        {
+            // TODO : If Call fails, this must be un-set
+            SessionId ??= Guid.NewGuid();
+            process.StartInfo.ArgumentList.Add("--session-id");
+        }
+
+        process.StartInfo.ArgumentList.Add(SessionId!.ToString());
+
+        // TODO : Use RhinoMcp
         string mcpName = "rhino";
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
@@ -86,9 +100,6 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
             process.StartInfo.ArgumentList.Add("opus");
         }
 
-        // --no-session-persistence              Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)
-        process.StartInfo.ArgumentList.Add("--no-session-persistence");
-
         // --strict-mcp-config                   Only use MCP servers from --mcp-config, ignoring all other MCP configurations
         process.StartInfo.ArgumentList.Add("--strict-mcp-config");
 
@@ -109,6 +120,14 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         process.StartInfo.ArgumentList.Add("stream-json");
 
         process.StartInfo.ArgumentList.Add("--verbose");
+        
+        // TODO : Use Agent Config
+
+        // Prevent users local tools and settings
+        process.StartInfo.ArgumentList.Add("--tools");
+        process.StartInfo.ArgumentList.Add("");
+        process.StartInfo.ArgumentList.Add("--setting-sources");
+        process.StartInfo.ArgumentList.Add("");
 
         // process.StartInfo.ArgumentList.Add("--append-system-prompt");
         // string prompt = JsonSerializer.Serialize(turn);
@@ -124,15 +143,16 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        _ = Task.Run(() => ReadLoopAsync(process, token), token);
-        _ = Task.Run(() => WriteLoopAsync(process, turn), token);
+        Task<IEnumerable<ITurn>> reading = ReadLoopAsync(process, token);
+        Task writing = WriteLoopAsync(process, turns);
 
         token.Register(() =>
         {
             try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
         });
 
-        await process.WaitForExitAsync();
+        await process.WaitForExitAsync(token);
+        await Task.WhenAll(reading, writing);
 
         // Other possible args
 
@@ -145,7 +165,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
 
         // process.Exited 
 
-        return Turns;
+        return await reading;
     }
 
     private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
@@ -156,8 +176,9 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         process.StandardInput.Close();
     }
 
-    private async Task ReadLoopAsync(Process process, CancellationToken token)
+    private async Task<IEnumerable<ITurn>> ReadLoopAsync(Process process, CancellationToken token)
     {
+        List<ITurn> turnsOut = [];
         try
         {
             string? line = null;
@@ -178,15 +199,20 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
                         _ => []
                     };
 
-                    Turns.AddRange(newturns);
+                    turnsOut.AddRange(newturns);
                 }
-                catch
+                catch (Exception ex)
                 {
-
+                    Debug.WriteLine(ex);
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
+        return turnsOut;
     }
 
     private static DateTime? GetTimestamp(JsonNode node)
@@ -261,7 +287,10 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
             if (subType is not null && subType.StartsWith("hook_")) return [];
 
             // Ignore Init for now - I don't know what to do with it?
-            if (subType is not null && subType.Equals("init")) return [];
+            if (subType is not null && subType.Equals("init"))
+            {
+                return [];
+            }
         }
 
         return [];
@@ -269,12 +298,18 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
 
     private static List<ITurn> ParseResult(JsonNode node)
     {
+
+        string? error = null;
+        if (node["is_error"]?.GetValue<bool>() == true)
+        {
+            error = node["result"]?.GetValue<string>();
+        }
+
         if (node["stop_reason"] is JsonNode stopProp)
         {
             string stopReason = stopProp.GetValue<string>();
             StopReason reason = stopReason.ToLowerInvariant() switch
             {
-
                 "end_turn" => StopReason.EndTurn,
                 "tool_use" => StopReason.ToolUse,
                 "max_tokens" => StopReason.MaxTokens,
@@ -286,10 +321,11 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
 
             TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
 
-            if (string.Equals(stopReason, "end_turn")) return [new TurnEnd(reason, duration: duration)];
+            return [new TurnEnd(reason, error, duration: duration)];
         }
 
-        return [];
+        StopReason endReason = error is null ? StopReason.EndTurn : StopReason.Error;
+        return [new TurnEnd(endReason, error)];
     }
 
     private static List<ITurn> ParseAssisant(JsonNode node)
@@ -354,18 +390,13 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         List<IToolArg> args = [];
         if (node is not JsonObject obj) return args;
 
-        for (int i = 0; i < obj.Count; i++)
+        foreach (KeyValuePair<string, JsonNode?> kvp in obj)
         {
-            JsonNode? kvp = obj[i];
-            if (kvp is null) continue;
-
-            string propName = kvp.GetPropertyName();
-            JsonValueKind kind = kvp.GetValueKind();
-
-            IToolArg? arg = kind switch
+            string propName = kvp.Key;
+            IToolArg? arg = kvp.Value?.GetValueKind() switch
             {
-                JsonValueKind.String => new ToolString(propName, kvp.GetValue<string>()),
-                JsonValueKind.Number => new ToolNumber(propName, kvp.GetValue<double>()),
+                JsonValueKind.String => new ToolString(propName, kvp.Value.GetValue<string>()),
+                JsonValueKind.Number => new ToolNumber(propName, kvp.Value.GetValue<double>()),
                 JsonValueKind.True => new ToolBoolean(propName, true),
                 JsonValueKind.False => new ToolBoolean(propName, false),
 
@@ -381,11 +412,9 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         return args;
     }
 
-    // TODO : This
-    // {"type":"rate_limit_event","rate_limit_info":{"status":"allowed","resetsAt":1790665800,"rateLimitType":"five_hour","overageStatus":"rejected","overageDisabledReason":"org_level_disabled","isUsingOverage":false,"unifiedWindows":{"five_hour":{"utilization":0.01,"resetsAt":1790665800},"seven_day":{"utilization":0.04,"resetsAt":1791007200}}},"uuid":"159c04ba-5afd-423c-911e-ba28c6517b93","session_id":"636253d7-0e0b-407c-8330-1a461bd94a13"}
-
     private void ReadErrors(object sender, DataReceivedEventArgs e)
     {
+        // TODO : Handle failed resume
         Debug.WriteLine(e.Data);
         ;
     }
