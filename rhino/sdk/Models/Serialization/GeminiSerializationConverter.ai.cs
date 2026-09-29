@@ -77,7 +77,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)candidate["finishReason"]), (int?)payload["usageMetadata"]?["candidatesTokenCount"]));
+        turns.Add(new TurnEnd(Stop((string?)candidate["finishReason"]), tokenCount: (int?)payload["usageMetadata"]?["candidatesTokenCount"]));
 
         return turns;
     }

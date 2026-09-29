@@ -73,7 +73,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), (int?)message["usage"]?["output_tokens"]));
+        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: (int?)message["usage"]?["output_tokens"]));
 
         return turns;
     }

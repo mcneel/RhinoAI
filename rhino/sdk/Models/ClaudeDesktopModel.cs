@@ -1,13 +1,13 @@
 using System;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Text;
-using System.IO;
-using System;
 
 namespace Rhino.AI.Models;
 
@@ -189,18 +189,27 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         catch { }
     }
 
-    private static List<ITurn> ParseUser(JsonNode node)
+    private static DateTime? GetTimestamp(JsonNode node)
+    {
+        string? timestamp = node["timestamp"]?.GetValue<string>();
+        if (!DateTime.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime parsed)) return null;
+        return parsed;
+    }
+
+    private List<ITurn> ParseUser(JsonNode node)
     {
         JsonNode? message = node["message"];
         JsonNode? content = message?["content"];
         if (content is not JsonArray contents) return [];
+
+        DateTime? timestamp = GetTimestamp(node);
 
         List<ITurn> turns = new(contents.Count);
         foreach (JsonNode? cont in contents)
         {
             ITurn? turn = cont?["type"]?.ToString() switch
             {
-                "tool_result" => GetToolResultTurn(cont),
+                "tool_result" => GetToolResultTurn(cont, timestamp),
 
                 _ => null,
             };
@@ -213,7 +222,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         return turns;
     }
 
-    private static ITurn? GetToolResultTurn(JsonNode content)
+    private ITurn? GetToolResultTurn(JsonNode content, DateTime? timestamp)
     {
         string? id = content["tool_use_id"]?.GetValue<string>();
         if (string.IsNullOrEmpty(id)) return null;
@@ -227,7 +236,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
             string? toolName = content["content"]?[0]?["tool_name"]?.GetValue<string>();
             if (string.IsNullOrEmpty(toolName)) return null;
 
-            ToolResultTurn toolResult = new(id, toolName, ToolReturn.Success(""));
+            ToolResultTurn toolResult = new(id, toolName, ToolReturn.Success(""), timestamp);
             return toolResult;
         }
         else if (kind == JsonValueKind.String)
@@ -235,7 +244,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
             string? contentResult = contentContent!.GetValue<string>();
             if (string.IsNullOrEmpty(contentResult)) return null;
             // TODO : What type is this? - Is it a message?
-            return new MessageTurn(contentResult, RoleType.User);
+            return new MessageTurn(contentResult, RoleType.User, timestamp);
         }
 
         return null;
@@ -275,7 +284,9 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
                 _ => StopReason.Other
             };
 
-            if (string.Equals(stopReason, "end_turn")) return [new TurnEnd(reason)];
+            TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
+
+            if (string.Equals(stopReason, "end_turn")) return [new TurnEnd(reason, duration: duration)];
         }
 
         return [];
@@ -290,14 +301,16 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         // TODO : Input tokens or output tokens?
         int? tokenCount = message?["usage"]?["input_tokens"]?.GetValue<int>() ?? null;
 
+        DateTime? timestamp = GetTimestamp(node);
+
         List<ITurn> turns = new(contents.Count);
         foreach (JsonNode? cont in contents)
         {
             ITurn? turn = cont?["type"]?.ToString() switch
             {
-                "tool_use" => GetToolTurn(cont, tokenCount),
-                "thinking" => GetThinking(cont, tokenCount),
-                "text" => GetText(cont, tokenCount),
+                "tool_use" => GetToolTurn(cont, timestamp, tokenCount),
+                "thinking" => GetThinking(cont, timestamp, tokenCount),
+                "text" => GetText(cont, timestamp, tokenCount),
 
                 _ => null,
             };
@@ -310,21 +323,21 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         return turns;
     }
 
-    private static MessageTurn? GetText(JsonNode content, int? tokenCount)
+    private static MessageTurn? GetText(JsonNode content, DateTime? timestamp, int? tokenCount)
     {
         string? text = content["text"]?.GetValue<string>();
         if (string.IsNullOrEmpty(text)) return null;
-        return new MessageTurn(text, RoleType.Assistant, tokenCount: tokenCount);
+        return new MessageTurn(text, RoleType.Assistant, timestamp, tokenCount: tokenCount);
     }
 
-    private static ThinkingTurn? GetThinking(JsonNode content, int? tokenCount)
+    private static ThinkingTurn? GetThinking(JsonNode content, DateTime? timestamp, int? tokenCount)
     {
         string? thinking = content["thinking"]?.GetValue<string>();
         if (string.IsNullOrEmpty(thinking)) return null;
-        return new ThinkingTurn(thinking);
+        return new ThinkingTurn(thinking, timestamp: timestamp, tokenCount: tokenCount);
     }
 
-    private static ToolTurn? GetToolTurn(JsonNode content, int? tokenCount)
+    private static ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp, int? tokenCount)
     {
         string? id = content["id"]?.GetValue<string>();
         if (string.IsNullOrEmpty(id)) return null;
@@ -333,7 +346,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         if (string.IsNullOrEmpty(name)) return null;
 
         List<IToolArg> args = GetArgs(content["input"]);
-        return new ToolTurn(id, name, args, tokenCount: tokenCount);
+        return new ToolTurn(id, name, args, timestamp: timestamp, tokenCount: tokenCount);
     }
 
     private static List<IToolArg> GetArgs(JsonNode? node)
