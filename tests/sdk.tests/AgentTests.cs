@@ -85,7 +85,7 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
-        ;
+        Assert.That(turns, Is.Not.Empty);
     }
 
     private class WeatherTool : ITool
