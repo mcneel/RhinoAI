@@ -124,8 +124,13 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        _ = Task.Run(() => ReadLoopAsync(process), token);
+        _ = Task.Run(() => ReadLoopAsync(process, token), token);
         _ = Task.Run(() => WriteLoopAsync(process, turn), token);
+
+        token.Register(() =>
+        {
+            try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+        });
 
         await process.WaitForExitAsync();
 
@@ -151,7 +156,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         process.StandardInput.Close();
     }
 
-    private async Task ReadLoopAsync(Process process)
+    private async Task ReadLoopAsync(Process process, CancellationToken token)
     {
         try
         {
@@ -177,7 +182,7 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
                 }
                 catch
                 {
-                    
+
                 }
             }
         }
@@ -186,16 +191,93 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
 
     private static List<ITurn> ParseUser(JsonNode node)
     {
-        return [];
+        JsonNode? message = node["message"];
+        JsonNode? content = message?["content"];
+        if (content is not JsonArray contents) return [];
+
+        List<ITurn> turns = new(contents.Count);
+        foreach (JsonNode? cont in contents)
+        {
+            ITurn? turn = cont?["type"]?.ToString() switch
+            {
+                "tool_result" => GetToolResultTurn(cont),
+
+                _ => null,
+            };
+
+            if (turn is null) continue;
+
+            turns.Add(turn);
+        }
+
+        return turns;
+    }
+
+    private static ITurn? GetToolResultTurn(JsonNode content)
+    {
+        string? id = content["tool_use_id"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(id)) return null;
+
+        JsonNode? contentContent = content["content"];
+
+        JsonValueKind? kind = contentContent?.GetValueKind();
+        if (kind == JsonValueKind.Array)
+        {
+            // TODO : A little flimsy?
+            string? toolName = content["content"]?[0]?["tool_name"]?.GetValue<string>();
+            if (string.IsNullOrEmpty(toolName)) return null;
+
+            ToolResultTurn toolResult = new(id, toolName, ToolReturn.Success(""));
+            return toolResult;
+        }
+        else if (kind == JsonValueKind.String)
+        {
+            string? contentResult = contentContent!.GetValue<string>();
+            if (string.IsNullOrEmpty(contentResult)) return null;
+            // TODO : What type is this? - Is it a message?
+            return new MessageTurn(contentResult, RoleType.User);
+        }
+
+        return null;
     }
 
     private static List<ITurn> ParseSystem(JsonNode node)
     {
+        JsonNode? subTypeNode = node["subtype"];
+        if (subTypeNode is not null)
+        {
+            string? subType = subTypeNode.GetValue<string>();
+
+            // Ignore Hooks for now
+            if (subType is not null && subType.StartsWith("hook_")) return [];
+
+            // Ignore Init for now - I don't know what to do with it?
+            if (subType is not null && subType.Equals("init")) return [];
+        }
+
         return [];
     }
 
     private static List<ITurn> ParseResult(JsonNode node)
     {
+        if (node["stop_reason"] is JsonNode stopProp)
+        {
+            string stopReason = stopProp.GetValue<string>();
+            StopReason reason = stopReason.ToLowerInvariant() switch
+            {
+
+                "end_turn" => StopReason.EndTurn,
+                "tool_use" => StopReason.ToolUse,
+                "max_tokens" => StopReason.MaxTokens,
+                "refusal" => StopReason.Refusal,
+                "error" => StopReason.Error,
+
+                _ => StopReason.Other
+            };
+
+            if (string.Equals(stopReason, "end_turn")) return [new TurnEnd(reason)];
+        }
+
         return [];
     }
 
@@ -208,9 +290,9 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
         // TODO : Input tokens or output tokens?
         int? tokenCount = message?["usage"]?["input_tokens"]?.GetValue<int>() ?? null;
 
-        List<ITurn> turns = new (contents.Count);
-        foreach(JsonNode? cont in contents)
-        {   
+        List<ITurn> turns = new(contents.Count);
+        foreach (JsonNode? cont in contents)
+        {
             ITurn? turn = cont?["type"]?.ToString() switch
             {
                 "tool_use" => GetToolTurn(cont, tokenCount),
@@ -258,27 +340,27 @@ internal sealed class ClaudeDesktopModel(string name) : DesktopModel(name, "Anth
     {
         List<IToolArg> args = [];
         if (node is not JsonObject obj) return args;
-        
-        for(int i = 0; i < obj.Count; i++)
+
+        for (int i = 0; i < obj.Count; i++)
         {
             JsonNode? kvp = obj[i];
             if (kvp is null) continue;
 
             string propName = kvp.GetPropertyName();
             JsonValueKind kind = kvp.GetValueKind();
-            
+
             IToolArg? arg = kind switch
             {
                 JsonValueKind.String => new ToolString(propName, kvp.GetValue<string>()),
                 JsonValueKind.Number => new ToolNumber(propName, kvp.GetValue<double>()),
                 JsonValueKind.True => new ToolBoolean(propName, true),
                 JsonValueKind.False => new ToolBoolean(propName, false),
-                
+
                 // Null, Undefined, Object, Array (for now)
 
-                _ => null  
+                _ => null
             };
-            
+
             if (arg is null) continue;
             args.Add(arg);
         }
