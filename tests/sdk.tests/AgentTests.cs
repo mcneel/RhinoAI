@@ -70,10 +70,11 @@ public class AgentTests
         Agent agent = new(Token, lmStudio, harness);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        Assert.That(turns, Is.Not.Empty);
     }
 
     [Test, Category("Manual")]
-    [CancelAfter(5000)]
+    [CancelAfter(60_000)]
     public async Task DesktopClaude(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
@@ -85,7 +86,16 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
-        Assert.That(turns, Is.Not.Empty);
+        List<ITurn> transcript = turns.ToList();
+
+        Assert.That(transcript, Is.Not.Empty);
+        Assert.That(transcript.Last(), Is.EqualTo(new TurnEnd(StopReason.EndTurn)));
+        Assert.That(transcript[^2], Is.InstanceOf<MessageTurn>());
+
+        MessageTurn answer = (MessageTurn)transcript[^2];
+        Assert.That(answer.Role, Is.EqualTo(RoleType.Assistant));
+        Assert.That(answer.Message, Is.Not.Empty);
+        Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
     }
 
     private class WeatherTool : ITool
