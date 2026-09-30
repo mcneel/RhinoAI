@@ -69,7 +69,7 @@ public class AgentTests
         harness.AddMcp(mcp);
         Agent agent = new(Token, lmStudio, harness);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
         Assert.That(turns, Is.Not.Empty);
     }
 
@@ -82,10 +82,35 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetClaudeDesktopAgent(Token);
+        Agent agent = Agent.GetClaudeDesktopAgent(Token, "opus");
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        List<ITurn> transcript = turns.ToList();
+
+        Assert.That(transcript, Is.Not.Empty);
+        Assert.That(transcript.Last(), Is.InstanceOf<TurnEnd>().With.Property(nameof(TurnEnd.Reason)).EqualTo(StopReason.EndTurn));
+        Assert.That(transcript[^2], Is.InstanceOf<MessageTurn>());
+
+        MessageTurn answer = (MessageTurn)transcript[^2];
+        Assert.That(answer.Role, Is.EqualTo(RoleType.Assistant));
+        Assert.That(answer.Message, Is.Not.Empty);
+        Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(60_000)]
+    public async Task DesktopCodex(CancellationToken token)
+    {
+        MemoryMcp mcp = new("Weather MCP");
+
+        WeatherTool tool = new();
+        mcp.RegisterTool(tool);
+
+        Agent agent = Agent.GetCodexDesktopAgent(Token, "gpt-6-astra");
+        agent.Harness.AddMcp(mcp);
+
+        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
         List<ITurn> transcript = turns.ToList();
 
         Assert.That(transcript, Is.Not.Empty);

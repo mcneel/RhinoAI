@@ -182,16 +182,16 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string prompt = "")
-        => new Agent(token, new ClaudeDesktopModel("opus"), new ClaudeHarness(), prompt);
+    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt = "")
+        => new Agent(token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    // public static Agent GetCodexDesktopAgent(PlugIns.PlugInPermission token, )
-    //     => new Agent(token, new CodexDesktopModel("gpt-6"), new CodexHarness());
+    public static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt = "")
+        => new Agent(token, new CodexDesktopModel(model), new CodexHarness(), prompt);
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
@@ -240,8 +240,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <returns>An Agent</returns>
     public static Agent FromModel(PlugInToken token, IModel model, string prompt) => model switch
     {
-        ClaudeDesktopModel => GetClaudeDesktopAgent(token, prompt),
-        // CodexDesktopModel => GetCodexDesktopAgent(prompt),
+        ClaudeDesktopModel => GetClaudeDesktopAgent(token, model.Name, prompt),
+        CodexDesktopModel => GetCodexDesktopAgent(token, model.Name, prompt),
 
         // TODO : fallthrough might be sufficient
         DeepSeekModel => GetDeepSeekAgent(token, model.Name, prompt),

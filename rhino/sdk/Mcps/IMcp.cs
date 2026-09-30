@@ -1,9 +1,7 @@
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace Rhino.AI;
 
@@ -13,7 +11,9 @@ namespace Rhino.AI;
 public interface IMcp : IDisposable
 {
 
-    /// <summary>The name of the MCP</summary>
+    // TODO : MCP Name Rules
+
+    /// <summary>The name of the MCP.</summary>
     public string Name { get; }
 
     /// <summary>The tools offered by this MCP</summary>
