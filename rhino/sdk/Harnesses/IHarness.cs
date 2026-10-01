@@ -39,9 +39,9 @@ public interface IHarness
     /// <returns><see cref="true"> on success</returns>
     public bool AddSkill(ISkill skill);
 
-#endregion
+    #endregion
 
-#region Send/Recieve
+    #region Send/Recieve
 
     /// <summary>
     /// Begins the IHarness <see cref="Loop"/>.

@@ -40,10 +40,11 @@ public class PermissionTests
         Agent agent = new(Token, deepSeek, harness);
 
         MemoryMcp mcp = new ("Smoople");
-        mcp.RegisterTool(new TestUtils.TestTool("Smoople", "The Smoople Tool", []));
+        TestUtils.TestTool tool = new ("Smoople", "The Smoople Tool", []);
+        mcp.RegisterTool(tool);
         harness.AddMcp(mcp);
 
-        Assert.That(harness.Permissions.AddPermission("Smoople", new Permission("Smoople", Permissability.Deny, [])));
+        Assert.That(harness.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
         Assert.That(turns.Any(t => t is ToolResultTurn result && result.Return.Result == ToolResult.Failure));

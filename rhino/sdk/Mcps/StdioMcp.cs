@@ -21,7 +21,7 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
     private const int RememberedErrorLines = 20;
     private const int GracefulExitMilliseconds = 2000;
 
-    public string Name { get; } = name;
+    public string Name { get; } = Tool.CorrectName(name);
 
     private Dictionary<string, ITool> PrivateTools { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;

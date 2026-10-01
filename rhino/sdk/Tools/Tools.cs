@@ -59,8 +59,7 @@ public abstract record Tool : ITool
     
     public Tool(string name, string description, bool readOnly, bool destructive, ToolParameter[] args)
     {
-        ValidateName(name);
-        Name = name;
+        Name = CorrectName(name);
         Description = description;
         ReadOnly = readOnly;
         Destructive = destructive;
@@ -74,11 +73,18 @@ public abstract record Tool : ITool
     /// - No spaces, commas or other special characters.
     /// - Case sensitive (although for simplicity, this SDK is case insensitive)
     /// </summary>
-    internal static void ValidateName(string name)
+    private static void ValidateName(string name)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
         if (name.Length > 128) throw new ArgumentException($"Tool name must be at most 128 characters, got {name.Length}", nameof(name));
         if (!Regex.IsMatch(name, "^[A-Za-z0-9_]+$")) throw new ArgumentException($"Tool name '{name}' may only contain ASCII letters, digits and _", nameof(name));
+    }
+
+    internal static string CorrectName(string name)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        name = name.Replace(' ', '_');
+        ValidateName(name);
+        return name;
     }
 
 
@@ -103,8 +109,7 @@ public record struct ToolParameter
 
     public ToolParameter(string name, string description, ToolArgType type, bool required)
     {
-        Tool.ValidateName(name);
-        Name = name;
+        Name = Tool.CorrectName(name);
         Description = description;
         Type = type;
         Required = required;

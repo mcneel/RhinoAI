@@ -60,13 +60,19 @@ internal static class ToolArgs
         List<IToolArg> pairs = new(arguments.Count);
         foreach (KeyValuePair<string, JsonNode?> argument in arguments)
         {
-            if (argument.Value is not JsonNode value || value.GetValueKind() == JsonValueKind.Null)
-                continue;
-
-            pairs.Add(ToArg(argument.Key, DeclaredType(tool, argument.Key) ?? InferredType(value), value));
+            if (FromProperty(tool, argument.Key, argument.Value) is IToolArg arg)
+                pairs.Add(arg);
         }
 
         return pairs;
+    }
+
+    public static IToolArg? FromProperty(ITool? tool, string name, JsonNode? value)
+    {
+        if (value is null || value.GetValueKind() == JsonValueKind.Null)
+            return null;
+
+        return ToArg(name, DeclaredType(tool, name) ?? InferredType(value), value);
     }
 
     private static IToolArg ToArg(string name, ToolArgType type, JsonNode value)

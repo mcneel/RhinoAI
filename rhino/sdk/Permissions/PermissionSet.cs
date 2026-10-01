@@ -11,41 +11,41 @@ public sealed class PermissionSet
 
     public Permissability DefaultPermission { get; set; } = Permissability.Ask;
 
-    private Dictionary<string, Permission> Permissions { get; } = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<Permission> Permissions { get; } = new();
 
-    public Permissability HasPermission(ITool tool, IReadOnlyList<IToolArg> args)
+    public Permissability HasPermission(IMcp mcp, ITool tool, IReadOnlyList<IToolArg> args)
+        => HasPermission(mcp.Name, tool.Name, args);
+
+    public Permissability HasPermission(string mcpName, string toolName, IReadOnlyList<IToolArg> args)
     {
         Permissability result = DefaultPermission;
-        if (Permissions.TryGetValue(tool.Name, out Permission? permission))
+        foreach(Permission permission in Permissions)
         {
-            if (permission is not null)
-            {
-                result = ResolvePermissions(permission, args);
-            }
-            else
-            {
-                Permissions.Remove(tool.Name);
-            }
+            if (!string.Equals(permission.McpName, mcpName)) continue;
+            if (!string.Equals(permission.ToolName, toolName)) continue;
+
+            // TODO : What if there are multiple entries
+            result = ResolvePermissions(permission, args);
         }
 
         return result;
     }
-    
+
     public IEnumerable<Permission> AllowedTools()
     {
-        foreach(KeyValuePair<string, Permission> permission in Permissions)
+        foreach (Permission permission in Permissions)
         {
-            if (permission.Value.Permissability != Permissability.Always) continue;
-            yield return permission.Value;
+            if (permission.Permissability != Permissability.Always) continue;
+            yield return permission;
         }
     }
-    
+
     public IEnumerable<Permission> ProhibitedTools()
     {
-        foreach(KeyValuePair<string, Permission> permission in Permissions)
+        foreach (Permission permission in Permissions)
         {
-            if (permission.Value.Permissability != Permissability.Deny) continue;
-            yield return permission.Value;
+            if (permission.Permissability != Permissability.Deny) continue;
+            yield return permission;
         }
     }
 
@@ -69,9 +69,9 @@ public sealed class PermissionSet
         return permission.Permissability;
     }
 
-    public bool AddPermission(string name, Permission permission)
-        => Permissions.TryAdd(name, permission);
-    
+    public bool AddPermission(Permission permission)
+        => Permissions.Add(permission);
+
 
     // All rules can amtch * as ANYTHING
     // OR !! as NOTHING
@@ -100,4 +100,31 @@ public enum Permissability { Always, Ask, Deny };
 
 public record struct ToolArgPermission(string ArgName, Permissability Permissability, string Value);
 
-public sealed record Permission(string ToolName, Permissability Permissability, Dictionary<string, ToolArgPermission> ArgumentPermissions);
+public sealed record Permission
+{
+
+    public string McpName { get; }
+
+    public string ToolName { get; }
+
+    public Permissability Permissability { get; }
+
+    public IReadOnlyDictionary<string, ToolArgPermission> ArgumentPermissions { get; }
+
+    public Permission(IMcp mcp, ITool tool, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    {
+        McpName = mcp.Name;
+        ToolName = tool.Name;
+        Permissability = permissability;
+        ArgumentPermissions = argumentPermissions;
+    }
+
+    public Permission(IMcp mcp, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    {
+        McpName = mcp.Name;
+        ToolName = "*";
+        Permissability = permissability;
+        ArgumentPermissions = argumentPermissions;
+    }
+
+}

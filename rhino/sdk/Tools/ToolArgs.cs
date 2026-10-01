@@ -33,8 +33,7 @@ public abstract record ToolArg : IToolArg
 
     public ToolArg(string name)
     {
-        Name = name;
-        Tool.ValidateName(name);
+        Name = Tool.CorrectName(name);
     }
 }
 

@@ -106,7 +106,8 @@ internal sealed class CodexHarness : IHarness
             process.StartInfo.ArgumentList.Add("-c");
             process.StartInfo.ArgumentList.Add("web_search=\"disabled\"");
 
-            string[] codexTools = ["shell_tool", "unified_exec", "code_mode_host", "multi_agent", "goals",
+            // code_mode_host stays enabled: this model routes every tool call, MCP included, through code mode.
+            string[] codexTools = ["shell_tool", "unified_exec", "multi_agent", "goals",
                                             "image_generation", "view_image", "sleep_tool", "apps", "tool_suggest",
                                             "remote_plugin", "browser_use", "computer_use"];
 
@@ -159,15 +160,13 @@ internal sealed class CodexHarness : IHarness
     private async Task<IEnumerable<ITurn>> ReadLoopAsync(Process process, CancellationToken token)
     {
         List<ITurn> turnsOut = [];
-        List<string> stringies = [];
+        List<JsonNode> stringies = [];
         try
         {
             string? line = null;
             while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 if (string.IsNullOrEmpty(line)) continue;
-
-                stringies.Add(line);
                 try
                 {
                     JsonNode? thing = JsonObject.Parse(line) ?? throw new Exception($"Could not parse {line}");
@@ -176,25 +175,18 @@ internal sealed class CodexHarness : IHarness
                     if (string.IsNullOrEmpty(turnId)) continue;
 
                     string[] turnIds = turnId.Split('.');
-                    if (turnIds.Length != 2)
+                    if (turnIds.Length is not (1 or 2))
                     {
                         throw new Exception($"{turnId} was unexpected!");
                     }
 
                     string turnType = turnIds[0].ToLowerInvariant();
-                    string turnStatus = turnIds[1].ToLowerInvariant();
+                    string turnStatus = turnIds.Length == 2 ? turnIds[1].ToLowerInvariant() : string.Empty;
 
                     if (string.Equals(turnId, "thread.started", StringComparison.OrdinalIgnoreCase))
                     {
                         SessionId = thing["thread_id"]?.GetValue<Guid>();
                         continue;
-                    }
-                    else if (string.Equals(turnId, "item.completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`."
-                        // Ignore this message
-                        string? message = thing["item"]?["message"]?.GetValue<string>();
-                        if (message is not null && message.Contains("Code Mode is unavailable", StringComparison.OrdinalIgnoreCase)) continue;
                     }
 
                     List<ITurn> newturns = turnType switch
@@ -209,19 +201,31 @@ internal sealed class CodexHarness : IHarness
                         {
                             "started" => [new TurnStart()],
                             "completed" => ParseTurnCompleted(thing),
+                            // TODO : Parse turn.failed into a TurnEnd(StopReason.Error) carrying error.message
+                            "failed" => [],
                             _ => [],
                         },
 
                         "item" => turnStatus switch
                         {
+                            "started" => ParseStarted(thing),
                             "completed" => ParseItemCompleted(thing),
+                            // TODO : Parse item.updated (progress on a running item, e.g. todo_list)
+                            "updated" => [],
                             _ => []
                         },
+
+                        // TODO : Parse the top-level error event (a stream failure, carries message)
+                        "error" => [],
 
                         _ => []
                     };
 
                     turnsOut.AddRange(newturns);
+                    if (newturns.Count == 0)
+                    {
+                        stringies.Add(thing);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -237,6 +241,55 @@ internal sealed class CodexHarness : IHarness
         return turnsOut;
     }
 
+    private List<ITurn> ParseStarted(JsonNode thing)
+    {
+        JsonNode? item = thing["item"];
+        if (item is null) return [];
+        string id = item["id"]?.GetValue<string>() ?? "err";
+        string? mcpName = item["server"]?.GetValue<string>();
+        string? toolName = item["tool"]?.GetValue<string>();
+
+        List<IToolArg> args = GetArgs(item["arguments"]);
+        
+        return [new ToolTurn(id, $"mcp__{mcpName}__{toolName}", args)];
+    }
+
+    private List<IToolArg> GetArgs(JsonNode? node)
+    {
+        if (node is not JsonObject jArgs) return [];
+        List<IToolArg> args = [];
+
+        foreach(KeyValuePair<string,JsonNode?> jArg in jArgs)
+        {
+            if (jArg.Value is null) continue;
+            
+            IToolArg? toolArg = ParseArg(jArg!);
+            if (toolArg is null) continue;
+
+            args.Add(toolArg);
+        }
+
+        return args;
+    }
+
+    private IToolArg? ParseArg(KeyValuePair<string, JsonNode> jArg)
+    {
+        JsonValueKind kind = jArg.Value.GetValueKind();
+        string propName = jArg.Key;
+        
+        return kind switch
+        {
+            JsonValueKind.String => new ToolString(propName, jArg.Value.GetValue<string>()),
+            JsonValueKind.Number => new ToolNumber(propName, jArg.Value.GetValue<double>()),
+            JsonValueKind.True => new ToolBoolean(propName, true),
+            JsonValueKind.False => new ToolBoolean(propName, false),
+
+            // Null, Undefined, Object, Array (for now)
+
+            _ => null
+        };
+    }
+
     private static List<ITurn> ParseItemCompleted(JsonNode thing)
     {
         JsonNode? item = thing["item"];
@@ -245,53 +298,38 @@ internal sealed class CodexHarness : IHarness
         JsonNode? type = item["type"];
         if (type is null) return [];
 
-        if (string.Equals(type?.GetValue<string>(), "agent_message", StringComparison.OrdinalIgnoreCase))
+        return type?.GetValue<string>()?.ToLowerInvariant() switch
         {
-            string message = item["text"]?.GetValue<string>() ?? item.ToJsonString();
-            return [new MessageTurn(message, RoleType.Assistant)];
-        }
-        
-        return [];
+            "agent_message" => [new MessageTurn(item["text"]?.GetValue<string>() ?? item.ToJsonString(), RoleType.Assistant)],
+            
+            // TODO : Message
+            "mcp_tool_call" => [GetToolResultTurn(item)],
+
+            _ => []
+        };
+    }
+
+    private static ToolResultTurn GetToolResultTurn(JsonNode item)
+    {
+        string id = item["id"]?.GetValue<string>() ?? "id";
+        string toolName = item["tool"]?.GetValue<string>() ?? "tool_name";
+
+        string? error = item["error"]?.GetValue<string>();
+
+        ToolReturn toolReturn = error switch
+        {
+            string err => ToolReturn.Success(err),
+            _ => ToolReturn.Success("Successfull") // TODO : More?
+        };
+
+        return new (id, toolName, toolReturn);
     }
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)
     {
         int? tokenCount =thing?["usage"]?["input_tokens"]?.GetValue<int>();
+        // new ToolResultTurn()
         return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
-    }
-
-    private static DateTime? GetTimestamp(JsonNode node)
-    {
-        string? timestamp = node["timestamp"]?.GetValue<string>();
-        if (!DateTime.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime parsed)) return null;
-        return parsed;
-    }
-    
-    private static List<IToolArg> GetArgs(JsonNode? node)
-    {
-        List<IToolArg> args = [];
-        if (node is not JsonObject obj) return args;
-
-        foreach (KeyValuePair<string, JsonNode?> kvp in obj)
-        {
-            string propName = kvp.Key;
-            IToolArg? arg = kvp.Value?.GetValueKind() switch
-            {
-                JsonValueKind.String => new ToolString(propName, kvp.Value.GetValue<string>()),
-                JsonValueKind.Number => new ToolNumber(propName, kvp.Value.GetValue<double>()),
-                JsonValueKind.True => new ToolBoolean(propName, true),
-                JsonValueKind.False => new ToolBoolean(propName, false),
-
-                // Null, Undefined, Object, Array (for now)
-
-                _ => null
-            };
-
-            if (arg is null) continue;
-            args.Add(arg);
-        }
-
-        return args;
     }
 
     private void ReadErrors(object sender, DataReceivedEventArgs e)
@@ -306,6 +344,7 @@ internal sealed class CodexHarness : IHarness
         ;
     }
 
+    // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
     private IEnumerable<string> GetMcpArgs()
     {
         string disabledTools = TomlArray(Permissions.ProhibitedTools().Select(permission => permission.ToolName));
@@ -316,17 +355,24 @@ internal sealed class CodexHarness : IHarness
             {
                 StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",
                 HttpMcp httpMcp => $"url='{httpMcp.Url.AbsoluteUri}'",
+                MemoryMcp memMcp => HandleMemoryMcp(memMcp),
                 _ => null,
             };
             if (transport is null) continue;
 
             yield return "-c";
-            yield return $"mcp_servers.{ServerKey(mcp.Name)}={{{transport}, disabled_tools={disabledTools}}}";
+            yield return $"mcp_servers.{mcp.Name}={{{transport}, disabled_tools={disabledTools}}}";
         }
     }
 
+    private string HandleMemoryMcp(MemoryMcp mcp)
+    {
+        Rhino.AI.Mcps.MemoryMcpManager.McpLease leaase = Rhino.AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(mcp);
+        return $"url='{leaase.Uri.AbsoluteUri}'";
+    }
+
     // Codex splits -c keys on every dot, even inside TOML quotes.
-    private static string ServerKey(string mcpName) => mcpName.Replace('.', '_');
+    private static string ServerKey(string mcpName) => mcpName.Replace('.', '_').Replace(' ', '_');
 
     private static string TomlArray(IEnumerable<string> values)
         => $"[{string.Join(", ", values.Select(value => $"'{value}'"))}]";

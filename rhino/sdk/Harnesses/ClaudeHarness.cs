@@ -78,15 +78,14 @@ internal sealed class ClaudeHarness : IHarness
 
         process.StartInfo.ArgumentList.Add(SessionId!.ToString());
 
-        // TODO : Use RhinoMcp
-        string mcpName = "rhino";
-
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;
-        foreach (Permission permission in Permissions.AllowedTools())
+        
+        // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
+        foreach (IMcp mcp in Mcps.Values)
         {
-            allowedTools += $"mcp__{mcpName}__{permission.ToolName}";
-            // permission.ArgumentPermissions // TODO : Use these for smarter permissions
+            // TODO : Check Permissions.ProhibitedTools()
+            allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
             allowedTools += " ";
         }
         process.StartInfo.ArgumentList.Add("--allowedTools");
@@ -97,7 +96,7 @@ internal sealed class ClaudeHarness : IHarness
         string disallowedTools = string.Empty;
         foreach (Permission permission in Permissions.ProhibitedTools())
         {
-            disallowedTools += $"mcp__{mcpName}__{permission.ToolName}";
+            disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions
             disallowedTools += " ";
         }
@@ -183,6 +182,9 @@ internal sealed class ClaudeHarness : IHarness
 
         return await reading;
     }
+
+    private static string CoerceMcpName(string mcpName)
+        => mcpName.Replace(' ', '_');
 
     private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
     {
@@ -440,6 +442,7 @@ internal sealed class ClaudeHarness : IHarness
         ;
     }
 
+    // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
     private string GetMcpJsons()
     {
         JsonObject array = new();
@@ -465,6 +468,20 @@ internal sealed class ClaudeHarness : IHarness
                 {
                     ["type"] = "http",
                     ["url"] = httpMcp.Url.AbsoluteUri
+                    // "headers": {
+                    //     "Authorization": "Bearer ${MCP_TOKEN}",
+                    //     "X-Tenant": "mcneel"
+                    // }
+                };
+            }
+            else if (mcp is MemoryMcp memoryMcp)
+            {
+                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(memoryMcp);
+
+                array[mcp.Name] = new JsonObject()
+                {
+                    ["type"] = "http",
+                    ["url"] = lease.Uri.AbsoluteUri
                     // "headers": {
                     //     "Authorization": "Bearer ${MCP_TOKEN}",
                     //     "X-Tenant": "mcneel"

@@ -58,7 +58,7 @@ public class SkillTests
         GenericHarness harness = new(Token);
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
-        ToolReturn result = await harness.UseToolAsync("Default Tools", "read_skill", [new ToolString("name", "Boxes")], token);
+        ToolReturn result = await harness.UseToolAsync("Default_Tools", "read_skill", [new ToolString("name", "Boxes")], token);
 
         Assert.That(result.Result, Is.EqualTo(ToolResult.Success));
         Assert.That(result.Message, Is.EqualTo("Use the Box command."));

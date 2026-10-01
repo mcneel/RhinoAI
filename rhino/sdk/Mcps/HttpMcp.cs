@@ -17,13 +17,15 @@ namespace Rhino.AI;
 public sealed class HttpMcp(string name, Uri url) : IMcp
 {
 
-    public string Name { get; } = name;
+    public string Name { get; } = Tool.CorrectName(name);
 
     private Dictionary<string, ITool> PrivateTools { get; } = [];
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
 
     public Uri Url { get; } = url;
 
+    // TODO : Process?? Surely a Http Listener? Or ? What we doing here.
+    // Try wrapping the Support MCP as an example
     private Process? Process { get; set; }
     private bool Disposed { get; set; }
     private int LastId { get; set; }

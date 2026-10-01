@@ -50,19 +50,19 @@ public class GenericHarness : IHarness
             return ToolReturn.Failure($"Tool named {toolName} is not available in {mcpName}", $"Did you mean {likelyToolString}?");
         }
 
-        Permissability permissability = Permissions.HasPermission(tool, args);
+        Permissability permissability = Permissions.HasPermission(mcpName, toolName, args);
         if (permissability == Permissability.Deny) return ToolReturn.Refused();
         if (permissability == Permissability.Ask)
         {
-            if (!await RequestPermissionFromUser(tool, args, token)) return ToolReturn.Refused();
+            if (!await RequestPermissionFromUser(mcp, tool, args, token)) return ToolReturn.Refused();
         }
 
         return await mcp.RunToolAsync(toolName, args, token).ConfigureAwait(false);
     }
 
-    public virtual async Task<bool> RequestPermissionFromUser(ITool tool, List<IToolArg> args, CancellationToken token)
+    public virtual async Task<bool> RequestPermissionFromUser(IMcp mcp, ITool tool, List<IToolArg> args, CancellationToken token)
     {
-        Permissability permissability = Permissions.HasPermission(tool, args);
+        Permissability permissability = Permissions.HasPermission(mcp, tool, args);
         if (permissability == Permissability.Always) return true;
         if (permissability == Permissability.Deny) return false;
         
