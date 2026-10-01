@@ -3,10 +3,11 @@ using System.Runtime.InteropServices;
 namespace Rhino.AI.Router;
 
 // Whether a process still owns a visible top-level window, i.e. whether a human
-// could close it by hand. CloseAsync uses this to decide whether an adopted slot
-// (one the router did not spawn) can be closed cooperatively: a hidden-window
-// slot that outlived its router has no window for anyone to close, so it must
-// not be refused the same way a normal adopted Rhino is.
+// could close it by hand. When the router runs with --hidden, CloseAsync uses
+// this to decide whether an adopted slot (one the router did not spawn) can be
+// closed cooperatively; without --hidden it never asks. A hidden-window slot
+// that outlived its router has no window for anyone to close, so it must not
+// be refused the same way a normal adopted Rhino is.
 public enum WindowVisibility { Visible, Hidden, Unknown }
 
 public interface IWindowProbe
@@ -15,10 +16,9 @@ public interface IWindowProbe
 }
 
 // Windows: EnumWindows every top-level window on the desktop, keep the ones
-// owned by pid, and check IsWindowVisible. Same technique used to verify
-// --hidden live against a real Rhino (see the hidden-window handoff): a hidden
-// Rhino still creates its usual ~20 top-level windows, just none visible, so
-// "no window owned by pid was visible" is Hidden, not "no window exists".
+// owned by pid, and check IsWindowVisible. A hidden Rhino still creates its
+// usual ~20 top-level windows, just none visible, so "no window owned by pid
+// was visible" is Hidden, not "no window exists".
 //
 // Non-Windows: no equivalent API here, so this always reports Unknown. CloseAsync
 // treats Unknown the same as Visible (refuse), which is what kept the pre-existing
