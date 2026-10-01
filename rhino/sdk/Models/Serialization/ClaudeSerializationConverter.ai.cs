@@ -128,9 +128,9 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
         {
             declarations.Add(new JsonObject
             {
-                ["name"] = $"{mcp.Name}__{tool.Name}",
+                ["name"] = ToolSchema.WireName(mcp.Name, tool.Name),
                 ["description"] = tool.Description,
-                ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
+                ["input_schema"] = ToolSchema.Parameters(tool, SchemaType),
             });
         }
 

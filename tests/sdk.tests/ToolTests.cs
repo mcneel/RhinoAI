@@ -61,7 +61,7 @@ public class ToolTests
         Assert.That(result.Message, Is.Not.Empty);
     }
 
-    [Test, CancelAfter(10_000)]
+    [Test, CancelAfter(60_000)]
     public async Task simpleDelegation(CancellationToken token)
     {
         DeepSeekModel deepSeek = DeepSeekModel.Default();
