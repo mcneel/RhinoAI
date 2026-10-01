@@ -251,10 +251,26 @@ internal sealed class CodexHarness : IHarness
 
     private static string? ErrorMessage(JsonNode? node) => node switch
     {
-        JsonValue value when value.TryGetValue(out string? text) => text,
-        JsonObject obj => obj["message"]?.GetValue<string>() ?? obj.ToJsonString(),
+        JsonValue value when value.TryGetValue(out string? text) => Unwrap(text),
+        JsonObject obj when obj["error"] is JsonNode inner => ErrorMessage(inner) ?? obj.ToJsonString(),
+        JsonObject obj => ErrorMessage(obj["message"]) ?? obj.ToJsonString(),
         _ => null,
     };
+
+    // Codex forwards the API's error body as a JSON string inside "message", so the readable text sits one level down.
+    private static string Unwrap(string text)
+    {
+        if (!text.TrimStart().StartsWith('{')) return text;
+
+        try
+        {
+            return JsonNode.Parse(text) is JsonObject obj && ErrorMessage(obj) is string inner ? inner : text;
+        }
+        catch (JsonException)
+        {
+            return text;
+        }
+    }
 
     private List<ITurn> ParseStarted(JsonNode thing)
     {

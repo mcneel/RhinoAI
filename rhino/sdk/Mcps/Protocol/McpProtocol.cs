@@ -92,8 +92,9 @@ internal static class McpProtocol
     {
         // {"name":"get_weather","arguments":{"city":"Miami"}
 
-        string? toolName = request.Params?["name"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(toolName)) return new McpResponse(System.Net.HttpStatusCode.OK, $"No Tool Name provided!");
+        string? toolName = request.Params?["name"] is JsonValue nameValue && nameValue.TryGetValue(out string? name) ? name : null;
+        if (string.IsNullOrEmpty(toolName))
+            return McpResponse.Json(JsonRpc.Error(request.Id, JsonRpcErrorCode.InvalidParams, "tools/call requires a tool name in params.name."));
 
         List<IToolArg> args = GetArgs(session.Mcp.Tools.GetValueOrDefault(toolName), request.Params?["arguments"]);
         ToolReturn @return = await session.Harness.UseToolAsync(session.Mcp.Name, toolName, args, token);
