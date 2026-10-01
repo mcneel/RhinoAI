@@ -1,10 +1,11 @@
 using RhinoCommand = Rhino.Commands.Command;
+using Rhino.UI;
 
 namespace Rhino.AI;
 
 public class AIPanelCommand : RhinoCommand
 {
-    public override string EnglishName => "AIPanel";
+    public override string EnglishName => LOC.COMMANDNAME("AIPanel");
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 

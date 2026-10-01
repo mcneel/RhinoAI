@@ -1,12 +1,13 @@
-using Rhino.Commands;
+using Rhino.UI;
 using Rhino.Input;
+using Rhino.Commands;
 using Rhino.Input.Custom;
 
 namespace Rhino.AI;
 
 public class MCPStatusCommand : Command
 {
-    public override string EnglishName => "McpStatus";
+    public override string EnglishName => LOC.COMMANDNAME("MCPStatus");
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 
