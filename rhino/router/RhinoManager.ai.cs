@@ -22,8 +22,13 @@ public class RhinoManager(
     RouterConfig config,
     RhinoControlClient control,
     SlotStore store,
-    ILogger<RhinoManager> log)
+    ILogger<RhinoManager> log,
+    IWindowProbe? windowProbe = null)
 {
+    // Injectable so CloseAsync's adopted-slot policy is unit-testable without a
+    // real Rhino; production leaves it null and gets the real probe.
+    private readonly IWindowProbe _windowProbe = windowProbe ?? new WindowProbe();
+
     // Manually-started Rhino lives on 10500; children walk forward from there.
     private const int ChildPortBase = 10500;
     private int StartupTimeoutSeconds { get; } = config.StartupTimeoutSeconds;
@@ -157,7 +162,7 @@ public class RhinoManager(
                 int port = store.ReservePort(slotId, ChildPortBase, IsPortListening);
                 log.LogInformation("Spawning Rhino {Version} as slot '{Slot}' on port {Port} (exe: {Exe})",
                     version, slotId, port, rhinoExe);
-                Process proc = LaunchWindows(rhinoExe, port);
+                Process proc = LaunchWindows(rhinoExe, port, config.WindowMode);
                 switch (WaitForPort(port, TimeSpan.FromSeconds(StartupTimeoutSeconds), proc))
                 {
                     case WaitResult.Bound:
@@ -169,11 +174,20 @@ public class RhinoManager(
                             $"plugin load failure.");
                     case WaitResult.Timeout:
                         // Refresh: MainWindowHandle is cached on first access. Zero handle
-                        // means no interactive-desktop access (e.g. spawned from IDE extension host).
+                        // means no interactive-desktop access (e.g. spawned from IDE extension host),
+                        // except under SpawnWindowMode.Hidden: Process only ever reports a visible
+                        // top-level window, so there a zero handle is what we asked for and says
+                        // nothing about the desktop. A minimized window still counts as visible.
                         proc.Refresh();
                         bool hasWindow = proc.MainWindowHandle != IntPtr.Zero;
+                        bool windowHidden = config.WindowMode == SpawnWindowMode.Hidden;
                         try { proc.Kill(); } catch { /* best effort */ }
-                        throw new TimeoutException(hasWindow
+                        throw new TimeoutException(
+                            windowHidden
+                            ? $"Rhino {version} (pid {proc.Id}) was spawned with a hidden window and did not bind port {port} " +
+                              $"within {StartupTimeoutSeconds}s. Possible causes: a license, EULA or crash-recovery dialog blocking out of sight, " +
+                              $"plugin failed to load, runscript stuck. Re-run the router without --hidden to see what the window shows."
+                            : hasWindow
                             ? $"Rhino {version} (pid {proc.Id}) has a main window but did not bind port {port} within {StartupTimeoutSeconds}s. " +
                               $"Possible causes: license/EULA dialog blocking, plugin failed to load, runscript stuck."
                             : $"Rhino {version} (pid {proc.Id}) is running but never created a main window. " +
@@ -268,8 +282,27 @@ public class RhinoManager(
 
         if (child.Adopted)
         {
-            // User started this Rhino, so the router doesn't get to kill it.
-            throw new AdoptedSlotCloseException(slotId);
+            // The router did not spawn an adopted Rhino, so by default it never
+            // closes it. The one exception is opt-in, under --hidden: a slot
+            // that outlived its router is adopted by the next router's
+            // announcement scan and has no window anyone could close by hand.
+            // Adopted alone cannot tell that orphan from a user-started Rhino;
+            // a visible top-level window can. So only a router running hidden
+            // asks the probe, and it closes the slot only when no visible
+            // window is found, through the same cooperative close path below.
+            if (config.WindowMode != SpawnWindowMode.Hidden)
+                throw new AdoptedSlotCloseException(slotId);
+
+            WindowVisibility visibility = child.Pid is { } adoptedPid
+                ? _windowProbe.Probe(adoptedPid)
+                : WindowVisibility.Unknown;
+
+            if (visibility != WindowVisibility.Hidden)
+                throw new AdoptedSlotCloseException(slotId, visibility);
+
+            log.LogInformation(
+                "Closing adopted slot '{Slot}' (pid {Pid}) cooperatively; no visible window found.",
+                slotId, child.Pid);
         }
 
         // A launching placeholder has no pid/port to act on; the leader/follower
@@ -597,12 +630,13 @@ public class RhinoManager(
     private const string PortEnvVar = "RHINO_MCP_AUTOSTART_PORT";
 
     // Uses CreateProcess + CREATE_BREAKAWAY_FROM_JOB; see WinSpawn for the rationale.
-    private static Process LaunchWindows(string rhinoExe, int port)
+    private static Process LaunchWindows(string rhinoExe, int port, SpawnWindowMode windowMode)
     {
         return WinSpawn.Start(
             rhinoExe,
             "/nosplash /runscript=\"_MCPSpawn\"",
-            new Dictionary<string, string> { [PortEnvVar] = port.ToString() });
+            new Dictionary<string, string> { [PortEnvVar] = port.ToString() },
+            windowMode);
     }
 
     // `open -a` exits immediately, so we resolve the Rhino pid via lsof later.
@@ -711,13 +745,25 @@ public class RhinoManager(
 }
 
 // Tools layer catches this and turns it into a structured `cannot_close_adopted` payload.
-public sealed class AdoptedSlotCloseException(string slotId)
-    : InvalidOperationException($"Slot '{slotId}' was adopted from a user-started Rhino and cannot be closed by the router.")
+// Thrown for the three cases the router refuses to touch an adopted slot: the
+// router does not run with --hidden (Reason is null, the default refusal); it
+// does, but the slot still has a visible window (someone may be looking at it);
+// or it does, but visibility could not be determined at all (no probe on this
+// OS, or the slot has no pid yet).
+public sealed class AdoptedSlotCloseException(string slotId, WindowVisibility? reason = null)
+    : InvalidOperationException(reason switch
+    {
+        null => $"Slot '{slotId}' was adopted from a user-started Rhino and cannot be closed by the router.",
+        WindowVisibility.Visible => $"Slot '{slotId}' was adopted from a user-started Rhino and still has a visible window; the router won't close it.",
+        _ => $"Slot '{slotId}' was adopted from a user-started Rhino and its window visibility could not be determined on this OS; the router won't close it.",
+    })
 {
     public string SlotId { get; } = slotId;
+    public WindowVisibility? Reason { get; } = reason;
 }
 
-// `Adopted` slots are never killed by the router — the user started them.
+// The router did not spawn an `Adopted` slot. It closes one only under --hidden,
+// and only when the slot has no visible window.
 // `Status` is internal lifecycle state, kept off the JSON wire.
 // Port/Pid are null on a launching row (the placeholder INSERT omits them) and
 // only set once the slot is marked ready. Modelling them as int? keeps a
