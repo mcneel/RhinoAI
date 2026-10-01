@@ -33,8 +33,7 @@ public class AgentTests
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
-        Assert.That(turns.Any(t => t is ToolResultTurn), "The model answered without calling the weather tool.");
-        Assert.That(turns.Last(), Is.InstanceOf<MessageTurn>());
+        AssertUsedWeatherTool(turns.ToList());
     }
 
     [Test, CancelAfter(5000)]
