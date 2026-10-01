@@ -147,14 +147,14 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
     private static JsonArray Declarations(IHarness harness)
     {
         JsonArray declarations = [];
-        foreach (ITool tool in ToolSchema.Tools(harness))
+        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {
                 ["type"] = "function",
                 ["function"] = new JsonObject
                 {
-                    ["name"] = tool.Name,
+                    ["name"] = $"{mcp.Name}__{tool.Name}",
                     ["description"] = tool.Description,
                     ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
                 },

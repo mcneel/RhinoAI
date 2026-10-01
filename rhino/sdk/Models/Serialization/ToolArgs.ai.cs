@@ -90,15 +90,12 @@ internal static class ToolArgs
         };
     }
 
-    private static ITool? FindTool(IHarness harness, string name)
+    private static ITool? FindTool(IHarness harness, string wireName)
     {
-        foreach (IMcp mcp in harness.Mcps.Values)
-        {
-            if (mcp.Tools.TryGetValue(name, out ITool? tool))
-                return tool;
-        }
+        if (!ToolSchema.TryParseWireName(wireName, out string mcpName, out string toolName)) return null;
+        if (!harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return null;
 
-        return null;
+        return mcp.Tools.GetValueOrDefault(toolName);
     }
 
     private static ToolArgType? DeclaredType(ITool? tool, string name)

@@ -77,7 +77,7 @@ internal sealed class ClaudeHarness : IHarness
             process.StartInfo.ArgumentList.Add("--session-id");
         }
 
-        process.StartInfo.ArgumentList.Add(SessionId!.ToString());
+        process.StartInfo.ArgumentList.Add(SessionId.ToString()!);
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;

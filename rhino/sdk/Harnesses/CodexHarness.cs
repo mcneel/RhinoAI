@@ -193,7 +193,7 @@ internal sealed class CodexHarness : IHarness
                     {
                         "thread" => turnStatus switch
                         {
-                            // "started" => ParseStarted()
+                            "started" => ParseStarted(thing),
                             _ => [],
                         },
 
@@ -248,14 +248,12 @@ internal sealed class CodexHarness : IHarness
     private List<ITurn> ParseStarted(JsonNode thing)
     {
         JsonNode? item = thing["item"];
-        if (item is null) return [];
-        string id = item["id"]?.GetValue<string>() ?? "err";
-        string? mcpName = item["server"]?.GetValue<string>();
-        string? toolName = item["tool"]?.GetValue<string>();
+        if (item?["type"]?.GetValue<string>() != "mcp_tool_call") return [];
+        if (!TryGetToolCallName(item, out string id, out string name)) return [];
 
         List<IToolArg> args = GetArgs(item["arguments"]);
 
-        return [new ToolTurn(id, $"mcp__{mcpName}__{toolName}", args)];
+        return [new ToolTurn(id, name, args)];
     }
 
     private List<IToolArg> GetArgs(JsonNode? node)
@@ -306,27 +304,58 @@ internal sealed class CodexHarness : IHarness
         {
             "agent_message" => [new MessageTurn(item["text"]?.GetValue<string>() ?? item.ToJsonString(), RoleType.Assistant)],
 
-            // TODO : Message
-            "mcp_tool_call" => [GetToolResultTurn(item)],
+            "mcp_tool_call" => GetToolResultTurn(item),
 
             _ => []
         };
     }
 
-    private static ToolResultTurn GetToolResultTurn(JsonNode item)
+    private static List<ITurn> GetToolResultTurn(JsonNode item)
     {
-        string id = item["id"]?.GetValue<string>() ?? "id";
-        string toolName = item["tool"]?.GetValue<string>() ?? "tool_name";
+        if (!TryGetToolCallName(item, out string id, out string name)) return [];
 
-        string? error = item["error"]?.GetValue<string>();
-
-        ToolReturn toolReturn = error switch
+        List<string> texts = [];
+        if (item["result"]?["content"] is JsonArray content)
         {
-            string err => ToolReturn.Success(err),
-            _ => ToolReturn.Success("Successfull") // TODO : More?
-        };
+            foreach (JsonNode? block in content)
+            {
+                if (block?["type"]?.GetValue<string>() != "text") continue;
+                if (block["text"]?.GetValue<string>() is string text) texts.Add(text);
+            }
+        }
+        string message = string.Join("\n", texts);
 
-        return new(id, toolName, toolReturn);
+        string? error = item["error"] switch
+        {
+            JsonValue value when value.TryGetValue(out string? text) => text,
+            JsonObject obj => obj["message"]?.GetValue<string>() ?? obj.ToJsonString(),
+            _ => null,
+        };
+        bool failed = error is not null || item["status"]?.GetValue<string>() == "failed";
+
+        ToolReturn toolReturn = failed
+            ? new ToolReturn(error ?? message, ToolResult.Failure, null)
+            : ToolReturn.Success(message);
+
+        return [new ToolResultTurn(id, name, toolReturn)];
+    }
+
+    private static bool TryGetToolCallName(JsonNode item, out string id, out string name)
+    {
+        id = string.Empty;
+        name = string.Empty;
+
+        string? callId = item["id"]?.GetValue<string>();
+        string? server = item["server"]?.GetValue<string>();
+        string? tool = item["tool"]?.GetValue<string>();
+
+        if (string.IsNullOrEmpty(callId)) return false;
+        if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(tool)) return false;
+
+        id = callId;
+        name = ToolSchema.WireName(server, tool);
+
+        return true;
     }
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)

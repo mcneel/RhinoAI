@@ -43,11 +43,10 @@ public sealed class Loop(IHarness harness)
 
     private async Task<ToolReturn> UseAsync(ToolTurn tool, CancellationToken token)
     {
-        IMcp? mcp = Harness.Mcps.Values.FirstOrDefault(m => m.Tools.ContainsKey(tool.Name));
-        if (mcp is null)
-            return ToolReturn.Failure($"No tool named {tool.Name} is registered.", "Call one of the declared tools instead.");
+        if (!ToolSchema.TryParseWireName(tool.Name, out string mcpName, out string toolName))
+            return ToolReturn.Failure($"Could not parse {tool.Name}.", "N/A");
 
-        return await Harness.UseToolAsync(mcp.Name, tool.Name, tool.Args.ToList(), token).ConfigureAwait(false);
+        return await Harness.UseToolAsync(mcpName, toolName, tool.Args.ToList(), token).ConfigureAwait(false);
     }
 
 }

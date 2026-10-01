@@ -92,7 +92,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
             ["functionResponse"] = new JsonObject
             {
                 ["id"] = result.Id,
-                ["name"] = result.ToolName,
+                ["name"] = result.Name,
                 ["response"] = new JsonObject { ["result"] = result.Data },
             },
         },
@@ -154,11 +154,11 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
     private static JsonArray Declarations(IHarness harness)
     {
         JsonArray declarations = [];
-        foreach (ITool tool in ToolSchema.Tools(harness))
+        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {
-                ["name"] = tool.Name,
+                ["name"] = $"{mcp.Name}__{tool.Name}",
                 ["description"] = tool.Description,
                 ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
             });
