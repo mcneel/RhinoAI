@@ -35,10 +35,14 @@ public class GenericHarness : IHarness
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     => await Loop.StartAsync(agent, start, token);
+    
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
+        => await UseToolAsync(this, toolName, mcpName, args, token);
+
+    public static async Task<ToolReturn> UseToolAsync(IHarness harness, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {
-        if (!Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return ToolReturn.Failure($"Mcp named {mcpName} is not available", "");
+        if (!harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return ToolReturn.Failure($"Mcp named {mcpName} is not available", "");
         
         if (!mcp.Tools.TryGetValue(toolName, out ITool? tool) || tool is null)
         {
@@ -50,41 +54,20 @@ public class GenericHarness : IHarness
             return ToolReturn.Failure($"Tool named {toolName} is not available in {mcpName}", $"Did you mean {likelyToolString}?");
         }
 
-        Permissability permissability = Permissions.HasPermission(mcpName, toolName, args);
+        Permissability permissability = harness.Permissions.HasPermission(mcpName, toolName, args);
         if (permissability == Permissability.Deny) return ToolReturn.Refused();
-        if (permissability == Permissability.Ask)
+        if (permissability == Permissability.Ask && harness.AskUser is not null)
         {
-            if (!await RequestPermissionFromUser(mcp, tool, args, token)) return ToolReturn.Refused();
+            if (!await harness.AskUser.Invoke(new PermissionRequest(mcp, tool, args), token)) return ToolReturn.Refused();
         }
 
         return await mcp.RunToolAsync(toolName, args, token).ConfigureAwait(false);
-    }
-
-    public virtual async Task<bool> RequestPermissionFromUser(IMcp mcp, ITool tool, List<IToolArg> args, CancellationToken token)
-    {
-        Permissability permissability = Permissions.HasPermission(mcp, tool, args);
-        if (permissability == Permissability.Always) return true;
-        if (permissability == Permissability.Deny) return false;
-        
-        PermissionRequested request = new();
-        PermissionRequested?.Invoke(this, request);
-        return request.HasPermission;
     }
 
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
 
     public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
 
-    public event EventHandler<PermissionRequested>? PermissionRequested;
-
-}
-
-/// <summary>
-/// A request for permission
-/// </summary>
-public sealed class PermissionRequested : EventArgs
-{
-
-    public bool HasPermission { get; set; } = true;
+    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
 
 }

@@ -39,9 +39,9 @@ public interface IHarness
     /// <returns><see cref="true"> on success</returns>
     public bool AddSkill(ISkill skill);
 
-    #endregion
+#endregion
 
-    #region Send/Recieve
+#region Send/Recieve
 
     /// <summary>
     /// Begins the IHarness <see cref="Loop"/>.
@@ -56,8 +56,6 @@ public interface IHarness
 
 #region Tools
 
-    // TODO : Specify an Mcp or name of an mcp?
-
     /// <summary>
     /// Uses a tool and returns the result.
     /// </summary>
@@ -69,11 +67,46 @@ public interface IHarness
 
 #endregion
 
+#region Permissions
+
+    /// <summary>
+    /// Awaitable Permissions request. If null, permissions are assumed true.
+    /// </summary>
+    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; }
+
+#endregion
+
 }
 
+/// <summary>
+/// Harness Configuration
+/// </summary>
 public sealed class HarnessConfig
 {
     
     public string CurrentWorkingDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+}
+
+/// <summary>
+/// A request for permission
+/// </summary>
+public sealed class PermissionRequest : EventArgs
+{
+
+    public string McpName { get; }
+    public string ToolName { get; }
+    
+    public bool HasPermission { get; set; } = false;
+
+    public IReadOnlyList<IToolArg> Args { get; }
+
+    public PermissionRequest(IMcp mcp, ITool tool, List<IToolArg> args)
+    {
+        McpName = mcp.Name;
+        ToolName = tool.Name;
+        Args = args;
+
+    }
 
 }

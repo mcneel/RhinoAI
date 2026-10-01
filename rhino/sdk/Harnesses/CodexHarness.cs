@@ -33,9 +33,12 @@ internal sealed class CodexHarness : IHarness
 
     public Guid? SessionId { get; set; }
 
-    // TODO : Not used? Hmm ..
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => ToolReturn.Refused();
+        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
+    
+    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
+
+    public event EventHandler<PermissionRequest>? PermissionRequested;
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -67,10 +70,7 @@ internal sealed class CodexHarness : IHarness
         process.StartInfo.ArgumentList.Add("exec");
 
         if (SessionId is not null)
-        {
             process.StartInfo.ArgumentList.Add("resume");
-            process.StartInfo.ArgumentList.Add(SessionId!.ToString());
-        }
 
         // Not a git repo
 
@@ -84,7 +84,7 @@ internal sealed class CodexHarness : IHarness
         process.StartInfo.ArgumentList.Add("--model");
         process.StartInfo.ArgumentList.Add(agent.Model.Name);
 
-        foreach(string mcpArg in GetMcpArgs())
+        foreach (string mcpArg in GetMcpArgs())
         {
             process.StartInfo.ArgumentList.Add(mcpArg);
         }
@@ -117,6 +117,11 @@ internal sealed class CodexHarness : IHarness
                 process.StartInfo.ArgumentList.Add(builtInTool);
             }
         }
+
+        if (SessionId is Guid sessionId)
+            process.StartInfo.ArgumentList.Add(sessionId.ToString());
+
+        process.StartInfo.ArgumentList.Add("-");
 
         process.ErrorDataReceived += ReadErrors;
         process.OutputDataReceived += ReadOutput;
@@ -254,7 +259,7 @@ internal sealed class CodexHarness : IHarness
         string? toolName = item["tool"]?.GetValue<string>();
 
         List<IToolArg> args = GetArgs(item["arguments"]);
-        
+
         return [new ToolTurn(id, $"mcp__{mcpName}__{toolName}", args)];
     }
 
@@ -263,10 +268,10 @@ internal sealed class CodexHarness : IHarness
         if (node is not JsonObject jArgs) return [];
         List<IToolArg> args = [];
 
-        foreach(KeyValuePair<string,JsonNode?> jArg in jArgs)
+        foreach (KeyValuePair<string, JsonNode?> jArg in jArgs)
         {
             if (jArg.Value is null) continue;
-            
+
             IToolArg? toolArg = ParseArg(jArg!);
             if (toolArg is null) continue;
 
@@ -280,7 +285,7 @@ internal sealed class CodexHarness : IHarness
     {
         JsonValueKind kind = jArg.Value.GetValueKind();
         string propName = jArg.Key;
-        
+
         return kind switch
         {
             JsonValueKind.String => new ToolString(propName, jArg.Value.GetValue<string>()),
@@ -305,7 +310,7 @@ internal sealed class CodexHarness : IHarness
         return type?.GetValue<string>()?.ToLowerInvariant() switch
         {
             "agent_message" => [new MessageTurn(item["text"]?.GetValue<string>() ?? item.ToJsonString(), RoleType.Assistant)],
-            
+
             // TODO : Message
             "mcp_tool_call" => [GetToolResultTurn(item)],
 
@@ -326,12 +331,12 @@ internal sealed class CodexHarness : IHarness
             _ => ToolReturn.Success("Successfull") // TODO : More?
         };
 
-        return new (id, toolName, toolReturn);
+        return new(id, toolName, toolReturn);
     }
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)
     {
-        int? tokenCount =thing?["usage"]?["input_tokens"]?.GetValue<int>();
+        int? tokenCount = thing?["usage"]?["input_tokens"]?.GetValue<int>();
         // new ToolResultTurn()
         return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
     }
@@ -373,22 +378,19 @@ internal sealed class CodexHarness : IHarness
 
     private string HandleMemoryMcp(MemoryMcp mcp)
     {
-        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(mcp, Permissions);
+        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, mcp);
         Leases.Add(lease);
         return $"url='{lease.Uri.AbsoluteUri}'";
     }
 
     private void DisposeLeases()
     {
-        foreach(Mcps.MemoryMcpManager.McpLease lease in Leases)
+        foreach (Mcps.MemoryMcpManager.McpLease lease in Leases)
         {
             lease.Dispose();
         }
         Leases.Clear();
     }
-
-    // Codex splits -c keys on every dot, even inside TOML quotes.
-    private static string ServerKey(string mcpName) => mcpName.Replace('.', '_').Replace(' ', '_');
 
     private static string TomlArray(IEnumerable<string> values)
         => $"[{string.Join(", ", values.Select(value => $"'{value}'"))}]";

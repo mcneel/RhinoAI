@@ -84,8 +84,14 @@ public class AgentTests
 
         Agent agent = Agent.GetClaudeDesktopAgent(Token, "opus");
         agent.Harness.AddMcp(mcp);
-        
-        AllowAll(agent.Harness);
+
+        ClaudeHarness harness = (ClaudeHarness)agent.Harness;
+        harness.PermissionRequested += (_, e) =>
+        {
+            Assert.That(e.HasPermission, Is.False);
+            e.HasPermission = true;
+            Assert.That(e.HasPermission);
+        };
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
@@ -104,7 +110,13 @@ public class AgentTests
         Agent agent = Agent.GetCodexDesktopAgent(Token, "gpt-6-astra");
         agent.Harness.AddMcp(mcp);
 
-        AllowAll(agent.Harness);
+        CodexHarness harness = (CodexHarness)agent.Harness;
+        harness.PermissionRequested += (_, e) =>
+        {
+            Assert.That(e.HasPermission, Is.False);
+            e.HasPermission = true;
+            Assert.That(e.HasPermission);
+        };
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
 
@@ -125,14 +137,6 @@ public class AgentTests
         Assert.That(answer.Message, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
 
         Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
-    }
-
-    private static void AllowAll(IHarness harness)
-    {
-        foreach(IMcp mcp in harness.Mcps.Values)
-        {
-            harness.Permissions.AddPermission(new Permission(mcp, Permissability.Always, []));
-        }
     }
 
     private sealed record WeatherTool() : Tool("get_weather", "Gets the current weather", true, false,

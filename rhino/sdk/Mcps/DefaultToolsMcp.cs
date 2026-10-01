@@ -10,7 +10,7 @@ public sealed class DefaultToolsMcp : GenericMcp
     /// Creates a default MCP for the given Harness
     /// </summary>
     /// <param name="harness">The harness</param>
-    public DefaultToolsMcp(IHarness harness, PlugIns.PlugInToken token) : base("Default Tools")
+    public DefaultToolsMcp(IHarness harness, PlugIns.PlugInToken token) : base("Default_Tools")
     {
         RegisterTool(new Tools.DelegateTool(token));
         // RegisterTool(new Tools.Compact()); // TODO : Compaction

@@ -32,9 +32,12 @@ internal sealed class ClaudeHarness : IHarness
 
     public Guid? SessionId { get; set; }
 
-    // TODO : Not used? Hmm ..
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => ToolReturn.Refused();
+        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
+    
+    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
+
+    public event EventHandler<PermissionRequest>? PermissionRequested;
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -280,19 +283,32 @@ internal sealed class ClaudeHarness : IHarness
         JsonValueKind? kind = contentContent?.GetValueKind();
         if (kind == JsonValueKind.Array)
         {
-            // TODO : A little flimsy?
-            string? toolName = content["content"]?[0]?["tool_name"]?.GetValue<string>();
-            if (string.IsNullOrEmpty(toolName)) return null;
+            ToolIdToTool.TryRemove(id, out string? toolName);
 
-            ToolResultTurn toolResult = new(id, toolName, ToolReturn.Success(""), timestamp);
-            return toolResult;
+            List<string> texts = [];
+            foreach (JsonNode? block in contentContent!.AsArray())
+            {
+                if (block?["type"]?.GetValue<string>() != "text") continue;
+                if (block["text"]?.GetValue<string>() is string text) texts.Add(text);
+            }
+
+            string message = string.Join("\n", texts);
+            ToolReturn toolReturn = content["is_error"]?.GetValue<bool>() == true
+                ? new ToolReturn(message, ToolResult.Failure, null)
+                : ToolReturn.Success(message);
+
+            return new ToolResultTurn(id, toolName ?? "err", toolReturn, timestamp);
         }
         else if (kind == JsonValueKind.String)
         {
-            string? contentResult = contentContent!.GetValue<string>();
-            if (string.IsNullOrEmpty(contentResult)) return null;
-            // TODO : What type is this? - Is it a message?
-            return new MessageTurn(contentResult, RoleType.User, timestamp);
+            ToolIdToTool.TryRemove(id, out string? toolName);
+            string? message = contentContent?.GetValue<string>() ?? "no message found";
+            
+            ToolReturn toolReturn = content["is_error"]?.GetValue<bool>() == true
+                ? new ToolReturn(message, ToolResult.Failure, null)
+                : ToolReturn.Success(message);
+
+            return new ToolResultTurn(id, toolName ?? "err", toolReturn, timestamp);
         }
 
         return null;
@@ -350,7 +366,7 @@ internal sealed class ClaudeHarness : IHarness
         return [new TurnEnd(endReason, error)];
     }
 
-    private static List<ITurn> ParseAssisant(JsonNode node)
+    private List<ITurn> ParseAssisant(JsonNode node)
     {
         JsonNode? message = node["message"];
         JsonNode? content = message?["content"];
@@ -395,7 +411,9 @@ internal sealed class ClaudeHarness : IHarness
         return new ThinkingTurn(thinking, timestamp: timestamp, tokenCount: tokenCount);
     }
 
-    private static ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp, int? tokenCount)
+    private System.Collections.Concurrent.ConcurrentDictionary<string, string> ToolIdToTool { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp, int? tokenCount)
     {
         string? id = content["id"]?.GetValue<string>();
         if (string.IsNullOrEmpty(id)) return null;
@@ -404,7 +422,9 @@ internal sealed class ClaudeHarness : IHarness
         if (string.IsNullOrEmpty(name)) return null;
 
         List<IToolArg> args = GetArgs(content["input"]);
-        return new ToolTurn(id, name, args, timestamp: timestamp, tokenCount: tokenCount);
+        ToolTurn turn = new (id, name, args, timestamp: timestamp, tokenCount: tokenCount);
+        ToolIdToTool[id] = name;
+        return turn;
     }
 
     private static List<IToolArg> GetArgs(JsonNode? node)
@@ -480,7 +500,7 @@ internal sealed class ClaudeHarness : IHarness
             }
             else if (mcp is MemoryMcp memoryMcp)
             {
-                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(memoryMcp, Permissions);
+                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, memoryMcp);
                 Leases.Add(lease);
 
                 array[mcp.Name] = new JsonObject()

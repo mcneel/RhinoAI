@@ -102,18 +102,7 @@ internal static class McpProtocol
         if (string.IsNullOrEmpty(toolName)) return new McpResponse(System.Net.HttpStatusCode.OK, $"No Tool Name provided!");
 
         List<IToolArg> args = GetArgs(session.Mcp.Tools.GetValueOrDefault(toolName), request.Params?["arguments"]);
-
-        Permissability permission = session.Permissions.HasPermission(session.Mcp.Name, toolName, args);
-        if (permission == Permissability.Deny)
-        {
-            // TODO : Return DENY
-        }
-        else if (permission == Permissability.Ask)
-        {
-            // TODO : Return Ask
-        }
-
-        ToolReturn @return = await session.Mcp.RunToolAsync(toolName, args, token);
+        ToolReturn @return = await session.Harness.UseToolAsync(session.Mcp.Name, toolName, args, token);
         return McpResponse.Json(JsonRpc.Result(request.Id, McpTools.ToCallResult(@return)));
     }
 
