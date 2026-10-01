@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Rhino.AI;
 using Rhino.AI.Models;
 
@@ -17,6 +18,11 @@ public class SkillTests
 
         public List<IReadOnlyList<ITurn>> Received { get; } = [];
 
+        public async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turn, [EnumeratorCancellation]CancellationToken token)
+        {
+            Received.Add(turn.ToList());
+            yield return new MessageTurn("ok", RoleType.Assistant);
+        }
         public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
         {
             Received.Add(turn.ToList());

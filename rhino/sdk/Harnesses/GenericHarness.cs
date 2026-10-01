@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using FuzzySharp;
 using FuzzySharp.PreProcess;
@@ -34,8 +35,21 @@ public class GenericHarness : IHarness
     }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
-    => await Loop.StartAsync(agent, start, token);
-    
+    {
+        List<ITurn> turns = [];
+        await foreach (ITurn turn in StreamLoopAsync(agent, start, token).ConfigureAwait(false))
+        {
+            turns.Add(turn);
+        }
+
+        return turns;
+    }
+
+    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    {
+        await foreach (ITurn turn in Loop.StreamAsync(agent, start, token))
+            yield return turn;
+    }
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await UseToolAsync(this, mcpName, toolName, args, token);
@@ -43,7 +57,7 @@ public class GenericHarness : IHarness
     public static async Task<ToolReturn> UseToolAsync(IHarness harness, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {
         if (!harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return ToolReturn.Failure($"Mcp named {mcpName} is not available", "");
-        
+
         if (!mcp.Tools.TryGetValue(toolName, out ITool? tool) || tool is null)
         {
             IEnumerable<ITool> likelyTools = mcp.Tools.Values
@@ -58,7 +72,7 @@ public class GenericHarness : IHarness
         if (permissability == Permissability.Deny) return ToolReturn.Refused();
         if (permissability == Permissability.Ask && harness.AskUser is not null)
         {
-            PermissionRequest request = new (mcp, tool, args);
+            PermissionRequest request = new(mcp, tool, args);
             await harness.AskUser.Invoke(request, token);
             if (!request.HasPermission) return ToolReturn.Refused();
         }

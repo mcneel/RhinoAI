@@ -52,6 +52,15 @@ public interface IHarness
     /// <returns>Any returned tasks from the completed loop</returns>
     public Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token);
 
+    /// <summary>
+    /// Begins the IHarness <see cref="Loop"/>.
+    /// </summary>
+    /// <param name="agent">An AI Agent to give access to the harness</param>
+    /// <param name="start">Information to start the loop with</param>
+    /// <param name="token">Cancellation Token</param>
+    /// <returns>Any returned tasks from the completed loop</returns>
+    public IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token);
+
 #endregion
 
 #region Tools

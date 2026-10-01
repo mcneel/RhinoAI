@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Rhino.AI.Models;
 
@@ -18,6 +19,17 @@ public sealed class Loop(IHarness harness)
 
     public async Task<IEnumerable<ITurn>> StartAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
+        List<ITurn> turns = [];
+        await foreach (ITurn turn in StreamAsync(agent, start, token).ConfigureAwait(false))
+        {
+            turns.Add(turn);
+        }
+
+        return turns;
+    }
+
+    public async IAsyncEnumerable<ITurn> StreamAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation]CancellationToken token)
+    {
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
 
@@ -27,18 +39,22 @@ public sealed class Loop(IHarness harness)
             conversation.AddRange(results);
             results.Clear();
 
-            foreach (ITurn turn in await agent.Model.SendAsync(Harness, conversation, token).ConfigureAwait(false))
+            await foreach (ITurn turn in agent.Model.StreamAsync(Harness, conversation, token))
             {
                 if (turn is TurnEnd) continue;
                 conversation.Add(turn);
+                yield return turn;
 
                 if (turn is ToolTurn tool)
-                    results.Add(new ToolResultTurn(tool.Id, tool.Name, await UseAsync(tool, token).ConfigureAwait(false)));
+                {
+                    ToolResultTurn result = new (tool.Id, tool.Name, await UseAsync(tool, token).ConfigureAwait(false));
+                    results.Add(result);
+                    yield return result;
+                }
             }
+
         }
         while (results.Count > 0);
-
-        return conversation;
     }
 
     private async Task<ToolReturn> UseAsync(ToolTurn tool, CancellationToken token)

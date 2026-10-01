@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Rhino.AI.Models;
 using Rhino.AI.PlugIns;
@@ -124,14 +125,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         return agent;
     }
 
-    /// <summary>
-    /// Sends a message to the assigned model
-    /// </summary>
-    /// <param name="message">The message to send</param>
-    /// <param name="token">A cancellation token</param>
-    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
-    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
+    public async IAsyncEnumerable<ITurn> StreamAsync(string message, [EnumeratorCancellation] CancellationToken token)
     {
         if (!PlugInRegistry.HasPermission(Token))
             throw new PermissionException($"PlugIn {2} does not have permission");
@@ -153,12 +147,27 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
 
         startTurns.Add(new MessageTurn(message));
 
-        IEnumerable<ITurn> turns = await Harness.LoopAsync(this, startTurns, token).ConfigureAwait(false);
+        await foreach (ITurn turn in Harness.StreamLoopAsync(this, startTurns, token))
+        {
+            Statistics.PlugInStatistics.Collect(this, Token, [turn]);
+            yield return turn;
+        }
+    }
 
-        Statistics.PlugInStatistics.Collect(this, Token, turns);
-
-        PrivateTurns.Clear();
-        PrivateTurns.AddRange(turns);
+    /// <summary>
+    /// Sends a message to the assigned model
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
+    {
+        List<ITurn> turns = [];
+        await foreach (ITurn turn in StreamAsync(message, token).ConfigureAwait(false))
+        {
+            turns.Add(turn);
+        }
 
         return turns;
     }
@@ -183,7 +192,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
+        => new(token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
@@ -191,7 +200,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, new CodexDesktopModel(model), new CodexHarness(), prompt);
+        => new(token, new CodexDesktopModel(model), new CodexHarness(), prompt);
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
@@ -199,7 +208,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetClaudeAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
+        => new(token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
@@ -207,7 +216,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetChatGptAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
+        => new(token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
@@ -215,7 +224,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetGeminiAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
+        => new(token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
@@ -223,7 +232,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetDeepSeekAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new (token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
+        => new(token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
@@ -231,7 +240,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetLocalAgent(PlugIns.PlugInToken token, string model, Uri server, string prompt)
-        => new (token, LocalModel.Default(model, server), new GenericHarness(token), prompt);
+        => new(token, LocalModel.Default(model, server), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
@@ -258,7 +267,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
 
 public sealed class AgentConfig
 {
-    
+
     public bool UseLocalSettings { get; set; } = false;
 
 }

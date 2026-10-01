@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Rhino.AI.Models;
 
@@ -33,6 +34,17 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     public virtual async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
+        List<ITurn> turnsOut = [];
+        await foreach (ITurn turn in StreamAsync(harness, turns, token).ConfigureAwait(false))
+        {
+            turnsOut.Add(turn);
+        }
+
+        return turnsOut;
+    }
+
+    public virtual async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
+    {
         if (!UserPermissions.IsPermitted(Vendor, Name))
             throw new PermissionException("Model or Vendor does not have permission.");
 
@@ -47,7 +59,8 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
         JsonNode node = JsonNode.Parse(json) ?? throw new HttpRequestException($"{Vendor} returned an empty body.");
 
-        return Converter.FromResponse(harness, node);
+        foreach(ITurn turn in Converter.FromResponse(harness, node))
+            yield return turn;
     }
 
     private HttpRequestMessage GetRequest(JsonObject body)

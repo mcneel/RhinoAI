@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Rhino.AI.Models;
 
@@ -34,16 +35,49 @@ internal sealed class ClaudeHarness : IHarness
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
-    
+
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+
+    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    {
+        if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
+
+        using Process process = StartClaude(agent);
+
+        using CancellationTokenRegistration _ = token.Register(() =>
+        {
+            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
+        });
+
+        Task writing = WriteLoopAsync(process, start);
+
+        await foreach (ITurn turn in StreamLoopAsync(process, token))
+        {
+            yield return turn;
+        }
+
+        await writing;
+        await process.WaitForExitAsync(token);
+    }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) return [];
 
+        List<ITurn> turns = [];
+        await foreach (ITurn turn in StreamLoopAsync(agent, start, token))
+        {
+            turns.Add(turn);
+        }
+
+        return turns;
+    }
+
+    private Process StartClaude(Agent agent)
+    {
         string exePath = ClaudeDesktopModel.ExePath;
 
-        using Process process = new()
+        Process process = new()
         {
             EnableRaisingEvents = true,
             StartInfo = new()
@@ -81,7 +115,7 @@ internal sealed class ClaudeHarness : IHarness
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;
-        
+
         // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
         foreach (IMcp mcp in Mcps.Values)
         {
@@ -159,29 +193,7 @@ internal sealed class ClaudeHarness : IHarness
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        Task<IEnumerable<ITurn>> reading = ReadLoopAsync(process, token);
-        Task writing = WriteLoopAsync(process, start);
-
-        using CancellationTokenRegistration _ = token.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
-        });
-
-        await process.WaitForExitAsync(token);
-        await Task.WhenAll(reading, writing);
-
-        // Other possible args
-
-        // --system-prompt <prompt>              System prompt to use for the session
-
-        // attach <id>                           Open a background session in this terminal. <id> is the short id that `claude --bg` prints and `claude agents` lists
-
-        // auth                                  Manage authentication
-        // setup-token                           Set up a long-lived authentication token (requires Claude subscription)
-
-        // process.Exited 
-
-        return await reading;
+        return process;
     }
 
     private static string CoerceMcpName(string mcpName)
@@ -195,20 +207,21 @@ internal sealed class ClaudeHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async Task<IEnumerable<ITurn>> ReadLoopAsync(Process process, CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, [EnumeratorCancellation] CancellationToken token)
     {
-        List<ITurn> turnsOut = [];
+        string? line;
         try
         {
-            string? line = null;
             while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 if (line.Length == 0)
                     continue;
+
+                List<ITurn> newturns = [];
                 try
                 {
                     JsonNode? thing = JsonObject.Parse(line);
-                    List<ITurn> newturns = thing?["type"]?.GetValue<string>() switch
+                    newturns = thing?["type"]?.GetValue<string>() switch
                     {
                         "user" => ParseUser(thing),
                         "system" => ParseSystem(thing),
@@ -217,25 +230,23 @@ internal sealed class ClaudeHarness : IHarness
 
                         _ => []
                     };
-
-                    turnsOut.AddRange(newturns);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine(ex);
                 }
+
+
+                foreach (ITurn turn in newturns)
+                {
+                    yield return turn;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
         }
         finally
         {
             DisposeLeases();
         }
-
-        return turnsOut;
     }
 
     private static DateTime? GetTimestamp(JsonNode node)
@@ -301,7 +312,7 @@ internal sealed class ClaudeHarness : IHarness
         {
             ToolIdToTool.TryRemove(id, out string? toolName);
             string? message = contentContent?.GetValue<string>() ?? "no message found";
-            
+
             ToolReturn toolReturn = content["is_error"]?.GetValue<bool>() == true
                 ? new ToolReturn(message, ToolResult.Failure, null)
                 : ToolReturn.Success(message);
@@ -420,7 +431,7 @@ internal sealed class ClaudeHarness : IHarness
         if (string.IsNullOrEmpty(name)) return null;
 
         List<IToolArg> args = GetArgs(content["input"]);
-        ToolTurn turn = new (id, name, args, timestamp: timestamp, tokenCount: tokenCount);
+        ToolTurn turn = new(id, name, args, timestamp: timestamp, tokenCount: tokenCount);
         ToolIdToTool[id] = name;
         return turn;
     }
@@ -524,7 +535,7 @@ internal sealed class ClaudeHarness : IHarness
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
     private void DisposeLeases()
     {
-        foreach(Mcps.MemoryMcpManager.McpLease lease in Leases)
+        foreach (Mcps.MemoryMcpManager.McpLease lease in Leases)
         {
             lease.Dispose();
         }

@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Rhino.AI.Models;
 
@@ -35,16 +36,49 @@ internal sealed class CodexHarness : IHarness
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
-    
+
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+
+    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    {
+        if (agent.Model is not CodexDesktopModel claudeModel) yield break;
+
+        using Process process = StartCodex(agent);
+
+        using CancellationTokenRegistration _ = token.Register(() =>
+        {
+            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
+        });
+
+        Task writing = WriteLoopAsync(process, start);
+
+        await foreach (ITurn turn in StreamLoopAsync(process, token))
+        {
+            yield return turn;
+        }
+
+        await writing;
+        await process.WaitForExitAsync(token);
+    }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not CodexDesktopModel claudeModel) return [];
 
+        List<ITurn> turns = [];
+        await foreach (ITurn turn in StreamLoopAsync(agent, start, token))
+        {
+            turns.Add(turn);
+        }
+
+        return turns;
+    }
+
+    private Process StartCodex(Agent agent)
+    {
         string exePath = CodexDesktopModel.ExePath;
 
-        using Process process = new()
+        Process process = new()
         {
             EnableRaisingEvents = true,
             StartInfo = new()
@@ -124,29 +158,7 @@ internal sealed class CodexHarness : IHarness
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        Task<IEnumerable<ITurn>> reading = ReadLoopAsync(process, token);
-        Task writing = WriteLoopAsync(process, start);
-
-        using CancellationTokenRegistration _ = token.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
-        });
-
-        await process.WaitForExitAsync(token);
-        await Task.WhenAll(reading, writing);
-
-        // Other possible args
-
-        // --system-prompt <prompt>              System prompt to use for the session
-
-        // attach <id>                           Open a background session in this terminal. <id> is the short id that `claude --bg` prints and `claude agents` lists
-
-        // auth                                  Manage authentication
-        // setup-token                           Set up a long-lived authentication token (requires Claude subscription)
-
-        // process.Exited 
-
-        return await reading;
+        return process;
     }
 
     private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
@@ -157,7 +169,7 @@ internal sealed class CodexHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async Task<IEnumerable<ITurn>> ReadLoopAsync(Process process, CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, [EnumeratorCancellation] CancellationToken token)
     {
         List<ITurn> turnsOut = [];
         List<JsonNode> stringies = [];
@@ -167,6 +179,7 @@ internal sealed class CodexHarness : IHarness
             while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 if (string.IsNullOrEmpty(line)) continue;
+                List<ITurn> newTurns = [];
                 try
                 {
                     JsonNode? thing = JsonObject.Parse(line) ?? throw new Exception($"Could not parse {line}");
@@ -189,7 +202,7 @@ internal sealed class CodexHarness : IHarness
                         continue;
                     }
 
-                    List<ITurn> newturns = turnType switch
+                    newTurns = turnType switch
                     {
                         "thread" => turnStatus switch
                         {
@@ -219,8 +232,8 @@ internal sealed class CodexHarness : IHarness
                         _ => []
                     };
 
-                    turnsOut.AddRange(newturns);
-                    if (newturns.Count == 0)
+                    turnsOut.AddRange(newTurns);
+                    if (newTurns.Count == 0)
                     {
                         stringies.Add(thing);
                     }
@@ -229,18 +242,17 @@ internal sealed class CodexHarness : IHarness
                 {
                     Debug.WriteLine(ex);
                 }
+
+                foreach (ITurn turn in newTurns)
+                {
+                    yield return turn;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
         }
         finally
         {
             DisposeLeases();
         }
-
-        return turnsOut;
     }
 
     private static List<ITurn> ParseTurnFailed(JsonNode thing)
