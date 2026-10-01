@@ -82,7 +82,7 @@ public abstract record Tool : ITool
     internal static string CorrectName(string name)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
-        name = name.Replace(' ', '_');
+        name = name.Replace(' ', '_').Replace("__", "_");
         ValidateName(name);
         return name;
     }

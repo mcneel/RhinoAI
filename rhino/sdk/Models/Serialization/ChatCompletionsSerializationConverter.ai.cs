@@ -154,7 +154,7 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
                 ["type"] = "function",
                 ["function"] = new JsonObject
                 {
-                    ["name"] = $"{mcp.Name}__{tool.Name}",
+                    ["name"] = ToolSchema.WireName(mcp.Name, tool.Name),
                     ["description"] = tool.Description,
                     ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
                 },

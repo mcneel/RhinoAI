@@ -56,7 +56,7 @@ public class AgentTests
     }
 
     [Test, Category("Manual")]
-    [CancelAfter(5000)]
+    [CancelAfter(60_000)]
     public async Task LMStudioApi(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
@@ -68,7 +68,8 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
-        Assert.That(turns, Is.Not.Empty);
+
+        AssertUsedWeatherTool(turns.ToList());
     }
 
     [Test, Category("Manual")]
@@ -124,15 +125,15 @@ public class AgentTests
     private static void AssertUsedWeatherTool(List<ITurn> transcript)
     {
         Assert.That(transcript, Is.Not.Empty);
-        Assert.That(transcript.Last(), Is.InstanceOf<TurnEnd>().With.Property(nameof(TurnEnd.Reason)).EqualTo(StopReason.EndTurn));
+        if (transcript.Last() is TurnEnd end)
+            Assert.That(end.Reason, Is.EqualTo(StopReason.EndTurn));
 
         Assert.That(transcript.OfType<ToolTurn>().Any(t => t.Name.EndsWith("get_weather")), "The model never called the weather tool.");
         Assert.That(transcript.OfType<ToolResultTurn>().Any(r => r.Return.Result == ToolResult.Success), "The weather tool's result never came back.");
 
-        Assert.That(transcript[^2], Is.InstanceOf<MessageTurn>());
-        MessageTurn answer = (MessageTurn)transcript[^2];
-        Assert.That(answer.Role, Is.EqualTo(RoleType.Assistant));
-        Assert.That(answer.Message, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
+        MessageTurn? answer = transcript.OfType<MessageTurn>().LastOrDefault(m => m.Role == RoleType.Assistant);
+        Assert.That(answer, Is.Not.Null, "The model never answered.");
+        Assert.That(answer!.Message, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
 
         Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
     }

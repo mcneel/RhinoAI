@@ -201,8 +201,7 @@ internal sealed class CodexHarness : IHarness
                         {
                             "started" => [new TurnStart()],
                             "completed" => ParseTurnCompleted(thing),
-                            // TODO : Parse turn.failed into a TurnEnd(StopReason.Error) carrying error.message
-                            "failed" => [],
+                            "failed" => ParseTurnFailed(thing),
                             _ => [],
                         },
 
@@ -215,8 +214,7 @@ internal sealed class CodexHarness : IHarness
                             _ => []
                         },
 
-                        // TODO : Parse the top-level error event (a stream failure, carries message)
-                        "error" => [],
+                        "error" => ParseError(thing),
 
                         _ => []
                     };
@@ -244,6 +242,19 @@ internal sealed class CodexHarness : IHarness
 
         return turnsOut;
     }
+
+    private static List<ITurn> ParseTurnFailed(JsonNode thing)
+        => [new TurnEnd(StopReason.Error, ErrorMessage(thing["error"]) ?? "Codex turn failed.")];
+
+    private static List<ITurn> ParseError(JsonNode thing)
+        => [new TurnEnd(StopReason.Error, ErrorMessage(thing) ?? "Codex reported an error.")];
+
+    private static string? ErrorMessage(JsonNode? node) => node switch
+    {
+        JsonValue value when value.TryGetValue(out string? text) => text,
+        JsonObject obj => obj["message"]?.GetValue<string>() ?? obj.ToJsonString(),
+        _ => null,
+    };
 
     private List<ITurn> ParseStarted(JsonNode thing)
     {
@@ -305,9 +316,32 @@ internal sealed class CodexHarness : IHarness
             "agent_message" => [new MessageTurn(item["text"]?.GetValue<string>() ?? item.ToJsonString(), RoleType.Assistant)],
 
             "mcp_tool_call" => GetToolResultTurn(item),
+            "reasoning" => ParseReasoning(item),
 
             _ => []
         };
+    }
+
+    private static List<ITurn> ParseReasoning(JsonNode item)
+    {
+        List<string> parts = [];
+        if (item["text"]?.GetValue<string>() is string text) parts.Add(text);
+
+        if (item["summary"] is JsonArray summary)
+        {
+            foreach (JsonNode? entry in summary)
+            {
+                string? part = entry switch
+                {
+                    JsonValue value when value.TryGetValue(out string? raw) => raw,
+                    JsonObject obj => obj["text"]?.GetValue<string>(),
+                    _ => null,
+                };
+                if (!string.IsNullOrEmpty(part)) parts.Add(part);
+            }
+        }
+
+        return parts.Count == 0 ? [] : [new ThinkingTurn(string.Join("\n", parts))];
     }
 
     private static List<ITurn> GetToolResultTurn(JsonNode item)

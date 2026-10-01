@@ -16,7 +16,7 @@ internal static class MemoryMcpManager
 
     private record struct UrlKey(string key);
 
-    private static HttpListener Listener { get; } = new();
+    private static HttpListener? Listener { get; set; }
     private static bool Started { get; set; } = false;
     private static string? ListenerUrl { get; set; } = null;
 
@@ -53,10 +53,13 @@ internal static class MemoryMcpManager
                     int port = ((IPEndPoint)tcp.LocalEndpoint).Port;
                     tcp.Stop();
                     ListenerUrl = $"http://localhost:{port}";
+
+                    Stop(Listener);
+                    Listener = new();
                     Listener.Prefixes.Add($"{ListenerUrl}/");
                     Listener.Start();
 
-                    _ = AcceptLoopAsync();
+                    _ = AcceptLoopAsync(Listener);
 
                     // Success!
                     return true;
@@ -64,7 +67,7 @@ internal static class MemoryMcpManager
                 catch
                 {
                     Started = false;
-                    Stop();
+                    Stop(Listener);
                 }
             }
         }
@@ -72,18 +75,32 @@ internal static class MemoryMcpManager
         return false;
     }
 
-    private static async Task AcceptLoopAsync()
+    private static async Task AcceptLoopAsync(HttpListener? listener)
     {
-        while (Listener.IsListening)
+        if (listener is null) return;
+
+        int delay = 100;
+        while (listener.IsListening)
         {
             try
             {
-                HttpListenerContext context = await Listener.GetContextAsync();
+                HttpListenerContext context = await listener.GetContextAsync();
                 _ = Task.Run(() => ServeAsync(context, CancellationToken.None));
+
+                delay = 100;
             }
             catch (HttpListenerException)
             {
-                // TODO : Report
+                if (delay > 1000)
+                {
+                    lock (StartLock)
+                    {
+                        if (ReferenceEquals(listener, Listener)) Started = false;
+                    }
+                    return;
+                }
+                await Task.Delay(delay);
+                delay += 100;
             }
             catch (ObjectDisposedException)
             {
@@ -122,10 +139,10 @@ internal static class MemoryMcpManager
         }
     }
 
-    private static void Stop()
+    private static void Stop(HttpListener? listener)
     {
-        Listener.Stop();
-        Listener.Prefixes.Clear();
+        listener?.Close();
+        listener?.Prefixes.Clear();
     }
 
     private static void DeRegisterMemoryMcp(string key)

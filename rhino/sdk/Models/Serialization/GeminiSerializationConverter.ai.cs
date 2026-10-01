@@ -158,7 +158,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
         {
             declarations.Add(new JsonObject
             {
-                ["name"] = $"{mcp.Name}__{tool.Name}",
+                ["name"] = ToolSchema.WireName(mcp.Name, tool.Name),
                 ["description"] = tool.Description,
                 ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
             });

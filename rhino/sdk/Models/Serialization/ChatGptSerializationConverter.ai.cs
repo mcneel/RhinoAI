@@ -150,7 +150,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
             declarations.Add(new JsonObject
             {
                 ["type"] = "function",
-                ["name"] = $"{mcp.Name}__{tool.Name}",
+                ["name"] = ToolSchema.WireName(mcp.Name, tool.Name),
                 ["description"] = tool.Description,
                 ["parameters"] = ToolSchema.Parameters(tool, SchemaType),
                 ["strict"] = false,
