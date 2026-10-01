@@ -230,8 +230,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetLMStudioAgent(PlugIns.PlugInToken token, string model, int port, string prompt)
-        => new (token, LMStudioModel.Default(model, port), new GenericHarness(token), prompt);
+    public static Agent GetLocalAgent(PlugIns.PlugInToken token, string model, Uri server, string prompt)
+        => new (token, LocalModel.Default(model, server), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
@@ -248,7 +248,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         ClaudeModel => GetClaudeAgent(token, model.Name, prompt),
         ChatGptModel => GetChatGptAgent(token, model.Name, prompt),
         GeminiModel => GetGeminiAgent(token, model.Name, prompt),
-        LMStudioModel => GetLMStudioAgent(token, model.Name, 1234, prompt),
+        LocalModel => GetLocalAgent(token, model.Name, new Uri("http://localhost:1234"), prompt),
 
         _ => new Agent(token, model, new GenericHarness(token), prompt),
     };

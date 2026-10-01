@@ -57,14 +57,14 @@ public class AgentTests
 
     [Test, Category("Manual")]
     [CancelAfter(60_000)]
-    public async Task LMStudioApi(CancellationToken token)
+    public async Task LocalModelApi(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetLMStudioAgent(Token, "qwen/qwen3-1.7b", 1234, "");
+        Agent agent = Agent.GetLocalAgent(Token, "qwen/qwen3-1.7b", 1234, "");
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
