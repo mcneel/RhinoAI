@@ -38,7 +38,7 @@ public class GenericHarness : IHarness
     
 
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => await UseToolAsync(this, toolName, mcpName, args, token);
+        => await UseToolAsync(this, mcpName, toolName, args, token);
 
     public static async Task<ToolReturn> UseToolAsync(IHarness harness, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {
@@ -58,7 +58,9 @@ public class GenericHarness : IHarness
         if (permissability == Permissability.Deny) return ToolReturn.Refused();
         if (permissability == Permissability.Ask && harness.AskUser is not null)
         {
-            if (!await harness.AskUser.Invoke(new PermissionRequest(mcp, tool, args), token)) return ToolReturn.Refused();
+            PermissionRequest request = new (mcp, tool, args);
+            await harness.AskUser.Invoke(request, token);
+            if (!request.HasPermission) return ToolReturn.Refused();
         }
 
         return await mcp.RunToolAsync(toolName, args, token).ConfigureAwait(false);
@@ -68,6 +70,6 @@ public class GenericHarness : IHarness
 
     public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
 
-    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
+    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
 }

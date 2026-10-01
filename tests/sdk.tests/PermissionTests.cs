@@ -24,7 +24,7 @@ public class PermissionTests
         });
         harness.AddMcp(mcp);
 
-        harness.PermissionRequested += (_, __) => permissionRequested = true;
+        harness.AskUser += async (e, __) => e.HasPermission = true;
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
 

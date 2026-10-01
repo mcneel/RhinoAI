@@ -50,7 +50,7 @@ public class AgentTests
         harness.AddMcp(mcp);
         Agent agent = new(Token, deepSeek, harness);
 
-        harness.PermissionRequested += (_, e) => e.HasPermission = false;
+        harness.AskUser += async (e, _) => e.HasPermission = false;
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
@@ -86,7 +86,7 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         ClaudeHarness harness = (ClaudeHarness)agent.Harness;
-        harness.PermissionRequested += (_, e) =>
+        harness.AskUser += async (e, _) => 
         {
             Assert.That(e.HasPermission, Is.False);
             e.HasPermission = true;
@@ -111,7 +111,7 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         CodexHarness harness = (CodexHarness)agent.Harness;
-        harness.PermissionRequested += (_, e) =>
+        harness.AskUser += async (e, _) => 
         {
             Assert.That(e.HasPermission, Is.False);
             e.HasPermission = true;

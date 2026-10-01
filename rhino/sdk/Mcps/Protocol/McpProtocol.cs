@@ -78,12 +78,6 @@ internal static class McpProtocol
         return McpResponse.Json(JsonRpc.Result(request.Id, result));
     }
 
-    private static McpResponse Discover(McpRequest request, McpSession session)
-    {
-        ;
-        throw new NotImplementedException();
-    }
-
     private static McpResponse ListLegacyTools(McpRequest request, McpSession session)
     {
         JsonObject result = new()

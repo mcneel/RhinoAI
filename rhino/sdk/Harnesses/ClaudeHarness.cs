@@ -35,9 +35,7 @@ internal sealed class ClaudeHarness : IHarness
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
     
-    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
-
-    public event EventHandler<PermissionRequest>? PermissionRequested;
+    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -456,9 +454,7 @@ internal sealed class ClaudeHarness : IHarness
 
     private void ReadErrors(object sender, DataReceivedEventArgs e)
     {
-        // TODO : Handle failed resume
         Debug.WriteLine(e.Data);
-        ;
     }
 
     private void ReadOutput(object sender, DataReceivedEventArgs e)

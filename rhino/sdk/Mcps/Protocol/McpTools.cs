@@ -40,8 +40,6 @@ internal static class McpTools
         },
     };
 
-    public static IReadOnlyList<IToolArg> ParseArgs(ITool tool, JsonObject? arguments) => throw new NotImplementedException();
-
     public static JsonObject ToCallResult(ToolReturn toolReturn)
     {
         string text = toolReturn.Guidance is string guidance

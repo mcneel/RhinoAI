@@ -36,9 +36,7 @@ internal sealed class CodexHarness : IHarness
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
     
-    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; set; }
-
-    public event EventHandler<PermissionRequest>? PermissionRequested;
+    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -75,9 +73,6 @@ internal sealed class CodexHarness : IHarness
         // Not a git repo
 
         process.StartInfo.ArgumentList.Add("--skip-git-repo-check");
-
-        // TODO : Use RhinoMcp
-        string mcpName = "rhino";
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
@@ -343,9 +338,7 @@ internal sealed class CodexHarness : IHarness
 
     private void ReadErrors(object sender, DataReceivedEventArgs e)
     {
-        // TODO : Handle failed resume
         Debug.WriteLine(e.Data);
-        ;
     }
 
     private void ReadOutput(object sender, DataReceivedEventArgs e)

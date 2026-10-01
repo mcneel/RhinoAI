@@ -72,7 +72,7 @@ public interface IHarness
     /// <summary>
     /// Awaitable Permissions request. If null, permissions are assumed true.
     /// </summary>
-    public Func<PermissionRequest, CancellationToken, Task<bool>>? AskUser { get; }
+    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; }
 
 #endregion
 
