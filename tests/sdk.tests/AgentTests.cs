@@ -64,7 +64,7 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetLocalAgent(Token, "qwen/qwen3-1.7b", 1234, "");
+        Agent agent = Agent.GetLocalAgent(Token, "qwen/qwen3-1.7b", new("http://localhost:1234"), "");
         agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
