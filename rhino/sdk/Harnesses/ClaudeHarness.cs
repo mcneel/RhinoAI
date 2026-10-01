@@ -229,6 +229,10 @@ internal sealed class ClaudeHarness : IHarness
         {
             Debug.WriteLine(ex);
         }
+        finally
+        {
+            DisposeLeases();
+        }
 
         return turnsOut;
     }
@@ -476,7 +480,8 @@ internal sealed class ClaudeHarness : IHarness
             }
             else if (mcp is MemoryMcp memoryMcp)
             {
-                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(memoryMcp);
+                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(memoryMcp, Permissions);
+                Leases.Add(lease);
 
                 array[mcp.Name] = new JsonObject()
                 {
@@ -498,6 +503,16 @@ internal sealed class ClaudeHarness : IHarness
         // TODO : Options
         string json = servers.ToJsonString();
         return json;
+    }
+
+    private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
+    private void DisposeLeases()
+    {
+        foreach(Mcps.MemoryMcpManager.McpLease lease in Leases)
+        {
+            lease.Dispose();
+        }
+        Leases.Clear();
     }
 
 }

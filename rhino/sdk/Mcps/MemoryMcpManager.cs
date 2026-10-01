@@ -21,21 +21,18 @@ internal static class MemoryMcpManager
     private static string? ListenerUrl { get; set; } = null;
 
     // TODO : Replace GUIDs with colours so it's more fun and easier to debug?
-    private static ConcurrentDictionary<string, MemoryMcp> RegisteredMcps { get; } = [];
+    private static ConcurrentDictionary<string, McpSession> RegisteredMcps { get; } = [];
 
-    // TODO : Not concurrent
-    private static ConditionalWeakTable<MemoryMcp, string> RegisteredGuids { get; } = new();
-
-    public static McpLease RegisterMemoryMcp(MemoryMcp mcp)
+    public static McpLease RegisterMemoryMcp(MemoryMcp mcp, PermissionSet permissions)
     {
         // TODO : Handle better
         if (!Start()) throw new Exception("Could not create lease");
 
-        string guidKey = RegisteredGuids.GetValue(mcp, _ => Guid.NewGuid().ToString().ToLowerInvariant());
-        RegisteredMcps[guidKey] = mcp;
+        string guidKey = Guid.NewGuid().ToString().ToLowerInvariant();
+        RegisteredMcps[guidKey] = new (mcp, permissions);
 
         Uri uri = new($"{ListenerUrl}/{guidKey}/");
-        McpLease lease = new(uri);
+        McpLease lease = new(guidKey, uri);
         return lease;
     }
 
@@ -102,10 +99,9 @@ internal static class MemoryMcpManager
             if (context.Request.Url is null) return;
             string[] segments = context.Request.Url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (segments.Length != 1) return;
-            if (RegisteredMcps.TryGetValue(segments[0], out MemoryMcp? memMcp) && memMcp is not null)
+            if (RegisteredMcps.TryGetValue(segments[0], out McpSession? session) && session is not null)
             {
                 McpHttpRequest request = await McpHttpRequest.FromRequestAsync(context.Request, token);
-                McpSession session = new(memMcp, new PermissionSet());
                 McpResponse response = await McpProtocol.HandleAsync(request, session, token);
 
                 context.Response.StatusCode = (int)response.Status;
@@ -130,24 +126,27 @@ internal static class MemoryMcpManager
         Listener.Prefixes.Clear();
     }
 
-    private static void DeRegisterMemoryMcp(Uri uri)
+    private static void DeRegisterMemoryMcp(string key)
     {
-
+        RegisteredMcps.TryRemove(key, out _);
     }
 
     public sealed class McpLease : IDisposable
     {
 
+        private string Key { get; }
+
         public Uri Uri { get; }
 
-        internal McpLease(Uri uri)
+        internal McpLease(string key, Uri uri)
         {
+            Key = key;
             Uri = uri;
         }
 
         public void Dispose()
         {
-            DeRegisterMemoryMcp(Uri);
+            DeRegisterMemoryMcp(Key);
         }
 
     }

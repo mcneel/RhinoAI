@@ -237,6 +237,10 @@ internal sealed class CodexHarness : IHarness
         {
             Debug.WriteLine(ex);
         }
+        finally
+        {
+            DisposeLeases();
+        }
 
         return turnsOut;
     }
@@ -365,10 +369,22 @@ internal sealed class CodexHarness : IHarness
         }
     }
 
+    private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
+
     private string HandleMemoryMcp(MemoryMcp mcp)
     {
-        Rhino.AI.Mcps.MemoryMcpManager.McpLease leaase = Rhino.AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(mcp);
-        return $"url='{leaase.Uri.AbsoluteUri}'";
+        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(mcp, Permissions);
+        Leases.Add(lease);
+        return $"url='{lease.Uri.AbsoluteUri}'";
+    }
+
+    private void DisposeLeases()
+    {
+        foreach(Mcps.MemoryMcpManager.McpLease lease in Leases)
+        {
+            lease.Dispose();
+        }
+        Leases.Clear();
     }
 
     // Codex splits -c keys on every dot, even inside TOML quotes.
