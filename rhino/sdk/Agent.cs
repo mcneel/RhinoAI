@@ -182,16 +182,16 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt = "")
-        => new Agent(token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
+    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new (token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt = "")
-        => new Agent(token, new CodexDesktopModel(model), new CodexHarness(), prompt);
+    public static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
+        => new (token, new CodexDesktopModel(model), new CodexHarness(), prompt);
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
@@ -199,7 +199,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetClaudeAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new Agent(token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
+        => new (token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
@@ -207,7 +207,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetChatGptAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new Agent(token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
+        => new (token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
@@ -215,7 +215,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetGeminiAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new Agent(token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
+        => new (token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
@@ -223,15 +223,15 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent GetDeepSeekAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new Agent(token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
+        => new (token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
     /// </summary>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetLMStudioAgent(PlugIns.PlugInToken token, string model, string prompt)
-        => new Agent(token, LMStudioModel.Default(model), new GenericHarness(token), prompt);
+    public static Agent GetLMStudioAgent(PlugIns.PlugInToken token, string model, int port, string prompt)
+        => new (token, LMStudioModel.Default(model, port), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
@@ -248,7 +248,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         ClaudeModel => GetClaudeAgent(token, model.Name, prompt),
         ChatGptModel => GetChatGptAgent(token, model.Name, prompt),
         GeminiModel => GetGeminiAgent(token, model.Name, prompt),
-        LMStudioModel => GetLMStudioAgent(token, model.Name, prompt),
+        LMStudioModel => GetLMStudioAgent(token, model.Name, 1234, prompt),
 
         _ => new Agent(token, model, new GenericHarness(token), prompt),
     };

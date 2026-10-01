@@ -64,10 +64,8 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        LMStudioModel lmStudio = LMStudioModel.Default("qwen/qwen3-8b");
-        GenericHarness harness = new(Token);
-        harness.AddMcp(mcp);
-        Agent agent = new(Token, lmStudio, harness);
+        Agent agent = Agent.GetLMStudioAgent(Token, "qwen/qwen3-1.7b", 1234, "");
+        agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
         Assert.That(turns, Is.Not.Empty);
@@ -82,7 +80,7 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetClaudeDesktopAgent(Token, "opus");
+        Agent agent = Agent.GetClaudeDesktopAgent(Token, "opus", "");
         agent.Harness.AddMcp(mcp);
 
         ClaudeHarness harness = (ClaudeHarness)agent.Harness;
@@ -107,7 +105,7 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetCodexDesktopAgent(Token, "gpt-6-astra");
+        Agent agent = Agent.GetCodexDesktopAgent(Token, "gpt-6-astra", "");
         agent.Harness.AddMcp(mcp);
 
         CodexHarness harness = (CodexHarness)agent.Harness;
