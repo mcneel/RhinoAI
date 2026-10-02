@@ -18,6 +18,8 @@ public sealed class DefaultToolsMcp : GenericMcp
         RegisterTool(new Tools.WriteTool());
         RegisterTool(new Tools.EditTool());
         RegisterTool(new Tools.ReadSkill((n) => (harness.Skills.TryGetValue(n, out ISkill? skill) && skill is not null) ? skill : skill));
+        RegisterTool(new Tools.ListResources(harness));
+        RegisterTool(new Tools.ReadResources(harness));
     }
 
 }

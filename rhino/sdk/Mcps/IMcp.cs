@@ -18,6 +18,9 @@ public interface IMcp : IDisposable
 
     /// <summary>The tools offered by this MCP</summary>
     public IReadOnlyDictionary<string, ITool> Tools { get; }
+    
+    /// <summary>Resources offered by this MCP</summary>
+    public IReadOnlyDictionary<string, IResource> Resources { get; }
 
     /// <summary>
     /// Initializes the MCP.
@@ -32,6 +35,13 @@ public interface IMcp : IDisposable
     /// <param name="tool">The tool to register</param>
     /// <returns>True on success, false otherwise</returns>
     public bool RegisterTool(ITool tool);
+
+    /// <summary>
+    /// Registers a resource for the MCP
+    /// </summary>
+    /// <param name="resource">The resource to register</param>
+    /// <returns>True on success, false otherwise</returns>
+    public bool RegisterResource(IResource resource);
 
     /// <summary>
     /// Runs the tool
