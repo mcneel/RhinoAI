@@ -19,8 +19,15 @@ public sealed class HttpMcp(string name, Uri url) : IMcp
 
     public string Name { get; } = Tool.CorrectName(name);
 
+    // TODO : Read from MCP
     private Dictionary<string, ITool> PrivateTools { get; } = [];
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
+
+    // TODO : Read from MCP
+    private Dictionary<string, IResource> PrivateResources { get; } = [];
+    public IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
+
+    public bool RegisterResource(IResource resource) => false;
 
     public Uri Url { get; } = url;
 

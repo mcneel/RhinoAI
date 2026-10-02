@@ -29,6 +29,11 @@ public sealed class RhinoMcp(string name) : IMcp
         return true;
     }
 
+    private Dictionary<string, IResource> PrivateResources { get; } = [];
+    public IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
+
+    public bool RegisterResource(IResource resource) => false;
+
     public Task<bool> InitAsync(CancellationToken token) => Task.FromResult(true);
 
     public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)

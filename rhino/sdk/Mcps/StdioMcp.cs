@@ -23,8 +23,15 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
 
     public string Name { get; } = Tool.CorrectName(name);
 
+    // TODO : Read from MCP
     private Dictionary<string, ITool> PrivateTools { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
+
+    // TODO : Read from MCP
+    private Dictionary<string, IResource> PrivateResources { get; } = [];
+    public IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
+
+    public bool RegisterResource(IResource resource) => false;
 
     public Uri ProcessPath { get; } = process;
 
