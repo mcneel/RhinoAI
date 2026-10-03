@@ -37,6 +37,18 @@ public class AgentTests
     }
 
     [Test, CancelAfter(5000)]
+    public async Task OneCallAtATime(CancellationToken token)
+    {
+        DeepSeekModel deepSeek = DeepSeekModel.Completions("deepseek-flash");
+        Agent agent = new(Token, deepSeek, new GenericHarness(Token));
+
+        await using IAsyncEnumerator<ITurn> first = agent.StreamAsync("Hello!", token).GetAsyncEnumerator(token);
+        Assert.That(await first.MoveNextAsync(), Is.True);
+
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await agent.SendAsync("Hello!", token));
+    }
+
+    [Test, CancelAfter(5000)]
     public async Task Denied(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
@@ -84,7 +96,7 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         ClaudeHarness harness = (ClaudeHarness)agent.Harness;
-        harness.AskUser += async (e, _) => 
+        harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
             e.HasPermission = true;
@@ -109,7 +121,7 @@ public class AgentTests
         agent.Harness.AddMcp(mcp);
 
         CodexHarness harness = (CodexHarness)agent.Harness;
-        harness.AskUser += async (e, _) => 
+        harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
             e.HasPermission = true;

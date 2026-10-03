@@ -112,36 +112,48 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         return agent;
     }
 
+    private SemaphoreSlim TurnGate { get; } = new(1, 1);
+
     public async IAsyncEnumerable<ITurn> StreamAsync(string message, [EnumeratorCancellation] CancellationToken token)
     {
-        if (!PlugInRegistry.HasPermission(Token))
-            throw new PermissionException($"PlugIn {2} does not have permission");
+        if (!TurnGate.Wait(0, CancellationToken.None))
+            throw new InvalidOperationException($"{nameof(StreamAsync)} cannot be run until the previous call has finished on the same agent.");
 
-        if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
-            throw new PermissionException("Model or Vendor does not have permission.");
-
-        List<ITurn> newTurns = [];
-
-        if (PrivateTurns.Count == 0)
+        try
         {
-            if (!string.IsNullOrEmpty(DefaultPrompt))
-                newTurns.Add(new SystemTurn(DefaultPrompt));
+            if (!PlugInRegistry.HasPermission(Token))
+                throw new PermissionException($"PlugIn {Token.Name} does not have permission");
 
-            if (SkillsPrompt(Harness.Skills) is string skillsPrompt)
-                newTurns.Add(new SystemTurn(skillsPrompt));
+            if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
+                throw new PermissionException("Model or Vendor does not have permission.");
+
+            List<ITurn> newTurns = [];
+
+            if (PrivateTurns.Count == 0)
+            {
+                if (!string.IsNullOrEmpty(DefaultPrompt))
+                    newTurns.Add(new SystemTurn(DefaultPrompt));
+
+                if (SkillsPrompt(Harness.Skills) is string skillsPrompt)
+                    newTurns.Add(new SystemTurn(skillsPrompt));
+            }
+
+            newTurns.Add(new MessageTurn(message));
+            PrivateTurns.AddRange(newTurns);
+
+            foreach (ITurn turn in newTurns)
+                yield return turn;
+
+            await foreach (ITurn turn in Harness.StreamLoopAsync(this, [.. PrivateTurns], token).ConfigureAwait(false))
+            {
+                Statistics.PlugInStatistics.Collect(this, Token, [turn]);
+                PrivateTurns.Add(turn);
+                yield return turn;
+            }
         }
-
-        newTurns.Add(new MessageTurn(message));
-        PrivateTurns.AddRange(newTurns);
-
-        foreach (ITurn turn in newTurns)
-            yield return turn;
-
-        await foreach (ITurn turn in Harness.StreamLoopAsync(this, [.. PrivateTurns], token).ConfigureAwait(false))
+        finally
         {
-            Statistics.PlugInStatistics.Collect(this, Token, [turn]);
-            PrivateTurns.Add(turn);
-            yield return turn;
+            TurnGate.Release();
         }
     }
 
