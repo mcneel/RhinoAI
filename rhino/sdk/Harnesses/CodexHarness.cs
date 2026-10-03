@@ -40,15 +40,21 @@ internal sealed class CodexHarness : IHarness
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not CodexDesktopModel claudeModel) yield break;
+        if (!await EnsureLoggedIn(token))
+        {
+            yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
+            yield break;
+        }
 
-        using Process process = StartCodex(agent, start);
+
+        using Process process = StartCodex(agent, start, token);
+
+        Task writing = WriteLoopAsync(process, start);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
             try { process.Kill(entireProcessTree: true); } catch (Exception) { }
         });
-
-        Task writing = WriteLoopAsync(process, start);
 
         await foreach (ITurn turn in StreamLoopAsync(process, agent, token))
         {
@@ -72,7 +78,7 @@ internal sealed class CodexHarness : IHarness
         return turns;
     }
 
-    private Process StartCodex(Agent agent, IEnumerable<ITurn> start)
+    private Process GetCodexProcess(CancellationToken token)
     {
         string exePath = CodexDesktopModel.ExePath;
 
@@ -96,6 +102,13 @@ internal sealed class CodexHarness : IHarness
         process.StartInfo.StandardInputEncoding = utf8;
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
+
+        return process;
+    }
+
+    private Process StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    {
+        Process process = GetCodexProcess(token);
 
         process.StartInfo.ArgumentList.Add("exec");
 
@@ -260,6 +273,74 @@ internal sealed class CodexHarness : IHarness
         {
             DisposeLeases();
         }
+    }
+
+
+    private bool LoggedIn { get; set; } = false;
+    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    {
+        if (LoggedIn) return true;
+        try
+        {
+            using Process codex = GetCodexProcess(token);
+            codex.StartInfo.ArgumentList.Add("login");
+            codex.StartInfo.ArgumentList.Add("status");
+
+            using CancellationTokenRegistration _ = token.Register(() =>
+            {
+                try { codex.Kill(entireProcessTree: true); } catch (Exception) { }
+            });
+
+            if (!codex.Start()) return LoggedIn;
+
+            await codex.WaitForExitAsync(token);
+
+            if (codex.ExitCode == 0)
+            {
+                LoggedIn = true;
+                return LoggedIn;
+            }
+
+            LoggedIn = await LogIn(token);
+            return LoggedIn;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> LogIn(CancellationToken token)
+    {
+        using Process codex = GetCodexProcess(token);
+        codex.StartInfo.ArgumentList.Add("login");
+
+        using CancellationTokenRegistration _ = token.Register(() =>
+        {
+            try { codex.Kill(entireProcessTree: true); } catch (Exception) { }
+        });
+
+        if (!codex.Start()) return false;
+
+        List<string> lines = [];
+        while (true)
+        {
+            string? line = await codex.StandardOutput.ReadLineAsync(token).ConfigureAwait(false);
+            if (line is null || line.Length == 0) break;
+            lines.Add(line);
+        }
+
+        // TODO : What is user closes the browser?
+
+        await codex.WaitForExitAsync(token);
+
+        if (codex.ExitCode == 0) return true;
+
+        // TODO : Handle Failure
+        string data = string.Join("\n", lines);
+        // JsonNode? node = JsonObject.Parse(data);
+
+        return false;
     }
 
     private static List<ITurn> ParseTurnFailed(JsonNode thing)

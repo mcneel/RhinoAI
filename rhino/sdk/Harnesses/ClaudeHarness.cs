@@ -40,8 +40,13 @@ internal sealed class ClaudeHarness : IHarness
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
+        if (!await EnsureLoggedIn(token))
+        {
+            yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
+            yield break;
+        }
 
-        using Process process = StartClaude(agent, start);
+        using Process process = StartClaude(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -59,6 +64,86 @@ internal sealed class ClaudeHarness : IHarness
         await process.WaitForExitAsync(token);
     }
 
+    private bool LoggedIn { get; set; } = false;
+    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    {
+        if (LoggedIn) return true;
+        try
+        {
+            using Process claude = GetClaudeProcess(token);
+            claude.StartInfo.ArgumentList.Add("auth");
+            claude.StartInfo.ArgumentList.Add("status");
+
+            using CancellationTokenRegistration _ = token.Register(() =>
+            {
+                try { claude.Kill(entireProcessTree: true); } catch (Exception) { }
+            });
+
+            if (!claude.Start()) return LoggedIn;
+
+            List<string> lines = [];
+            while (true)
+            {
+                string? line = await claude.StandardOutput.ReadLineAsync(token).ConfigureAwait(false);
+                if (line is null || line.Length == 0) break;
+                lines.Add(line);
+            }
+
+            await claude.WaitForExitAsync(token);
+
+            // if (claude.ExitCode == 0) return true;
+
+            string data = string.Join("\n", lines);
+            JsonNode? node = JsonObject.Parse(data);
+            if (node?["loggedIn"]?.GetValue<bool>() == true)
+            {
+                LoggedIn = true;
+                return LoggedIn;
+            }
+            LoggedIn = await LogIn(token);
+            return LoggedIn;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> LogIn(CancellationToken token)
+    {
+        using Process claude = GetClaudeProcess(token);
+        claude.StartInfo.ArgumentList.Add("auth");
+        claude.StartInfo.ArgumentList.Add("login");
+        claude.StartInfo.ArgumentList.Add("--claudeai");
+
+        using CancellationTokenRegistration _ = token.Register(() =>
+        {
+            try { claude.Kill(entireProcessTree: true); } catch (Exception) { }
+        });
+
+        if (!claude.Start()) return false;
+
+        List<string> lines = [];
+        while (true)
+        {
+            string? line = await claude.StandardOutput.ReadLineAsync(token).ConfigureAwait(false);
+            if (line is null || line.Length == 0) break;
+            lines.Add(line);
+        }
+
+        // TODO : What is user closes the browser?
+
+        await claude.WaitForExitAsync(token);
+
+        if (claude.ExitCode == 0) return true;
+
+        // TODO : Handle Failure
+        string data = string.Join("\n", lines);
+        // JsonNode? node = JsonObject.Parse(data);
+
+        return false;
+    }
+
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) return [];
@@ -72,7 +157,7 @@ internal sealed class ClaudeHarness : IHarness
         return turns;
     }
 
-    private Process StartClaude(Agent agent, IEnumerable<ITurn> start)
+    private Process GetClaudeProcess(CancellationToken token)
     {
         string exePath = ClaudeDesktopModel.ExePath;
 
@@ -96,6 +181,13 @@ internal sealed class ClaudeHarness : IHarness
         process.StartInfo.StandardInputEncoding = utf8;
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
+
+        return process;
+    }
+
+    private Process StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    {
+        Process process = GetClaudeProcess(token);
 
         process.StartInfo.ArgumentList.Add("-p");
 
