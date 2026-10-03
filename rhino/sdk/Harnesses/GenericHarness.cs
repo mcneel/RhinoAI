@@ -77,7 +77,16 @@ public class GenericHarness : IHarness
             if (!request.HasPermission) return ToolReturn.Refused();
         }
 
-        return await mcp.RunToolAsync(toolName, args, token).ConfigureAwait(false);
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(McpTimeouts.ToolCall);
+        try
+        {
+            return await mcp.RunToolAsync(toolName, args, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            return ToolReturn.Failure($"{toolName} timed out after {McpTimeouts.ToolCall}.", "Try a smaller or simpler operation.");
+        }
     }
 
     public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);

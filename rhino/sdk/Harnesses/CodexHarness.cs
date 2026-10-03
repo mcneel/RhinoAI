@@ -39,7 +39,7 @@ internal sealed class CodexHarness : IHarness
 
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel claudeModel) yield break;
+        if (agent.Model is not CodexDesktopModel) yield break;
         if (!await EnsureLoggedIn(token))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
@@ -47,27 +47,65 @@ internal sealed class CodexHarness : IHarness
         }
 
 
-        using Process process = StartCodex(agent, start, token);
-
-        Task writing = WriteLoopAsync(process, start);
+        using TurnProcess process = StartCodex(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
             try { process.Kill(entireProcessTree: true); } catch (Exception) { }
         });
 
+        Task writing = WriteLoopAsync(process, start);
+
+        bool ended = false;
         await foreach (ITurn turn in StreamLoopAsync(process, agent, token))
         {
+            while (process.TryPop(out ITurn processTurn))
+            {
+                ended |= processTurn is TurnEnd;
+                yield return processTurn;
+            }
+
+            ended |= turn is TurnEnd;
             yield return turn;
         }
 
-        await writing;
+        Exception? ex = null;
+        try
+        {
+            await writing;
+        }
+        catch (IOException) { }
+        catch (Exception writeEx)
+        {
+            ex = writeEx;
+        }
+
+        if (ex is not null)
+        {
+            yield return new MessageTurn(ex.Message, RoleType.System);
+        }
+
         await process.WaitForExitAsync(token);
+
+        while (process.TryPop(out ITurn processTurn))
+        {
+            ended |= processTurn is TurnEnd;
+            yield return processTurn;
+        }
+
+        if (process.ExitCode != 0)
+        {
+            yield return new TurnEnd(StopReason.Error, $"{process.ExitCode}", DateTime.UtcNow, TimeSpan.Zero, 0);
+            ended = true;
+        }
+
+        if (!ended)
+            yield return new TurnEnd(StopReason.Error);
     }
 
     public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel claudeModel) return [];
+        if (agent.Model is not CodexDesktopModel) return [];
 
         List<ITurn> turns = [];
         await foreach (ITurn turn in StreamLoopAsync(agent, start, token))
@@ -106,7 +144,7 @@ internal sealed class CodexHarness : IHarness
         return process;
     }
 
-    private Process StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private TurnProcess StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         Process process = GetCodexProcess(token);
 
@@ -172,16 +210,15 @@ internal sealed class CodexHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("-");
 
-        process.ErrorDataReceived += ReadErrors;
-        process.OutputDataReceived += ReadOutput;
+        TurnProcess turnProcess = new(process);
 
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        return process;
+        return turnProcess;
     }
 
-    private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
+    private async Task WriteLoopAsync(TurnProcess process, IEnumerable<ITurn> turn)
     {
         MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
         await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
@@ -189,7 +226,7 @@ internal sealed class CodexHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, Agent agent, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(TurnProcess process, Agent agent, [EnumeratorCancellation] CancellationToken token)
     {
         List<ITurn> turnsOut = [];
         List<JsonNode> stringies = [];
@@ -515,20 +552,11 @@ internal sealed class CodexHarness : IHarness
         return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
     }
 
-    private void ReadErrors(object sender, DataReceivedEventArgs e)
-    {
-        Debug.WriteLine(e.Data);
-    }
-
-    private void ReadOutput(object sender, DataReceivedEventArgs e)
-    {
-        ;
-    }
-
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
     private IEnumerable<string> GetMcpArgs()
     {
         string disabledTools = TomlArray(Permissions.ProhibitedTools().Select(permission => permission.ToolName));
+        string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (IMcp mcp in Mcps.Values)
         {
@@ -542,7 +570,7 @@ internal sealed class CodexHarness : IHarness
             if (transport is null) continue;
 
             yield return "-c";
-            yield return $"mcp_servers.{mcp.Name}={{{transport}, disabled_tools={disabledTools}}}";
+            yield return $"mcp_servers.{mcp.Name}={{{transport}, {timeouts}, disabled_tools={disabledTools}}}";
         }
     }
 

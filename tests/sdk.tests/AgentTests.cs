@@ -1,6 +1,7 @@
 ﻿using Rhino.AI;
 using Rhino.AI.Tools;
 using Rhino.AI.Models;
+using System.Diagnostics;
 
 namespace sdk.tests;
 
@@ -131,6 +132,51 @@ public class AgentTests
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
 
         AssertUsedWeatherTool(turns.ToList());
+    }
+
+    [TestCase("--resume;cheese")]
+    [TestCase("--resume;3059787b-db32-48ba-a85a-9ad9a41c212b")]
+    [TestCase("--cheese")]
+    [Category("Manual")]
+    [CancelAfter(60_000)]
+    public async Task DesktopClaudeErrors(string args, CancellationToken token)
+    {
+        Process claudeProcess = GetClaudeProcess();
+        foreach(string arg in args.Split(';'))
+        {
+            claudeProcess.StartInfo.ArgumentList.Add(arg);
+        }
+        TurnProcess process = new(claudeProcess);
+
+        claudeProcess.Start();
+        claudeProcess.BeginErrorReadLine();
+        claudeProcess.StandardInput.Close();
+
+        await claudeProcess.WaitForExitAsync(token);
+
+        Assert.That(process.TryPop<MessageTurn>(out MessageTurn turn));
+    }
+
+    private static Process GetClaudeProcess()
+    {
+        string exePath = ClaudeDesktopModel.ExePath;
+
+        Process process = new()
+        {
+            EnableRaisingEvents = true,
+            StartInfo = new()
+            {
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+
+                FileName = exePath,
+                WorkingDirectory = Path.GetTempPath(),
+                CreateNoWindow = true,
+            }
+        };
+        process.StartInfo.ArgumentList.Add("-p");
+
+        return process;
     }
 
     private static void AssertUsedWeatherTool(List<ITurn> transcript)

@@ -46,7 +46,7 @@ internal sealed class ClaudeHarness : IHarness
             yield break;
         }
 
-        using Process process = StartClaude(agent, start, token);
+        using TurnProcess process = StartClaude(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -55,13 +55,51 @@ internal sealed class ClaudeHarness : IHarness
 
         Task writing = WriteLoopAsync(process, start);
 
+        bool ended = false;
         await foreach (ITurn turn in StreamLoopAsync(process, token))
         {
+            while (process.TryPop(out ITurn processTurn))
+            {
+                ended |= processTurn is TurnEnd;
+                yield return processTurn;
+            }
+
+            ended |= turn is TurnEnd;
             yield return turn;
         }
 
-        await writing;
+        Exception? ex = null;
+        try
+        {
+            await writing;
+        }
+        catch (IOException) { }
+        catch (Exception writeEx)
+        {
+            ex = writeEx;
+        }
+
+        if (ex is not null)
+        {
+            yield return new MessageTurn(ex.Message, RoleType.System);
+        }
+
         await process.WaitForExitAsync(token);
+
+        while (process.TryPop(out ITurn processTurn))
+        {
+            ended |= processTurn is TurnEnd;
+            yield return processTurn;
+        }
+
+        if (process.ExitCode != 0)
+        {
+            yield return new TurnEnd(StopReason.Error, $"{process.ExitCode}", DateTime.UtcNow, TimeSpan.Zero, 0);
+            ended = true;
+        }
+
+        if (!ended)
+            yield return new TurnEnd(StopReason.Error);
     }
 
     private bool LoggedIn { get; set; } = false;
@@ -90,8 +128,6 @@ internal sealed class ClaudeHarness : IHarness
             }
 
             await claude.WaitForExitAsync(token);
-
-            // if (claude.ExitCode == 0) return true;
 
             string data = string.Join("\n", lines);
             JsonNode? node = JsonObject.Parse(data);
@@ -185,9 +221,11 @@ internal sealed class ClaudeHarness : IHarness
         return process;
     }
 
-    private Process StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private TurnProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         Process process = GetClaudeProcess(token);
+
+        process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
         process.StartInfo.ArgumentList.Add("-p");
 
@@ -279,21 +317,18 @@ internal sealed class ClaudeHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("--disable-slash-commands");
 
-        process.ErrorDataReceived += ReadErrors;
-        process.OutputDataReceived += ReadOutput;
-
-        // process.StandardInput
+        TurnProcess turnProcess = new(process);
 
         if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        return process;
+        return turnProcess;
     }
 
     private static string CoerceMcpName(string mcpName)
         => mcpName.Replace(' ', '_');
 
-    private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
+    private async Task WriteLoopAsync(TurnProcess process, IEnumerable<ITurn> turn)
     {
         MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
         await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
@@ -301,7 +336,7 @@ internal sealed class ClaudeHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(TurnProcess process, [EnumeratorCancellation] CancellationToken token)
     {
         string? line;
         try
@@ -557,16 +592,6 @@ internal sealed class ClaudeHarness : IHarness
         return args;
     }
 
-    private void ReadErrors(object sender, DataReceivedEventArgs e)
-    {
-        Debug.WriteLine(e.Data);
-    }
-
-    private void ReadOutput(object sender, DataReceivedEventArgs e)
-    {
-        ;
-    }
-
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
     private string GetMcpJsons()
     {
@@ -614,6 +639,12 @@ internal sealed class ClaudeHarness : IHarness
                     // }
                 };
             }
+        }
+
+        foreach (KeyValuePair<string, JsonNode?> server in array)
+        {
+            if (server.Value is JsonObject config)
+                config["timeout"] = (long)McpTimeouts.ToolCall.TotalMilliseconds;
         }
 
         JsonObject servers = new()

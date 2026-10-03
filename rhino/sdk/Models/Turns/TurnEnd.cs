@@ -10,7 +10,7 @@ public sealed record TurnEnd(StopReason Reason = StopReason.EndTurn, string? err
     public RoleType Role => RoleType.Assistant;
 
     [JsonIgnore]
-    public bool Success => Reason is not (StopReason.Refusal or StopReason.Error);
+    public bool Success => Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
 
     [JsonIgnore]
     public int? TokenCount { get; } = tokenCount;
@@ -30,4 +30,4 @@ public sealed record TurnEnd(StopReason Reason = StopReason.EndTurn, string? err
 /// <summary>
 /// The reason for the turns end
 /// </summary>
-public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other }
+public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled }
