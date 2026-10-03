@@ -32,8 +32,6 @@ internal sealed class ClaudeHarness : IHarness
 
     public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
 
-    public Guid? SessionId { get; set; }
-
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
@@ -101,18 +99,18 @@ internal sealed class ClaudeHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("-p");
 
-        if (SessionId is not null)
+        if (agent.Config.SessionId != Guid.Empty)
         {
             process.StartInfo.ArgumentList.Add("--resume");
         }
         else
         {
             // TODO : If Call fails, this must be un-set
-            SessionId ??= Guid.NewGuid();
+            agent.Config.SessionId = Guid.NewGuid();
             process.StartInfo.ArgumentList.Add("--session-id");
         }
 
-        process.StartInfo.ArgumentList.Add(SessionId.ToString()!);
+        process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString()!);
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;

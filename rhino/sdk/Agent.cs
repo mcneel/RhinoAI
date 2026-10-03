@@ -107,6 +107,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         // if (model is DesktopModel desktopModel)
         Agent agent = new(Token, model, Harness, DefaultPrompt);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
+        AgentConfig.Push(this.Config, agent.Config);
+
         return agent;
     }
 
@@ -262,9 +264,17 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
 
 }
 
-public sealed class AgentConfig
+public sealed record AgentConfig
 {
 
     public bool UseLocalSettings { get; set; } = false;
+
+    public Guid SessionId { get; set; } = Guid.Empty;
+
+    public static void Push(AgentConfig from, AgentConfig to)
+    {
+        to.UseLocalSettings = from.UseLocalSettings;
+        to.SessionId = from.SessionId;
+    }
 
 }

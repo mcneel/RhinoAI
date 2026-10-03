@@ -32,8 +32,6 @@ internal sealed class CodexHarness : IHarness
 
     public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
 
-    public Guid? SessionId { get; set; }
-
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
@@ -52,7 +50,7 @@ internal sealed class CodexHarness : IHarness
 
         Task writing = WriteLoopAsync(process, start);
 
-        await foreach (ITurn turn in StreamLoopAsync(process, token))
+        await foreach (ITurn turn in StreamLoopAsync(process, agent, token))
         {
             yield return turn;
         }
@@ -101,8 +99,10 @@ internal sealed class CodexHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("exec");
 
-        if (SessionId is not null)
+        if (agent.Config.SessionId != Guid.Empty)
+        {
             process.StartInfo.ArgumentList.Add("resume");
+        }
 
         // Not a git repo
 
@@ -154,8 +154,8 @@ internal sealed class CodexHarness : IHarness
             }
         }
 
-        if (SessionId is Guid sessionId)
-            process.StartInfo.ArgumentList.Add(sessionId.ToString());
+        if (agent.Config.SessionId != Guid.Empty)
+            process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString());
 
         process.StartInfo.ArgumentList.Add("-");
 
@@ -176,7 +176,7 @@ internal sealed class CodexHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(Process process, Agent agent, [EnumeratorCancellation] CancellationToken token)
     {
         List<ITurn> turnsOut = [];
         List<JsonNode> stringies = [];
@@ -205,7 +205,7 @@ internal sealed class CodexHarness : IHarness
 
                     if (string.Equals(turnId, "thread.started", StringComparison.OrdinalIgnoreCase))
                     {
-                        SessionId = thing["thread_id"]?.GetValue<Guid>();
+                        agent.Config.SessionId = thing["thread_id"]?.GetValue<Guid>() ?? agent.Config.SessionId;
                         continue;
                     }
 
