@@ -46,7 +46,7 @@ internal sealed class ClaudeHarness : IHarness
             yield break;
         }
 
-        using TurnProcess process = StartClaude(agent, start, token);
+        using AIProcess process = StartClaude(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -221,7 +221,7 @@ internal sealed class ClaudeHarness : IHarness
         return process;
     }
 
-    private TurnProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         Process process = GetClaudeProcess(token);
 
@@ -317,7 +317,7 @@ internal sealed class ClaudeHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("--disable-slash-commands");
 
-        TurnProcess turnProcess = new(process);
+        AIProcess turnProcess = new(process);
 
         if (!process.Start()) { }
         process.BeginErrorReadLine();
@@ -328,7 +328,7 @@ internal sealed class ClaudeHarness : IHarness
     private static string CoerceMcpName(string mcpName)
         => mcpName.Replace(' ', '_');
 
-    private async Task WriteLoopAsync(TurnProcess process, IEnumerable<ITurn> turn)
+    private async Task WriteLoopAsync(AIProcess process, IEnumerable<ITurn> turn)
     {
         MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
         await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
@@ -336,7 +336,7 @@ internal sealed class ClaudeHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(TurnProcess process, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, [EnumeratorCancellation] CancellationToken token)
     {
         string? line;
         try

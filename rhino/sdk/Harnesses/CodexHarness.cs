@@ -47,7 +47,7 @@ internal sealed class CodexHarness : IHarness
         }
 
 
-        using TurnProcess process = StartCodex(agent, start, token);
+        using AIProcess process = StartCodex(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -144,7 +144,7 @@ internal sealed class CodexHarness : IHarness
         return process;
     }
 
-    private TurnProcess StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         Process process = GetCodexProcess(token);
 
@@ -210,7 +210,7 @@ internal sealed class CodexHarness : IHarness
 
         process.StartInfo.ArgumentList.Add("-");
 
-        TurnProcess turnProcess = new(process);
+        AIProcess turnProcess = new(process);
 
         if (!process.Start()) { }
         process.BeginErrorReadLine();
@@ -218,7 +218,7 @@ internal sealed class CodexHarness : IHarness
         return turnProcess;
     }
 
-    private async Task WriteLoopAsync(TurnProcess process, IEnumerable<ITurn> turn)
+    private async Task WriteLoopAsync(AIProcess process, IEnumerable<ITurn> turn)
     {
         MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
         await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
@@ -226,7 +226,7 @@ internal sealed class CodexHarness : IHarness
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(TurnProcess process, Agent agent, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, Agent agent, [EnumeratorCancellation] CancellationToken token)
     {
         List<ITurn> turnsOut = [];
         List<JsonNode> stringies = [];

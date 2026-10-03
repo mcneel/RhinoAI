@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 
 namespace Rhino.AI;
 
-internal class TurnProcess : IDisposable
+internal class AIProcess : IDisposable
 {
 
     public Process Process { get; }
@@ -19,7 +19,7 @@ internal class TurnProcess : IDisposable
 
     public int ExitCode => Process.ExitCode;
 
-    public TurnProcess(Process process)
+    public AIProcess(Process process)
     {
         Process = process;
 

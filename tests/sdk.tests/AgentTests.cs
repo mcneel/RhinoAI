@@ -146,7 +146,7 @@ public class AgentTests
         {
             claudeProcess.StartInfo.ArgumentList.Add(arg);
         }
-        TurnProcess process = new(claudeProcess);
+        AIProcess process = new(claudeProcess);
 
         claudeProcess.Start();
         claudeProcess.BeginErrorReadLine();
