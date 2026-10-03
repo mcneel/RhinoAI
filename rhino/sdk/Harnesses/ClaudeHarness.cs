@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -42,7 +43,7 @@ internal sealed class ClaudeHarness : IHarness
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
 
-        using Process process = StartClaude(agent);
+        using Process process = StartClaude(agent, start);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -73,7 +74,7 @@ internal sealed class ClaudeHarness : IHarness
         return turns;
     }
 
-    private Process StartClaude(Agent agent)
+    private Process StartClaude(Agent agent, IEnumerable<ITurn> start)
     {
         string exePath = ClaudeDesktopModel.ExePath;
 
@@ -179,9 +180,12 @@ internal sealed class ClaudeHarness : IHarness
             process.StartInfo.ArgumentList.Add("");
         }
 
-        // process.StartInfo.ArgumentList.Add("--append-system-prompt");
-        // string prompt = JsonSerializer.Serialize(turn);
-        // process.StartInfo.ArgumentList.Add(prompt);
+        string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
+        if (systemPrompt.Length > 0)
+        {
+            process.StartInfo.ArgumentList.Add("--append-system-prompt");
+            process.StartInfo.ArgumentList.Add(systemPrompt);
+        }
 
         process.StartInfo.ArgumentList.Add("--disable-slash-commands");
 
@@ -201,8 +205,8 @@ internal sealed class ClaudeHarness : IHarness
 
     private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
     {
-        string prompt = JsonSerializer.Serialize(turn);
-        await process.StandardInput.WriteLineAsync(prompt).ConfigureAwait(false);
+        MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
+        await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
         await process.StandardInput.FlushAsync().ConfigureAwait(false);
         process.StandardInput.Close();
     }

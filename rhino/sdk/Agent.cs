@@ -110,21 +110,6 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         return agent;
     }
 
-    /// <summary>
-    /// Create a new Agent that has permission.
-    /// </summary>
-    /// <param name="model"></param>
-    /// <returns>A freshly made agent with all of the state copied safely</returns>
-    internal Agent WithPermission()
-    {
-        // Finds the first Agent or Vendor that has permission
-        // TODO : Check existing models
-        IModel model = default!;
-        Agent agent = new(Token, model, Harness, DefaultPrompt);
-        agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
-        return agent;
-    }
-
     public async IAsyncEnumerable<ITurn> StreamAsync(string message, [EnumeratorCancellation] CancellationToken token)
     {
         if (!PlugInRegistry.HasPermission(Token))
@@ -133,23 +118,27 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         if (!UserPermissions.IsPermitted(Model.Vendor, Model.Name))
             throw new PermissionException("Model or Vendor does not have permission.");
 
-        List<ITurn> startTurns = new(Turns);
+        List<ITurn> newTurns = [];
 
-        // The loop hands back the whole transcript, so system turns added on every send would stack up.
-        if (startTurns.Count == 0)
+        if (PrivateTurns.Count == 0)
         {
             if (!string.IsNullOrEmpty(DefaultPrompt))
-                startTurns.Add(new SystemTurn(DefaultPrompt));
+                newTurns.Add(new SystemTurn(DefaultPrompt));
 
             if (SkillsPrompt(Harness.Skills) is string skillsPrompt)
-                startTurns.Add(new SystemTurn(skillsPrompt));
+                newTurns.Add(new SystemTurn(skillsPrompt));
         }
 
-        startTurns.Add(new MessageTurn(message));
+        newTurns.Add(new MessageTurn(message));
+        PrivateTurns.AddRange(newTurns);
 
-        await foreach (ITurn turn in Harness.StreamLoopAsync(this, startTurns, token))
+        foreach (ITurn turn in newTurns)
+            yield return turn;
+
+        await foreach (ITurn turn in Harness.StreamLoopAsync(this, [.. PrivateTurns], token).ConfigureAwait(false))
         {
             Statistics.PlugInStatistics.Collect(this, Token, [turn]);
+            PrivateTurns.Add(turn);
             yield return turn;
         }
     }
@@ -241,6 +230,14 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <returns>An Agent</returns>
     public static Agent GetLocalAgent(PlugIns.PlugInToken token, string model, Uri server, string prompt)
         => new(token, LocalModel.Default(model, server), new GenericHarness(token), prompt);
+
+    /// <summary>
+    /// Returns the users prefered agent, harness and overall config
+    /// </summary>
+    /// <param name="prompt">The starting prompt</param>
+    /// <returns>An Agent</returns>
+    public static Agent GetDefaultAgent(PlugIns.PlugInToken token, string prompt)
+        => throw new NotImplementedException("TODO : Implement from user settings");
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>

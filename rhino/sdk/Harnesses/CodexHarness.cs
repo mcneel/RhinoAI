@@ -43,7 +43,7 @@ internal sealed class CodexHarness : IHarness
     {
         if (agent.Model is not CodexDesktopModel claudeModel) yield break;
 
-        using Process process = StartCodex(agent);
+        using Process process = StartCodex(agent, start);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -74,7 +74,7 @@ internal sealed class CodexHarness : IHarness
         return turns;
     }
 
-    private Process StartCodex(Agent agent)
+    private Process StartCodex(Agent agent, IEnumerable<ITurn> start)
     {
         string exePath = CodexDesktopModel.ExePath;
 
@@ -121,6 +121,13 @@ internal sealed class CodexHarness : IHarness
         process.StartInfo.ArgumentList.Add("-c");
         process.StartInfo.ArgumentList.Add("model_reasoning_effort=\"high\"");
 
+        string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
+        if (systemPrompt.Length > 0)
+        {
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
+        }
+
         // Output as JSON
         process.StartInfo.ArgumentList.Add("--json");
 
@@ -163,8 +170,8 @@ internal sealed class CodexHarness : IHarness
 
     private async Task WriteLoopAsync(Process process, IEnumerable<ITurn> turn)
     {
-        string prompt = JsonSerializer.Serialize(turn);
-        await process.StandardInput.WriteLineAsync(prompt).ConfigureAwait(false);
+        MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
+        await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
         await process.StandardInput.FlushAsync().ConfigureAwait(false);
         process.StandardInput.Close();
     }
