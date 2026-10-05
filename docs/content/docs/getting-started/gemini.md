@@ -21,14 +21,13 @@ If you're choosing between assistants and aren't sure, start with [Claude Deskto
 
 [Gemini CLI](https://github.com/google-gemini/gemini-cli) — install and sign in. See the [Gemini CLI install guide](https://github.com/google-gemini/gemini-cli#installation) if you need it.
 
-## 2. Install the Rhino plugin
+## 2. Install the Rhino plugin (Rhino 8 only!)
 
 {{< yak package="Rhino-MCP-Platform" version="8" >}}
-{{< yak package="Rhino-MCP-Platform" version="9" >}}
 
 If that doesn't work you can try the below:
 
-1. Open Rhino 8 (and/or Rhino 9 WIP)
+1. Open Rhino 8
 2. Run the `PackageManager` command
 3. Search for, and install Rhino-MCP-Platform
 

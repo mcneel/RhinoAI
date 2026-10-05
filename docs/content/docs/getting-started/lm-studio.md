@@ -29,14 +29,13 @@ Local open-weight models are not as capable as the paid hosted models (Claude, G
 1. Install [LM Studio](https://lmstudio.ai), then download a model with strong tool-use support. A good starting point is [Qwen3](https://lmstudio.ai/models/qwen3), which drives MCP tools reliably. Plan on **16 GB of RAM** as a minimum.
 2. **Crank up the context length.** LM Studio defaults to a small context window, which the Rhino tool list alone will blow through. Open the model's load settings and push the max context length as high as your machine will allow.
 
-## 2. Install the Rhino plugin
+## 2. Install the Rhino plugin (Rhino 8 only!)
 
 {{< yak package="Rhino-MCP-Platform" version="8" >}}
-{{< yak package="Rhino-MCP-Platform" version="9" >}}
 
 If that doesn't work you can try the below:
 
-1. Open Rhino 8 (and/or Rhino 9 WIP)
+1. Open Rhino 8
 2. Run the `PackageManager` command
 3. Search for, and install Rhino-MCP-Platform
 
