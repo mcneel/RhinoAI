@@ -50,10 +50,16 @@ internal record struct Glob(string GlobPath, bool IncludeDirs = true)
         List<string> paths = [];
         if (string.IsNullOrEmpty(nextPart)) return paths;
 
-#if NET48
+        // Path.Combine("C:", "Users") is the drive-relative "C:Users", not "C:\Users".
         if (OperatingSystem.IsWindows() && fullPath.Length == 2 && fullPath[1] == ':')
             fullPath += Path.DirectorySeparatorChar;
-#endif
+
+        if (nextPart == "**")
+        {
+            paths.Add(fullPath);
+            paths.AddRange(Directory.EnumerateDirectories(fullPath, "*", SearchOption.AllDirectories));
+            return paths;
+        }
 
         if (!nextPart.Contains('*'))
         {
@@ -63,24 +69,16 @@ internal record struct Glob(string GlobPath, bool IncludeDirs = true)
             return [];
         }
 
-        string filter = Filter(nextPart);
-
-        foreach (string dir in Directory.EnumerateDirectories(fullPath, filter))
+        foreach (string dir in Directory.EnumerateDirectories(fullPath, nextPart))
         {
             paths.Add(dir);
         }
 
-        foreach (string file in Directory.EnumerateFiles(fullPath, filter))
+        foreach (string file in Directory.EnumerateFiles(fullPath, nextPart))
         {
             paths.Add(file);
         }
 
         return paths;
-    }
-
-    private static string Filter(string nextPart)
-    {
-        if (string.Equals(nextPart, "**")) return "*";
-        return nextPart;
     }
 }
