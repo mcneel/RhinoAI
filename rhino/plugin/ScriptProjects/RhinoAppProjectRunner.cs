@@ -6,6 +6,9 @@ namespace Rhino.AI.ScriptProjects;
 
 internal class RhinoAppProjectRunner : IProjectRunner
 {
+
+    public Guid? Id { get; } = Guid.Empty;
+
     public int CommandCount => -1;
 
     public ScriptProjectPaths Paths { get; }
