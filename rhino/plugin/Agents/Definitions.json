@@ -61,6 +61,7 @@
         ],
         "mac": [
           "/Applications/ChatGPT.app/Contents/Resources/codex",
+          "/Applications/ChatGPT.app/Contents/Resources/**/codex",
           "%USERPROFILE%/.nvm/versions/node/**/bin/codex",
           "/opt/homebrew/bin/codex",
           "/usr/local/bin/codex"
