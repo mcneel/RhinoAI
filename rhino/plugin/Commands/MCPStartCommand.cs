@@ -1,5 +1,6 @@
-using Rhino.Commands;
+using Rhino.UI;
 using Rhino.Input;
+using Rhino.Commands;
 using Rhino.Input.Custom;
 
 namespace Rhino.AI;
@@ -7,7 +8,7 @@ namespace Rhino.AI;
 public class MCPStartCommand : Command
 {
 
-    public override string EnglishName => "MCPStart";
+    public override string EnglishName => LOC.COMMANDNAME("MCPStart");
 
     protected override string CommandContextHelpUrl => DocsLinks.Homepage;
 

@@ -1,31 +1,22 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!--Generator: Xara Designer (www.xara.com), SVG filter version: 6,5,0,13-->
 <svg fill="none" fill-rule="evenodd" stroke="black" stroke-linejoin="bevel" stroke-miterlimit="10" font-family="Times New Roman" font-size="16" style="font-variant-ligatures:none" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" overflow="visible" width="36pt" height="36pt" viewBox="0 -36 36 36">
  <defs>
-  <linearGradient id="LinearGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="8.347" y2="-9.129" gradientTransform="translate(10.656 21.234)">
-   <stop offset="0" stop-color="#ffd43b"/>
-   <stop offset="0.809453725814819" stop-color="#fab005"/>
-   <stop offset="1" stop-color="#fcc419"/>
-  </linearGradient>
-  <linearGradient id="LinearGradient_1" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="6.357" y2="-6.101" gradientTransform="translate(24.61 11.479)">
-   <stop offset="0" stop-color="#ffd43b"/>
-   <stop offset="1" stop-color="#fab005"/>
-  </linearGradient>
-  <linearGradient id="LinearGradient_2" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="3.796" y2="-4.016" gradientTransform="translate(24.351 30.761)">
-   <stop offset="0" stop-color="#ffd43b"/>
-   <stop offset="1" stop-color="#fab005"/>
-  </linearGradient>
+  <style type="text/css">@import url('https://themes.googleusercontent.com/fonts/css?family=Open Sans:400,600');</style>
  </defs>
  <g id="Layer 1" transform="scale(1 -1)" stroke-width="0.501">
-  <path d="M 13.485,30.006 C 12.064,24.229 8.406,20.91 2.994,19.517 C 8.176,18.26 11.738,14.822 13.517,8.994 C 15.209,14.923 18.714,18.413 24.007,19.483 C 18.168,21.06 14.601,24.494 13.485,30.006 Z" stroke="#000000" stroke-width="2.989" stroke-linejoin="round" fill="#fcc419" marker-start="none" marker-end="none"/>
-  <path d="M 26.99,15.037 C 26.175,11.717 24.071,9.809 20.961,9.009 C 23.941,8.286 25.985,6.31 27.01,2.961 C 27.981,6.369 29.995,8.373 33.037,8.988 C 29.682,9.895 27.633,11.869 26.99,15.037 Z" stroke="#000000" stroke-width="2.924" stroke-linejoin="round" fill="#fcc419" marker-start="none" marker-end="none"/>
-  <path d="M 25.494,33.024 C 24.984,30.949 23.671,29.756 21.726,29.257 C 23.589,28.804 24.867,27.569 25.507,25.476 C 26.114,27.607 27.373,28.859 29.274,29.243 C 27.177,29.81 25.896,31.044 25.494,33.024 Z" stroke="#000000" stroke-width="2.952" stroke-linejoin="round" fill="#fcc419" marker-start="none" marker-end="none"/>
-  <path d="M 13.485,30.006 C 12.064,24.229 8.406,20.91 2.994,19.517 C 8.176,18.26 11.738,14.822 13.517,8.994 C 15.209,14.923 18.714,18.413 24.007,19.483 C 18.168,21.06 14.601,24.494 13.485,30.006 Z" stroke="none" stroke-width="0.618" stroke-linejoin="miter" marker-start="none" marker-end="none" fill="url(#LinearGradient)"/>
-  <path d="M 26.99,15.037 C 26.175,11.717 24.071,9.809 20.961,9.009 C 23.941,8.286 25.985,6.31 27.01,2.961 C 27.981,6.369 29.995,8.373 33.037,8.988 C 29.682,9.895 27.633,11.869 26.99,15.037 Z" stroke="none" stroke-width="0.355" stroke-linejoin="miter" marker-start="none" marker-end="none" fill="url(#LinearGradient_1)"/>
-  <path d="M 25.494,33.024 C 24.984,30.949 23.671,29.756 21.726,29.257 C 23.589,28.804 24.867,27.569 25.507,25.476 C 26.114,27.607 27.373,28.859 29.274,29.243 C 27.177,29.81 25.896,31.044 25.494,33.024 Z" stroke="none" stroke-width="0.221" stroke-linejoin="miter" marker-start="none" marker-end="none" fill="url(#LinearGradient_2)"/>
-  <path d="M 13.34,27.135 C 11.657,22.833 8.498,20.772 5.678,19.516" fill="none" stroke="#fff3bf" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.45"/>
-  <path d="M 26.949,12.944 C 26.295,11.202 24.525,9.746 23.006,8.971" fill="none" stroke-linejoin="round" stroke-width="1.272" stroke="#fff3bf" stroke-linecap="round"/>
-  <path d="M 25.477,31.81 C 24.455,29.797 23.274,29.504 22.877,29.285" fill="none" stroke-width="0.697" stroke-linejoin="round" stroke="#fff3bf" stroke-linecap="round"/>
-  <path d="M 13.723,11.768 C 15.406,16.07 18.398,18.192 21.217,19.449" fill="none" stroke="#f59f00" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.45"/>
-  <path d="M 27.058,4.93 C 27.711,6.672 29.055,8.21 30.889,9" fill="none" stroke="#f59f00" stroke-linejoin="round" stroke-width="1.272" stroke-linecap="round"/>
-  <path d="M 25.477,26.631 C 26.142,28.11 27.382,29.034 28.121,29.253" fill="none" stroke-width="0.697" stroke="#f59f00" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 13.527,29.857 L 16.936,22.936 L 23.857,19.527 L 16.936,16.118 L 13.527,9.197 L 10.118,16.118 L 3.197,19.527 L 10.118,22.936 Z" fill="#fcc419" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 27.001,14.847 L 28.93,10.93 L 32.847,9.001 L 28.93,7.072 L 27.001,3.155 L 25.072,7.072 L 21.155,9.001 L 25.072,10.93 Z" fill="#fcc419" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 25.5,32.317 L 26.641,30.001 L 28.957,28.86 L 26.641,27.719 L 25.5,25.403 L 24.359,27.719 L 22.043,28.86 L 24.359,30.001 Z" fill="#fcc419" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 13.527,19.527 L 23.857,19.527 L 16.936,16.118 L 13.527,9.197 Z" fill="#fab005" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 27.001,9.001 L 32.847,9.001 L 28.93,7.072 L 27.001,3.155 Z" fill="#fab005" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 25.5,28.5 L 28.957,28.5 L 26.641,27.359 L 25.5,25.043 Z" fill="#fab005" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 13.527,19.527 L 3.197,19.527 L 10.118,22.936 L 13.527,29.857 Z" fill="#ffd43b" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 13.527,29.857 L 16.936,22.936 L 23.857,19.527 L 16.936,16.118 L 13.527,9.197 L 10.118,16.118 L 3.197,19.527 L 10.118,22.936 Z" fill="none" stroke="#000000" stroke-width="1.5" stroke-linejoin="miter" marker-start="none" marker-end="none"/>
+  <path d="M 25.5,28.5 L 22.043,28.5 L 24.359,29.641 L 25.5,31.957 Z" fill="#ffd43b" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 25.5,31.957 L 26.641,29.641 L 28.957,28.5 L 26.641,27.359 L 25.5,25.043 L 24.359,27.359 L 22.043,28.5 L 24.359,29.641 Z" fill="none" stroke="#000000" stroke-linejoin="miter" stroke-width="0.922" marker-start="none" marker-end="none"/>
+  <path d="M 27.001,9.001 L 21.155,9.001 L 25.072,10.93 L 27.001,14.847 Z" fill="#ffd43b" stroke="none" marker-start="none" marker-end="none"/>
+  <path d="M 27.001,14.847 L 28.93,10.93 L 32.847,9.001 L 28.93,7.072 L 27.001,3.155 L 25.072,7.072 L 21.155,9.001 L 25.072,10.93 Z" fill="none" stroke="#000000" stroke-linejoin="miter" stroke-width="1.462" marker-start="none" marker-end="none"/>
  </g>
 </svg>

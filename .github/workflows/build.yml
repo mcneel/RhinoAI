@@ -4,16 +4,16 @@ on:
   push:
     branches:
       - main
-      - rhino-9.x
-      - 'rhino-9.x/**'
+      - rhino-*.x
+      - 'rhino-*.x/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'
   pull_request:
     branches:
       - main
-      - rhino-9.x
-      - 'rhino-9.x/**'
+      - rhino-*.x
+      - 'rhino-*.x/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'
@@ -81,19 +81,23 @@ jobs:
         shell: bash
         run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
+      # R9 ships inside Rhino, so it is compiled for coverage but never packaged.
       - name: Download yak CLI
+        if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
           curl -fsSL -o yak https://files.mcneel.com/yak/tools/0.13.0/mac/yak
           chmod +x yak
 
       - name: Build yak package
+        if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
           "$GITHUB_WORKSPACE/yak" build --platform ${{ matrix.plugin.yak }}
         working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release
 
       - name: Upload yak artifact
+        if: matrix.rhino_target == 'R8'
         uses: actions/upload-artifact@v7
         with:
           name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.plugin.os }}
@@ -136,11 +140,11 @@ jobs:
             echo "New version ${{ steps.ver.outputs.version }} - will release."
           fi
 
-      - name: Download all yak artifacts
+      - name: Download R8 yak artifacts
         if: steps.check.outputs.exists == 'false'
         uses: actions/download-artifact@v8
         with:
-          # No name downloads every yak artifact into its own subdir under dist/.
+          pattern: rhino-mcp-platform-R8-*
           path: dist
 
       - name: Create GitHub Release (creates tag atomically)
