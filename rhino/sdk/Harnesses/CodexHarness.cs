@@ -35,6 +35,8 @@ internal sealed class CodexHarness : IHarness
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
+    [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
+              "Codex: no approval in codex exec. You'd have to switch CodexHarness to codex app-server, which has a published schema but is labelled experimental.")]
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
@@ -46,15 +48,19 @@ internal sealed class CodexHarness : IHarness
             yield break;
         }
 
+        MessageTurn latest = start.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
+        if (latest.Content.FirstOrDefault(c => c is not TextContent and not ImageContent) is IMessageContent unsupported)
+            throw new NotSupportedException($"The Codex harness cannot send {unsupported.GetType().Name}.");
 
-        using AIProcess process = StartCodex(agent, start, token);
+        using ImagetoFile images = ImagetoFile.Write(latest.Content.OfType<ImageContent>());
+        using AIProcess process = StartCodex(agent, start, images.Paths, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
             try { process.Kill(entireProcessTree: true); } catch (Exception) { }
         });
 
-        Task writing = WriteLoopAsync(process, start);
+        Task writing = WriteLoopAsync(process, latest.Data);
 
         bool ended = false;
         await foreach (ITurn turn in StreamLoopAsync(process, agent, token))
@@ -144,7 +150,7 @@ internal sealed class CodexHarness : IHarness
         return process;
     }
 
-    private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
         Process process = GetCodexProcess(token);
 
@@ -208,6 +214,13 @@ internal sealed class CodexHarness : IHarness
         if (agent.Config.SessionId != Guid.Empty)
             process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString());
 
+        // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
+        foreach (string imagePath in imagePaths)
+        {
+            process.StartInfo.ArgumentList.Add("-i");
+            process.StartInfo.ArgumentList.Add(imagePath);
+        }
+
         process.StartInfo.ArgumentList.Add("-");
 
         AIProcess turnProcess = new(process);
@@ -218,10 +231,9 @@ internal sealed class CodexHarness : IHarness
         return turnProcess;
     }
 
-    private async Task WriteLoopAsync(AIProcess process, IEnumerable<ITurn> turn)
+    private async Task WriteLoopAsync(AIProcess process, string prompt)
     {
-        MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
-        await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
+        await process.StandardInput.WriteLineAsync(prompt).ConfigureAwait(false);
         await process.StandardInput.FlushAsync().ConfigureAwait(false);
         process.StandardInput.Close();
     }

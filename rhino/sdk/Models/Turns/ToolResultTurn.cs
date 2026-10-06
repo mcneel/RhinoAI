@@ -25,6 +25,6 @@ public sealed record ToolResultTurn(string Id, string Name, ToolReturn Return, D
         ? $"{Return.Message}\n\n{guidance}"
         : Return.Message;
 
-    public ITurn Copy() => new ToolResultTurn(Id, Name, Return, Timestamp, Duration, TokenCount);
+    public ITurn Copy() => new ToolResultTurn(Id, Name, Return.Copy(), Timestamp, Duration, TokenCount);
 
 }

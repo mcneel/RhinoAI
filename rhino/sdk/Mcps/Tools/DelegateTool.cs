@@ -71,7 +71,9 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         foreach (ITurn turn in turns)
         {
             if (turn is MessageTurn message)
+            {
                 report.AppendLine(message.Message);
+            }
         }
 
         return report.Length == 0

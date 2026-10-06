@@ -35,6 +35,8 @@ internal sealed class ClaudeHarness : IHarness
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
+    [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
+              "--permission-prompt-tool would resolve this")]
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
@@ -46,6 +48,8 @@ internal sealed class ClaudeHarness : IHarness
             yield break;
         }
 
+        string prompt = UserLine(start.OfType<MessageTurn>().Last(m => m.Role == RoleType.User));
+
         using AIProcess process = StartClaude(agent, start, token);
 
         using CancellationTokenRegistration _ = token.Register(() =>
@@ -53,7 +57,7 @@ internal sealed class ClaudeHarness : IHarness
             try { process.Kill(entireProcessTree: true); } catch (Exception) { }
         });
 
-        Task writing = WriteLoopAsync(process, start);
+        Task writing = WriteLoopAsync(process, prompt);
 
         bool ended = false;
         await foreach (ITurn turn in StreamLoopAsync(process, token))
@@ -294,6 +298,9 @@ internal sealed class ClaudeHarness : IHarness
         process.StartInfo.ArgumentList.Add("--prompt-suggestions");
         process.StartInfo.ArgumentList.Add("false");
 
+        process.StartInfo.ArgumentList.Add("--input-format");
+        process.StartInfo.ArgumentList.Add("stream-json");
+
         // Output as JSON
         process.StartInfo.ArgumentList.Add("--output-format");
         process.StartInfo.ArgumentList.Add("stream-json");
@@ -328,10 +335,35 @@ internal sealed class ClaudeHarness : IHarness
     private static string CoerceMcpName(string mcpName)
         => mcpName.Replace(' ', '_');
 
-    private async Task WriteLoopAsync(AIProcess process, IEnumerable<ITurn> turn)
+    private static string UserLine(MessageTurn message) => new JsonObject
     {
-        MessageTurn latest = turn.OfType<MessageTurn>().Last(m => m.Role == RoleType.User);
-        await process.StandardInput.WriteLineAsync(latest.Message).ConfigureAwait(false);
+        ["type"] = "user",
+        ["message"] = new JsonObject
+        {
+            ["role"] = "user",
+            ["content"] = new JsonArray(message.Content.Select(ToBlock).ToArray()),
+        },
+    }.ToJsonString();
+
+    private static JsonNode ToBlock(IMessageContent content) => content switch
+    {
+        TextContent text => new JsonObject { ["type"] = "text", ["text"] = text.Text },
+        ImageContent image => new JsonObject
+        {
+            ["type"] = "image",
+            ["source"] = new JsonObject
+            {
+                ["type"] = "base64",
+                ["media_type"] = image.MediaType,
+                ["data"] = Convert.ToBase64String(image.Bytes),
+            },
+        },
+        _ => throw new NotSupportedException($"The Claude harness cannot send {content.GetType().Name}."),
+    };
+
+    private async Task WriteLoopAsync(AIProcess process, string prompt)
+    {
+        await process.StandardInput.WriteLineAsync(prompt).ConfigureAwait(false);
         await process.StandardInput.FlushAsync().ConfigureAwait(false);
         process.StandardInput.Close();
     }
@@ -356,6 +388,7 @@ internal sealed class ClaudeHarness : IHarness
                         "system" => ParseSystem(thing),
                         "result" => ParseResult(thing),
                         "assistant" => ParseAssisant(thing),
+                        "rate_limit_event" => ParseRateLimit(thing),
 
                         _ => []
                     };
@@ -376,6 +409,11 @@ internal sealed class ClaudeHarness : IHarness
         {
             DisposeLeases();
         }
+    }
+
+    private List<ITurn> ParseRateLimit(JsonNode thing)
+    {
+        return [];
     }
 
     private static DateTime? GetTimestamp(JsonNode node)
@@ -528,6 +566,8 @@ internal sealed class ClaudeHarness : IHarness
             };
 
             if (turn is null) continue;
+
+            // NOTE : Can't ask for permission here, it's already happened
 
             turns.Add(turn);
         }

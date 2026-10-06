@@ -114,7 +114,37 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
 
     private SemaphoreSlim TurnGate { get; } = new(1, 1);
 
-    public async IAsyncEnumerable<ITurn> StreamAsync(string message, [EnumeratorCancellation] CancellationToken token)
+    /// <summary>
+    /// Sends a message to the assigned model
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
+    /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public IAsyncEnumerable<ITurn> StreamAsync(string message, CancellationToken token)
+        => StreamAsync([new TextContent(message)], token);
+
+    /// <summary>
+    /// Sends content to the assigned model
+    /// </summary>
+    /// <param name="content">The content to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
+    /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public IAsyncEnumerable<ITurn> StreamAsync(IMessageContent content, CancellationToken token)
+        => StreamAsync([content], token);
+
+    /// <summary>
+    /// Sends content to the assigned model
+    /// </summary>
+    /// <param name="contents">The content parts of the message to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
+    /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public async IAsyncEnumerable<ITurn> StreamAsync(IEnumerable<IMessageContent> contents, [EnumeratorCancellation] CancellationToken token)
     {
         if (!TurnGate.Wait(0, CancellationToken.None))
             throw new InvalidOperationException($"{nameof(StreamAsync)} cannot be run until the previous call has finished on the same agent.");
@@ -138,7 +168,8 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
                     newTurns.Add(new SystemTurn(skillsPrompt));
             }
 
-            newTurns.Add(new MessageTurn(message));
+            newTurns.Add(new MessageTurn(contents, RoleType.User));
+
             PrivateTurns.AddRange(newTurns);
 
             foreach (ITurn turn in newTurns)
@@ -165,9 +196,29 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
     public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
+        => await SendAsync([new TextContent(message)], token);
+
+    /// <summary>
+    /// Sends content to the assigned model
+    /// </summary>
+    /// <param name="content">The content to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public async Task<IEnumerable<ITurn>> SendAsync(IMessageContent content, CancellationToken token)
+        => await SendAsync([content], token);
+
+    /// <summary>
+    /// Sends content to the assigned model
+    /// </summary>
+    /// <param name="contents">The contents to send</param>
+    /// <param name="token">A cancellation token</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public async Task<IEnumerable<ITurn>> SendAsync(IEnumerable<IMessageContent> contents, CancellationToken token)
     {
         List<ITurn> turns = [];
-        await foreach (ITurn turn in StreamAsync(message, token).ConfigureAwait(false))
+        await foreach (ITurn turn in StreamAsync(contents, token).ConfigureAwait(false))
         {
             turns.Add(turn);
         }
