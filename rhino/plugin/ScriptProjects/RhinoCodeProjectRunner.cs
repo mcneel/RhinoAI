@@ -18,7 +18,7 @@ internal class RhinoCodeProjectRunner : IProjectRunner
 
     private IProject? CachedProject { get; set; }
 
-    public Guid? Id => CachedProject.Id;
+    public Guid? Id => CachedProject?.Id;
 
     public ScriptProjectPaths Paths { get; }
 
