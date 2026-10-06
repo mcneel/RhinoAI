@@ -498,10 +498,10 @@ internal sealed class ClaudeHarness : IHarness
             string? subType = subTypeNode.GetValue<string>();
 
             // Ignore Hooks for now
-            if (subType is not null && subType.StartsWith("hook_")) return [];
+            if (subType is not null && subType.StartsWith("hook_", StringComparison.OrdinalIgnoreCase)) return [];
 
             // Ignore Init for now - I don't know what to do with it?
-            if (subType is not null && subType.Equals("init"))
+            if (subType is not null && subType.Equals("init", StringComparison.OrdinalIgnoreCase))
             {
                 return [];
             }

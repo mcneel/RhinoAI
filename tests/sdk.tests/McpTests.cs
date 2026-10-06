@@ -22,9 +22,15 @@ public class McpTests
     }
 
     [OneTimeTearDown]
-    public void TearDown()
+    public void OnetimeTearDown()
     {
         Mcp.Dispose();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        Agent.ClearConversation();
     }
 
     [SetUp]

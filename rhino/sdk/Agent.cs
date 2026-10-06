@@ -324,6 +324,13 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         _ => new Agent(token, model, new GenericHarness(token), prompt),
     };
 
+    /// <summary>
+    /// Empties all previous turns and 
+    /// </summary>
+    internal void ClearConversation()
+    {
+        PrivateTurns.Clear();
+    }
 
 }
 
