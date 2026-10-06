@@ -1,6 +1,6 @@
 # Claude Code plugin
 
-A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.com/mcneel/RhinoMCP) into Claude Code, plus a couple of slash commands and a modeling agent.
+A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.com/mcneel/RhinoAI) into Claude Code, plus a couple of slash commands and a modeling agent.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.co
 From a Claude Code session:
 
 ```
-/plugin marketplace add mcneel/RhinoMCP
+/plugin marketplace add mcneel/RhinoAI
 /plugin install mcneel@rhino-mcp
 ```
 
