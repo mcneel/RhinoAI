@@ -30,6 +30,7 @@ internal partial class AIPanelViewModel : IDisposable
 
     public void Attach()
     {
+        RhinoApp.Idle += UpdateSelection;
         RhinoDoc.SelectObjects += OnSelectionChanged;
         RhinoDoc.DeselectObjects += OnSelectionChanged;
         RhinoDoc.DeselectAllObjects += OnSelectionChanged;
@@ -39,9 +40,11 @@ internal partial class AIPanelViewModel : IDisposable
 
     public void Detach()
     {
+        RhinoApp.Idle -= UpdateSelection;
         RhinoDoc.SelectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectAllObjects -= OnSelectionChanged;
+        
         Unsubscribe();
     }
 
@@ -51,10 +54,21 @@ internal partial class AIPanelViewModel : IDisposable
         Listener.Close();
     }
 
+    private bool UpdatedSelected { get; set; } = false;
+
+    private void UpdateSelection(object? sender, EventArgs e)
+    {
+        if (!UpdatedSelected) return;
+        UpdatedSelected = false;
+        SendContext();
+    }
+    
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
         if (ChangedDocument(e)?.RuntimeSerialNumber == DocumentSerialNumber)
-            SendContext();
+        {
+            UpdatedSelected = true;            
+        }
     }
 
     private static RhinoDoc? ChangedDocument(EventArgs e) => e switch
@@ -469,6 +483,12 @@ internal partial class AIPanelViewModel : IDisposable
 
 #region TO THE PANEL
 
+#if R9 && NETCOREAPP
+    private const bool PluginCommandsAvailable = true;
+#else
+    private const bool PluginCommandsAvailable = false;
+#endif
+
     private void SendEnvironment()
     {
         Bridge.Post(new HelloEvent(
@@ -477,7 +497,7 @@ internal partial class AIPanelViewModel : IDisposable
                 RhinoApp.Version.ToString(),
                 OperatingSystem.IsWindows() ? "windows" : "macos",
                 Document is { } doc ? DocTitle(doc) : "Untitled",
-                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true)),
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true, PluginCommands: PluginCommandsAvailable)),
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 
@@ -490,8 +510,8 @@ internal partial class AIPanelViewModel : IDisposable
 
     private void SendContext()
     {
-        if (Document is { } doc)
-            Bridge.Post(new ContextEvent(PanelContextSource.For(doc)));
+        if (Document is null) return;
+        Bridge.Post(new ContextEvent(PanelContextSource.For(Document)));
     }
 
     private void SendAgents()
