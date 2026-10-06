@@ -51,6 +51,9 @@ internal static class ScriptProjectStartup
     private const string RHINO_PATH = @"Software\McNeel\Rhinoceros";
     private const string PROXY_ID = "f3e1f51e-f7f3-414a-99cd-5ebc88ec0ef5";
 
+    /// <summary>
+    /// Prevents the AI Plugin being registered ANYWHERE.
+    /// </summary>
     public static void DeleteRegistryCache()
     {
         if (!Runtime.HostUtils.RunningOnWindows) return;
@@ -72,20 +75,22 @@ internal static class ScriptProjectStartup
             using Microsoft.Win32.RegistryKey? plugIns = rhino.OpenSubKey(version + @"\Plug-Ins", writable: true);
             if (plugIns is null) continue;
 
-            using (Microsoft.Win32.RegistryKey? list = plugIns.OpenSubKey(id + @"\CommandList"))
+            using Microsoft.Win32.RegistryKey? aiPlugIn = plugIns.OpenSubKey(id);
+            if (aiPlugIn is not null)
             {
-                if (list is not null) commands.UnionWith(list.GetValueNames());
+                plugIns.DeleteSubKeyTree(id, throwOnMissingSubKey: false);
             }
 
-            plugIns.DeleteSubKeyTree(id, throwOnMissingSubKey: false);
-
-            using Microsoft.Win32.RegistryKey? proxy = plugIns.OpenSubKey(PROXY_ID + @"\CommandList", writable: true);
-            if (proxy is null) continue;
-
-            foreach (string name in proxy.GetValueNames())
-            {
-                if (commands.Contains(name)) proxy.DeleteValue(name, throwOnMissingValue: false);
-            }
+            // NOTE : Only add if necessary
+            //using Microsoft.Win32.RegistryKey? proxyPlugIn = plugIns.OpenSubKey(PROXY_ID + @"\CommandList", writable: true);
+            //if (proxyPlugIn is not null)
+            //{
+            //    foreach (string name in proxyPlugIn.GetValueNames())
+            //    {
+            //        if (!commands.Contains(name)) continue;
+            //        proxyPlugIn.DeleteValue(name, throwOnMissingValue: false);
+            //    }
+            //}
         }
     }
     
