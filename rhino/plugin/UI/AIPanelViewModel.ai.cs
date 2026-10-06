@@ -30,6 +30,7 @@ internal partial class AIPanelViewModel : IDisposable
 
     public void Attach()
     {
+        RhinoApp.Idle += UpdateSelection;
         RhinoDoc.SelectObjects += OnSelectionChanged;
         RhinoDoc.DeselectObjects += OnSelectionChanged;
         RhinoDoc.DeselectAllObjects += OnSelectionChanged;
@@ -39,9 +40,11 @@ internal partial class AIPanelViewModel : IDisposable
 
     public void Detach()
     {
+        RhinoApp.Idle -= UpdateSelection;
         RhinoDoc.SelectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectAllObjects -= OnSelectionChanged;
+        
         Unsubscribe();
     }
 
@@ -51,10 +54,21 @@ internal partial class AIPanelViewModel : IDisposable
         Listener.Close();
     }
 
+    private bool UpdatedSelected { get; set; } = false;
+
+    private void UpdateSelection(object? sender, EventArgs e)
+    {
+        if (!UpdatedSelected) return;
+        UpdatedSelected = false;
+        SendContext();
+    }
+    
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
         if (ChangedDocument(e)?.RuntimeSerialNumber == DocumentSerialNumber)
-            SendContext();
+        {
+            UpdatedSelected = true;            
+        }
     }
 
     private static RhinoDoc? ChangedDocument(EventArgs e) => e switch
@@ -496,8 +510,8 @@ internal partial class AIPanelViewModel : IDisposable
 
     private void SendContext()
     {
-        if (Document is { } doc)
-            Bridge.Post(new ContextEvent(PanelContextSource.For(doc)));
+        if (Document is null) return;
+        Bridge.Post(new ContextEvent(PanelContextSource.For(Document)));
     }
 
     private void SendAgents()
