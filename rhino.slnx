@@ -19,7 +19,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Router.Tests/Router.Tests.csproj" />
-    <Project Path="tests/Acp.Tests/Acp.Tests.csproj" />
     <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
     <Project Path="tests/sdk.tests/sdk.tests.csproj" />
     <Project Path="tests/Server.Tests/Server.Tests.csproj" />
