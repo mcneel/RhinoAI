@@ -4,16 +4,16 @@ on:
   push:
     branches:
       - main
-      - rhino-*.x
-      - 'rhino-*.x/**'
+      - rhino-*
+      - 'rhino-*/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'
   pull_request:
     branches:
       - main
-      - rhino-*.x
-      - 'rhino-*.x/**'
+      - rhino-*
+      - 'rhino-*/**'
     paths-ignore:
       - 'docs/**'
       - '.github/workflows/docs.yml'
