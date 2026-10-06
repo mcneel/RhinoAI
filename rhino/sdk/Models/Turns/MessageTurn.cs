@@ -26,7 +26,7 @@ public sealed record MessageTurn : ITurn
     // TODO : Improve!
     public string Data => string.Concat(Content.OfType<TextContent>().Select(p => p.Text));
 
-    [Obsolete("REMOVE THIS")]
+    // [Obsolete("REMOVE THIS")] // TODO : Remove ALL usages of this
     public string Message => Data;
 
     private List<IMessageContent> PrivateContent { get; }
