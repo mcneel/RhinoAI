@@ -241,6 +241,9 @@ internal sealed class AISettingsPanel : Panel
         LoadEditor();
     }
 
+    private static string FoundString { get; } = LOC.STR("Found on search paths");
+    private static string NotFoundString { get; } = LOC.STR("Not found on search paths");
+
     private void LoadEditor()
     {
         Loading = true;
@@ -249,7 +252,7 @@ internal sealed class AISettingsPanel : Panel
             if (TryGetSelected(out AgentRow row))
             {
                 NameHeader.Text = row.Name;
-                AvailableLabel.Text = row.Available ? "✓ Found on search paths" : "✗ Not found on search paths";
+                AvailableLabel.Text = row.Available ? $"✓ {FoundString}" : $"✗ {NotFoundString}";
                 AvailableLabel.TextColor = row.Available ? Colors.Green : Colors.Red;
                 EnabledBox.Checked = row.Enabled;
                 LoadModelBox(row);
