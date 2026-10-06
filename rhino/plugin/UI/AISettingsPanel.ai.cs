@@ -241,8 +241,8 @@ internal sealed class AISettingsPanel : Panel
         LoadEditor();
     }
 
-    private static string FoundString { get; } = LOC.STR("Found on search paths");
-    private static string NotFoundString { get; } = LOC.STR("Not found on search paths");
+    private static string FoundString { get; } = Localization.LocalizeString("Found on search paths", 217);
+    private static string NotFoundString { get; } = Localization.LocalizeString("Not found on search paths", 218);
 
     private void LoadEditor()
     {
