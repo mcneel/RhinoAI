@@ -29,10 +29,9 @@ keywords:
 
 That's it. The connector is now wired up.
 
-## 3. Install the Rhino plugin
+## 2. Install the Rhino plugin (Rhino 8 only!)
 
 {{< yak package="Rhino-MCP-Platform" version="8" >}}
-{{< yak package="Rhino-MCP-Platform" version="9" >}}
 
 If that doesn't work you can try the below:
 
