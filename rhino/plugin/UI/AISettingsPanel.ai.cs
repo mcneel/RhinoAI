@@ -126,7 +126,7 @@ internal sealed class AISettingsPanel : Panel
         {
             HeaderText = Localization.LocalizeString("Default", 21),
             HeaderTextAlignment = TextAlignment.Center,
-            DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.DefaultGlyph), TextAlignment = TextAlignment.Center },
+            DataCell = new ImageViewCell { Binding = Binding.Property<AgentRow, Image>(r => r.DefaultImage) }, //Binding.Property((AgentRow r) => r.DefaultGlyph), TextAlignment = TextAlignment.Center },
             Editable = false,
             Resizable = false,
             AutoSize = true,
@@ -605,7 +605,12 @@ internal sealed class AISettingsPanel : Panel
         public bool Enabled { get; set; }
         public bool IsDefault { get; set; }
 
-        public string DefaultGlyph => IsDefault ? "★" : string.Empty;
+        //public string DefaultGlyph => IsDefault ? "✓" : string.Empty;
+
+        private static Image DefaultCheckIcon => 
+            Rhino.Resources.Assets.Rhino.Eto.Icons.TryGet(Rhino.Resources.ResourceIds.CheckSvg, new Size(16,16));
+
+        public Image DefaultImage => IsDefault ? DefaultCheckIcon : null;
 
         public AgentRow(
             string name, bool available, string searchPathsText, IReadOnlyList<ModelSpec> models,
