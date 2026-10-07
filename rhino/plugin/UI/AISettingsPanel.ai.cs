@@ -138,7 +138,7 @@ internal sealed class AISettingsPanel : Panel
             DataCell = new TextBoxCell { Binding = Binding.Property((AgentRow r) => r.Name), TextAlignment = TextAlignment.Center },
             Editable = false,
             Resizable = false,
-            Width = 140,
+            Expand = true
         });
 
         AgentGrid.SelectionChanged += (_, _) => LoadEditor();
