@@ -16,11 +16,13 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private Image? LightCachedImage { get; set; }
     private Image? DarkCachedImage { get; set; }
 
-    public AIOptionsPage() : base(Localization.LocalizeString("AI", 2))
+    public AIOptionsPage() : base("AI") // do not use localized title here, it needs to be able to respond to `_OptionsPage _AI` in all languages
     {
         Panel.Width = 800;
         Panel.UseRhinoStyle();
     }
+
+    public override string LocalPageTitle => Localization.LocalizeString("AI", 2); // supply the localized title here
 
     public override object PageControl => Panel;
 

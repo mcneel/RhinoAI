@@ -35,6 +35,8 @@ internal partial class AIPanelViewModel : IDisposable
         RhinoDoc.DeselectObjects += OnSelectionChanged;
         RhinoDoc.DeselectAllObjects += OnSelectionChanged;
 
+        UIMessagePublisher.Subscribe<SettingsCommittedMessage>(OnSettingsCommitted);
+
         ShowCurrent();
     }
 
@@ -44,6 +46,8 @@ internal partial class AIPanelViewModel : IDisposable
         RhinoDoc.SelectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectAllObjects -= OnSelectionChanged;
+
+        UIMessagePublisher.Unsubscribe<SettingsCommittedMessage>(OnSettingsCommitted);
         
         Unsubscribe();
     }
@@ -61,6 +65,13 @@ internal partial class AIPanelViewModel : IDisposable
         if (!UpdatedSelected) return;
         UpdatedSelected = false;
         SendContext();
+    }
+
+    private void OnSettingsCommitted(SettingsCommittedMessage _)
+    {
+        SendAgents();
+        //SendContext(); not needed when settings are committed, refer RH-99277
+        SendHistory();
     }
     
     private void OnSelectionChanged(object? sender, EventArgs e)
@@ -437,12 +448,8 @@ internal partial class AIPanelViewModel : IDisposable
 
     private bool OpenSettings()
     {
-        AISettingsDialog dialog = new();
-        dialog.ShowModal(View);
-        SendAgents();
-        SendContext();
-        SendHistory();
-        return true;
+        const string script = "! _OptionsPage _AI";
+        return RhinoApp.RunScript(script, false);
     }
 
     private static bool OpenUrl(string url)

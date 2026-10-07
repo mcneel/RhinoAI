@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
+using Rhino.AI.UI;
 using Rhino.UI;
 
 namespace Rhino.AI;
@@ -101,6 +102,8 @@ internal sealed class AISettingsPanel : Panel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        // notify any interested parties about the settings change
+        UIMessagePublisher.Notify(new SettingsCommittedMessage());
         return true;
     }
 
