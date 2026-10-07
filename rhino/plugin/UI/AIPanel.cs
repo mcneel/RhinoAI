@@ -1,6 +1,10 @@
 using System.Runtime.InteropServices;
 
 using Eto.Forms;
+using Rhino.UI;
+using Rhino.UI.Controls;
+using Eto.Drawing;
+using Rhino.Resources;
 
 namespace Rhino.AI.UI;
 
@@ -8,7 +12,6 @@ namespace Rhino.AI.UI;
 [Guid("fb948c98-5987-45a3-8dcb-2814ed77ee3b")]
 public partial class AIPanel : Panel
 {
-
     private WebView View { get; }
 
     private AIPanelViewModel Model => (DataContext as AIPanelViewModel)!;
@@ -20,9 +23,49 @@ public partial class AIPanel : Panel
 
     public AIPanel(uint documentSerialNumber)
     {
-        Content = View = new();
+        View = new();
         DataContext = new AIPanelViewModel(View, documentSerialNumber);
+        Content = new RhinoPanelTableLayout
+        {
+            Spacing = RhinoLayout.Spacing(RhinoLayout.SpacingType.Dialog),
+            Rows =
+            {
+                new TableRow(new TableCell(CreateToolbar(), true)),
+                new TableRow(new TableCell(View, true)){ScaleHeight = true },
+            }
+        };
+
         LoadUI();
+    }
+
+    private StackLayout CreateToolbar() // todo: update nuget and use TopRowButtonLayout
+    {
+        // note: the localized strings with id 63, 64 and 65 also live in PanelStrings.ai.cs and need to stay in sync!
+        ImageToolTipButton history = new(ResourceIds.ToolsCommandHistorySvg, null, Localization.LocalizeString("Conversation history", 63), null);
+        // The drawer belongs to the page, so the button asks for it rather than drawing it.
+        history.Click += (_, _) => Model.Bridge.Post(new OverlayToggleEvent("history"));
+
+        ImageToolTipButton newConversation = new(ResourceIds.Svg_namedItemAddHotSvg, null, Localization.LocalizeString("New conversation  (Ctrl+Shift+N)", 64), null)
+        {
+            MaskImageWithBackgroundColorWhenDisabled = true,
+        };
+        newConversation.Click += (_, _) => Model.Execute(new NewConversationCommand());
+        Model.TurnRunningChanged += running => newConversation.Enabled = !running;
+
+        ImageToolTipButton settings = new(ResourceIds.StandardStandardToolsOptionsSvg, null, Localization.LocalizeString("AI settings", 65), null);
+        settings.Click += (_, _) => Model.Execute(new OpenSettingsCommand());
+
+        ImageToolTipButton help = new(ResourceIds.Svg_namedItemHelpSvg, null, LOC.STR("Help"), null);
+        help.Click += (_, _) => Model.Execute(new OpenUrlCommand(DocsLinks.Homepage));
+        
+        // TopRowButtonLayout is newer than the RhinoCommon package this compiles against (added 2026-06-02), 
+        // so use StackLayout until the package is updated
+        return new StackLayout 
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = RhinoLayout.StackedSpacing(Orientation.Horizontal, RhinoLayout.SpacingType.Dialog),
+            Items = { newConversation, history, settings, help },
+        };
     }
 
     private void LoadUI()
@@ -31,7 +74,7 @@ public partial class AIPanel : Panel
         View.Url = Model.PageUrl;
 
         // Make dragging the panel MUCH easier.
-        Padding = 4;
+        // Padding = 4; // not needed with RhinoPanelTableLayout as content
     }
 
     protected override void OnLoad(EventArgs e)

@@ -13,6 +13,7 @@ import { historyDrawer } from './history.js';
 import { questionOverlay } from './question.js';
 import { icon } from './icons.js';
 import { transcript } from './transcript.js';
+import { nativeToolbar } from './context.js';
 
 function statusStrip(ctx: PanelContext): Child {
   const { store } = ctx;
@@ -164,7 +165,7 @@ export function app(ctx: PanelContext): Child {
       class: 'panel',
       ref: (node: HTMLElement) => ctx.zoom.attach(node),
     },
-    header(ctx),
+    when(() => !nativeToolbar(ctx), () => header(ctx)),
     transcript(ctx),
     // Below the transcript, not above it: what the agent is doing now belongs next to where its
     // output is landing and next to the Stop button, not up by the agent picker.
@@ -177,7 +178,7 @@ export function app(ctx: PanelContext): Child {
     questionOverlay(ctx),
     when(
       () => ui.overlay() === 'agents',
-      () => [el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }), agentMenu(ctx)],
+      () => [el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }), when(() => !nativeToolbar(ctx), () => agentMenu(ctx))],
     ),
     when(
       () => ui.overlay() === 'history',

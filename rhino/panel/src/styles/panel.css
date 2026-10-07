@@ -270,6 +270,10 @@ a:hover { text-decoration: underline; }
 .agent-chip .model { font-size: var(--fs-xs); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .agent-chip .chev { color: var(--text-faint); margin-left: auto; transition: transform .15s ease; }
 .agent-chip[aria-expanded='true'] .chev { transform: rotate(90deg); }
+.composer-actions .agent-chip { flex: 0 1 auto; padding: 1.8px 5.4px; }
+.composer-actions .agent-chip .who { flex-direction: row; align-items: baseline; gap: 4.5px; }
+.composer-actions .agent-chip .who > span { min-width: 0; }
+.composer-actions .agent-chip[aria-expanded='true'] .chev { transform: rotate(-90deg); }
 
 .dot {
   inline-size: 6.3px;
@@ -1024,6 +1028,14 @@ a:hover { text-decoration: underline; }
   border-radius: var(--r);
   box-shadow: var(--shadow);
   padding: 3.6px;
+}
+
+.popover.up { 
+  top: auto;
+  bottom: 100%;
+  inset-inline: 0;
+  margin-bottom:
+  4.5px; 
 }
 
 .menu-item {

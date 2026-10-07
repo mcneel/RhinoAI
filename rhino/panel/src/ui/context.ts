@@ -16,3 +16,7 @@ export interface PanelContext {
   /** Sends the composer's draft, attachments and picked context as one prompt. */
   submit(text?: string): void;
 }
+
+export function nativeToolbar(ctx: PanelContext): boolean {
+  return ctx.store.host()?.capabilities.nativeToolbar ?? ctx.native;
+}

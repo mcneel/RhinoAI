@@ -205,6 +205,8 @@ internal partial class AIPanelViewModel : IDisposable
         };
     }
 
+    public void Execute(PanelCommand command) => IncomingCommand(command);
+
     private bool Ready()
     {
         SendEnvironment();
@@ -504,7 +506,8 @@ internal partial class AIPanelViewModel : IDisposable
                 RhinoApp.Version.ToString(),
                 OperatingSystem.IsWindows() ? "windows" : "macos",
                 Document is { } doc ? DocTitle(doc) : "Untitled",
-                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, Grasshopper: true, PluginCommands: PluginCommandsAvailable)),
+                new PanelCapabilities(Attachments: true, ViewportCapture: true, UndoTurn: false, 
+                    Grasshopper: true, PluginCommands: PluginCommandsAvailable, NativeToolbar : true)),
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 
@@ -614,6 +617,7 @@ internal partial class AIPanelViewModel : IDisposable
         Review = null;
         Resubscribe();
         Feed?.Replay();
+        ReportTurnRunning();
     }
 
     private void Resubscribe()
@@ -646,6 +650,21 @@ internal partial class AIPanelViewModel : IDisposable
     {
         if (View.Loaded && Review is null)
             Feed?.Pump();
+        ReportTurnRunning();
+    }
+
+    public event Action<bool>? TurnRunningChanged;
+
+    private bool? ReportedTurnRunning { get; set; }
+
+    private void ReportTurnRunning()
+    {
+        bool running = IsTurnRunning;
+        if (ReportedTurnRunning == running)
+            return;
+
+        ReportedTurnRunning = running;
+        TurnRunningChanged?.Invoke(running);
     }
 
     private void Persist()

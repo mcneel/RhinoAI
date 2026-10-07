@@ -1054,7 +1054,7 @@ export class MockHost implements Bridge {
         version: '9.0.25246 (prototype host)',
         platform: navigator.platform.toLowerCase().includes('mac') ? 'macos' : 'windows',
         docTitle: 'tower-study.3dm',
-        capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true, pluginCommands: true },
+        capabilities: { attachments: true, viewportCapture: true, undoTurn: true, grasshopper: true, pluginCommands: true, nativeToolbar: false },
       },
       language: 'en-US',
       strings: {},

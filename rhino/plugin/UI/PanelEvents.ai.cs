@@ -30,6 +30,7 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(StatusEvent), "status")]
 [JsonDerivedType(typeof(ZoomEvent), "zoom")]
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
+[JsonDerivedType(typeof(OverlayToggleEvent), "overlay.toggle")]
 internal abstract record PanelEvent;
 
 internal sealed record HelloEvent(PanelHost Host, string Language, IReadOnlyDictionary<string, string> Strings) : PanelEvent;
@@ -55,6 +56,8 @@ internal sealed record StatusEvent(string? Text) : PanelEvent;
 // level and the ladder is never duplicated on this side. "set" is the exception: the stored level.
 internal sealed record ZoomEvent(string Action, double? Level = null) : PanelEvent;
 internal sealed record ReloadEvent : PanelEvent;
+// The page owns its overlays, so the native toolbar only asks for one: opened, or closed if it already is.
+internal sealed record OverlayToggleEvent(string Overlay) : PanelEvent;
 
 internal sealed record PanelHost(
     string Product,
@@ -68,7 +71,8 @@ internal sealed record PanelCapabilities(
     bool ViewportCapture,
     bool UndoTurn,
     bool Grasshopper,
-    bool PluginCommands);
+    bool PluginCommands,
+    bool NativeToolbar);
 
 internal sealed record PanelAgent(
     string Name,

@@ -15,11 +15,11 @@ export function hostMenu(ctx: PanelContext): void {
     // With no host there is nothing to show a menu, so let the browser keep its own. That is the
     // prototype-in-a-browser case; inside Rhino the host always answers.
     if (!ctx.native) return;
-    // The header is chrome: its buttons already do what they do, and a zoom menu over them is
+    // The composer's buttons are chrome: they already do what they do, and a zoom menu over them is
     // noise. Text fields keep the native field menu, which is the only route to Paste.
     if (
       event.target instanceof Element &&
-      event.target.closest('.header, textarea, input, [contenteditable="true"]')
+      event.target.closest('.composer-actions, textarea, input, [contenteditable="true"]')
     )
       return;
 

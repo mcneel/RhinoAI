@@ -693,6 +693,9 @@ try {
 
     check('C#-serialised events render a turn', rendered.turns === 1 && rendered.prompt?.includes('Facade'), JSON.stringify(rendered));
     check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
+    check('inside Rhino the page has no header and the agent picker sits in the composer',
+      (await host.evaluate(() => document.querySelector('.header') === null
+        && document.querySelector('.composer .agent-chip') !== null)) === true);
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
       rendered.tools === 4 && rendered.toolOk === 1, JSON.stringify(rendered));
@@ -754,7 +757,7 @@ try {
         scheme: document.documentElement.dataset.scheme,
         // The transcript is transparent and shows the body's ground.
         bg: getComputedStyle(document.body).backgroundColor,
-        chrome: getComputedStyle(document.querySelector('.header')).backgroundColor,
+        chrome: getComputedStyle(document.querySelector('.composer')).backgroundColor,
       }));
 
     await host.evaluate(() =>
@@ -861,12 +864,12 @@ try {
 
     await host.evaluate(() => {
       window.__sent.length = 0;
-      document.querySelector('.header').dispatchEvent(
+      document.querySelector('.composer-actions').dispatchEvent(
         new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
       );
     });
     await wait(120);
-    check('the header gets no zoom menu',
+    check('the composer buttons get no zoom menu',
       (await host.evaluate(() => window.__sent.some((m) => m.type === 'menu.open'))) === false);
 
     // The menu reports an intent; the panel owns the ladder.

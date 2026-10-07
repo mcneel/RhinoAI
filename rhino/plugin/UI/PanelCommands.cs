@@ -21,7 +21,6 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
 [JsonDerivedType(typeof(OpenMenuCommand), "menu.open")]
 internal abstract partial record PanelCommand { }
-
 internal sealed record ReadyCommand : PanelCommand;
 internal sealed record CancelCommand : PanelCommand;
 internal sealed record NewConversationCommand : PanelCommand;

@@ -8,6 +8,8 @@ import type { StringKey } from '../i18n/strings.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
+import { agentChip, agentMenu } from './agentMenu.js';
+import { nativeToolbar } from './context.js';
 
 interface Command {
   key: string;
@@ -263,6 +265,7 @@ export function composer(ctx: PanelContext): Child {
       },
     },
     menu,
+    when(() => ui.overlay() === 'agents' && nativeToolbar(ctx), () => agentMenu(ctx, 'up')),
     when(
       () => ui.pickedContext().length > 0,
       () =>
@@ -325,6 +328,7 @@ export function composer(ctx: PanelContext): Child {
       el(
         'div',
         { class: 'composer-actions' },
+        when(() => nativeToolbar(ctx), () => agentChip(ctx)),
         el(
           'button',
           { class: 'icon-btn', type: 'button', title: () => t('composer.attachFile'), onClick: () => ctx.send({ type: 'attachments.pick' }) },

@@ -175,6 +175,7 @@ export interface HostInfo {
     undoTurn: boolean;
     grasshopper: boolean;
     pluginCommands: boolean;
+    nativeToolbar: boolean;
   };
 }
 
@@ -204,7 +205,8 @@ export type HostEvent =
   // an intent rather than a level. `set` is the other direction: the level the host had stored.
   | { type: 'zoom'; action: 'in' | 'out' | 'reset' }
   | { type: 'zoom'; action: 'set'; level: number }
-  | { type: 'reload' };
+  | { type: 'reload' }
+  | { type: 'overlay.toggle'; overlay: 'history' };
 
 // ---------------------------------------------------------------- panel -> host
 

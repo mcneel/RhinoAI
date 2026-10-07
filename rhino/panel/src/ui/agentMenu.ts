@@ -18,7 +18,39 @@ function reasonFor(agent: AgentInfo): string {
   return agent.detail ?? (key === null ? '' : t(key));
 }
 
-export function agentMenu(ctx: PanelContext): Child {
+export function agentChip(ctx: PanelContext): Child {
+  const { store, ui } = ctx;
+
+  return el(
+    'button',
+    {
+      class: 'agent-chip',
+      type: 'button',
+      'aria-expanded': () => ui.overlay() === 'agents',
+      'aria-label': () => t('header.switchAgent'),
+      onClick: () => ui.openOverlay('agents'),
+    },
+    el('span', {
+      class: () => {
+        const agent = store.activeAgent();
+        if (store.thinking()) return 'dot busy';
+        return `dot ${agent?.availability ?? 'missing'}`;
+      },
+    }),
+    el(
+      'span',
+      { class: 'who' },
+      el('span', { class: 'name', text: () => store.activeAgent()?.label ?? t('header.noAgent') }),
+      el('span', {
+        class: 'model',
+        text: () => store.activeAgent()?.modelLabel ?? t('header.nothingConfigured'),
+      }),
+    ),
+    el('span', { class: 'chev' }, icon('chevron', 13)),
+  );
+}
+
+export function agentMenu(ctx: PanelContext, placement: 'down' | 'up' = 'down'): Child {
   const { store, ui } = ctx;
 
   const row = (agent: AgentInfo): Child => {
@@ -60,7 +92,7 @@ export function agentMenu(ctx: PanelContext): Child {
 
   return el(
     'div',
-    { class: 'popover', role: 'menu' },
+    { class: placement === 'up' ? 'popover up' : 'popover', role: 'menu' },
     el('div', { class: 'menu-head', text: () => t('agent.menuHead') }),
     each(
       () => store.agents(),

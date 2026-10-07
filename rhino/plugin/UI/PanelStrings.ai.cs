@@ -10,6 +10,7 @@ internal static class PanelStrings
         ["header.switchAgent"] = Localization.LocalizeString("Switch agent", 60),
         ["header.noAgent"] = Localization.LocalizeString("No agent", 61),
         ["header.nothingConfigured"] = Localization.LocalizeString("nothing configured", 62),
+        // note: the localized strings with id 63, 64 and 65 are also used in AIPanel.cs and need to stay in sync!        
         ["header.history"] = Localization.LocalizeString("Conversation history", 63),
         ["header.newConversation"] = Localization.LocalizeString("New conversation  (Ctrl+Shift+N)", 64),
         ["header.settings"] = Localization.LocalizeString("AI settings", 65),
