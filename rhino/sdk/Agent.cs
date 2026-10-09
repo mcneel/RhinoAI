@@ -85,6 +85,9 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// </summary>
     public string DefaultPrompt { get; } = defaultPrompt;
 
+    /// <summary>
+    /// Configuration
+    /// </summary>
     public AgentConfig Config { get; } = new();
 
     // TODO : Enum ??
@@ -93,7 +96,7 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
     /// <summary>
     /// Forks an agent at a point in a conversation.
     /// </summary>
-    /// <returns>A freshly made agent with all of the state copied safely</returns>
+    /// <returns>A forked copy of an Agent with all of the state copied safely.</returns>
     internal Agent Fork() => WithNewModel(Model);
 
     /// <summary>
@@ -240,73 +243,96 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         return prompt.ToString();
     }
 
+    // TODO : Should there be calls like GET CLAUDE DESKTOP or nah? I feel like the GetPreferredAgent is best
+
     /// <summary>
     /// Returns a claude desktop agent that uses the desktop harness
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetClaudeDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, new ClaudeDesktopModel(model), new ClaudeHarness(), prompt);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetCodexDesktopAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, new CodexDesktopModel(model), new CodexHarness(), prompt);
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetClaudeAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetClaudeAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, ClaudeModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetChatGptAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetChatGptAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, ChatGptModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetGeminiAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetGeminiAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, GeminiModel.Default(model, "Google"), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetDeepSeekAgent(PlugIns.PlugInToken token, string model, string prompt)
+    internal static Agent GetDeepSeekAgent(PlugIns.PlugInToken token, string model, string prompt)
         => new(token, DeepSeekModel.Default(model), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
+    /// <param name="server">The server of the local model. Usually http://localhost:port</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetLocalAgent(PlugIns.PlugInToken token, string model, Uri server, string prompt)
+    internal static Agent GetLocalAgent(PlugIns.PlugInToken token, string model, Uri server, string prompt)
         => new(token, LocalModel.Default(model, server), new GenericHarness(token), prompt);
 
     /// <summary>
     /// Returns the users prefered agent, harness and overall config
     /// </summary>
+    /// <param name="token">The permissions token</param>
     /// <param name="prompt">The starting prompt</param>
     /// <returns>An Agent</returns>
-    public static Agent GetDefaultAgent(PlugIns.PlugInToken token, string prompt)
-        => throw new NotImplementedException("TODO : Implement from user settings");
+    public static Agent? GetPreferredAgent(PlugIns.PlugInToken token, string prompt)
+    {
+        if (!PrivateModelMakers.TryGetValue(UserSettings.PreferredModel, out IModel? model) || model is null) return null;
+        return FromModel(token, model, prompt);
+    }
 
     /// <summary>
     /// Returns an Agent that uses the appropriate <see cref="IHarness"/>
     /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="model">The AI Model</param>
     /// <param name="prompt">The default prompt</param>
     /// <returns>An Agent</returns>
     public static Agent FromModel(PlugInToken token, IModel model, string prompt) => model switch
@@ -319,13 +345,13 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
         ClaudeModel => GetClaudeAgent(token, model.Name, prompt),
         ChatGptModel => GetChatGptAgent(token, model.Name, prompt),
         GeminiModel => GetGeminiAgent(token, model.Name, prompt),
-        LocalModel => GetLocalAgent(token, model.Name, new Uri("http://localhost:1234"), prompt),
+        LocalModel => GetLocalAgent(token, model.Name, UserSettings.DefaultLocalModelUri, prompt),
 
         _ => new Agent(token, model, new GenericHarness(token), prompt),
     };
 
     /// <summary>
-    /// Empties all previous turns and 
+    /// Empties all previous turns
     /// </summary>
     internal void ClearConversation()
     {
@@ -334,13 +360,25 @@ public sealed class Agent(PlugInToken token, IModel model, IHarness harness, str
 
 }
 
+/// <summary>
+/// Agent Configuration
+/// </summary>
 public sealed record AgentConfig
 {
 
+    /// <summary>
+    /// Uses the local settings of the Agents Harness
+    /// </summary>
     public bool UseLocalSettings { get; set; } = false;
 
+    /// <summary>
+    /// The Session Id to resume with
+    /// </summary>
     public Guid SessionId { get; set; } = Guid.Empty;
 
+    /// <summary>
+    /// Pushes Config from one agent to another
+    /// </summary>
     public static void Push(AgentConfig from, AgentConfig to)
     {
         to.UseLocalSettings = from.UseLocalSettings;
