@@ -44,7 +44,7 @@ public class PermissionTests
         mcp.RegisterTool(tool);
         harness.AddMcp(mcp);
 
-        Assert.That(harness.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
+        Assert.That(UserSettings.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
         Assert.That(turns.Any(t => t is ToolResultTurn result && result.Return.Result == ToolResult.Failure));

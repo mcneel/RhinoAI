@@ -12,9 +12,6 @@ namespace Rhino.AI;
 public interface IHarness
 {
 
-    /// <summary>Permissions for the MCPs and Tools</summary>
-    public PermissionSet Permissions { get; }
-
     public HarnessConfig Config { get; }
 
 #region Extensions
@@ -29,14 +26,14 @@ public interface IHarness
     /// Adds an <see cref="IMcp"/> to the <see cref="IHarness"/>
     /// </summary>
     /// <param name="mcp">An mcp</param>
-    /// <returns><see cref="true"> on success</returns>
+    /// <returns><see langword="true"/> on success</returns>
     public bool AddMcp(IMcp mcp);
     
     /// <summary>
     /// Adds an <see cref="ISkill"/> to the <see cref="IHarness"/>
     /// </summary>
     /// <param name="skill">An mcp</param>
-    /// <returns><see cref="true"> on success</returns>
+    /// <returns><see langword="true"/> on success</returns>
     public bool AddSkill(ISkill skill);
 
 #endregion
@@ -61,14 +58,15 @@ public interface IHarness
     /// <returns>Any returned tasks from the completed loop</returns>
     public IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token);
 
-#endregion
+    #endregion
 
-#region Tools
+    #region Tools
 
     /// <summary>
     /// Uses a tool and returns the result.
     /// </summary>
-    /// <param name="name">The tool name</param>
+    /// <param name="mcpName">The MCP name</param>
+    /// <param name="toolName">The tool name</param>
     /// <param name="args">The args for the tool</param>
     /// <param name="token">Cancellation Token</param>
     /// <returns></returns>
@@ -100,22 +98,19 @@ public sealed class HarnessConfig
 /// <summary>
 /// A request for permission
 /// </summary>
-public sealed class PermissionRequest : EventArgs
+public sealed class PermissionRequest(IMcp mcp, ITool tool, List<IToolArg> args) : EventArgs
 {
 
-    public string McpName { get; }
-    public string ToolName { get; }
-    
+    /// <summary>The name of the MCP</summary>
+    public string McpName { get; } = mcp.Name;
+
+    /// <summary>The name of the tool</summary>
+    public string ToolName { get; } = tool.Name;
+
+    /// <summary>Current permission status of the request</summary>
     public bool HasPermission { get; set; } = false;
 
-    public IReadOnlyList<IToolArg> Args { get; }
-
-    public PermissionRequest(IMcp mcp, ITool tool, List<IToolArg> args)
-    {
-        McpName = mcp.Name;
-        ToolName = tool.Name;
-        Args = args;
-
-    }
-
+    /// <summary>The args of the permission</summary>
+    public IReadOnlyList<IToolArg> Args { get; } = args;
+    
 }

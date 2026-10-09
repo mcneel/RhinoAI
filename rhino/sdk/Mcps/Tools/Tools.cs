@@ -93,20 +93,30 @@ public abstract record Tool : ITool
 }
 
 /// <summary>
-/// A parameter 
+/// A Tool parameter definition, a specification, not input
 /// </summary>
-/// <param name="Name">The name of the tool. Please ensure the name uses between 1-128 characters, only ASCII characters, No spaces, commas or other special characters besides _</param>
-/// <param name="Description">A description of the tool type</param>
-/// <param name="Type">The argument type</param>
-/// <param name="Required">Required parameters will be </param>
-public record struct ToolParameter
+public readonly record struct ToolParameter
 {
+
+    /// <summary>The name of the tool</summary>
     public string Name { get; }
+    
+    /// <summary>A description of the tool type</summary>
     public string Description { get; }
+    
+    /// <summary>The argument type</summary>
     public ToolArgType Type { get; }
+    
+    /// <summary>Parameters the Tool call must fill out</summary>
     public bool Required { get;  }
     
-
+    /// <summary>
+    /// Creates a Tool Parameter
+    /// </summary>
+    /// <param name="name">The name of the tool. Please ensure the name uses between 1-128 characters, only ASCII characters, No spaces, commas or other special characters besides _</param>
+    /// <param name="description">A description of the tool type</param>
+    /// <param name="type">The argument type</param>
+    /// <param name="required">Required parameters will be true</param>
     public ToolParameter(string name, string description, ToolArgType type, bool required)
     {
         Name = Tool.CorrectName(name);

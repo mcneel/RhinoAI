@@ -5,7 +5,24 @@
     <RootNamespace>Rhino.AI</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
+  <PropertyGroup>
+    <PackageId>RhinoAI</PackageId>
+    <PackageVersion>$(RhinoAIPackageVersion)</PackageVersion>
+    <Authors>Robert McNeel &amp; Associates</Authors>
+    <Description>SDK for building agents, harnesses, models and MCP integrations for RhinoAI.</Description>
+    <PackageTags>rhino;rhino3d;ai;agents;mcp</PackageTags>
+    <RepositoryUrl>https://github.com/mcneel/RhinoAI</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <ExposeInternalsToTests>true</ExposeInternalsToTests>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ExposeInternalsToTests)' == 'true'">
     <InternalsVisibleTo Include="sdk.tests" />
   </ItemGroup>
 

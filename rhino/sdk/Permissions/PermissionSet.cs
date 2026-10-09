@@ -69,7 +69,7 @@ public sealed class PermissionSet
         return permission.Permissability;
     }
 
-    public bool AddPermission(Permission permission)
+    internal bool AddPermission(Permission permission)
         => Permissions.Add(permission);
 
 

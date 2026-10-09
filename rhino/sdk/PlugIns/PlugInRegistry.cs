@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 
 namespace Rhino.AI.PlugIns;
 
+/// <summary>
+/// Registry for PlugIn Tokens. Required for permissions.
+/// </summary>
 public static class PlugInRegistry
 {
 

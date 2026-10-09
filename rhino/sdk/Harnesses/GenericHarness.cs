@@ -24,13 +24,14 @@ public class GenericHarness : IHarness
     private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
 
-    public PermissionSet Permissions { get; } = new PermissionSet();
+    public PermissionSet Permissions { get; }
 
     public HarnessConfig Config { get; } = new();
 
     public GenericHarness(PlugIns.PlugInToken token)
     {
         Loop = new(this);
+        Permissions = UserSettings.Permissions;
         AddMcp(new DefaultToolsMcp(this, token));
     }
 
@@ -54,7 +55,7 @@ public class GenericHarness : IHarness
     public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
         => await UseToolAsync(this, mcpName, toolName, args, token);
 
-    public static async Task<ToolReturn> UseToolAsync(IHarness harness, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
+    internal static async Task<ToolReturn> UseToolAsync(IHarness harness, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {
         if (!harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return ToolReturn.Failure($"Mcp named {mcpName} is not available", "");
 
@@ -68,7 +69,7 @@ public class GenericHarness : IHarness
             return ToolReturn.Failure($"Tool named {toolName} is not available in {mcpName}", $"Did you mean {likelyToolString}?");
         }
 
-        Permissability permissability = harness.Permissions.HasPermission(mcpName, toolName, args);
+        Permissability permissability = UserSettings.Permissions.HasPermission(mcpName, toolName, args);
         if (permissability == Permissability.Deny) return ToolReturn.Refused();
         if (permissability == Permissability.Ask && harness.AskUser is not null)
         {

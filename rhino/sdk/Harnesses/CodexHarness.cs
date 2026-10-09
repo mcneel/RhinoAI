@@ -18,8 +18,6 @@ namespace Rhino.AI;
 internal sealed class CodexHarness : IHarness
 {
 
-    public PermissionSet Permissions { get; } = new();
-
     private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
 
@@ -567,7 +565,7 @@ internal sealed class CodexHarness : IHarness
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
     private IEnumerable<string> GetMcpArgs()
     {
-        string disabledTools = TomlArray(Permissions.ProhibitedTools().Select(permission => permission.ToolName));
+        string disabledTools = TomlArray(UserSettings.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (IMcp mcp in Mcps.Values)

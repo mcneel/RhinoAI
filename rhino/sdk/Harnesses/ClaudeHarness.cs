@@ -18,8 +18,6 @@ namespace Rhino.AI;
 internal sealed class ClaudeHarness : IHarness
 {
 
-    public PermissionSet Permissions { get; } = new();
-
     private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
 
@@ -262,7 +260,7 @@ internal sealed class ClaudeHarness : IHarness
 
         // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
         string disallowedTools = string.Empty;
-        foreach (Permission permission in Permissions.ProhibitedTools())
+        foreach (Permission permission in UserSettings.Permissions.ProhibitedTools())
         {
             disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions
