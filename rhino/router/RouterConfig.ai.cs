@@ -3,7 +3,8 @@ namespace Rhino.AI.Router;
 public record RouterConfig(
     string DefaultVersion,
     int StartupTimeoutSeconds = 120,
-    IReadOnlyDictionary<string, string>? RhinoExeOverrides = null)
+    IReadOnlyDictionary<string, string>? RhinoExeOverrides = null,
+    SpawnWindowMode WindowMode = SpawnWindowMode.Normal)
 {
     public const int DefaultStartupTimeoutSeconds = 120;
 
@@ -19,6 +20,10 @@ public record RouterConfig(
     // CLI arg wins. Value is a Rhino.exe (Windows) or a .app bundle (macOS).
     public const string RhinoExeEnvPrefix = "RHINO_MCP_RHINO_EXE_";
 
+    // Env var fallback for the spawned window's show state; the `--hidden` CLI arg wins.
+    // Accepts the same words as the flag, plus the usual boolean spellings.
+    public const string WindowModeEnvVar = "RHINO_MCP_HIDDEN";
+
     private static readonly string[] KnownVersions = ["8", "9", "WIP"];
 
     public static RouterConfig FromArgs(string[] args)
@@ -26,28 +31,50 @@ public record RouterConfig(
         string defaultVersion = ReadDefaultVersionFromEnv();
         int startupTimeoutSeconds = ReadStartupTimeoutFromEnv();
         Dictionary<string, string> overrides = ReadRhinoExeOverridesFromEnv();
+        SpawnWindowMode windowMode = ReadWindowModeFromEnv();
 
-        for (int i = 0; i < args.Length - 1; i++)
+        // Walk every argument, not every argument but the last: `--hidden` carries no
+        // value, so a loop that stops one short would drop it when it is typed last.
+        for (int i = 0; i < args.Length; i++)
         {
-            if (args[i] == "--default-version" || args[i] == "-v")
+            string arg = args[i];
+            string? value = i + 1 < args.Length ? args[i + 1] : null;
+
+            // `--hidden`, `--hidden=minimized`. The attached form keeps the bare flag
+            // unambiguous: a following bare word is the next flag, never this one's value.
+            if (arg == "--hidden")
             {
-                defaultVersion = args[i + 1];
+                windowMode = SpawnWindowMode.Hidden;
             }
-            else if (args[i] == "--startup-timeout")
+            else if (arg.StartsWith("--hidden=", StringComparison.Ordinal))
             {
-                if (int.TryParse(args[i + 1], out int parsed) && parsed > 0)
+                if (TryParseWindowMode(arg["--hidden=".Length..], out SpawnWindowMode parsedMode))
+                {
+                    windowMode = parsedMode;
+                }
+            }
+            else if (value is null)
+            {
+                continue;
+            }
+            else if (arg == "--default-version" || arg == "-v")
+            {
+                defaultVersion = value;
+            }
+            else if (arg == "--startup-timeout")
+            {
+                if (int.TryParse(value, out int parsed) && parsed > 0)
                 {
                     startupTimeoutSeconds = parsed;
                 }
             }
-            else if (args[i] == "--rhino-exe")
+            else if (arg == "--rhino-exe")
             {
                 // `<version>=<path>`; the CLI value overrides any env value for that version.
-                string raw = args[i + 1];
-                int eq = raw.IndexOf('=');
+                int eq = value.IndexOf('=');
                 if (eq > 0)
                 {
-                    overrides[raw[..eq]] = raw[(eq + 1)..];
+                    overrides[value[..eq]] = value[(eq + 1)..];
                 }
             }
         }
@@ -55,7 +82,8 @@ public record RouterConfig(
         return new RouterConfig(
             defaultVersion,
             startupTimeoutSeconds,
-            overrides.Count > 0 ? overrides : null);
+            overrides.Count > 0 ? overrides : null,
+            windowMode);
     }
 
     private static string ReadDefaultVersionFromEnv()
@@ -72,6 +100,49 @@ public record RouterConfig(
             return parsed;
         }
         return DefaultStartupTimeoutSeconds;
+    }
+
+    private static SpawnWindowMode ReadWindowModeFromEnv()
+    {
+        string? raw = Environment.GetEnvironmentVariable(WindowModeEnvVar);
+        return TryParseWindowMode(raw, out SpawnWindowMode parsed) ? parsed : SpawnWindowMode.Normal;
+    }
+
+    // One spelling table for the flag value and the env var, so `--hidden=minimized`
+    // and `RHINO_MCP_HIDDEN=minimized` cannot drift apart.
+    private static bool TryParseWindowMode(string? raw, out SpawnWindowMode mode)
+    {
+        mode = SpawnWindowMode.Normal;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        switch (raw.Trim().ToLowerInvariant())
+        {
+            case "1":
+            case "true":
+            case "yes":
+            case "on":
+            case "hidden":
+            case "hide":
+                mode = SpawnWindowMode.Hidden;
+                return true;
+            case "min":
+            case "minimised":
+            case "minimized":
+                mode = SpawnWindowMode.Minimized;
+                return true;
+            case "0":
+            case "false":
+            case "no":
+            case "off":
+            case "normal":
+                mode = SpawnWindowMode.Normal;
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static Dictionary<string, string> ReadRhinoExeOverridesFromEnv()
