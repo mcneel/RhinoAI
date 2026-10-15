@@ -18,8 +18,6 @@ namespace Rhino.AI;
 internal sealed class ClaudeHarness : IHarness
 {
 
-    public PermissionSet Permissions { get; } = new();
-
     private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
 
@@ -42,7 +40,7 @@ internal sealed class ClaudeHarness : IHarness
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
-        if (!await EnsureLoggedIn(token))
+        if (!await EnsureLoggedIn(token, claudeModel))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -107,12 +105,12 @@ internal sealed class ClaudeHarness : IHarness
     }
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, ClaudeDesktopModel claudeModel)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process claude = GetClaudeProcess(token);
+            using Process claude = GetClaudeProcess(token, claudeModel);
             claude.StartInfo.ArgumentList.Add("auth");
             claude.StartInfo.ArgumentList.Add("status");
 
@@ -140,7 +138,7 @@ internal sealed class ClaudeHarness : IHarness
                 LoggedIn = true;
                 return LoggedIn;
             }
-            LoggedIn = await LogIn(token);
+            LoggedIn = await LogIn(token, claudeModel);
             return LoggedIn;
         }
         catch
@@ -149,9 +147,9 @@ internal sealed class ClaudeHarness : IHarness
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token)
+    private async Task<bool> LogIn(CancellationToken token, ClaudeDesktopModel model)
     {
-        using Process claude = GetClaudeProcess(token);
+        using Process claude = GetClaudeProcess(token, model);
         claude.StartInfo.ArgumentList.Add("auth");
         claude.StartInfo.ArgumentList.Add("login");
         claude.StartInfo.ArgumentList.Add("--claudeai");
@@ -197,9 +195,10 @@ internal sealed class ClaudeHarness : IHarness
         return turns;
     }
 
-    private Process GetClaudeProcess(CancellationToken token)
+    private Process GetClaudeProcess(CancellationToken token, IModel model)
     {
-        string exePath = ClaudeDesktopModel.ExePath;
+        ClaudeDesktopModel claudeModel = (ClaudeDesktopModel)model;
+        string exePath = claudeModel.ExePath;
 
         Process process = new()
         {
@@ -227,7 +226,7 @@ internal sealed class ClaudeHarness : IHarness
 
     private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
-        Process process = GetClaudeProcess(token);
+        Process process = GetClaudeProcess(token, agent.Model);
 
         process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
@@ -262,7 +261,7 @@ internal sealed class ClaudeHarness : IHarness
 
         // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
         string disallowedTools = string.Empty;
-        foreach (Permission permission in Permissions.ProhibitedTools())
+        foreach (Permission permission in Instances.Preferences.Permissions.ProhibitedTools())
         {
             disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions
@@ -276,7 +275,7 @@ internal sealed class ClaudeHarness : IHarness
         process.StartInfo.ArgumentList.Add("--model");
         process.StartInfo.ArgumentList.Add(agent.Model.Name);
 
-        if (UserPermissions.IsPermitted("anthropic", "opus"))
+        if (Instances.Preferences.IsPermitted("anthropic", "opus"))
         {
             // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
             process.StartInfo.ArgumentList.Add("--fallback-model");

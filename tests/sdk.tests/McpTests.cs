@@ -18,7 +18,9 @@ public class McpTests
         DeepSeekModel deepSeek = DeepSeekModel.Default();
         GenericHarness harness = new(Token);
         harness.AddMcp(Mcp);
-        Agent = new(Token, deepSeek, harness);
+
+        Agent = Agent.GetClaudeDesktopAgent(Token)!;
+        Assert.That(Agent, Is.Not.Null);
     }
 
     [OneTimeTearDown]

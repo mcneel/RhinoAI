@@ -7,6 +7,6 @@ namespace Rhino.AI;
 public class MemoryMcp(string name) : GenericMcp(name)
 {
     
-    public void ClearTools() => PrivateTools.Clear();
+    internal void ClearTools() => PrivateTools.Clear();
 
 }

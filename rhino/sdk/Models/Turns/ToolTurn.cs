@@ -6,26 +6,32 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-public sealed record ToolTurn(string Id, string Name, IReadOnlyList<IToolArg> Args, ThoughtSignature? Signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+internal sealed record ToolTurn : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.Assistant;
+    public string Id { get; }
+    public string Name { get; }
 
-    [JsonIgnore]
-    public bool Success => true;
+    public IReadOnlyList<IToolArg> Args { get; init; }
+    public ThoughtSignature? Signature { get; init; }
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
+    public ToolTurn(string id, string name, IReadOnlyList<IToolArg> args, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("result")
+    {
+        Id = id;
+        Name = name;
+        Args = args;
+        Signature = signature;
+        
+        Role = RoleType.Assistant;
+        Success = true;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
 
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
+        Data = ToolArgs.Describe(Name, Args);
+    }
 
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data => ToolArgs.Describe(Name, Args);
-
-    public ITurn Copy() => new ToolTurn(Id, Name, [.. Args], Signature, Timestamp, Duration, TokenCount);
+    public override ITurn Copy() => new ToolTurn(Id, Name, [.. Args], Signature, TimeStamp, Duration, TokenCount);
 
 }

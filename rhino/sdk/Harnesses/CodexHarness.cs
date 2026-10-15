@@ -18,8 +18,6 @@ namespace Rhino.AI;
 internal sealed class CodexHarness : IHarness
 {
 
-    public PermissionSet Permissions { get; } = new();
-
     private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
 
@@ -41,8 +39,8 @@ internal sealed class CodexHarness : IHarness
 
     public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel) yield break;
-        if (!await EnsureLoggedIn(token))
+        if (agent.Model is not CodexDesktopModel codexModel) yield break;
+        if (!await EnsureLoggedIn(token, codexModel))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -122,9 +120,10 @@ internal sealed class CodexHarness : IHarness
         return turns;
     }
 
-    private Process GetCodexProcess(CancellationToken token)
+    private Process GetCodexProcess(IModel model, CancellationToken token)
     {
-        string exePath = CodexDesktopModel.ExePath;
+        CodexDesktopModel codexModel = (CodexDesktopModel)model;
+        string exePath = codexModel.ExePath;
 
         Process process = new()
         {
@@ -152,7 +151,7 @@ internal sealed class CodexHarness : IHarness
 
     private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
-        Process process = GetCodexProcess(token);
+        Process process = GetCodexProcess(agent.Model, token);
 
         process.StartInfo.ArgumentList.Add("exec");
 
@@ -326,12 +325,12 @@ internal sealed class CodexHarness : IHarness
 
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, CodexDesktopModel codexModel)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process codex = GetCodexProcess(token);
+            using Process codex = GetCodexProcess(codexModel, token);
             codex.StartInfo.ArgumentList.Add("login");
             codex.StartInfo.ArgumentList.Add("status");
 
@@ -350,7 +349,7 @@ internal sealed class CodexHarness : IHarness
                 return LoggedIn;
             }
 
-            LoggedIn = await LogIn(token);
+            LoggedIn = await LogIn(token, codexModel);
             return LoggedIn;
         }
         catch
@@ -359,9 +358,9 @@ internal sealed class CodexHarness : IHarness
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token)
+    private async Task<bool> LogIn(CancellationToken token, CodexDesktopModel codexModel)
     {
-        using Process codex = GetCodexProcess(token);
+        using Process codex = GetCodexProcess(codexModel, token);
         codex.StartInfo.ArgumentList.Add("login");
 
         using CancellationTokenRegistration _ = token.Register(() =>
@@ -567,7 +566,7 @@ internal sealed class CodexHarness : IHarness
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
     private IEnumerable<string> GetMcpArgs()
     {
-        string disabledTools = TomlArray(Permissions.ProhibitedTools().Select(permission => permission.ToolName));
+        string disabledTools = TomlArray(Instances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (IMcp mcp in Mcps.Values)

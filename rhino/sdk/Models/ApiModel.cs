@@ -16,6 +16,7 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 {
 
     public string Name { get; } = name;
+    
     public string Vendor { get; } = vendor;
 
     public int MaxOutputTokens { get; set; } = 8192;
@@ -45,7 +46,7 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     public virtual async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
     {
-        if (!UserPermissions.IsPermitted(Vendor, Name))
+        if (!Instances.Preferences.IsPermitted(Vendor, Name))
             throw new PermissionException("Model or Vendor does not have permission.");
 
         JsonObject body = Converter.ToRequest(new RequestSettings(Name, MaxOutputTokens), harness, turns);

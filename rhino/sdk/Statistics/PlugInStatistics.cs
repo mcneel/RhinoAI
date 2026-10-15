@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace Rhino.AI.Statistics;
 
+/// <summary>
+/// Internalised usage statistics for the user to evaluate agent usage and performance
+/// </summary>
 internal class PlugInStatistics
 {
 
@@ -31,9 +34,12 @@ internal class PlugInStatistics
         }
     }
 
+    // TODO : Move to Instanes?
     private static Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
 
-    private Dictionary<ModelKey, int> ModelUsage { get; } = [];
+    private Dictionary<ModelKey, int> PrivateModelUsage { get; } = [];
+
+    public int ModelUsage => PrivateModelUsage.Sum(pm => pm.Value);
 
     public static void Collect(Agent agent, PlugIns.PlugInToken token, IEnumerable<ITurn> turn)
     {
@@ -44,13 +50,20 @@ internal class PlugInStatistics
         Stats[tokenKey] = stats;
     }
 
+    public static PlugInStatistics? Usage(PlugIns.PlugInToken token)
+    {
+        PlugIn tokenKey = new(token);
+        Stats.TryGetValue(tokenKey, out PlugInStatistics? statistics);
+        return statistics;
+    }
+
     private void AddTokenUsage(Models.IModel model, int tokenCount)
     {
         if (tokenCount <= 0) return;
 
         ModelKey key = new(model);
-        ModelUsage.TryGetValue(key, out int count);
-        ModelUsage[key] = count + tokenCount;
+        PrivateModelUsage.TryGetValue(key, out int count);
+        PrivateModelUsage[key] = count + tokenCount;
     }
 
     public static bool LoadFromJson(string json)

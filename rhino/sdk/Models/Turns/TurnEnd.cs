@@ -1,29 +1,31 @@
 using System;
-using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record TurnEnd(StopReason Reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+// Each parameter in the deserialization constructor on type 'Rhino.AI.TurnEnd'
+// must bind to an object property or field on deserialization.
+// Each parameter name and type must match with a property or field on the object.
+internal sealed record TurnEnd : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.Assistant;
+    public StopReason Reason { get; init; }
 
-    [JsonIgnore]
-    public bool Success => Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+    public TurnEnd(StopReason reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("end")
+    {
+        Role = RoleType.Assistant;
+        Reason = reason;
+        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+        Data = error ?? string.Empty;
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
+        Role = RoleType.Assistant;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
+    }
 
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
-
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data { get; } = error ?? string.Empty;
-
-    public ITurn Copy() => this;
+    // TODO : Improve
+    public override ITurn Copy() => this;
 
 }
 

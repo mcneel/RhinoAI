@@ -11,8 +11,6 @@ namespace Rhino.AI;
 public interface IMcp : IDisposable
 {
 
-    // TODO : MCP Name Rules
-
     /// <summary>The name of the MCP.</summary>
     public string Name { get; }
 

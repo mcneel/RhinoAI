@@ -19,6 +19,7 @@ internal sealed class ImagetoFile : IDisposable
         List<string> paths = [];
         foreach (ImageContent image in images)
         {
+            // TODO : Use Harness Config? Or nah?
             string path = Path.Combine(Path.GetTempPath(), $"rhinoai-{Guid.NewGuid():N}{ExtensionFor(image.MediaType)}");
             File.WriteAllBytes(path, image.Bytes);
             paths.Add(path);

@@ -10,7 +10,7 @@ namespace Rhino.AI.Models;
 /// <summary>
 /// An AI Model
 /// </summary>
-public interface IModel
+internal interface IModel
 {
     
     /// <summary>The Name of the Model</summary>
@@ -24,16 +24,16 @@ public interface IModel
     
     /// <summary>Send a series of messages to the Model</summary>
     /// <param name="harness">The Harness to use with the model</param>
-    /// <param name="turn">The messages to start the conversation with</param>
+    /// <param name="turns">The messages to start the conversation with</param>
     /// <param name="token">A Cancellation token</param>
     /// <returns>The response from the AI Model</returns>
-    public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token);
+    public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token);
 
     /// <summary>Send a series of messages to the Model</summary>
     /// <param name="harness">The Harness to use with the model</param>
-    /// <param name="turn">The messages to start the conversation with</param>
+    /// <param name="turns">The messages to start the conversation with</param>
     /// <param name="token">A Cancellation token</param>
     /// <returns>The response from the AI Model</returns>
-    public IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turn, [EnumeratorCancellation]CancellationToken token);
+    public IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token);
 
 }
