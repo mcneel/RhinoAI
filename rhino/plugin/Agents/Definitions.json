@@ -4,7 +4,7 @@
       "name": "Claude",
       "company": "Anthropic",
       "isBuiltIn": true,
-      "defaultPrompt" : "",
+      "defaultPrompt": "",
       "defaultModel": "opus",
       "searchPaths": {
         "win": [
@@ -25,7 +25,7 @@
         { "display": "Opus (latest)", "id": "opus" },
         { "display": "Sonnet (latest)", "id": "sonnet" },
         { "display": "Haiku (latest)", "id": "haiku" },
-        { "display": "Fable (latest)", "id": "fable" },
+        { "display": "Fable (latest)", "id": "claude-fable-5-1" },
         { "display": "Fable 5.1", "id": "claude-fable-5-1" },
         { "display": "Fable 5.1 (1M context)", "id": "claude-fable-5-1[1m]" },
         { "display": "Fable 5", "id": "claude-fable-5" },
@@ -53,7 +53,7 @@
       "company": "OpenAI",
       "defaultModel": "gpt-5.5",
       "isBuiltIn": true,
-      "defaultPrompt" : "",
+      "defaultPrompt": "",
       "searchPaths": {
         "win": [
           "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe",
@@ -73,6 +73,39 @@
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
         { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
         { "display": "GPT 5.5", "id": "gpt-5.5" }
+      ]
+    },
+    {
+      "name": "Gemini",
+      "company": "Google",
+      "defaultModel": "gemini-3.5-pro",
+      "isBuiltIn": true,
+      "defaultPrompt": "",
+      "searchPaths": {
+        "win": [
+          "%LOCALAPPDATA%/agy/bin/agy.exe",
+          "%LOCALAPPDATA%/Programs/Antigravity/resources/app/bin/agy.exe",
+          "%APPDATA%/npm/gemini.cmd",
+          "%USERPROFILE%/.local/bin/gemini.exe"
+        ],
+        "mac": [
+          "%USERPROFILE%/.local/bin/agy",
+          "/opt/homebrew/bin/agy",
+          "/usr/local/bin/agy",
+          "/opt/homebrew/bin/gemini",
+          "/usr/local/bin/gemini"
+        ]
+      },
+      "models": [
+        { "display": "Gemini 4 Argon (Max Reasoning)", "id": "gemini-4-argon" },
+        { "display": "Gemini 3.8 Flash High (Fast Draft)", "id": "gemini-3.8-flash-high" },
+        { "display": "Gemini 3.5 Pro (Deep Geometry / High-Context)", "id": "gemini-3.5-pro" },
+        { "display": "Gemini 3.1 Pro (Extended Reasoning)", "id": "gemini-3.1-pro" },
+        { "display": "Gemini 2.5 Pro (Balanced / Opus-Class)", "id": "gemini-2.5-pro" },
+        { "display": "Gemini 2.5 Flash", "id": "gemini-2.5-flash" },
+        { "display": "Nano Banana Pro (Pro Image / Renders)", "id": "gemini-3-pro-image" },
+        { "display": "Nano Banana 2 (Flash Image / Diagrams)", "id": "gemini-3.1-flash-image" },
+        { "display": "Nano Banana (Flash Image / Fast)", "id": "gemini-2.5-flash-image" }
       ]
     }
   ]

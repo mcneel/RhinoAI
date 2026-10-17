@@ -116,13 +116,7 @@ internal static class AgentHost
             case "codex":
                 return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()), resumeId));
             case "gemini":
-                
-                // No native --resume seam: the prior turns are shown for the user's reference, but the
-                // fresh native session starts with no memory of them. Warn so the user doesn't assume
-                // continuity the agent doesn't have.
-                restored.NoteSystem("Gemini cannot resume prior context; the turns above are shown for reference only.");
-                
-                return new AgentRunner(def, restored, (client, _, cwd) => GeminiConnection.Connect(def, client, cwd));
+                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new AntigravityStreamJsonParser(def), resumeId));
             
             default:
                 throw new NotImplementedException($"Unknown agent adapter {def.Name}");
