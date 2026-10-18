@@ -49,7 +49,6 @@ internal static class ScriptProjectStartup
     }
 
     private const string RHINO_PATH = @"Software\McNeel\Rhinoceros";
-    private const string PROXY_ID = "f3e1f51e-f7f3-414a-99cd-5ebc88ec0ef5";
 
     /// <summary>
     /// Prevents the AI Plugin being registered ANYWHERE.
@@ -57,41 +56,38 @@ internal static class ScriptProjectStartup
     public static void DeleteRegistryCache()
     {
         if (!Runtime.HostUtils.RunningOnWindows) return;
-        if (ScriptProjectRunner.TryCreate(out IProjectRunner runner).IsFailure) return;
-        if (!runner.TryGetProjectCommandNames(out List<string> commandNames)) return;
-        
-        string? id = runner.Id?.ToString();
-        if (string.IsNullOrEmpty(id)) return;
+        if (!TryReadProjectId(out Guid id)) return;
 
         using Microsoft.Win32.RegistryKey? rhino = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RHINO_PATH, writable: true);
         if (rhino is null) return;
 
-        HashSet<string> commands = new (commandNames);
-
+        string key = id.ToString();
         foreach (string version in rhino.GetSubKeyNames())
         {
             // TODO : Ignore pre-9.0
 
             using Microsoft.Win32.RegistryKey? plugIns = rhino.OpenSubKey(version + @"\Plug-Ins", writable: true);
-            if (plugIns is null) continue;
-
-            using Microsoft.Win32.RegistryKey? aiPlugIn = plugIns.OpenSubKey(id);
-            if (aiPlugIn is not null)
-            {
-                plugIns.DeleteSubKeyTree(id, throwOnMissingSubKey: false);
-            }
-
-            // NOTE : Only add if necessary
-            //using Microsoft.Win32.RegistryKey? proxyPlugIn = plugIns.OpenSubKey(PROXY_ID + @"\CommandList", writable: true);
-            //if (proxyPlugIn is not null)
-            //{
-            //    foreach (string name in proxyPlugIn.GetValueNames())
-            //    {
-            //        if (!commands.Contains(name)) continue;
-            //        proxyPlugIn.DeleteValue(name, throwOnMissingValue: false);
-            //    }
-            //}
+            plugIns?.DeleteSubKeyTree(key, throwOnMissingSubKey: false);
         }
     }
-    
+
+    private static bool TryReadProjectId(out Guid id)
+    {
+        id = Guid.Empty;
+        string projectFile = ScriptProjectPaths.For(null).ProjectFile;
+        if (!File.Exists(projectFile)) return false;
+
+        try
+        {
+            using JsonDocument json = JsonDocument.Parse(File.ReadAllText(projectFile));
+            if (!json.RootElement.TryGetProperty("id", out JsonElement element)) return false;
+            element.TryGetGuid(out id);
+            return id != Guid.Empty;
+        }
+        catch (Exception ex) when (ex is IOException or JsonException)
+        {
+            return false;
+        }
+    }
+
 }

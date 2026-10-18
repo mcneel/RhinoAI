@@ -17,8 +17,6 @@ internal enum Lang { Python3, CSharp }
 internal interface IProjectRunner
 {
 
-    public Guid? Id { get; }
-    
     public ScriptProjectPaths Paths { get; }
 
     public IToolResult AddCommandToProject(string commandName, string script, string? svg);
