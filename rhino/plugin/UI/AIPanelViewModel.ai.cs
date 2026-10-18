@@ -259,7 +259,7 @@ internal partial class AIPanelViewModel : IDisposable
         }
 
         Unsubscribe();
-        Review = new ConversationFeed(Conversation.Restore(dto), Bridge.Post, CodexHome.GeneratedImages);
+        Review = new ConversationFeed(Conversation.Restore(dto), Bridge.Post, CodexHome.GeneratedImages, ModelFor);
         Review.Replay(readOnly: true);
         return true;
     }
@@ -396,7 +396,7 @@ internal partial class AIPanelViewModel : IDisposable
 
     private static bool OpenImage(string id)
     {
-        if (ServedImages.Resolve(id) is not { } path)
+        if (ServedImages.ResolveNamedPath(id) is not { } path)
             return false;
 
         Application.Instance.Open(AsLink(path));
@@ -410,7 +410,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         Application.Instance.AsyncInvoke(() =>
         {
-            string name = Path.GetFileName(path);
+            string name = ServedImages.ResolveFileName(id) ?? Path.GetFileName(path);
             Eto.Forms.SaveFileDialog dialog = new() { Title = "Save image", FileName = name };
             dialog.Filters.Add(new FileFilter(Path.GetExtension(path).TrimStart('.').ToUpperInvariant(), Path.GetExtension(path)));
 
@@ -620,8 +620,13 @@ internal partial class AIPanelViewModel : IDisposable
 
         Action handler = () => RhinoApp.InvokeOnUiThread(new Action(PumpIfLive));
         convo.Changed += handler;
-        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post, CodexHome.GeneratedImages), handler);
+        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post, CodexHome.GeneratedImages, ModelFor), handler);
     }
+
+    private static string? ModelFor(string agentName, string imagePath) =>
+        AgentRegistry.Instance.AllDefinitions.FirstOrDefault(d => d.Name == agentName) is { } def
+            ? ServedImages.ModelForImage(imagePath, AISettings.EffectiveModel(def), def.ImageModel)
+            : null;
 
     private void Unsubscribe()
     {

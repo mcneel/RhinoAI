@@ -94,14 +94,18 @@ internal static class SchemaBuilder
 
         if (ElementType(u) is Type element)
         {
-            JsonObject array = new() { ["type"] = "array" };
-            if (depth < MaxDepth)
-                array["items"] = SchemaFor(element, depth + 1, seen);
+            JsonObject array = new()
+            {
+                ["type"] = "array",
+                ["items"] = depth < MaxDepth
+                    ? SchemaFor(element, depth + 1, seen)
+                    : new JsonObject { ["type"] = TypeName(element) },
+            };
             return array;
         }
 
         JsonObject obj = new() { ["type"] = "object" };
-        if (depth >= MaxDepth || !seen.Add(u))
+        if (depth >= MaxDepth || IsFrameworkType(u) || !seen.Add(u))
             return obj;
 
         if (BindingConstructor(u) is ConstructorInfo ctor)
@@ -119,6 +123,32 @@ internal static class SchemaBuilder
                 properties[wire] = prop;
 
                 if (IsRequired(p)) required.Add(wire);
+            }
+            if (properties.Count > 0) obj["properties"] = properties;
+            if (required.Count > 0) obj["required"] = required;
+        }
+        else
+        {
+            JsonObject properties = new();
+            JsonArray required = new();
+            foreach (PropertyInfo propInfo in u.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!propInfo.CanRead || !propInfo.CanWrite || propInfo.GetIndexParameters().Length > 0)
+                    continue;
+
+                string wire = WireName(propInfo.Name);
+                if (wire.Length == 0) continue;
+
+                JsonObject prop = SchemaFor(propInfo.PropertyType, depth + 1, seen);
+                if (propInfo.GetCustomAttribute<DescriptionAttribute>()?.Description is { Length: > 0 } description)
+                    prop["description"] = description;
+                properties[wire] = prop;
+
+                ParameterInfo[]? setterParams = propInfo.SetMethod?.GetParameters();
+                bool isReq = setterParams is { Length: 1 }
+                    ? IsRequired(setterParams[0])
+                    : (propInfo.PropertyType.IsValueType && Nullable.GetUnderlyingType(propInfo.PropertyType) is null);
+                if (isReq) required.Add(wire);
             }
             if (properties.Count > 0) obj["properties"] = properties;
             if (required.Count > 0) obj["required"] = required;
@@ -141,14 +171,19 @@ internal static class SchemaBuilder
             : null;
     }
 
+    private static bool IsFrameworkType(Type u)
+    {
+        string ns = u.Namespace ?? string.Empty;
+        return ns == "System" || ns.StartsWith("System.", StringComparison.Ordinal) ||
+               ns.StartsWith("Microsoft.", StringComparison.Ordinal);
+    }
+
     // The constructor STJ will bind through: the widest public one that actually takes arguments.
     // Framework types are left shapeless on purpose: Dictionary<,> and friends have constructors
     // taking capacities and comparers, and advertising those as fields would be a lie.
     private static ConstructorInfo? BindingConstructor(Type u)
     {
-        string ns = u.Namespace ?? string.Empty;
-        if (ns == "System" || ns.StartsWith("System.", StringComparison.Ordinal) ||
-            ns.StartsWith("Microsoft.", StringComparison.Ordinal))
+        if (IsFrameworkType(u))
             return null;
 
         ConstructorInfo? best = null;
@@ -163,7 +198,7 @@ internal static class SchemaBuilder
 
     private static string? PrimitiveType(Type u) => u switch
     {
-        _ when u == typeof(string) || u == typeof(Guid) || u == typeof(Uri) ||
+        _ when u == typeof(string) || u == typeof(char) || u == typeof(Guid) || u == typeof(Uri) ||
                u == typeof(DateTime) || u == typeof(DateTimeOffset) || u == typeof(TimeSpan) => "string",
         _ when u == typeof(bool) => "boolean",
         _ when u == typeof(byte) || u == typeof(sbyte) || u == typeof(short) || u == typeof(ushort) ||

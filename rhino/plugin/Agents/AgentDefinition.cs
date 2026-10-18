@@ -15,6 +15,11 @@ internal sealed record AgentDefinition
     public string DefaultModel { get; init; }
     public string DefaultPrompt { get; init; }
 
+    // The model that draws images when the agent delegates generation to a subagent (Gemini's
+    // image-generator). The agent's stream never names it, so generated images would otherwise be
+    // labelled with the chat model. Empty when the agent draws with its own model, as Codex does.
+    public string ImageModel { get; init; } = string.Empty;
+
     public bool Available => SearchPaths.GetPaths().Any();
 
     public bool? LoggedIn { get; private set; } = null;
@@ -48,7 +53,7 @@ internal sealed record AgentDefinition
     {
         "claude" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this))),
         "codex" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, CodexHome.Prepare()))),
-        "gemini" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new AntigravityStreamJsonParser(this))),
+        "gemini" => new AgentRunner(this, docTitle, (client, convo, cwd) => GeminiConnection.CreateAgent(this, client, convo, cwd)),
 
         // TODO : Use a better result
         _ => throw new NotImplementedException($"{Name} is not configured")

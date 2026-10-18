@@ -15,6 +15,11 @@ namespace Rhino.AI.Server;
 
 internal sealed class McpDispatcher
 {
+    // Fired whenever tools/list is served to an MCP client; carries Filtered (true for the in-panel /agent endpoint).
+    // StreamJsonAgent listens to this on Claude startup so it knows when Claude Code CLI's MCP client has finished
+    // its initial handshake before piping the first prompt to stdin.
+    public static event Action<bool>? ToolsListServed;
+
     private readonly ToolRegistry _tools;
     private readonly ResourceRegistry _resources;
 
@@ -140,6 +145,8 @@ internal sealed class McpDispatcher
 
     private Task<JsonRpcResponse> HandleToolsList()
     {
+        ToolsListServed?.Invoke(Filtered);
+
         HashSet<string> disabled = Filtered
             ? new HashSet<string>(Rhino.AI.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
             : [];

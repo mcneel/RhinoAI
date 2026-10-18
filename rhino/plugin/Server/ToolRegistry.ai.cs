@@ -17,8 +17,14 @@ internal sealed class ToolRegistry
 
     public IReadOnlyCollection<ToolHandler> All => ByName.Values;
 
-    public bool TryGet(string name, out ToolHandler handler) =>
-        ByName.TryGetValue(name, out handler!);
+    public bool TryGet(string name, out ToolHandler handler)
+    {
+        if (ByName.TryGetValue(name, out handler!))
+            return true;
+
+        string stripped = ToolSummary.RemoveUnderscoreUnderscoreNaming(name);
+        return ByName.TryGetValue(stripped, out handler!);
+    }
 
 
     const BindingFlags FLAGS = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;

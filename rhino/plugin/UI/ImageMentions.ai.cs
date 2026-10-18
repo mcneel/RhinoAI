@@ -16,7 +16,7 @@ internal static class ImageMentions
     private static Regex[] Forms { get; } =
     [
         new(@"!?\[[^\]\r\n]*\]\(\s*(?:<(?<path>[^>\r\n]{1,400})>|(?<path>[^\s)]{1,400}))\s*(?:""[^""\r\n]*""|'[^'\r\n]*')?\s*\)", Relaxed, Budget),
-        new($@"[""'`](?<path>{Rooted}[^""'`\r\n]{{0,400}}\.(?:{ImageExtension}))[""'`]", Relaxed, Budget),
+        new($@"[""'`](?<path>{Rooted}[^""'`\r\n]{{0,400}}\.(?:{ImageExtension}))\\?[""'`]", Relaxed, Budget),
         new($@"(?<path>{Rooted}[^\s""'`<>()\[\]]{{0,400}}\.(?:{ImageExtension}))", Relaxed, Budget),
     ];
 
