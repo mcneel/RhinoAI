@@ -5,7 +5,7 @@ namespace Rhino.AI;
 
 public class AIPanelCommand : RhinoCommand
 {
-    public override string EnglishName => "AIPanel";
+    public override string EnglishName => "AI";
 
     public override string LocalName => LOC.COMMANDNAME(EnglishName);
 
