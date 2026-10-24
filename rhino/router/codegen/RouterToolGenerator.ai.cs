@@ -14,8 +14,8 @@ namespace Rhino.AI.Router.Codegen;
 // for each [McpServerTool] method. Generated proxies prepend a `slot` argument
 // and forward the call to ProxyDispatcher.CallToolAsync.
 //
-// Parameter type rule: primitive types (string/bool/int/long/double/float and
-// their nullables/arrays) pass through unchanged. Anything else — including
+// Parameter type rule: primitive types (string/bool/int/long/double/float/decimal
+// and their nullables/arrays) pass through unchanged. Anything else — including
 // Rhino-specific types like Vector3d and the plugin's record structs — maps to
 // an "open object" Dictionary<string, JsonElement>? so the router doesn't have to
 // reference RhinoCommon or duplicate types. The plugin deserialises on its end.
@@ -43,6 +43,7 @@ public class RouterToolGenerator : IIncrementalGenerator
         "long", "long?",
         "double", "double?",
         "float", "float?",
+        "decimal", "decimal?",
     };
 
     public void Initialize(IncrementalGeneratorInitializationContext context)

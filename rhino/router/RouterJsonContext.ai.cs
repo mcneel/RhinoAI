@@ -50,6 +50,8 @@ namespace Rhino.AI.Router;
 [JsonSerializable(typeof(double?))]
 [JsonSerializable(typeof(float))]
 [JsonSerializable(typeof(float?))]
+[JsonSerializable(typeof(decimal))]
+[JsonSerializable(typeof(decimal?))]
 internal partial class RouterJsonContext : JsonSerializerContext;
 
 // Envelope for the JSON-RPC tools/call payloads ProxyDispatcher and

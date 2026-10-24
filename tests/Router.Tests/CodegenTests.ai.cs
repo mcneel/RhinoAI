@@ -113,6 +113,38 @@ public class CodegenTests
         Assert.That(output, Does.Not.Contain("__obj_wires"));
     }
 
+    [Test]
+    public void Decimal_param_passes_through_as_a_number()
+    {
+        // #172: g1_place_slider and g2_place_slider take decimal min/value/max. A
+        // decimal used to map to an open object, so the proxy advertised "object"
+        // and every call with a number failed to bind.
+        string output = RunGenerator(
+            """
+            namespace Rhino.AI.Tools;
+
+            [McpServerToolType]
+            public class STool
+            {
+                [McpServerTool("s", "S", false, false)]
+                public static string Run(
+                    RhinoDoc doc,
+                    [Description("min")] decimal min,
+                    [Description("step")] decimal? step = null) => "ok";
+            }
+            """);
+
+        Assert.That(output, Does.Contain("decimal min"));
+        Assert.That(output, Does.Contain("decimal? step"));
+        Assert.That(output, Does.Contain("args[\"min\"] = global::System.Text.Json.Nodes.JsonValue.Create(min);"));
+        Assert.That(output, Does.Not.Contain("__obj_min"));
+
+        // The router builds each proxy's schema from RouterJsonContext. Without
+        // decimal declared there, it throws on startup instead of serving tools.
+        Assert.That(RouterJsonContext.Default.GetTypeInfo(typeof(decimal)), Is.Not.Null);
+        Assert.That(RouterJsonContext.Default.GetTypeInfo(typeof(decimal?)), Is.Not.Null);
+    }
+
     private static string RunGenerator(string toolSource)
     {
         SyntaxTree compilationTree = CSharpSyntaxTree.ParseText("// placeholder compilation unit");
