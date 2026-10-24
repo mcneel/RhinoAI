@@ -233,6 +233,32 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         }
         _ = Task.Run(() => ReadLoopAsync(proc.StandardOutput, proc));
 
+        // Claude Code CLI boots its MCP client in the background and takes ~1.1s to discover
+        // servers and call tools/list. If the initial turn prompt is sent to stdin before tools/list
+        // returns, Claude dispatches turn 1 to Anthropic with 0 tools, causing immediate tool_use
+        // errors (run_csharp). Wait until Rhino serves tools/list (or timeout) before returning.
+        if (Parser is ClaudeStreamJsonParser)
+        {
+            TaskCompletionSource<bool> toolsListed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Action<bool> onToolsList = filtered =>
+            {
+                if (filtered)
+                    toolsListed.TrySetResult(true);
+            };
+            Rhino.AI.Server.McpDispatcher.ToolsListServed += onToolsList;
+            try
+            {
+                await Task.WhenAny(toolsListed.Task, Task.Delay(2500, Lifetime.Token)).ConfigureAwait(false);
+                await Task.Delay(75, Lifetime.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                Rhino.AI.Server.McpDispatcher.ToolsListServed -= onToolsList;
+            }
+        }
     }
 
     // The runner resolves the MCP server set from AISettings (the parser stays settings-free). Each

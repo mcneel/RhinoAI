@@ -102,4 +102,32 @@ public class ImageMentionsTests
 
         Assert.That(ImageMentions.In("[here](relative.png)"), Is.Empty);
     }
+
+    [Test]
+    public void A_published_image_is_named_with_doc_agent_model_and_timestamp()
+    {
+        string path = Write("exec-c5aeecb3-2957-402f-ba54-9a4c68cf6e36.png");
+        DateTime stamp = new FileInfo(path).LastWriteTime;
+
+        string name = ServedImages.FormatRenderName(path, "Contemporary house.3dm", "Codex", "gpt-6-astra");
+        PanelImage? published = ServedImages.Publish(path, name);
+        string? namedPath = ServedImages.ResolveNamedPath(published!.Id);
+
+        Assert.That(name, Is.EqualTo($"Contemporary house_Codex_gpt-6-astra_{stamp:yyyyMMdd_HHmmss}.png"));
+        Assert.That(published.Name, Is.EqualTo(name));
+        Assert.That(ServedImages.ResolveFileName(published.Id), Is.EqualTo(name));
+        Assert.That(Path.GetFileName(namedPath), Is.EqualTo(name));
+        Assert.That(File.Exists(namedPath), Is.True);
+    }
+
+    [Test]
+    public void A_forward_slash_path_inside_escaped_json_tool_result_is_found()
+    {
+        string path = Write("viewport_capture.jpg");
+        string forwardSlash = path.Replace('\\', '/');
+
+        string escapedJson = $"{{\"content\":[{{\"type\":\"text\",\"text\":\"{{\\\"metadata\\\":{{\\\"viewport\\\":{{\\\"path\\\":\\\"{forwardSlash}\\\"}}}}}}\"}}]}}";
+
+        Assert.That(ImageMentions.In(escapedJson), Is.EqualTo(new[] { path }));
+    }
 }

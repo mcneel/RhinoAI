@@ -29,6 +29,7 @@ internal static class CodexHome
         }
 
         CopyAuth(codexDataStash);
+        CopyModelsCache(codexDataStash);
         return codexDataStash;
     }
 
@@ -56,6 +57,26 @@ internal static class CodexHome
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             HostUtils.LogDebugEvent($"[codex] could not copy auth.json ({ex.Message}); the agent may ask you to sign in again.\n");
+        }
+    }
+
+    // Seed models_cache.json into the sandbox home so codex doesn't reject newly added models before its first refresh.
+    private static void CopyModelsCache(string home)
+    {
+        string real = Path.Combine(UserCodexHome(), "models_cache.json");
+        string copy = Path.Combine(home, "models_cache.json");
+
+        if (!File.Exists(real))
+            return;
+
+        try
+        {
+            File.Delete(copy);
+            File.Copy(real, copy);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            HostUtils.LogDebugEvent($"[codex] could not copy models_cache.json ({ex.Message}).\n");
         }
     }
 

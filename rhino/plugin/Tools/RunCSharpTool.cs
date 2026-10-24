@@ -9,7 +9,7 @@ internal static class RunCSharpTool
     private const string HEADER_NOTATION = "// #! csharp";
 
     [McpServerTool("run_csharp", "Run C# Script", false, true)]
-    [Description("Execute a C# script targeted at this slot's document. The script editor injects `__rhino_doc__` (type `RhinoDoc`) — use it as your document handle instead of `RhinoDoc.ActiveDoc` or anything else. System/Linq/Collections.Generic are auto-injected if missing.")]
+    [Description("Execute a C# script targeted at this slot's document. The script editor injects `__rhino_doc__` (type `RhinoDoc`) — use it as your document handle instead of `RhinoDoc.ActiveDoc` or anything else. System/Linq/Collections.Generic and Rhino/Rhino.Geometry/Rhino.DocObjects are auto-injected if missing. Use `Console.WriteLine` for stdout (`RhinoApp.WriteLine` is not captured in stdout; never throw an exception to return output).")]
     public static IToolResult RunCSharp(
         RhinoDoc doc,
         [Description("Script")] string script)
@@ -23,6 +23,9 @@ internal static class RunCSharpTool
         "System",
         "System.Linq",
         "System.Collections.Generic",
+        "Rhino",
+        "Rhino.Geometry",
+        "Rhino.DocObjects",
     ];
 
     public static string InjectUsings(string script)
@@ -34,7 +37,7 @@ internal static class RunCSharpTool
                 continue;
 
             int index = script.IndexOf(HEADER_NOTATION);
-            if (index > 0)
+            if (index >= 0)
             {
                 index += HEADER_NOTATION.Length;
                 script = script.Insert(index, "\n");
@@ -45,7 +48,7 @@ internal static class RunCSharpTool
                 index = 0;
             }
 
-            script = script.Insert(index, usingString);
+            script = script.Insert(index, usingString + "\n");
         }
 
         return script;  

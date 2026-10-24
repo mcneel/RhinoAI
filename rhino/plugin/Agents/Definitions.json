@@ -4,7 +4,7 @@
       "name": "Claude",
       "company": "Anthropic",
       "isBuiltIn": true,
-      "defaultPrompt" : "",
+      "defaultPrompt": "",
       "defaultModel": "opus",
       "searchPaths": {
         "win": [
@@ -31,6 +31,7 @@
         { "display": "Fable 5", "id": "claude-fable-5" },
         { "display": "Mythos 5.1", "id": "claude-mythos-5-1" },
         { "display": "Mythos 5", "id": "claude-mythos-5" },
+        { "display": "Opus 5.5", "id": "claude-opus-5-5" },
         { "display": "Opus 5", "id": "claude-opus-5" },
         { "display": "Opus 5 (1M context)", "id": "claude-opus-5[1m]" },
         { "display": "Opus 4.8", "id": "claude-opus-4-8" },
@@ -40,20 +41,22 @@
         { "display": "Opus 4.5", "id": "claude-opus-4-5" },
         { "display": "Opus 4.1", "id": "claude-opus-4-1" },
         { "display": "Opus 4", "id": "claude-opus-4" },
+        { "display": "Sonnet 5.5", "id": "claude-sonnet-5-5" },
         { "display": "Sonnet 5", "id": "claude-sonnet-5" },
         { "display": "Sonnet 5 (1M context)", "id": "claude-sonnet-5[1m]" },
         { "display": "Sonnet 4.6", "id": "claude-sonnet-4-6" },
         { "display": "Sonnet 4.5", "id": "claude-sonnet-4-5" },
         { "display": "Sonnet 4", "id": "claude-sonnet-4" },
+        { "display": "Haiku 5.5", "id": "claude-haiku-5-5" },
         { "display": "Haiku 4.5", "id": "claude-haiku-4-5" }
       ]
     },
     {
       "name": "Codex",
       "company": "OpenAI",
-      "defaultModel": "gpt-5.5",
+      "defaultModel": "gpt-6.1-sol",
       "isBuiltIn": true,
-      "defaultPrompt" : "",
+      "defaultPrompt": "",
       "searchPaths": {
         "win": [
           "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe",
@@ -68,11 +71,44 @@
         ]
       },
       "models": [
+        { "display": "GPT 6.1 Sol", "id": "gpt-6.1-sol" },
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
+        { "display": "GPT 6 Sol", "id": "gpt-6-sol" },
+        { "display": "GPT 6 Luna", "id": "gpt-6-luna" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
-        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
-        { "display": "GPT 5.5", "id": "gpt-5.5" }
+        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" }
+      ]
+    },
+    {
+      "name": "Gemini",
+      "company": "Google",
+      "defaultModel": "gemini-3.8-flash-high",
+      "imageModel": "gemini-3.1-flash-image",
+      "isBuiltIn": true,
+      "defaultPrompt": "You are an AI assistant embedded directly inside Rhino 3D via the RhinoAI plugin. Immediately and exclusively invoke Rhino MCP tools via call_mcp_tool with ServerName='rhino' (always preferring run_csharp over run_python for scripting so Python 3 is not spawned, along with get_context, run_command, list_objects, get_selection, set_selection, set_layer_material, zoom_to_layer, zoom_to_object, set_camera, get_viewport_image, ask_user, and g2_* Grasshopper tools). For generating or rendering images (Nano Banana 2), invoke the built-in image-generator subagent (supplying required toolAction and toolSummary properties). Immediately after invoking image-generator, stop calling tools without writing waiting notes or polling transcripts; the system will automatically notify you when complete. Once finished, report only the [Rendered Image](file:///...) link and Scene Highlights. All Rhino tool schemas are provided inline — never call run_command, search_web, or ask_question.",
+      "searchPaths": {
+        "win": [
+          "%LOCALAPPDATA%/agy/bin/agy.exe",
+          "%LOCALAPPDATA%/Programs/Antigravity/resources/app/bin/agy.exe",
+          "%APPDATA%/npm/gemini.cmd",
+          "%USERPROFILE%/.local/bin/gemini.exe"
+        ],
+        "mac": [
+          "%USERPROFILE%/.local/bin/agy",
+          "/opt/homebrew/bin/agy",
+          "/usr/local/bin/agy",
+          "/opt/homebrew/bin/gemini",
+          "/usr/local/bin/gemini"
+        ]
+      },
+      "models": [
+        { "display": "Gemini 4 Argon (High)", "id": "gemini-4-argon-high" },
+        { "display": "Gemini 4 Argon (Medium)", "id": "gemini-4-argon-medium" },
+        { "display": "Gemini 4 Argon (Low)", "id": "gemini-4-argon-low" },
+        { "display": "Gemini 3.8 Flash (High)", "id": "gemini-3.8-flash-high" },
+        { "display": "Gemini 3.8 Flash (Medium)", "id": "gemini-3.8-flash-medium" },
+        { "display": "Gemini 3.8 Flash (Low)", "id": "gemini-3.8-flash-low" }
       ]
     }
   ]

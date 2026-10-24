@@ -53,6 +53,7 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
         
         context.Inputs["__rhino_doc__"] = doc;
 
+        RhinoApp.CommandWindowCaptureEnabled = true;
         string? thrown = null;
         try
         {
@@ -62,8 +63,12 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
         {
             thrown = ex.Message;
         }
+        string[] cmdLines = RhinoApp.CapturedCommandWindowStrings(true);
+        RhinoApp.CommandWindowCaptureEnabled = false;
 
         string stdout = Encoding.UTF8.GetString(output.ToArray());
+        if (stdout.Length == 0 && cmdLines is { Length: > 0 })
+            stdout = string.Concat(cmdLines);
         string stderr = Encoding.UTF8.GetString(errors.ToArray());
 
         // Only a throw is a failure: a warning on stderr still means the script ran and its changes landed.
