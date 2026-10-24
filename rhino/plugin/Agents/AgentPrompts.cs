@@ -41,10 +41,12 @@ internal static class AgentPrompts
         + "Prefer small incremental edits followed by a re-solve over assembling one large graph in a "
         + "single shot. It is far easier to localize a fault when each step is solved and checked.";
 
-    // The always-on steers plus this agent's own prompt; the steers are never dropped.
+    // The always-on steers, the skills installed plugins ship, then this agent's own prompt; the steers are never dropped.
     public static string Compose(string systemPrompt)
     {
         string steers = AskUserSteer + "\n\n" + GroundingSteer + "\n\n" + GrasshopperSteer;
+        if (Skills.PlugInSkills.Prompt(Skills.PlugInSkills.Find()) is string skills)
+            steers += "\n\n" + skills;
         return systemPrompt.Length > 0 ? steers + "\n\n" + systemPrompt : steers;
     }
 }
