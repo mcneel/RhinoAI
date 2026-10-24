@@ -1,28 +1,24 @@
 using System;
-using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record ThinkingTurn(string Thinking, ThoughtSignature? Signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+internal sealed record ThinkingTurn : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.Assistant;
+    public ThoughtSignature? Signature { get; }
 
-    [JsonIgnore]
-    public bool Success => true;
+    public ThinkingTurn(string Thinking, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("think")
+    {
+        Data = Thinking;
+        Role = RoleType.Assistant;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
+        Success = true;
+        Signature = signature;
+    }
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
-
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
-
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data => Thinking;
-
-    public ITurn Copy() => new ThinkingTurn(Thinking, Signature, Timestamp, Duration, TokenCount);
+    public override ITurn Copy() => new ThinkingTurn(Data, Signature, TimeStamp, Duration, TokenCount);
 
 }

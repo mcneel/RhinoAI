@@ -12,7 +12,7 @@ using System.Diagnostics;
 namespace Rhino.AI;
 
 /// <summary>
-/// A standard input output MCP that drives an executable MCP
+/// A STandard Input Output MCP that drives an executable
 /// </summary>
 public sealed class StdioMcp(string name, Uri process) : IMcp
 {

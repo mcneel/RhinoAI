@@ -6,13 +6,15 @@ using System.Runtime.CompilerServices;
 
 namespace Rhino.AI.Models;
 
-internal abstract class DesktopModel(string name, string vendor) : IModel
+internal abstract class DesktopModel(string name, string vendor, IEnumerable<string> searchPaths) : IModel
 {
 
     public string Name { get; } = name;
     public string Vendor { get; } = vendor;
 
     public abstract bool Available { get; }
+
+    protected IEnumerable<string> SearchPaths { get; } = searchPaths;
     
     public async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
     {

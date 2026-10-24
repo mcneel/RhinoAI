@@ -101,7 +101,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
 
     private JsonObject ToThought(ThinkingTurn thinking)
     {
-        JsonObject part = new() { ["text"] = thinking.Thinking, ["thought"] = true };
+        JsonObject part = new() { ["text"] = thinking.Data, ["thought"] = true };
         Sign(part, thinking.Signature);
         return part;
     }

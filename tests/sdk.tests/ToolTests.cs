@@ -64,9 +64,8 @@ public class ToolTests
     [Test, CancelAfter(60_000)]
     public async Task simpleDelegation(CancellationToken token)
     {
-        DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        Agent agent = new(Token, deepSeek, harness);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
 
         IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a {DeepSeekModel.Default().Name} subagent to write a letter of resignation from its job as a subagent", token);
         Assert.That(turns, Turns.EndsWith("resign"));
@@ -75,9 +74,8 @@ public class ToolTests
     [Test, CancelAfter(40_000)]
     public async Task FuzzyDelegation(CancellationToken token)
     {
-        DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        Agent agent = new(Token, deepSeek, harness);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
 
         IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a subagent to write a letter of resignation from its job as a subagent", token);
         Assert.That(turns, Turns.EndsWith("resign"));

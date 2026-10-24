@@ -36,6 +36,10 @@ public class SkillTests
         RecordingModel model = new();
         GenericHarness harness = new(Token);
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
+
+        TestDefinition definition = new () { CurrentModelId = model.Name };
+        definition.PrivateModelDefinitions.Add(model);
+        
         Agent agent = new(Token, model, harness, "Be helpful.");
 
         await agent.SendAsync("first", token);
@@ -49,10 +53,10 @@ public class SkillTests
     [Test, CancelAfter(5000)]
     public async Task SimpleSkill(CancellationToken token)
     {
-        DeepSeekModel model = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        harness.AddSkill(new Skill("Smoofle", "Teaches you about a Smoofle.", "A Smoofle is a large orange chicken with wheels."));
-        Agent agent = new(Token, model, harness, "Be helpful.");
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        agent.Harness.AddSkill(new Skill("Smoofle", "Teaches you about a Smoofle.", "A Smoofle is a large orange chicken with wheels."));
 
         IEnumerable<ITurn> turns = await agent.SendAsync("What is a Smoofle?", token);
         Assert.That(turns, Turns.EndsWith("large", "orange", "chicken", "wheels"));

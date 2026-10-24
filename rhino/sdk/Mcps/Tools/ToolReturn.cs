@@ -12,10 +12,13 @@ public enum ToolResult { Success, Mixed, Failure }
 public sealed record ToolReturn
 {
 
+    /// <summary>The content of the return</summary>
     public IReadOnlyList<IMessageContent> Content { get; }
 
+    /// <summary>The final result of the tool</summary>
     public ToolResult Result { get; }
 
+    /// <summary>Guidance for the AI if the return fails</summary>
     public string? Guidance { get; }
 
     public string Message => string.Concat(Content.OfType<TextContent>().Select(p => p.Text));
@@ -32,6 +35,8 @@ public sealed record ToolReturn
     {
     }
 
+    /// <summary>A copy of the return</summary>
+    /// <returns>A deep copy</returns>
     public ToolReturn Copy() => new(Content.Select(c => c.Copy()), Result, Guidance);
 
     /// <summary>

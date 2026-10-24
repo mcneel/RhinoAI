@@ -104,7 +104,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
 
     private static JsonObject ToThinking(ThinkingTurn thinking, ThoughtSignature signature) => signature.IsRedacted
         ? new JsonObject { ["type"] = "redacted_thinking", ["data"] = signature.Value }
-        : new JsonObject { ["type"] = "thinking", ["thinking"] = thinking.Thinking, ["signature"] = signature.Value };
+        : new JsonObject { ["type"] = "thinking", ["thinking"] = thinking.Data, ["signature"] = signature.Value };
 
     private ITurn? ToTurn(IHarness harness, JsonObject block) => (string?)block["type"] switch
     {

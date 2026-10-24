@@ -14,7 +14,7 @@ public sealed class RhinoHarness : GenericHarness
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
-        StdioMcp rhinoMcp = new("rhino", new Uri(ResolveRouter));
+        RhinoMcp rhinoMcp = new ("Rhino");
         AddMcp(rhinoMcp);
     }
 

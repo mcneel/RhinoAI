@@ -3,25 +3,34 @@ using System.Collections.Generic;
 
 namespace Rhino.AI;
 
+// TODO : Deserialize from somewhere
+// TODO : Make not
+
 /// <summary>
-/// User specified permissions
+/// Global User Preferences for AI Models, Agents
 /// </summary>
-internal static class UserPermissions
+public class UserPreferences
 {
+    
+    public Guid AgentId { get; }
+    
+    // NOTE : These are Global?
+    public PermissionSet Permissions { get; } = new();
 
-    public static bool BlockAll { get; set; } = false;
 
-    public static HashSet<string> BlockedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public static HashSet<string> BlockedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public bool BlockAll { get; set; } = false;
 
-    public static HashSet<string> ApprovedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public static HashSet<string> ApprovedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> BlockedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> BlockedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public HashSet<string> ApprovedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> ApprovedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Checks if a model or vendor is permitted by the user.
     /// </summary>
     /// <returns><c>true</c> if neither the vendor nor the model is blocked, and each approved list the user has filled in contains this vendor or this model. An empty approved list is no opinion, not approve nothing.</returns>
-    public static bool IsPermitted(string vendor, string model)
+    public bool IsPermitted(string vendor, string model)
     {
         if (BlockAll) return false;
         if (BlockedVendors.Contains(vendor)) return false;
