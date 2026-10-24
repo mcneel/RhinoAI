@@ -34,7 +34,7 @@ internal sealed class ConnectDialog : Dialog
 
     public ConnectDialog()
     {
-        Title = LOC.STR("Connect Rhino to your AI Agent");
+        Title = Localization.LocalizeString("Connect Rhino to your AI Agent", 221);
 
         Resizable = true;
         Padding = new Padding(12);
@@ -57,32 +57,32 @@ internal sealed class ConnectDialog : Dialog
         };
 
         TabControl tabs = new();
-        TabPage installTab = new() { Text = LOC.STR("Install"), Content = BuildInstall() };
-        TabPage promptTab = new() { Text = LOC.STR("Prompt"), Content = BuildPrompt() };
+        TabPage installTab = new() { Text = Localization.LocalizeString("Install", 222), Content = BuildInstall() };
+        TabPage promptTab = new() { Text = Localization.LocalizeString("Prompt", 223), Content = BuildPrompt() };
         TabPage jsonTab = new() { Text = "mcp.json", Content = Pad(_jsonTextArea) };
         tabs.Pages.Add(installTab);
         tabs.Pages.Add(promptTab);
         tabs.Pages.Add(jsonTab);
-        tabs.Pages.Add(new TabPage { Text = LOC.STR("Advanced"), Content = BuildAdvanced() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Advanced", 224), Content = BuildAdvanced() });
 
-        Button copyButton = new() { Text = LOC.STR("Copy") };
+        Button copyButton = new() { Text = Localization.LocalizeString("Copy", 225) };
         copyButton.Click += (_, _) =>
         {
             TextArea active = tabs.SelectedPage == jsonTab ? _jsonTextArea : _promptTextArea;
             Clipboard.Instance.Text = active.Text;
-            copyButton.Text = LOC.STR("Copied!");
+            copyButton.Text = Localization.LocalizeString("Copied!", 226);
         };
 
         // Copy only means anything on the two text tabs; re-scan the Install grid whenever it shows.
         tabs.SelectedIndexChanged += (_, _) =>
         {
-            copyButton.Text = LOC.STR("Copy");
+            copyButton.Text = Localization.LocalizeString("Copy", 227);
             copyButton.Enabled = tabs.SelectedPage == promptTab || tabs.SelectedPage == jsonTab;
             if (tabs.SelectedPage == installTab)
                 PopulateInstall();
         };
 
-        Button closeButton = new() { Text = LOC.STR("Close") };
+        Button closeButton = new() { Text = Localization.LocalizeString("Close", 228) };
         closeButton.Click += (_, _) => Close();
 
         StackLayout buttons = new()
@@ -116,7 +116,7 @@ internal sealed class ConnectDialog : Dialog
     {
         Label blurb = new()
         {
-            Text = LOC.STR("If Install does not support your agent, you can paste this prompt into your MCP-aware AI agent (e.g. Claude), it will handle the connection for you."),
+            Text = Localization.LocalizeString("If Install does not support your agent, you can paste this prompt into your MCP-aware AI agent (e.g. Claude), it will handle the connection for you.", 229),
             Wrap = WrapMode.Word,
         };
 
@@ -137,7 +137,7 @@ internal sealed class ConnectDialog : Dialog
     {
         Label help = new()
         {
-            Text = LOC.STR("Add or remove the RhinoAI MCP server for any agent detected on this machine. Detected agents show an Install button; connected ones show an Uninstall button."),
+            Text = Localization.LocalizeString("Add or remove the RhinoAI MCP server for any agent detected on this machine. Detected agents show an Install button; connected ones show an Uninstall button.", 230),
             Wrap = WrapMode.Word,
             TextColor = Colors.Gray,
         };
@@ -159,8 +159,8 @@ internal sealed class ConnectDialog : Dialog
     {
         TableLayout table = new() { Spacing = new Size(16, 8) };
         table.Rows.Add(new TableRow(
-            new TableCell(HeaderLabel(LOC.STR("Agent")), scaleWidth: true),
-            new TableCell(HeaderLabel(LOC.STR("Status"))),
+            new TableCell(HeaderLabel(Localization.LocalizeString("Agent", 231)), scaleWidth: true),
+            new TableCell(HeaderLabel(Localization.LocalizeString("Status", 232))),
             new TableCell(HeaderLabel(""))));
 
         foreach (McpClientConfigInstaller.McpClient client in McpClientConfigInstaller.Clients)
@@ -179,11 +179,11 @@ internal sealed class ConnectDialog : Dialog
     private static Control StatusLabel(McpClientConfigInstaller.McpInstallState state) => state switch
     {
         McpClientConfigInstaller.McpInstallState.Installed =>
-            new Label { Text = LOC.STR("✓ Installed"), TextColor = Colors.Green, VerticalAlignment = VerticalAlignment.Center },
+            new Label { Text = Localization.LocalizeString("✓ Installed", 233), TextColor = Colors.Green, VerticalAlignment = VerticalAlignment.Center },
         McpClientConfigInstaller.McpInstallState.Detected =>
-            new Label { Text = LOC.STR("Detected"), TextColor = Colors.Gray, VerticalAlignment = VerticalAlignment.Center },
+            new Label { Text = Localization.LocalizeString("Detected", 234), TextColor = Colors.Gray, VerticalAlignment = VerticalAlignment.Center },
         _ =>
-            new Label { Text = LOC.STR("Not detected"), TextColor = Colors.Gray, VerticalAlignment = VerticalAlignment.Center },
+            new Label { Text = Localization.LocalizeString("Not detected", 235), TextColor = Colors.Gray, VerticalAlignment = VerticalAlignment.Center },
     };
 
     private Control ActionControl(McpClientConfigInstaller.McpClient client, McpClientConfigInstaller.McpInstallState state) => state switch
@@ -195,15 +195,15 @@ internal sealed class ConnectDialog : Dialog
 
     private Button InstallButton(McpClientConfigInstaller.McpClient client)
     {
-        Button button = new() { Text = LOC.STR("Install") };
+        Button button = new() { Text = Localization.LocalizeString("Install", 236) };
         button.Click += (_, _) =>
         {
             McpClientConfigInstaller.McpInstallResult result = McpClientConfigInstaller.Install(client, CurrentEnv());
             if (result is McpClientConfigInstaller.McpInstallResult.Unsupported or McpClientConfigInstaller.McpInstallResult.Failed)
                 MessageBox.Show(
                     this,
-                    LOC.STR($"Couldn't add the RhinoAI MCP server to {client.DisplayName}. Its config may be in a shape we can't safely edit; use the mcp.json tab to add it by hand."),
-                    LOC.STR("Install"),
+                    Localization.LocalizeString($"Couldn't add the RhinoAI MCP server to {client.DisplayName}. Its config may be in a shape we can't safely edit; use the mcp.json tab to add it by hand.", 237),
+                    Localization.LocalizeString("Install", 238),
                     MessageBoxButtons.OK,
                     MessageBoxType.Warning);
             PopulateInstall();
@@ -213,15 +213,15 @@ internal sealed class ConnectDialog : Dialog
 
     private Button UninstallButton(McpClientConfigInstaller.McpClient client)
     {
-        Button button = new() { Text = LOC.STR("Uninstall") };
+        Button button = new() { Text = Localization.LocalizeString("Uninstall", 239) };
         button.Click += (_, _) =>
         {
             McpClientConfigInstaller.McpUninstallResult result = McpClientConfigInstaller.Uninstall(client);
             if (result is McpClientConfigInstaller.McpUninstallResult.Unsupported or McpClientConfigInstaller.McpUninstallResult.Failed)
                 MessageBox.Show(
                     this,
-                    LOC.STR($"Couldn't remove the RhinoAI MCP server from {client.DisplayName}. Its config may be in a shape we can't safely edit; remove the rhino entry by hand."),
-                    LOC.STR("Uninstall"),
+                    Localization.LocalizeString($"Couldn't remove the RhinoAI MCP server from {client.DisplayName}. Its config may be in a shape we can't safely edit; remove the rhino entry by hand.", 240),
+                    Localization.LocalizeString("Uninstall", 241),
                     MessageBoxButtons.OK,
                     MessageBoxType.Warning);
             PopulateInstall();
@@ -287,9 +287,9 @@ internal sealed class ConnectDialog : Dialog
     }
 
     private static string Prompt(IReadOnlyDictionary<string, string> env) =>
-LOC.STR($@"Install the RhinoAI MCP server. The entry is:
+Localization.LocalizeString($@"Install the RhinoAI MCP server. The entry is:
 
 {RouterMcpConfig.EntryFragment(env)}
 
-It is very important you tell the user to reload after this.");
+It is very important you tell the user to reload after this.", 242);
 }
