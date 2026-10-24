@@ -1,4 +1,5 @@
 using Eto.Forms;
+using Eto.Drawing;
 
 using Rhino.AI.Statistics;
 
@@ -108,16 +109,87 @@ internal sealed class StatisticCell : CustomCell
 internal sealed class ModelBar : Drawable
 {
 
-    public List<PlugInModelStatistic> ModelList { get; } = [];
+    private const float ShadeStep = 0.15f;
+    private const float MinShade = 0.4f;
+    private const float TextPadding = 4f;
+
+    private static Font LabelFont { get; } = Fonts.Sans(9);
+
+    private List<PlugInModelStatistic>? _modelList;
+    public List<PlugInModelStatistic>? ModelList
+    {
+        get => _modelList;
+        set
+        {
+            _modelList = value;
+            Invalidate();
+        }
+    }
+
+    public ModelBar()
+    {
+        MinimumSize = new Size(-1, 20);
+    }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        // TODO : Claude - Draw a bar that is composed of all the models in the list
-        //                 Use vendor colours for each model, with each model having a slightly different shade
-        //                 Maybe alphabetical and just 0.1% less opacity or w/e idk
-        //                 Each bar item in the bar should have the display name of the model
+
+        if (ModelList is null) return;
+
+        float total = ModelList.Sum(m => m.TokenCount);
+        if (total <= 0) return;
+
+        RectangleF bounds = new(Size);
+        float x = bounds.X;
+
+        IEnumerable<IGrouping<string, PlugInModelStatistic>> byVendor = ModelList
+            .Where(m => m.TokenCount > 0)
+            .OrderBy(m => m.Vendor, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(m => m.ModelName, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(m => m.Vendor, StringComparer.OrdinalIgnoreCase);
+
+        foreach (IGrouping<string, PlugInModelStatistic> vendor in byVendor)
+        {
+            Color baseColour = VendorColour(vendor.Key);
+            int index = 0;
+            foreach (PlugInModelStatistic model in vendor)
+            {
+                float width = bounds.Width * (model.TokenCount / total);
+                RectangleF segment = new(x, bounds.Y, width, bounds.Height);
+
+                float shade = Math.Max(MinShade, 1f - (ShadeStep * index));
+                e.Graphics.FillRectangle(new Color(baseColour, shade), segment);
+                DrawLabel(e.Graphics, segment, model.ModelName);
+
+                x += width;
+                index++;
+            }
+        }
     }
+
+    private static void DrawLabel(Graphics graphics, RectangleF segment, string text)
+    {
+        SizeF textSize = graphics.MeasureString(LabelFont, text);
+        if (textSize.Width + (TextPadding * 2) > segment.Width) return;
+
+        PointF location = new(
+            segment.X + ((segment.Width - textSize.Width) / 2f),
+            segment.Y + ((segment.Height - textSize.Height) / 2f));
+        graphics.DrawText(LabelFont, Colors.White, location, text);
+    }
+
+    private static Color VendorColour(string vendor) => vendor.ToLowerInvariant() switch
+    {
+        "anthropic" => Color.FromArgb(0xD9, 0x77, 0x57),
+        "openai" => Color.FromArgb(0x10, 0xA3, 0x7F),
+        "google" => Color.FromArgb(0x42, 0x85, 0xF4),
+        "deepseek" => Color.FromArgb(0x4D, 0x6B, 0xFE),
+        "lm studio" => Color.FromArgb(0x7C, 0x4D, 0xFF),
+        "apple" => Color.FromArgb(0x55, 0x55, 0x55),
+        
+        _ => Colors.SlateGray,
+    };
 
 }
 
