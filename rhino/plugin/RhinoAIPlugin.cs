@@ -20,11 +20,24 @@ public class RhinoAIPlugin : PlugIn
         {
             HostUtils.LogDebugEvent($"RhinoAI: could not stage the MCP router ({stagingError}).\n");
         }
-
-        Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
+        if (!RhinoApp.IsRunningHeadless)
+            Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
 
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();
+
+        // Headless hosts (Linux RhinoCore, Rhino.Inside, Compute) have no one to type MCPStart,
+        // and they created their document before third-party plug-ins loaded, so the NewDocument
+        // hook above never fires for it. Start on the existing document when the router's
+        // autostart variable is set; its value is the port.
+        if (RhinoApp.IsRunningHeadless
+            && int.TryParse(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar), out int port)
+            && RhinoDoc.ActiveDoc is RhinoDoc activeDoc)
+        {
+            if (!RhinoAIHost.StartOrRestart(activeDoc, port, quiet: true))
+                HostUtils.LogDebugEvent($"RhinoAI: headless MCP listener failed to start on port {port}.\n");
+        }
+
         ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();
 
         return base.OnLoad(ref errorMessage);

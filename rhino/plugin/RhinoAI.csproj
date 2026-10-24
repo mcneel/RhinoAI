@@ -5,9 +5,13 @@
   <PropertyGroup>
     <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
     <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win</PluginOS>
+    <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Linux'))">linux</PluginOS>
     <PluginOS Condition="'$(PluginOS)' == ''">osx</PluginOS>
     <RouterRids Condition="'$(RouterRids)' == '' AND '$(PluginOS)' == 'win'">win-x64;win-arm64</RouterRids>
-    <RouterRids Condition="'$(RouterRids)' == ''">osx-arm64</RouterRids>
+    <RouterRids Condition="'$(RouterRids)' == '' AND '$(PluginOS)' == 'osx'">osx-arm64</RouterRids>
+    <!-- Linux has no default router: the router is NativeAOT, which needs clang and only links
+         for the build host's architecture, and the headless RhinoCore hosts (Rhino.Compute) reach
+         the plug-in over HTTP without it. Pass -p:RouterRids=linux-x64 or linux-arm64 to bundle one. -->
   </PropertyGroup>
 
   <PropertyGroup>
@@ -27,13 +31,14 @@
     <PluginOutputDir Condition="'$(PluginOutputDir)' == '' AND '$(RhinoTarget)' == 'R9' AND '$(RhinoPlugInOutputDir)' != ''">$([MSBuild]::NormalizePath('$(RhinoPlugInOutputDir)', 'RhinoAI'))</PluginOutputDir>
     <PluginOutputDir Condition="'$(PluginOutputDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</PluginOutputDir>
     <OutputPath>$(PluginOutputDir)/</OutputPath>
-    <!-- macOS: no target-framework subfolder, so the payload is flat in Plug-ins/RhinoAI
+    <!-- macOS and Linux: no target-framework subfolder, so the payload is flat in Plug-ins/RhinoAI
          (RhinoAI.rhp + dependencies + router/) exactly like Plug-ins/Grasshopper2. The Mac
          app-bundle install step in src4/BuildSolutions/MacDotNetMakefile copies that folder
          straight into ManagedPlugIns/RhinoAI.rhp, which is the layout the Mac plug-in loader
-         expects (<Name>.rhp/<Name>.rhp). Windows keeps the net8.0 subfolder that
-         installer/msi/Features/Plug-ins/RhinoAI.wxs harvests from. -->
-    <AppendTargetFrameworkToOutputPath Condition="'$(PluginOS)' == 'osx'">false</AppendTargetFrameworkToOutputPath>
+         expects (<Name>.rhp/<Name>.rhp). On Linux the RhinoCore deploy and the deb ship the
+         folder as is and the headless folder scan loads Plug-ins/RhinoAI/RhinoAI.rhp. Windows
+         keeps the net8.0 subfolder that installer/msi/Features/Plug-ins/RhinoAI.wxs harvests from. -->
+    <AppendTargetFrameworkToOutputPath Condition="'$(PluginOS)' != 'win'">false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -107,7 +112,7 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)/icon.png" DestinationFolder="$(PluginOutputDir)" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="BundleRouter" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net8.0'">
+  <Target Name="BundleRouter" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net8.0' AND '$(RouterRids)' != ''">
     <ItemGroup>
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>

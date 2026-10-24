@@ -5,9 +5,9 @@
   <img alt="Rhino MCP" src="art/logo.svg" width="180">
 </picture>
 
-# Rhino MCP Platform
+# RhinoAI
 
-**A Rhino MCP Server for AI Agents to create and edit in Rhino.**
+**An AI Integration for Rhino3d**
 
 [**Read the docs →**](https://mcneel.github.io/RhinoAI/docs/)
 

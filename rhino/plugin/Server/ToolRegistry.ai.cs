@@ -134,7 +134,7 @@ internal sealed class ToolHandler
     public Task<CallToolResult> InvokeAsync(
         IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
     {
-        if (!_marshalToUi)
+        if (!_marshalToUi || RhinoApp.IsRunningHeadless)
             return InvokeCoreAsync(arguments, scope, ct);
 
         // Default policy: marshal every tool to the Rhino UI thread. macOS's
