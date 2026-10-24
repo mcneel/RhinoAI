@@ -50,22 +50,8 @@ public class RegistryTests
         public string SkillData { get; } = "Data";
     }
 
-    private record TestMcp : IMcp
+    private class TestMcp() : Mcp("Test")
     {
-        public string Name => "Test";
-
-        public IReadOnlyDictionary<string, ITool> Tools { get; } = new Dictionary<string, ITool>();
-
-        public IReadOnlyDictionary<string, IResource> Resources { get; } = new Dictionary<string, IResource>();
-
-        public void Dispose() { }
-
-        public async Task<bool> InitAsync(CancellationToken token) => false;
-
-        public bool RegisterResource(IResource resource) => false;
-
-        public bool RegisterTool(ITool tool) => false;
-
         public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
             => ToolReturn.Failure("Not implemented", "Don't use this");
     }

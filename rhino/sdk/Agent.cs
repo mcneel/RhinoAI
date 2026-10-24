@@ -32,9 +32,9 @@ public sealed class Agent
     internal IModel? Model => Definition.CurrentModel;
 
     /// <summary>
-    /// The current <see cref="IHarness"/>
+    /// The current <see cref="Harness"/>
     /// </summary>
-    public IHarness Harness { get; }
+    public Harness Harness { get; }
 
     public IAgentDefinition Definition { get; }
 
@@ -43,7 +43,7 @@ public sealed class Agent
     /// </summary>
     public AgentConfig Config { get; } = new();
 
-    internal Agent(IAgentDefinition definition, PlugInToken token, IHarness harness)
+    internal Agent(IAgentDefinition definition, PlugInToken token, Harness harness)
     {
         Token = token;
         Harness = harness;
@@ -127,9 +127,6 @@ public sealed class Agent
         {
             if (!PlugInRegistry.HasPermission(Token))
                 throw new PermissionException($"PlugIn {Token.Name} does not have permission");
-
-            if (!Instances.Preferences.IsPermitted(Model.Vendor, Model.Name))
-                throw new PermissionException("Model or Vendor does not have permission.");
 
             List<ITurn> newTurns = [];
 
@@ -233,7 +230,7 @@ public sealed class Agent
         => Instances.Agents.FromParameters("OpenAI", AgentType.Cli)?.GetAgent(token);
 
     /// <summary>
-    /// Returns a Claude agent that uses a <see cref="GenericHarness"/>
+    /// Returns a Claude agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
@@ -241,7 +238,7 @@ public sealed class Agent
         => Instances.Agents.FromParameters("Anthropic", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
-    /// Returns a ChatGPT agent that uses a <see cref="GenericHarness"/>
+    /// Returns a ChatGPT agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
@@ -249,7 +246,7 @@ public sealed class Agent
         => Instances.Agents.FromParameters("OpenAI", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
-    /// Returns a Gemini agent that uses a <see cref="GenericHarness"/>
+    /// Returns a Gemini agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
@@ -257,7 +254,7 @@ public sealed class Agent
         => Instances.Agents.FromParameters("Google", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
-    /// Returns a DeepSeek agent that uses a <see cref="GenericHarness"/>
+    /// Returns a DeepSeek agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
@@ -265,23 +262,23 @@ public sealed class Agent
         => Instances.Agents.FromParameters("DeepSeek", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
-    /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
+    /// Returns a LMStudio agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <param name="vendor">The AI Model vendor</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetLocalAgent(PlugIns.PlugInToken token, string vendor)
         => Instances.Agents.FromParameters(vendor, AgentType.Local)?.GetAgent(token);
-    
+
     /// <summary>
-    /// Returns a LMStudio agent that uses a <see cref="GenericHarness"/>
+    /// Returns a LMStudio agent that uses a <see cref="AI.Harness"/>
     /// </summary>
     /// <param name="definition">The Agent definition</param>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetCustomAgent(IAgentDefinition definition, PlugIns.PlugInToken token)
     {
-        return new(definition, token, new GenericHarness(token));
+        return new(definition, token, new Harness(token));
     }
 
     /// <summary>
@@ -326,6 +323,11 @@ public sealed record AgentConfig
     /// The Session Id to resume with
     /// </summary>
     public Guid SessionId { get; set; } = Guid.Empty;
+
+    /// <summary>
+    /// Effort the Model 
+    /// </summary>
+    public string ModelEffort { get; set; } = string.Empty;
 
     /// <summary>
     /// Pushes Config from one agent to another

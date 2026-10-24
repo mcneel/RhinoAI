@@ -34,15 +34,26 @@ internal class PlugInStatistics
         }
     }
 
+    // PlugIn Image (via method?)
+    // PlugIn Name / Id
+    // Token Count
+    // List<Statistic>
+
     // TODO : Move to Instanes?
     private static Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
 
+    public List<PlugInModelStatistic> Statistics
+        => PrivateModelUsage.Select(kvp => new PlugInModelStatistic(kvp.Key.Name, kvp.Key.Vendor, kvp.Value)).ToList();
+
     private Dictionary<ModelKey, int> PrivateModelUsage { get; } = [];
 
-    public int ModelUsage => PrivateModelUsage.Sum(pm => pm.Value);
+    public int TotalTokenUsage => PrivateModelUsage.Sum(pm => pm.Value);
 
     public static void Collect(Agent agent, PlugIns.PlugInToken token, IEnumerable<ITurn> turn)
     {
+        // TODO : Handle this check better
+        if (agent.Model is null) return;
+
         PlugIn tokenKey = new(token);
         Stats.TryGetValue(tokenKey, out PlugInStatistics? stats);
         stats ??= new PlugInStatistics();
@@ -66,7 +77,7 @@ internal class PlugInStatistics
         PrivateModelUsage[key] = count + tokenCount;
     }
 
-    public static bool LoadFromJson(string json)
+    internal static bool LoadFromJson(string json)
     {
         try
         {
@@ -75,26 +86,28 @@ internal class PlugInStatistics
             Dictionary<PlugIn, PlugInStatistics>? dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<PlugIn, PlugInStatistics>>(json);
             if (dict is null) return false;
 
-            foreach(KeyValuePair<PlugIn, PlugInStatistics> kvp in dict)
+            foreach (KeyValuePair<PlugIn, PlugInStatistics> kvp in dict)
             {
                 Stats[kvp.Key] = kvp.Value;
             }
-            
+
             return true;
         }
-        catch {}
+        catch { }
         return false;
     }
 
-    public static string? GetJson()
+    internal static string? GetJson()
     {
         try
         {
             string json = System.Text.Json.JsonSerializer.Serialize(Stats);
             return json;
         }
-        catch {}
+        catch { }
         return null;
     }
 
 }
+
+internal record PlugInModelStatistic(string ModelName, string Vendor, int TokenCount = 0) { }

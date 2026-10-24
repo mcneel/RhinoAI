@@ -7,6 +7,12 @@ namespace sdk.tests;
 public class StatisticsTests
 {
     
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+    }
+
     [Test]
     public void Collect()
     {
@@ -23,7 +29,7 @@ public class StatisticsTests
         PlugInStatistics? stats = PlugInStatistics.Usage(token);
         Assert.That(stats, Is.Not.Null);
 
-        Assert.That(stats.ModelUsage, Is.EqualTo(count));
+        Assert.That(stats.TotalTokenUsage, Is.EqualTo(count));
     }
     
     [Test]

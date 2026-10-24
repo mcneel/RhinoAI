@@ -9,7 +9,7 @@ namespace Rhino.AI;
 /// <summary>
 /// A Rhino specific harness, including all Rhino tooling
 /// </summary>
-public sealed class RhinoHarness : GenericHarness
+public sealed class RhinoHarness : Harness
 {
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)

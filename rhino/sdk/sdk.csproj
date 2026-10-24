@@ -27,6 +27,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RhinoAI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Definitions.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
   </ItemGroup>
 

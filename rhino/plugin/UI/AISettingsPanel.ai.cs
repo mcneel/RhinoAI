@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
+using Rhino.AI.UI;
 using Rhino.UI;
 
 namespace Rhino.AI;
@@ -52,10 +53,14 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = new AIAgentDefinitionsPage() });
         tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
+        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
+        
+        // Human written pages
+        tabs.Pages.Add(new TabPage { Text = LOC.STR("Usage"), Content = new AIUsagePage() });
+        tabs.Pages.Add(new TabPage { Text = LOC.STR("PlugIns"), Content = new AIPluginPage() });
+        tabs.Pages.Add(new TabPage { Text = LOC.STR("Permissions"), Content = new AIPermissionsPage() });
 
         Content = tabs;
     }

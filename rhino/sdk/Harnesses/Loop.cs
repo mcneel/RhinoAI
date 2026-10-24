@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,10 +13,10 @@ namespace Rhino.AI;
 /// A harness loop
 /// </summary>
 /// <param name="harness">The harness</param>
-public sealed class Loop(IHarness harness)
+public sealed class Loop(Harness harness)
 {
 
-    private IHarness Harness { get; } = harness;
+    private Harness Harness { get; } = harness;
 
     public async Task<IEnumerable<ITurn>> StartAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -33,6 +34,9 @@ public sealed class Loop(IHarness harness)
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
 
+        if (agent.Model is null)
+            throw new Exception("Agent does not have a valid model");
+
         do
         {
             // Endpoints validate the transcript as a whole, so results have to be sent behind the calls they answer, never on their own.
@@ -47,7 +51,7 @@ public sealed class Loop(IHarness harness)
 
                 if (turn is ToolTurn tool)
                 {
-                    ToolResultTurn result = new (tool.Id, tool.Name, await UseAsync(tool, token).ConfigureAwait(false));
+                    ToolResultTurn result = new (tool.Id, tool.Name, await UseAsync(agent, tool, token).ConfigureAwait(false));
                     results.Add(result);
                     yield return result;
                 }
@@ -57,12 +61,12 @@ public sealed class Loop(IHarness harness)
         while (results.Count > 0);
     }
 
-    private async Task<ToolReturn> UseAsync(ToolTurn tool, CancellationToken token)
+    private async Task<ToolReturn> UseAsync(Agent agent, ToolTurn tool, CancellationToken token)
     {
         if (!ToolSchema.TryParseWireName(tool.Name, out string mcpName, out string toolName))
             return ToolReturn.Failure($"Could not parse {tool.Name}.", "N/A");
 
-        return await Harness.UseToolAsync(mcpName, toolName, tool.Args.ToList(), token).ConfigureAwait(false);
+        return await Harness.UseToolAsync(agent, mcpName, toolName, tool.Args.ToList(), token).ConfigureAwait(false);
     }
 
 }

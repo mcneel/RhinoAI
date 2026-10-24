@@ -15,29 +15,14 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class ClaudeHarness : IHarness
+internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 {
-
-    private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
-
-    private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
-
-    public HarnessConfig Config { get; } = new();
-
-    public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
-
-    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
-
-    public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "--permission-prompt-tool would resolve this")]
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
-    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
         if (!await EnsureLoggedIn(token, claudeModel))
@@ -182,7 +167,7 @@ internal sealed class ClaudeHarness : IHarness
         return false;
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    public override async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) return [];
 
@@ -226,6 +211,7 @@ internal sealed class ClaudeHarness : IHarness
 
     private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
+        // TODO : Check agent.Model
         Process process = GetClaudeProcess(token, agent.Model);
 
         process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
@@ -249,7 +235,7 @@ internal sealed class ClaudeHarness : IHarness
         string allowedTools = string.Empty;
 
         // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             // TODO : Check Permissions.ProhibitedTools()
             allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
@@ -275,11 +261,15 @@ internal sealed class ClaudeHarness : IHarness
         process.StartInfo.ArgumentList.Add("--model");
         process.StartInfo.ArgumentList.Add(agent.Model.Name);
 
-        if (Instances.Preferences.IsPermitted("anthropic", "opus"))
+        // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
+        process.StartInfo.ArgumentList.Add("--fallback-model");
+        process.StartInfo.ArgumentList.Add("opus");
+
+        // --effort <level>                      Effort level for the current session (low, medium, high, xhigh, max)
+        if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
         {
-            // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
-            process.StartInfo.ArgumentList.Add("--fallback-model");
-            process.StartInfo.ArgumentList.Add("opus");
+            process.StartInfo.ArgumentList.Add("--effort");
+            process.StartInfo.ArgumentList.Add(agent.Config.ModelEffort);
         }
 
         // --strict-mcp-config                   Only use MCP servers from --mcp-config, ignoring all other MCP configurations
@@ -287,7 +277,7 @@ internal sealed class ClaudeHarness : IHarness
 
         // --mcp-config <configs...>             Load MCP servers from JSON files or strings (space-separated)
         process.StartInfo.ArgumentList.Add("--mcp-config");
-        process.StartInfo.ArgumentList.Add(GetMcpJsons());
+        process.StartInfo.ArgumentList.Add(GetMcpJsons(agent));
 
         // --effort <level>  Effort level for the current session (low, medium, high, xhigh, max)
         process.StartInfo.ArgumentList.Add("--effort");
@@ -632,13 +622,13 @@ internal sealed class ClaudeHarness : IHarness
     }
 
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
-    private string GetMcpJsons()
+    private string GetMcpJsons(Agent agent)
     {
         JsonObject array = new();
 
         // NOTE : Do the MCP configs need to be done? Can turns not just be run?
         string mcpJson = string.Empty;
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             // TODO : MCP's
             if (mcp is StdioMcp stdioMcp)
@@ -665,7 +655,7 @@ internal sealed class ClaudeHarness : IHarness
             }
             else if (mcp is MemoryMcp memoryMcp)
             {
-                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, memoryMcp);
+                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, memoryMcp);
                 Leases.Add(lease);
 
                 array[mcp.Name] = new JsonObject()

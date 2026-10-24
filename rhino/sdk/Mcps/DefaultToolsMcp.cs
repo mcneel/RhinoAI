@@ -3,7 +3,7 @@ namespace Rhino.AI;
 /// <summary>
 /// A simple default mcp with all the basic tools
 /// </summary>
-public sealed class DefaultToolsMcp : GenericMcp
+public sealed class DefaultToolsMcp : Mcp
 {
 
     /// <summary>
@@ -11,7 +11,7 @@ public sealed class DefaultToolsMcp : GenericMcp
     /// </summary>
     /// <param name="harness">The harness</param>
     /// <param name="token">The permissions token</param>
-    public DefaultToolsMcp(IHarness harness, PlugIns.PlugInToken token) : base("Default_Tools")
+    public DefaultToolsMcp(Harness harness, PlugIns.PlugInToken token) : base("Default_Tools")
     {
         RegisterTool(new Tools.DelegateTool(token));
         // RegisterTool(new Tools.Compact()); // TODO : Compaction

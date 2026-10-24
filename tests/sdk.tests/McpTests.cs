@@ -15,11 +15,11 @@ public class McpTests
 
     public McpTests()
     {
-        DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        harness.AddMcp(Mcp);
+        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
 
-        Agent = Agent.GetClaudeDesktopAgent(Token)!;
+        Agent = Agent.GetDeepSeekAgent(Token)!;
+        Agent.Harness.AddMcp(Mcp);
+
         Assert.That(Agent, Is.Not.Null);
     }
 
@@ -128,13 +128,13 @@ public class McpTests
     [Test, CancelAfter(5000)]
     public async Task FuzzyTool(CancellationToken token)
     {
-        GenericHarness harness = new(Token);
+        Harness harness = new(Token);
 
         TestTool tool = new("read", "", []);
         Mcp.RegisterTool(tool);
         harness.AddMcp(Mcp);
 
-        ToolReturn result = await harness.UseToolAsync("AnyMCP", "reed", [], token);
+        ToolReturn result = await harness.UseToolAsync(Agent, "AnyMCP", "reed", [], token);
         Assert.That(result.Guidance, Does.Contain(tool.Name));
         Assert.That(result.Result == ToolResult.Failure);
     }

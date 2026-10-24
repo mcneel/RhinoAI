@@ -11,7 +11,7 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
 
     public string Vendor { get; } = vendor;
 
-    public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
+    public JsonObject ToRequest(RequestSettings settings, Harness harness, IEnumerable<ITurn> turns)
     {
         StringBuilder system = new();
         StringBuilder text = new();
@@ -83,7 +83,7 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         return body;
     }
 
-    public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response)
+    public IReadOnlyList<ITurn> FromResponse(Harness harness, JsonNode response)
     {
         if (response is not JsonObject payload)
             throw new JsonException($"{Vendor} returned something other than a completion object.");
@@ -134,7 +134,7 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         },
     };
 
-    private ToolTurn ToolCall(IHarness harness, JsonObject call)
+    private ToolTurn ToolCall(Harness harness, JsonObject call)
     {
         JsonObject? function = call["function"] as JsonObject;
 
@@ -144,10 +144,10 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         return new ToolTurn((string?)call["id"] ?? string.Empty, name, ToolArgs.FromJson(harness, name, arguments));
     }
 
-    private static JsonArray Declarations(IHarness harness)
+    private static JsonArray Declarations(Harness harness)
     {
         JsonArray declarations = [];
-        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
+        foreach ((Mcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {

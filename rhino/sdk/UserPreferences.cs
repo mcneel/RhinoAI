@@ -11,35 +11,44 @@ namespace Rhino.AI;
 /// </summary>
 public class UserPreferences
 {
+
+    // TODO : Grab these and move here
+    // AutoLoadMcpBox.Checked = AISettings.AutoLoadMCP;
+    // AutoLoadScriptPlugInBox.Checked = AISettings.AutoLoadScriptPlugIn;
     
-    public Guid AgentId { get; }
+    public Guid PreferedAgentId { get; }
     
-    // NOTE : These are Global?
+    /// <summary>
+    /// Global user Permissions
+    /// </summary>
     public PermissionSet Permissions { get; } = new();
 
+    public Permissability DefaultPermission { get; set; } = Permissability.Ask;
 
-    public bool BlockAll { get; set; } = false;
+    // NOTE : I think the below is unnecessary
 
-    public HashSet<string> BlockedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public HashSet<string> BlockedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+    // public bool BlockAll { get; set; } = false;
 
-    public HashSet<string> ApprovedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public HashSet<string> ApprovedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
+    // public HashSet<string> BlockedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
+    // public HashSet<string> BlockedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Checks if a model or vendor is permitted by the user.
-    /// </summary>
-    /// <returns><c>true</c> if neither the vendor nor the model is blocked, and each approved list the user has filled in contains this vendor or this model. An empty approved list is no opinion, not approve nothing.</returns>
-    public bool IsPermitted(string vendor, string model)
-    {
-        if (BlockAll) return false;
-        if (BlockedVendors.Contains(vendor)) return false;
-        if (BlockedModels.Contains(model)) return false;
+    // public HashSet<string> ApprovedVendors { get; } = new(StringComparer.OrdinalIgnoreCase);
+    // public HashSet<string> ApprovedModels { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        if (ApprovedVendors.Count > 0 && !ApprovedVendors.Contains(vendor)) return false;
-        if (ApprovedModels.Count > 0 && !ApprovedModels.Contains(model)) return false;
+    // /// <summary>
+    // /// Checks if a model or vendor is permitted by the user.
+    // /// </summary>
+    // /// <returns><c>true</c> if neither the vendor nor the model is blocked, and each approved list the user has filled in contains this vendor or this model. An empty approved list is no opinion, not approve nothing.</returns>
+    // public bool IsPermitted(string vendor, string model)
+    // {
+    //     if (BlockAll) return false;
+    //     if (BlockedVendors.Contains(vendor)) return false;
+    //     if (BlockedModels.Contains(model)) return false;
 
-        return true;
-    }
+    //     if (ApprovedVendors.Count > 0 && !ApprovedVendors.Contains(vendor)) return false;
+    //     if (ApprovedModels.Count > 0 && !ApprovedModels.Contains(model)) return false;
+
+    //     return true;
+    // }
 
 }

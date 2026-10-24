@@ -10,6 +10,12 @@ public class AgentTests
 
     private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+    }
+
     [TestCase(ProtocolKind.Completions)]
     [TestCase(ProtocolKind.Messages)]
     [TestCase(ProtocolKind.Responses)]
@@ -21,15 +27,10 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        HttpAgentDefinition def = new ("DeepSeek", "Deep Seek")
-        {
-            Protocol = protocol
-        };
-        Agent? agent = def.GetAgent(Token);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
-        GenericHarness harness = new(Token);
-        harness.AddMcp(mcp);
+        agent.Harness.AddMcp(mcp);
 
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
@@ -101,7 +102,14 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent? agent = Agent.GetCustomAgent(Token, ProtocolKind.Completions, "qwen/qwen3-1.7b", "LM Studio Community", new("http://localhost:1234"), "");
+        ModelDefinition modelDefinition = new("LM Studio", "Qwen 3-1.7b", "qwen/qwen3-1.7b");
+        HttpAgentDefinition definition = new("LM Studio", "LM Studio Community") { Protocol = ProtocolKind.Completions, Host = "http://localhost:1234" };
+        definition.Add(modelDefinition);
+        definition.CurrentModelId = modelDefinition.ModelId;
+
+        Assert.That(Instances.Agents.Add(definition));
+
+        Agent? agent = Agent.GetCustomAgent(definition, Token);
         Assert.That(agent, Is.Not.Null);
         agent.Harness.AddMcp(mcp);
 
@@ -183,6 +191,19 @@ public class AgentTests
         await claudeProcess.WaitForExitAsync(token);
 
         Assert.That(process.TryPop<MessageTurn>(out MessageTurn turn));
+    }
+
+    [Test]
+    [CancelAfter(5000)]
+    public async Task ModelEffort(CancellationToken token)
+    {
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        agent.Config.ModelEffort = "max";
+
+        IEnumerable<ITurn> turns = await agent.SendAsync("What effort level are you using?", token);
+        // TODO : Assert a message contains "max" and not "low" etc.
     }
 
     private static Process GetClaudeProcess()

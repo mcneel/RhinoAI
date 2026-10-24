@@ -19,7 +19,7 @@ internal abstract record Turn : ITurn
 
     public RoleType Role { get; init; }
     
-    public bool Success { get; init; }
+    public bool Success { get; init; } = true;
 
     public int? TokenCount { get; init; }
 

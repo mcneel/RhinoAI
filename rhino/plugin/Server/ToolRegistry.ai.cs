@@ -192,7 +192,7 @@ internal sealed class ToolHandler
         }
         catch (TargetInvocationException tie) when (tie.InnerException is OverflowException overflow)
         {
-            return ToolResultFormatter.Format(ToolResult.Failure(
+            return ToolResultFormatter.Format(Tools.ToolResult.Failure(
                 ToolError.BadArgument,
                 overflow.Message,
                 "A value exceeded the range of the type it was applied to; pass a smaller number."));

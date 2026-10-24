@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using Rhino.AI.Models;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -37,7 +38,11 @@ public interface IAgentDefinition
 
     internal IModel? CurrentModel { get; }
 
-    public IReadOnlyList<ModelDefinition> AvailableModels { get; }
+    public PermissionSet Permissions { get; }
+
+    public bool Enabled { get; set; }
+
+    public IReadOnlySet<ModelDefinition> AvailableModels { get; }
 
     internal IEnumerable<Agent> RegisteredAgents { get; }
 
@@ -68,9 +73,19 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
 
     public string? CurrentModelId { get; set; }
 
-    public HashSet<ModelDefinition> AvailableModels { get; init; } = [];
+    public bool Enabled { get; set; } = true;
 
-    public bool Add(ModelDefinition definition) => AvailableModels.Add(definition);
+    // TODO : Document WHY this exists, I've forgotten
+    public Platform Platforms { get; init; } = Platform.All;
+
+    public PermissionSet Permissions { get; } = new();
+
+    protected HashSet<ModelDefinition> PrivateAvailableModels { get; init; } = [];
+    public IReadOnlySet<ModelDefinition> AvailableModels => PrivateAvailableModels;
+
+    public bool Add(ModelDefinition definition) => PrivateAvailableModels.Add(definition);
+
+    public bool Add(IModel definition) => PrivateAvailableModels.Add(new ModelDefinition(definition.Vendor, definition.Name, definition.Name));
 
     public abstract bool Available { get; }
 
@@ -106,8 +121,8 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
 internal sealed class CliAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
-    private List<string> WinSearchPaths { get; init; } = [];
-    private List<string> MacSearchPaths { get; init; } = [];
+    public List<string> WinSearchPaths { get; init; } = [];
+    public List<string> MacSearchPaths { get; init; } = [];
 
     public override bool Available
     {
@@ -124,11 +139,9 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
         }
     }
 
-    public Platform Platforms { get; init; } = Platform.All;
-
     public override IModel? GetModel(string modelName)
     {
-        ModelDefinition? def = Models.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
+        ModelDefinition? def = PrivateAvailableModels.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
         if (def is null) return null;
 
         IEnumerable<string> searchPaths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
@@ -164,10 +177,10 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
         IModel? model = CurrentModel;
         if (model is null) return null;
 
-        IHarness? harness = Vendor.ToLowerInvariant() switch
+        Harness? harness = Vendor.ToLowerInvariant() switch
         {
-            "anthropic" => new ClaudeHarness(),
-            "openai" => new CodexHarness(),
+            "anthropic" => new ClaudeHarness(token),
+            "openai" => new CodexHarness(token),
             // "google" => (n) => new GeminiHarness(n),
             // "deepseek" => (n) => new DeepSeekHarness(n),
 
@@ -190,15 +203,33 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 
     public ProtocolKind Protocol { get; init; } = ProtocolKind.Default;
 
+    // Local only
     public string? ModelsRoute { get; init; }
 
+    [JsonPropertyName("envVar")]
     public string? ApiKeyEnvVar { get; init; }
 
     private string? PrivateApiKey { get; set; }
+    
+    [JsonPropertyName("apiKey")]
     public string? ApiKey
     {
-        get => PrivateApiKey ??= Environment.GetEnvironmentVariable(ApiKeyEnvVar ?? string.Empty);
-        set => PrivateApiKey = value;
+        get => PrivateApiKey ??=
+            (Environment.GetEnvironmentVariable(ApiKeyEnvVar ?? string.Empty)
+            ?? Secrets.Stasher.GetSecret(ApiKeyEnvVar ?? string.Empty));
+        set
+        {
+            if (string.IsNullOrEmpty(ApiKeyEnvVar)) return;
+
+            if (string.IsNullOrEmpty(value))
+            {
+                Secrets.Stasher.TryDeleteSecret(ApiKeyEnvVar);
+            }
+            else
+            {
+                Secrets.Stasher.TrySetSecret(ApiKeyEnvVar, value);
+            }
+        }
     }
 
     public override Agent? WithModel(PlugIns.PlugInToken token, string modelName)
@@ -210,6 +241,7 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             ModelsRoute = this.ModelsRoute,
             ApiKeyEnvVar = this.ApiKeyEnvVar,
             PrivateApiKey = this.PrivateApiKey,
+            Platforms = this.Platforms,
             CurrentModelId = modelName
         };
 
@@ -218,7 +250,7 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 
     public override IModel? GetModel(string modelName)
     {
-        ModelDefinition? def = Models.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
+        ModelDefinition? def = PrivateAvailableModels.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
         if (def is null) return null;
 
         Func<string, IModel>? modelFactory = Vendor.ToLowerInvariant() switch
@@ -238,6 +270,13 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
         if (modelFactory is null) return null;
 
         IModel model = modelFactory.Invoke(def.ModelId);
+
+        // Ensure the API Key is injected
+        if (model is ApiModel apiModel)
+        {
+            apiModel.ApiKey = ApiKey;
+        }
+
         return model;
     }
 
@@ -289,10 +328,10 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 
     public override Agent? GetAgent(PlugIns.PlugInToken token)
     {
-        IModel? model = GetModel(CurrentModelId ?? "") ?? CurrentModel;
+        IModel? model = GetModel(CurrentModelId ?? DefaultModelId ?? "") ?? CurrentModel;
         if (model is null) return null;
 
-        return new Agent(this, token, new GenericHarness(token));
+        return new Agent(this, token, new Harness(token));
     }
 
 }

@@ -4,79 +4,17 @@ using Rhino.AI.PlugIns;
 
 namespace sdk.tests;
 
-internal sealed class TestDefinition : IAgentDefinition
+internal sealed class TestDefinition() : AgentDefinition("Test", "Test Def")
 {
-    
-    static TestDefinition()
-    {
-        // TODO : Use Definitions.json
-        Instances.Agents.Add(new TestDefinition());
 
-        // Deep Seek
-        ModelDefinition deepSeekModel = new ("DeepSeek", "Flash", "deepseek-flash");
+    public override bool Available => true;
 
-        HttpAgentDefinition deepSeekMessages = new ("DeepSeek", "Deep Seek (Messages)") { DefaultModelId = "deepseek-flash", Protocol = ProtocolKind.Messages, AvailableModels = { deepSeekModel } };
-        HttpAgentDefinition deepSeekCompletions = new ("DeepSeek", "Deep Seek (Completions)") { DefaultModelId = "deepseek-flash", Protocol = ProtocolKind.Completions, AvailableModels = { deepSeekModel } };
-        HttpAgentDefinition deepSeekResponses = new ("DeepSeek", "Deep Seek (Responses)") { DefaultModelId = "deepseek-flash", Protocol = ProtocolKind.Responses, AvailableModels = { deepSeekModel } };
-        
-        Instances.Agents.Add(deepSeekMessages);
-        Instances.Agents.Add(deepSeekCompletions);
-        Instances.Agents.Add(deepSeekResponses);
+    public override Agent? GetAgent(PlugInToken token)
+        => new(this, token, new Harness(token));
 
-        // Claude
-        ModelDefinition opusModel = new ("Anthropic", "Opus", "opus");
-        
-        CliAgentDefinition claudeDesktop = new ("Anthropic", "Claude (CLI)") { DefaultModelId = "opus", AvailableModels = { opusModel } };
-        Instances.Agents.Add(claudeDesktop);
-        
-    }
+    public override IModel? GetModel(string modelName) => new TestModel() { Name = modelName };
 
-    public Guid Id { get; set; } = Guid.NewGuid();
-
-    public string Vendor { get; set; } = "RhinoAI";
-
-    public string DisplayName { get; set; } = "Test Agent";
-
-    public string DefaultPrompt { get; set; } = "";
-
-    public string SvgIcon { get; set; } = "";
-
-    public string DefaultModelId { get; set; } = "";
-
-    public string? CurrentModelId { get; set; }
-
-    public List<ModelDefinition> PrivateModelDefinitions { get; } = [];
-    public IReadOnlyList<ModelDefinition> AvailableModels => PrivateModelDefinitions;
-
-    public bool Available { get; set; } = true;
-
-    public List<WeakReference<Agent>> PrivateRegisteredAgents { get; } = [];
-    public IEnumerable<Agent> RegisteredAgents
-    {
-        get
-        {
-            foreach (WeakReference<Agent> agentRef in PrivateRegisteredAgents)
-            {
-                if (!agentRef.TryGetTarget(out Agent? agent)) continue;
-                if (agent is null) continue;
-                yield return agent;
-            }
-        }
-    }
-
-    public void RegisterAgent(Agent agent)
-    {
-        PrivateRegisteredAgents.Add(new(agent));
-    }
-
-    public IModel? CurrentModel=> GetModel(CurrentModelId ?? DefaultModelId ?? "");
-
-    public Agent? GetAgent(PlugInToken token)
-        => new(this, token, new GenericHarness(token));
-
-    public IModel? GetModel(string modelName) => new TestModel() { Name = modelName };
-
-    public Agent? WithModel(PlugInToken token, string modelName)
+    public override Agent? WithModel(PlugInToken token, string modelName)
     {
         throw new NotImplementedException();
     }
@@ -89,13 +27,13 @@ internal sealed class TestDefinition : IAgentDefinition
 
         public bool Available { get; set; } = true;
 
-        public Func<IHarness, IEnumerable<ITurn>, CancellationToken, Task<IEnumerable<ITurn>>>? SendAsyncFunc { get; set; }
-        public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
+        public Func<Harness, IEnumerable<ITurn>, CancellationToken, Task<IEnumerable<ITurn>>>? SendAsyncFunc { get; set; }
+        public Task<IEnumerable<ITurn>> SendAsync(Harness harness, IEnumerable<ITurn> turns, CancellationToken token)
             => SendAsyncFunc!.Invoke(harness, turns, token);
 
-        public Func<IHarness, IEnumerable<ITurn>, CancellationToken, IAsyncEnumerable<ITurn>>? StreamAsyncFunc { get; set; }
+        public Func<Harness, IEnumerable<ITurn>, CancellationToken, IAsyncEnumerable<ITurn>>? StreamAsyncFunc { get; set; }
 
-        public IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
+        public IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turn, CancellationToken token)
             => StreamAsyncFunc!.Invoke(harness, turn, token);
 
     }

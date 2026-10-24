@@ -14,6 +14,7 @@
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
     <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <AssemblyName>RhinoAI</AssemblyName>
+    <PackageId>RhinoAI.PlugIn</PackageId>
     <RootNamespace>Rhino.AI</RootNamespace>
     <Title>Rhino AI</Title>
     <Description>AI tools for Rhino</Description>
@@ -38,6 +39,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
+    <ProjectReference Include="../sdk/sdk.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>

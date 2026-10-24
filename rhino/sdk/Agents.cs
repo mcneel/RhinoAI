@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -14,26 +15,37 @@ internal sealed class Agents
     public IReadOnlyCollection<IAgentDefinition> Definitions => PrivateDefinitions.Values;
 
     public IAgentDefinition? PreferredDefinition
-        => PrivateDefinitions.TryGetValue(Instances.Preferences.AgentId, out IAgentDefinition? def) ? def : null;
+        => PrivateDefinitions.TryGetValue(Instances.Preferences.PreferedAgentId, out IAgentDefinition? def) ? def : null;
 
     public bool Add(IAgentDefinition definition)
         => PrivateDefinitions.TryAdd(definition.Id, definition);
+    
+    public bool Remove(Guid id)
+        => PrivateDefinitions.Remove(id);
 
     public bool Exists(IAgentDefinition definition)
         => PrivateDefinitions.ContainsKey(definition.Id);
 
-    private bool LoadAgentsFromJson(string json)
+    public bool LoadAgentsFromJson(string json)
     {
-        try
+        IReadOnlyList<AgentDefinition>? definitions = AgentDefinitionsJson.Parse(json);
+        if (definitions is null) return false;
+
+        PrivateDefinitions.Clear();
+        foreach (AgentDefinition definition in definitions)
         {
-            // TODO : Get Claude to write this
-            // See : Definitions.json
-            return true;
+            Add(definition);
         }
-        catch
-        {
-            return false;
-        }
+
+        return true;
+    }
+
+    public bool LoadAgentsFromJson()
+    {
+        using Stream? stream = typeof(Agents).Assembly.GetManifestResourceStream("Rhino.AI.Definitions.json");
+        using StreamReader reader = new(stream!);
+        string json = reader.ReadToEnd();
+        return LoadAgentsFromJson(json);
     }
 
     // NOTE : These are ONLY ones used for the AI Panel
@@ -65,4 +77,4 @@ internal sealed class Agents
 
 }
 
-internal enum AgentType { Cli, Api, Local }
+internal enum AgentType { Unknown = 0, Cli, Api, Local }

@@ -133,7 +133,7 @@ internal static partial class GetContextTool
     // excluded from this build). A one-line component/wire count, no per-object detail.
     private static GrasshopperSummary SummarizeGrasshopper1()
     {
-        GH_Document? ghDoc = Instances.ActiveCanvas?.Document;
+        GH_Document? ghDoc = Grasshopper.Instances.ActiveCanvas?.Document;
         if (ghDoc is null)
             return new GrasshopperSummary("GH1", false, 0, 0);
 

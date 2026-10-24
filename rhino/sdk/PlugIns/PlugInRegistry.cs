@@ -12,11 +12,15 @@ namespace Rhino.AI.PlugIns;
 /// </summary>
 public static class PlugInRegistry
 {
+    // TODO : Instances!
 
     private sealed record PlugInPermission(bool Allowed);
 
     private static Dictionary<PlugInToken, PlugInPermission> Permissions { get; } = [];
     private static Dictionary<Assembly, PlugInToken> Tokens { get; } = [];
+
+    private static Dictionary<PlugInToken, AgenticPlugIn> PrivatePlugIns { get; } = [];
+    internal static IReadOnlyDictionary<PlugInToken, AgenticPlugIn> PlugIns => PrivatePlugIns;
 
     /// <summary>
     /// Register a PlugIn in the permissions system. This method will always return the same token instance to the assembly that calls it.
@@ -42,6 +46,11 @@ public static class PlugInRegistry
             Tokens[assembly] = token;
             Permissions[token] = new PlugInPermission(false);
 
+            if (AgenticPlugIn.Get(assembly, id, name) is {} plugin)
+            {
+                PrivatePlugIns.Add(token, plugin);
+            }
+
             return token;
         }
         catch { }
@@ -61,8 +70,13 @@ public static class PlugInRegistry
         if (permission is null) return false;
         return permission.Allowed;
     }
+    
+    internal static void GivePermission(PlugInToken token)
+    {
+        Permissions[token] = new PlugInPermission(true);
+    }
 
-    private static Dictionary<PlugInToken, List<ISkill>> PrivatePanelSkills { get; } = [];
+    internal static Dictionary<PlugInToken, List<ISkill>> PrivatePanelSkills { get; } = [];
     public static IReadOnlyCollection<ISkill> PanelSkills => PrivatePanelSkills.SelectMany(pps => pps.Value).ToArray();
 
     /// <summary>
@@ -91,8 +105,8 @@ public static class PlugInRegistry
         return true;
     }
 
-    private static Dictionary<PlugInToken, List<IMcp>> PrivatePanelMcps { get; } = [];
-    public static IReadOnlyCollection<IMcp> PanelMcps => PrivatePanelMcps.SelectMany(pps => pps.Value).ToArray();
+    internal static Dictionary<PlugInToken, List<Mcp>> PrivatePanelMcps { get; } = [];
+    public static IReadOnlyCollection<Mcp> PanelMcps => PrivatePanelMcps.SelectMany(pps => pps.Value).ToArray();
 
     /// <summary>
     /// Registers an MCP with the AI Panel
@@ -100,9 +114,9 @@ public static class PlugInRegistry
     /// <param name="token">A permissions token for a PlugIn</param>
     /// <param name="mcp">The mcp to register. Do not use this same instance with other Harnesses or Agents</param>
     /// <returns>true on success, false otherwise</returns>
-    public static bool RegisterPanelMcp(PlugInToken token, IMcp mcp)
+    public static bool RegisterPanelMcp(PlugInToken token, Mcp mcp)
     {
-        PrivatePanelMcps.TryGetValue(token, out List<IMcp>? Mcps);
+        PrivatePanelMcps.TryGetValue(token, out List<Mcp>? Mcps);
         Mcps ??= new();
 
         if (Mcps.Any(s => IsEqual(s, mcp))) return false;
@@ -112,7 +126,7 @@ public static class PlugInRegistry
         return true;
     }
 
-    private static bool IsEqual(IMcp a, IMcp b)
+    private static bool IsEqual(Mcp a, Mcp b)
     {
         if (ReferenceEquals(a, b)) return true;
         if (!string.Equals(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)) return false;
@@ -140,6 +154,51 @@ public static class PlugInRegistry
             ByPass = bool.TryParse(value, out bool result) && result;
         }
         catch { }
+    }
+
+    public class AgenticPlugIn
+    {
+        public Guid Id { get; }
+
+        public string Name { get; }
+
+        public string IconResource { get; }
+
+        public Assembly Assembly { get; }
+
+        private AgenticPlugIn(Assembly assembly, Guid id, string name, string iconResource)
+        {
+            Assembly = assembly;
+            Id = id;
+            Name = name;
+            IconResource = iconResource;
+        }
+
+        public static AgenticPlugIn? Get(Assembly assembly, Guid id, string name)
+        {
+            foreach(object attrib in assembly.GetCustomAttributes(false))
+            {
+                Type? type = attrib?.GetType();
+                if (type is null) continue;
+
+                if (!string.Equals(type.Name, "PlugInDescription")) continue;
+
+                // [assembly: PlugInDescription(DescriptionType.Icon, "Rhino.AI.Panel_light.ico")]
+                
+                // DescriptionType -> 8
+                PropertyInfo? descInfo = type.GetProperty("DescriptionType");
+                if (descInfo?.GetValue(attrib) is not int enumIntValue) continue;
+                if (enumIntValue != 8) continue;
+                
+                // Value -> is the resource
+                PropertyInfo? valueInfo = type.GetProperty("Value");
+                if (valueInfo?.GetValue(attrib) is not string resource) continue;
+                
+                return new AgenticPlugIn(assembly, id, name, resource);
+            }
+
+            return null;
+        }
     }
 
 }

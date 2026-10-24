@@ -12,7 +12,7 @@ public sealed class PermissionSet
     /// <summary>
     /// The default permission used when no prior permission has been requested
     /// </summary>
-    public Permissability DefaultPermission { get; set; } = Permissability.Ask;
+    public Permissability DefaultPermission { get; set; } = Permissability.Unset;
 
     private HashSet<Permission> Permissions { get; } = new();
 
@@ -23,7 +23,7 @@ public sealed class PermissionSet
     /// <param name="tool">A Tool of this MCP</param>
     /// <param name="args">The arguments</param>
     /// <returns>The given permission, or the default if none is found</returns>
-    public Permissability HasPermission(IMcp mcp, ITool tool, IList<IToolArg> args)
+    public Permissability HasPermission(Mcp mcp, ITool tool, IList<IToolArg> args)
         => HasPermission(mcp.Name, tool.Name, args);
 
     /// <summary>
@@ -44,11 +44,33 @@ public sealed class PermissionSet
             if (!string.Equals(permission.ToolName, toolName) &&
                 !string.Equals(permission.ToolName, "*")) continue;
 
-            // TODO : What if there are multiple entries
+            // TODO : What if there are multiple entries?
             result = ResolvePermissions(permission, args);
         }
 
         return result;
+    }
+
+    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, Mcp mcp, ITool tool, IList<IToolArg> args)
+        => ResolvePermissionChain(definition, mcp.Name, tool.Name, args);
+
+    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, string mcpName, string toolName, IList<IToolArg> args)
+    {
+        Permissability globalPermissions = Instances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
+        if (globalPermissions == Permissability.Deny) return Permissability.Deny;
+
+        Permissability defPermissions = definition.Permissions.HasPermission(mcpName, toolName, args);
+        if (defPermissions == Permissability.Deny) return Permissability.Deny;
+        
+        // Never specified
+        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Unset) return Instances.Preferences.DefaultPermission;
+
+        if (globalPermissions == Permissability.Always && defPermissions == Permissability.Unset) return globalPermissions;
+        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Always) return defPermissions;
+        
+        // TODO : Add a test -- I think some scenarios are missing here
+        
+        return globalPermissions;
     }
     
     /// <summary>
@@ -129,7 +151,7 @@ public sealed class PermissionSet
 /// <summary>
 /// The current permission of a tool
 /// </summary>
-public enum Permissability { Always, Ask, Deny };
+public enum Permissability { Unset = 0, Always, Ask, Deny };
 
 /// <summary>
 /// A given tool argument permission
@@ -182,7 +204,7 @@ public sealed record Permission
         ArgumentPermissions = argumentPermissions;
     }
     
-    public Permission(IMcp mcp, ITool tool, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    public Permission(Mcp mcp, ITool tool, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcp.Name;
         ToolName = tool.Name;
@@ -190,7 +212,7 @@ public sealed record Permission
         ArgumentPermissions = argumentPermissions;
     }
 
-    public Permission(IMcp mcp, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    public Permission(Mcp mcp, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcp.Name;
         ToolName = "*";

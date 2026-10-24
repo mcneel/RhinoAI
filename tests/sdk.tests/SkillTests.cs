@@ -18,29 +18,38 @@ public class SkillTests
 
         public List<IReadOnlyList<ITurn>> Received { get; } = [];
 
-        public async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turn, [EnumeratorCancellation]CancellationToken token)
+        public async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turn, [EnumeratorCancellation]CancellationToken token)
         {
             Received.Add(turn.ToList());
             yield return new MessageTurn("ok", RoleType.Assistant);
         }
-        public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turn, CancellationToken token)
+        public Task<IEnumerable<ITurn>> SendAsync(Harness harness, IEnumerable<ITurn> turn, CancellationToken token)
         {
             Received.Add(turn.ToList());
             return Task.FromResult<IEnumerable<ITurn>>([new MessageTurn("ok", RoleType.Assistant)]);
         }
     }
 
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+    }
+
+
     [Test, CancelAfter(5000)]
     public async Task SkillsAreListedOnce(CancellationToken token)
     {
         RecordingModel model = new();
-        GenericHarness harness = new(Token);
-        harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
         TestDefinition definition = new () { CurrentModelId = model.Name };
-        definition.PrivateModelDefinitions.Add(model);
+        definition.Add(model);
         
-        Agent agent = new(Token, model, harness, "Be helpful.");
+        Instances.Agents.Add(definition);
+
+        Agent? agent = definition.GetAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+        agent.Harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
         await agent.SendAsync("first", token);
         await agent.SendAsync("second", token);
@@ -65,10 +74,13 @@ public class SkillTests
     [Test, CancelAfter(5000)]
     public async Task ReadSkillReturnsSkillData(CancellationToken token)
     {
-        GenericHarness harness = new(Token);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        Harness harness = new(Token);
         harness.AddSkill(new Skill("boxes", "How to draw boxes", "Use the Box command."));
 
-        ToolReturn result = await harness.UseToolAsync("Default_Tools", "read_skill", [new ToolString("name", "Boxes")], token);
+        ToolReturn result = await harness.UseToolAsync(agent, "Default_Tools", "read_skill", [new ToolString("name", "Boxes")], token);
 
         Assert.That(result.Result, Is.EqualTo(ToolResult.Success));
         Assert.That(result.Message, Is.EqualTo("Use the Box command."));
@@ -77,7 +89,7 @@ public class SkillTests
     [Test]
     public void DuplicateSkillIsRejected()
     {
-        GenericHarness harness = new(Token);
+        Harness harness = new(Token);
         Assert.That(harness.AddSkill(new Skill("boxes", "a", "a")), Is.True);
         Assert.That(harness.AddSkill(new Skill("Boxes", "b", "b")), Is.False);
     }

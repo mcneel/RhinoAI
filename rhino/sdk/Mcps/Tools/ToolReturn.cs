@@ -67,6 +67,6 @@ public sealed record ToolReturn
     /// <summary>
     /// A refused tool call
     /// </summary>
-    internal static ToolReturn Refused() => new("Tool use was refused", ToolResult.Failure, "Ask the user what to do");
+    internal static ToolReturn Refused(string toolName) => new($"Use of {toolName} was refused", ToolResult.Failure, "Ask the user what to do");
 
 }

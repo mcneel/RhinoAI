@@ -9,6 +9,12 @@ public class PermissionTests
     
     private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+    }
+
     [Test, CancelAfter(5000)]
     public async Task PermissionRequested(CancellationToken token)
     {

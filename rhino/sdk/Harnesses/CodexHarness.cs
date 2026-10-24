@@ -15,29 +15,14 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class CodexHarness : IHarness
+internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 {
-
-    private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
-
-    private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
-
-    public HarnessConfig Config { get; } = new();
-
-    public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
-
-    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
-
-    public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "Codex: no approval in codex exec. You'd have to switch CodexHarness to codex app-server, which has a published schema but is labelled experimental.")]
     public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
-    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not CodexDesktopModel codexModel) yield break;
         if (!await EnsureLoggedIn(token, codexModel))
@@ -169,7 +154,13 @@ internal sealed class CodexHarness : IHarness
         process.StartInfo.ArgumentList.Add("--model");
         process.StartInfo.ArgumentList.Add(agent.Model.Name);
 
-        foreach (string mcpArg in GetMcpArgs())
+        // Effort
+        if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
+        {
+            // TODO : Put into the toml?
+        }
+
+        foreach (string mcpArg in GetMcpArgs(agent))
         {
             process.StartInfo.ArgumentList.Add(mcpArg);
         }
@@ -564,18 +555,18 @@ internal sealed class CodexHarness : IHarness
     }
 
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
-    private IEnumerable<string> GetMcpArgs()
+    private IEnumerable<string> GetMcpArgs(Agent agent)
     {
         string disabledTools = TomlArray(Instances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             string? transport = mcp switch
             {
                 StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",
                 HttpMcp httpMcp => $"url='{httpMcp.Url.AbsoluteUri}'",
-                MemoryMcp memMcp => HandleMemoryMcp(memMcp),
+                MemoryMcp memMcp => HandleMemoryMcp(agent, memMcp),
                 _ => null,
             };
             if (transport is null) continue;
@@ -587,9 +578,9 @@ internal sealed class CodexHarness : IHarness
 
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
 
-    private string HandleMemoryMcp(MemoryMcp mcp)
+    private string HandleMemoryMcp(Agent agent, MemoryMcp mcp)
     {
-        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, mcp);
+        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, mcp);
         Leases.Add(lease);
         return $"url='{lease.Uri.AbsoluteUri}'";
     }

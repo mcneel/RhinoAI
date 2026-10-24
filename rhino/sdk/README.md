@@ -40,7 +40,7 @@ The brains of the Agent is the model. API Models, Desktop models and local Model
 
 ## Harnesses
 
-Desktop Models have their own harness and will use them. For API Models, Local Models or any non-hosted models the GenericHarness (or a custom harness) can be used.
+Desktop Models have their own harness and will use them. For API Models, Local Models or any non-hosted models the Harness (or a custom harness) can be used.
 
 ## MCPs
 
@@ -56,3 +56,8 @@ After that various calls run by the agents will be approved by the user.
 ``` cs
 PlugInToken token = PlugInRegistry.Register();
 ```
+
+
+# External
+
+How can this SDK be used outside of Rhino? If people connect via the router etc.

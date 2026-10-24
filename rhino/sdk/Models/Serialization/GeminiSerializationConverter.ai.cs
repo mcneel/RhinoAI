@@ -11,7 +11,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
 
     public string Vendor { get; } = vendor;
 
-    public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
+    public JsonObject ToRequest(RequestSettings settings, Harness harness, IEnumerable<ITurn> turns)
     {
         StringBuilder system = new();
         JsonArray contents = [];
@@ -62,7 +62,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
         return body;
     }
 
-    public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response)
+    public IReadOnlyList<ITurn> FromResponse(Harness harness, JsonNode response)
     {
         if (response is not JsonObject payload)
             throw new JsonException("Gemini returned something other than a response object.");
@@ -129,7 +129,7 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
             part["thoughtSignature"] = signature.Value;
     }
 
-    private ITurn? ToTurn(IHarness harness, JsonObject part)
+    private ITurn? ToTurn(Harness harness, JsonObject part)
     {
         ThoughtSignature? signature = (string?)part["thoughtSignature"] is string value
             ? new ThoughtSignature(Vendor, null, value)
@@ -151,10 +151,10 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
 
     private static string NewId() => $"call_{Guid.NewGuid():N}";
 
-    private static JsonArray Declarations(IHarness harness)
+    private static JsonArray Declarations(Harness harness)
     {
         JsonArray declarations = [];
-        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
+        foreach ((Mcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {

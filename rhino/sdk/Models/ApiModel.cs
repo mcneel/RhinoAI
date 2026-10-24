@@ -21,8 +21,6 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     public int MaxOutputTokens { get; set; } = 8192;
 
-    public bool Available => !string.IsNullOrEmpty(ApiKey);
-
     private Uri Host { get; } = host;
 
     private Protocol Protocol { get; } = protocol;
@@ -31,9 +29,9 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     protected HttpClient Http { get; } = new();
 
-    protected string? ApiKey { get; set; }
+    public string? ApiKey { get; set; }
 
-    public virtual async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
+    public virtual async Task<IEnumerable<ITurn>> SendAsync(Harness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
         List<ITurn> turnsOut = [];
         await foreach (ITurn turn in StreamAsync(harness, turns, token).ConfigureAwait(false))
@@ -44,11 +42,8 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
         return turnsOut;
     }
 
-    public virtual async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
+    public virtual async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
     {
-        if (!Instances.Preferences.IsPermitted(Vendor, Name))
-            throw new PermissionException("Model or Vendor does not have permission.");
-
         JsonObject body = Converter.ToRequest(new RequestSettings(Name, MaxOutputTokens), harness, turns);
 
         using HttpRequestMessage request = GetRequest(body);
