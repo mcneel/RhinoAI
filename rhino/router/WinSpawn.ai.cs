@@ -18,13 +18,36 @@ internal static class WinSpawn
     private const uint CREATE_BREAKAWAY_FROM_JOB  = 0x01000000;
     private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
 
-    public static Process Start(string exePath, string arguments, IDictionary<string, string> extraEnv)
+    private const uint STARTF_USESHOWWINDOW = 0x00000001;
+
+    private const ushort SW_HIDE             = 0;
+    private const ushort SW_SHOWMINNOACTIVE  = 7;
+
+    public static Process Start(
+        string exePath,
+        string arguments,
+        IDictionary<string, string> extraEnv,
+        SpawnWindowMode windowMode = SpawnWindowMode.Normal)
     {
         // CreateProcess can write into lpCommandLine; pre-size to Windows' 32k limit.
         StringBuilder cmdLine = new (32768);
         cmdLine.Append('"').Append(exePath).Append('"').Append(' ').Append(arguments);
 
         STARTUPINFOW startup = new() { cb = (uint)Marshal.SizeOf<STARTUPINFOW>() };
+
+        // wShowWindow is only consulted when STARTF_USESHOWWINDOW is set, and only
+        // by a child that shows its main window with the show command Windows handed
+        // it (SW_SHOWDEFAULT) rather than a hard-coded one. Rhino's main frame does,
+        // so the request lands; leave the struct untouched for Normal so the
+        // pre-existing launch is byte-for-byte what it was.
+        if (windowMode != SpawnWindowMode.Normal)
+        {
+            startup.dwFlags |= STARTF_USESHOWWINDOW;
+            startup.wShowWindow = windowMode == SpawnWindowMode.Minimized
+                ? SW_SHOWMINNOACTIVE
+                : SW_HIDE;
+        }
+
         IntPtr envBlock = BuildEnvBlock(extraEnv);
         try
         {
