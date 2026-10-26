@@ -1,4 +1,5 @@
 namespace Rhino.AI;
+using Rhino.UI;
 
 // One router env override the Connect dialog's Advanced tab exposes. The router
 // runs as a separate AOT binary, so its env-var names can't be shared as
@@ -13,21 +14,21 @@ internal sealed record RouterEnvOverride(IReadOnlyList<string> EnvVars, string L
 
     // Placeholder text shown in the empty field: the default value, or a hint
     // when the default is "unset".
-    public string Placeholder => Default.Length > 0 ? Default : "(installed default)";
+    public string Placeholder => Default.Length > 0 ? Default : LOC.STR("(installed default)");
 
     public static RouterEnvOverride DefaultVersion { get; } =
-        new(["RHINO_MCP_DEFAULT_VERSION"], "Default version", "8",
-            "Rhino version auto-spawned for un-pinned tool calls: 8, 9, or WIP.");
+        new(["RHINO_MCP_DEFAULT_VERSION"], LOC.STR("Default version"), "8",
+            LOC.STR("Rhino version auto-spawned for un-pinned tool calls: 8, 9, or WIP."));
 
     public static IReadOnlyList<RouterEnvOverride> Catalog { get; } =
     [
         DefaultVersion,
-        new(["RHINO_MCP_STARTUP_TIMEOUT"], "Startup timeout (s)", "120",
-            "Seconds to wait for Rhino to bind its port before failing. Raise for slow or debug builds."),
-        new(["RHINO_MCP_RHINO_EXE_8"], "Rhino 8 path", "",
-            "Custom Rhino.exe (Windows) or .app bundle (macOS) to launch for version 8."),
-        new(["RHINO_MCP_RHINO_EXE_9", "RHINO_MCP_RHINO_EXE_WIP"], "Rhino 9/WIP path", "",
-            "Custom Rhino.exe / .app to launch for version 9 and WIP, which resolve to one build."),
+        new(["RHINO_MCP_STARTUP_TIMEOUT"], LOC.STR("Startup timeout (s)"), "120",
+            LOC.STR("Seconds to wait for Rhino to bind its port before failing. Raise for slow or debug builds.")),
+        new(["RHINO_MCP_RHINO_EXE_8"], LOC.STR("Rhino 8 path"), "",
+            LOC.STR("Custom Rhino.exe (Windows) or .app bundle (macOS) to launch for version 8.")),
+        new(["RHINO_MCP_RHINO_EXE_9", "RHINO_MCP_RHINO_EXE_WIP"], LOC.STR("Rhino 9/WIP path"), "",
+            LOC.STR("Custom Rhino.exe / .app to launch for version 9 and WIP, which resolve to one build.")),
         // RHINO_MCP_HOME is deliberately NOT exposed: it's a shared contract read
         // independently by the router and the plugin (RouterPaths is linked into
         // both). Setting it in this env block reaches only the router, so the
