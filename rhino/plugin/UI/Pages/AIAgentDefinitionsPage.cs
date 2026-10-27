@@ -29,16 +29,19 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             AllowDrop = false,
             Panel1 = GetDefinitionsView(),
             Panel2 = GetProperties(),
-            FixedPanel = SplitterFixedPanel.Panel2,
+            Panel2MinimumSize = 400,
+            FixedPanel = SplitterFixedPanel.Panel1,
         };
 
         Content = splitter;
     }
 
+    private static Padding InternalPadding { get; } = new(4, 4);
+    private static Size InternalSpacing { get; } = new(6, 6);
+
     private Control GetProperties()
     {
-        DynamicLayout layout = new();
-        layout.BeginVertical();
+        DynamicLayout layout = new() { Padding = InternalPadding, Spacing = InternalSpacing };
 
         // NOTE : Someone WILL say "Why aren't we using OptionsList here?" - It seems to be internal, so I can't
 
@@ -51,7 +54,7 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             Binding.Property((UIAgentDefinition d) => d.Available).Convert(a => (string?)(a ? "Available" : "Not available")),
             DualBindingMode.OneWay);
 
-        layout.BeginVertical();
+        layout.BeginVertical(Padding.Empty, InternalSpacing);
         layout.AddRow(Caption("Name"), BindText(new TextBox(), d => d.DisplayName));
         layout.AddRow(Caption("Vendor"), BindText(new TextBox(), d => d.Vendor));
         layout.AddRow(Caption("Enabled"), enabled);
@@ -74,14 +77,15 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             DataStore = new ObservableCollection<object>(AIAgentDefinitionsViewModel.Types),
         };
         typeDropDown.BindDataContext(tdd => tdd.SelectedValue, Binding.Property((UIAgentDefinition d) => d.Type).Cast<object?>());
-        layout.Add(typeDropDown);
+        layout.BeginVertical(Padding.Empty, InternalSpacing);
+        layout.AddRow(Caption("Type"), typeDropDown);
+        layout.EndVertical();
 
         Panel customControls = new() { Padding = 0 };
         customControls.BindDataContext(cc => cc.Content, Binding.Property((UIAgentDefinition d) => d.Type).Convert(t => (Control?)GetTypeControls(t)));
         layout.Add(customControls);
-        layout.Add(new Rhino.UI.Controls.LabelSeparator());
 
-        layout.EndVertical();
+        layout.Add(null);
 
         layout.DataContext = Model.Current;
         layout.Enabled = Model.Current is not null;
@@ -92,10 +96,13 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             layout.Enabled = Model.Current is not null;
         };
 
-        return layout;
+        return new Scrollable { Content = layout, Border = BorderType.None, ExpandContentWidth = true };
     }
 
-    private static Label Caption(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center };
+    // Captions are split across several tables, so a shared width keeps their value columns aligned
+    private const int CaptionWidth = 150;
+
+    private static Label Caption(string text) => new() { Text = text, Width = CaptionWidth, VerticalAlignment = VerticalAlignment.Center };
 
     private static Control BindText(TextControl control, Expression<Func<UIAgentDefinition, string?>> property)
     {
@@ -264,7 +271,7 @@ internal sealed class AIAgentDefinitionsPage : AIPage
         };
 
         DynamicLayout layout = new();
-        layout.BeginVertical();
+        layout.BeginVertical(Padding.Empty, InternalSpacing);
         foreach ((string caption, Control control) in fields)
         {
             layout.AddRow(Caption(caption), control);
@@ -331,7 +338,7 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             },
         };
 
-        DynamicLayout layout = new();
+        DynamicLayout layout = new() { Width = 160 };
         layout.BeginVertical();
         layout.Add(new Label() { Text = "Agent Definitions" });
         layout.Add(grid, yscale: true);

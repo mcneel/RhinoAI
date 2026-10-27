@@ -219,6 +219,7 @@ internal sealed class AgenticPlugInInfo
     // TODO : Method to get an icon from a .ico --> Check the PlugIn.cs
     private Bitmap? GetIcon(System.Reflection.Assembly assembly, string iconResource)
     {
+        if (string.IsNullOrEmpty(iconResource)) return null;
         Stream? stream = assembly.GetManifestResourceStream(iconResource);
         if (stream is null) return null;
 
