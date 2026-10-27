@@ -46,7 +46,7 @@ JsonSerializerOptions jsonOptions = new (JsonSerializerDefaults.Web);
 jsonOptions.TypeInfoResolverChain.Insert(0, RouterJsonContext.Default);
 jsonOptions.Converters.Add(new LenientStringConverter());
 
-McpServerBuilder mcpBuilder = builder.Services
+IMcpServerBuilder mcpBuilder = builder.Services
     .AddMcpServer(o =>
     {
         o.ServerInfo = new() { Name = "rhino-mcp-router", Version = routerVersion };

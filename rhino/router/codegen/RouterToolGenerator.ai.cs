@@ -270,7 +270,7 @@ public class RouterToolGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("public static class RouterToolRegistrar");
         sb.AppendLine("{");
-        sb.AppendLine("    public static global::Microsoft.Extensions.DependencyInjection.McpServerBuilder RegisterAll(global::Microsoft.Extensions.DependencyInjection.McpServerBuilder builder, global::System.Text.Json.JsonSerializerOptions? options = null)");
+        sb.AppendLine("    public static global::Microsoft.Extensions.DependencyInjection.IMcpServerBuilder RegisterAll(global::Microsoft.Extensions.DependencyInjection.IMcpServerBuilder builder, global::System.Text.Json.JsonSerializerOptions? options = null)");
         sb.AppendLine("    {");
         sb.AppendLine("        builder = global::Microsoft.Extensions.DependencyInjection.McpServerBuilderExtensions.WithTools<global::Rhino.AI.Router.Tools.SpawnSlotTool>(builder, options);");
         foreach (var tool in tools)
