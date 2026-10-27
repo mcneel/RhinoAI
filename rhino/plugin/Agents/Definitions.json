@@ -11,7 +11,8 @@
           "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe",
           "%APPDATA%/Claude/claude-code/**/claude.exe",
           "%USERPROFILE%/.local/bin/claude.exe",
-          "%APPDATA%/npm/claude.cmd"
+          "%APPDATA%/npm/claude.cmd",
+          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe"
         ],
         "mac": [
           "%USERPROFILE%/.local/bin/claude",
