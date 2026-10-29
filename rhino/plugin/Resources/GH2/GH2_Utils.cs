@@ -26,6 +26,13 @@ internal static class GH2_Utils
   {
     doc = default!;
 
+    // No GH2 on Linux: Rhino there is the headless RhinoCore flavor, there is no window for the
+    // editor, and GH2 disables itself at load. Answer "not available" here, the one place every
+    // canvas tool goes through, instead of trying to launch it. Deliberately not the headless
+    // flag: Rhino.Inside hosts on a full build report headless and do show the GH2 editor.
+    if (Rhino.Runtime.HostUtils.RunningOnLinux)
+      return false;
+
     Editor? editor = Editor.Instance;
     if (editor is null)
     {
@@ -46,6 +53,10 @@ internal static class GH2_Utils
   // Read-only probe for callers that must never put GH2 on screen, unlike TryGetDoc, which launches it.
   public static bool TryPeekDoc(out Document doc)
   {
+    doc = default!;
+    if (Rhino.Runtime.HostUtils.RunningOnLinux)
+      return false; // see TryGetDoc; also keeps get_context from touching the editor type
+
     doc = Editor.Instance?.Canvas?.Document!;
     return doc is not null;
   }

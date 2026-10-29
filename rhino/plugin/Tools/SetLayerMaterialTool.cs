@@ -53,7 +53,8 @@ internal static class SetLayerMaterialTool
             mat.Shine = coerced.Clamp("gloss", gloss.Value, 0.0, 1.0) * Material.MaxShine;
 
         mat.CommitChanges();
-        doc.Views.Redraw();
+        if (!Rhino.Runtime.HostUtils.RunningOnLinux) // no views to redraw in the Linux RhinoCore host
+            doc.Views.Redraw();
 
         return Success(
             ContentBlock.CreateText($"Updated layer \"{layer}\" (material index {matIdx})."),
