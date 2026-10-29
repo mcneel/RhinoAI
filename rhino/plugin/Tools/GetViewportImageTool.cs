@@ -26,8 +26,7 @@ internal static class GetViewportImageTool
         [Description("Frame this bounding box (max corner). Pair with boxMin.")] Vector3d? boxMax = null,
         [Description("Magnification factor: >1 zoom in, 0<x<1 zoom out. Applied after boxMin/boxMax if both supplied.")] double? zoom = null)
     {
-        // The Linux RhinoCore host's startup document is a normal document, so check the host too.
-        if (doc.IsHeadless || Rhino.Runtime.HostUtils.RunningOnLinux)
+        if (doc.IsHeadless)
             return Failure(ToolError.RH_Doc_Headless);
 
         if (width <= 0)
