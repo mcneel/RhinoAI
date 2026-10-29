@@ -197,7 +197,7 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
 internal sealed class HttpAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
-    public override bool Available => !string.IsNullOrEmpty(ApiKey);
+    public override bool Available => ModelsRoute is not null || !string.IsNullOrEmpty(ApiKey);
 
     public string? Host { get; init; }
 
@@ -259,10 +259,10 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             "openai" => Protocols(ChatGptModel.Default, null, ChatGptModel.Completions, ChatGptModel.Responses),
             "google" => Protocols(GeminiModel.Default, null, GeminiModel.Completions, null),
             "deepseek" => Protocols(DeepSeekModel.Default, DeepSeekModel.Anthropic, DeepSeekModel.Completions, DeepSeekModel.Responses),
-            "LM Studio" => Protocols(LocalModel.Default, LocalModel.Anthropic, LocalModel.Completions, LocalModel.Responses),
+            "lm studio" => Protocols(LocalModel.Default, LocalModel.Anthropic, LocalModel.Completions, LocalModel.Responses),
             // TODO : Fix
             // "Ollama" => Protocols(null),
-            "Apple" => Protocols(LocalModel.Default, null, LocalModel.Completions, null),
+            "apple" => Protocols(LocalModel.Default, null, LocalModel.Completions, null),
 
             _ => Protocols(null, UnknownModel.Anthropic, UnknownModel.Completions, UnknownModel.Completions),
         };
