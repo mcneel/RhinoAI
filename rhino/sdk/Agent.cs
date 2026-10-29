@@ -211,7 +211,17 @@ public sealed class Agent
         return prompt.ToString();
     }
 
-    // TODO : Should there be calls like GET CLAUDE DESKTOP or nah? I feel like the GetPreferredAgent is best
+    /// <summary>
+    /// Returns an Agent with the given parameters.
+    /// If you are using this, the user should be informed you are making the decision for them.
+    /// <see cref="GetPreferredAgent"/> is always the best default.
+    /// </summary>
+    /// <param name="token">The permissions token</param>
+    /// <param name="vendor">The vendor of the model</param>
+    /// <param name="type">The type of Agent</param>
+    /// <returns>An Agent if one is available, otherwise null</returns>
+    public static Agent? GetAgentFromParameters(PlugIns.PlugInToken token, string vendor, AgentType type)
+        => Instances.Agents.FromParameters(vendor, type)?.GetAgent(token);
 
     /// <summary>
     /// Returns a claude desktop agent that uses the desktop harness

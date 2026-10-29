@@ -77,4 +77,4 @@ internal sealed class Agents
 
 }
 
-internal enum AgentType { Unknown = 0, Cli, Api, Local }
+public enum AgentType { Unknown = 0, Cli, Api, Local }

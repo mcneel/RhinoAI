@@ -34,7 +34,8 @@ public interface IAgentDefinition
 
     public string DefaultModelId { get; set; }
 
-    public string? CurrentModelId { get; set; }
+    // Looks like a dev could currently change this?
+    public string? CurrentModelId { get; internal set; }
 
     internal IModel? CurrentModel { get; }
 
