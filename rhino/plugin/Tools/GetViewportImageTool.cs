@@ -131,13 +131,33 @@ internal static class GetViewportImageTool
 
         using MemoryStream ms = new();
         bitmap.Save(ms, ImageFormat.Jpeg);
+        byte[] jpegBytes = ms.ToArray();
+        if (meta is not null)
+            meta.SavedPath = TrySaveCapture(jpegBytes);
 
         return Success(
             [
                 ContentBlock.CreateText(SerializeResult(meta)),
-                ContentBlock.CreateImage(ms.ToArray(), "image/jpeg"),
+                ContentBlock.CreateImage(jpegBytes, "image/jpeg"),
             ],
             coerced.Guidance);
+    }
+
+    // Persists the capture so subagents and external tools (which cannot receive in-memory ContentBlock bytes) can reference it by path.
+    private static string? TrySaveCapture(byte[] jpegBytes)
+    {
+        try
+        {
+            string dir = Rhino.AI.UI.ServedImages.CaptureFolder;
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, $"viewport_{DateTime.Now:yyyyMMdd_HHmmss_fff}.jpg");
+            File.WriteAllBytes(file, jpegBytes);
+            return file.Replace('\\', '/');
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private sealed class CaptureMetadata(GetContextTool.ViewportSummary viewport)
@@ -145,6 +165,7 @@ internal static class GetViewportImageTool
         public GetContextTool.ViewportSummary Viewport { get; } = viewport;
         public int ImageWidth { get; set; }
         public int ImageHeight { get; set; }
+        public string? SavedPath { get; set; }
         public BoundingBox SceneBoundingBox { get; set; } = BoundingBox.Empty;
         public int VisibleObjectCount { get; set; }
         public int TotalObjectCount { get; set; }
@@ -205,6 +226,7 @@ internal static class GetViewportImageTool
                     projection = meta.Viewport.Camera.Projection,
                     width = meta.ImageWidth,
                     height = meta.ImageHeight,
+                    path = meta.SavedPath,
                 },
                 camera = new
                 {

@@ -16,6 +16,7 @@
     <Company Condition="'$(IsInRhino)' == 'false'">Robert McNeel &amp; Associates</Company>
     <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
+    <PolySharpUseEmbeddedAttributeForGeneratedTypes>false</PolySharpUseEmbeddedAttributeForGeneratedTypes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

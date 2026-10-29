@@ -21,6 +21,8 @@ internal sealed class ConversationFeed
     private Conversation Source { get; }
     private Action<PanelEvent> Emit { get; }
     private GeneratedImages Produced { get; }
+    // (agent name, image path) -> the model the image is named after.
+    private Func<string, string, string?>? ResolveModel { get; }
 
     private List<TurnCursor> Cursors { get; } = new();
     private int LifecycleSent { get; set; }
@@ -48,13 +50,17 @@ internal sealed class ConversationFeed
         public StringBuilder Text = new();
         public int TextScanned;
         public HashSet<string> ImagesSent = new(StringComparer.OrdinalIgnoreCase);
+        // One image can surface under several paths: agy.exe offloads an MCP image block to its own
+        // steps/<n>/media_0.jpg beside the path get_viewport_image already reported.
+        public HashSet<string> ContentSent = new(StringComparer.Ordinal);
     }
 
-    public ConversationFeed(Conversation source, Action<PanelEvent> emit, string? generatedImagesRoot = null)
+    public ConversationFeed(Conversation source, Action<PanelEvent> emit, string? generatedImagesRoot = null, Func<string, string, string?>? resolveModel = null)
     {
         Source = source;
         Emit = emit;
         Produced = new GeneratedImages(generatedImagesRoot);
+        ResolveModel = resolveModel;
     }
 
     // Replay the whole conversation as if it were arriving live. Cheaper than a snapshot type, and
@@ -224,11 +230,38 @@ internal sealed class ConversationFeed
 
     private void EmitImage(TurnCursor cursor, string path)
     {
-        if (cursor.ImagesSent.Contains(path) || ServedImages.Publish(path) is not { } image)
+        if (cursor.ImagesSent.Contains(path))
+            return;
+
+        string? digest = ContentDigest(path);
+        if (digest is not null && cursor.ContentSent.Contains(digest))
+        {
+            cursor.ImagesSent.Add(path);
+            return;
+        }
+
+        string? model = ResolveModel?.Invoke(Source.AgentName, path);
+        string displayName = ServedImages.FormatRenderName(path, Source.DocTitle, Source.AgentName, model);
+        if (ServedImages.Publish(path, displayName) is not { } image)
             return;
 
         cursor.ImagesSent.Add(path);
+        if (digest is not null)
+            cursor.ContentSent.Add(digest);
         Emit(new TurnImageEvent(cursor.Id, image));
+    }
+
+    // Null when the file cannot be read; Publish then decides, so a locked file is not silently dropped.
+    private static string? ContentDigest(string path)
+    {
+        try
+        {
+            using System.IO.FileStream stream = System.IO.File.OpenRead(path);
+            using System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create();
+            return BitConverter.ToString(sha.ComputeHash(stream));
+        }
+        catch (System.IO.IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
     }
 
     // Diff the posed set against the conversation's: drop what is gone, pose what is new. Both
