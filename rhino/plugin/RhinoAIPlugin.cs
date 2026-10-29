@@ -34,8 +34,16 @@ public class RhinoAIPlugin : PlugIn
             && int.TryParse(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar), out int port)
             && RhinoDoc.ActiveDoc is RhinoDoc activeDoc)
         {
+            // Several RhinoCore processes on one machine (Rhino.Compute children) share the
+            // variable, so only the first can have the configured port; the rest fall back to
+            // the next free one and announce it like any other listener.
             if (!RhinoAIHost.StartOrRestart(activeDoc, port, quiet: true))
-                HostUtils.LogDebugEvent($"RhinoAI: headless MCP listener failed to start on port {port}.\n");
+            {
+                if (RhinoAIHost.TryGetNextPort(out int fallback) && RhinoAIHost.StartOrRestart(activeDoc, fallback, quiet: true))
+                    HostUtils.LogDebugEvent($"RhinoAI: port {port} was taken; headless MCP listener started on {fallback}.\n");
+                else
+                    HostUtils.LogDebugEvent($"RhinoAI: headless MCP listener failed to start on port {port}.\n");
+            }
         }
 
         ScriptProjects.ScriptProjectStartup.ReloadWhenIdle();

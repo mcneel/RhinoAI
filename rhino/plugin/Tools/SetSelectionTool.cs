@@ -110,7 +110,8 @@ internal static class SetSelectionTool
             }
         }
 
-        doc.Views.Redraw();
+        if (!Rhino.Runtime.HostUtils.RunningOnLinux) // no views to redraw in the Linux RhinoCore host
+            doc.Views.Redraw();
 
         return Success(
             ContentBlock.CreateText($"Selected {selected} object(s)."),
