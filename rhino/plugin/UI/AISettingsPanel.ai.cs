@@ -45,6 +45,8 @@ internal sealed class AISettingsPanel : Panel
     // the editor from a freshly selected row.
     private bool Loading { get; set; }
 
+    private List<(string Name, AIPage Page)> Pages { get; } = [];
+
     public AISettingsPanel()
     {
         Padding = new Padding(20);
@@ -53,16 +55,22 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = new AIAgentDefinitionsPage() });
+        AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
         tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
         tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-        
+
         // Human written pages
-        tabs.Pages.Add(new TabPage { Text = LOC.STR("Usage"), Content = new AIUsagePage() });
-        tabs.Pages.Add(new TabPage { Text = LOC.STR("PlugIns"), Content = new AIPluginPage() });
-        tabs.Pages.Add(new TabPage { Text = LOC.STR("Permissions"), Content = new AIPermissionsPage() });
+        AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
+        AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
+        AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
 
         Content = tabs;
+    }
+
+    private void AddPage(TabControl tabs, string name, AIPage page)
+    {
+        tabs.Pages.Add(new TabPage { Text = name, Content = page });
+        Pages.Add((name, page));
     }
 
     // Persists every tab back to AISettings. Returns false (and shows the MCP error inline) when the
@@ -79,6 +87,20 @@ internal sealed class AISettingsPanel : Panel
             return false;
         }
         McpErrorLabel.Visible = false;
+
+        foreach ((string name, AIPage page) in Pages)
+        {
+            if (page.Validate()) continue;
+            error = string.Format(LOC.STR("The {0} settings are not valid."), name);
+            return false;
+        }
+
+        foreach ((string name, AIPage page) in Pages)
+        {
+            if (page.TryApplyChanges()) continue;
+            error = string.Format(LOC.STR("The {0} settings could not be applied."), name);
+            return false;
+        }
 
         foreach (AgentRow row in Rows)
         {

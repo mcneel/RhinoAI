@@ -43,10 +43,17 @@ public static class PlugInRegistry
             string name = assembly.GetName()?.Name ?? assembly.FullName ?? id.ToString();
             token = new(id, name);
 
-            Tokens[assembly] = token;
-            Permissions[token] = new PlugInPermission(false);
+            bool permission = false;
+            // Default to true for Script Editor as this is users running their own scripts
+            if (id == new Guid("c9cba87a-23ce-4f15-a918-97645c05cde7"))
+            {
+                permission = true;
+            }
 
-            if (AgenticPlugIn.Get(assembly, id, name) is {} plugin)
+            Tokens[assembly] = token;
+            Permissions[token] = new PlugInPermission(permission);
+
+            if (AgenticPlugIn.Get(assembly, id, name) is { } plugin)
             {
                 PrivatePlugIns.Add(token, plugin);
             }
@@ -70,7 +77,7 @@ public static class PlugInRegistry
         if (permission is null) return false;
         return permission.Allowed;
     }
-    
+
     internal static void GivePermission(PlugInToken token)
     {
         Permissions[token] = new PlugInPermission(true);
@@ -176,26 +183,30 @@ public static class PlugInRegistry
 
         public static AgenticPlugIn? Get(Assembly assembly, Guid id, string name)
         {
-            foreach(object attrib in assembly.GetCustomAttributes(false))
+            try
             {
-                Type? type = attrib?.GetType();
-                if (type is null) continue;
+                foreach (object attrib in assembly.GetCustomAttributes(false))
+                {
+                    Type? type = attrib?.GetType();
+                    if (type is null) continue;
 
-                if (!string.Equals(type.Name, "PlugInDescription")) continue;
+                    if (!string.Equals(type.Name, "PlugInDescriptionAttribute", StringComparison.OrdinalIgnoreCase)) continue;
 
-                // [assembly: PlugInDescription(DescriptionType.Icon, "Rhino.AI.Panel_light.ico")]
-                
-                // DescriptionType -> 8
-                PropertyInfo? descInfo = type.GetProperty("DescriptionType");
-                if (descInfo?.GetValue(attrib) is not int enumIntValue) continue;
-                if (enumIntValue != 8) continue;
-                
-                // Value -> is the resource
-                PropertyInfo? valueInfo = type.GetProperty("Value");
-                if (valueInfo?.GetValue(attrib) is not string resource) continue;
-                
-                return new AgenticPlugIn(assembly, id, name, resource);
+                    // [assembly: PlugInDescription(DescriptionType.Icon, "Rhino.AI.Panel_light.ico")]
+
+                    // DescriptionType -> 8
+                    PropertyInfo? descInfo = type.GetProperty("DescriptionType");
+                    int enumIntValue = (int)descInfo?.GetValue(attrib);
+                    if (enumIntValue != 8) continue;
+
+                    // Value -> is the resource
+                    PropertyInfo? valueInfo = type.GetProperty("Value");
+                    if (valueInfo?.GetValue(attrib) is not string resource) continue;
+
+                    return new AgenticPlugIn(assembly, id, name, resource);
+                }
             }
+            catch { }
 
             return null;
         }

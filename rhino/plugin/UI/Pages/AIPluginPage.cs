@@ -17,12 +17,22 @@ internal sealed class AIPluginPage : AIPage
     {
         DataContext = new AIPluginPageViewModel();
 
+        Grid.DataStore = Model.PlugIns;
+        Grid.SelectedRow = Model.SelectedIndex;
+        Grid.SelectedRowsChanged += (_, _) => Model.SelectedIndex = Grid.SelectedRow;
+
         Content = new Splitter()
         {
             Panel1 = Grid,
             Panel2 = GetProperties(),
             FixedPanel = SplitterFixedPanel.Panel2,
         };
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Model.Update();
     }
 
     private static Control GetProperties()
@@ -111,7 +121,7 @@ internal sealed class AIPluginPage : AIPage
     public GridView Grid { get; } = new()
     {
         AllowDrop = false,
-        ShowHeader = false,
+        ShowHeader = true,
         Border = BorderType.Line,
         GridLines = GridLines.None,
         AllowEmptySelection = true,
@@ -122,9 +132,26 @@ internal sealed class AIPluginPage : AIPage
             new GridColumn()
             {
                 AutoSize = true,
+                Expand = false,
                 Sortable = false,
-                DataCell = new PlugInRow()
-            }
+                DataCell = new ImageViewCell(nameof(AgenticPlugInInfo.Icon))
+            },
+            new GridColumn()
+            {
+                HeaderText = LOC.STR("Name"),
+                AutoSize = true,
+                Expand = true,
+                Sortable = false,
+                DataCell = new TextBoxCell(nameof(AgenticPlugInInfo.Name))
+            },
+            new GridColumn()
+            {
+                HeaderText = LOC.STR("Enabled"),
+                AutoSize = true,
+                Expand = false,
+                Sortable = false,
+                DataCell = new CheckBoxCell(nameof(AgenticPlugInInfo.Enabled)),
+            },
         }
     };
 
@@ -142,41 +169,6 @@ internal sealed class AIPluginPage : AIPage
         return true;
     }
 
-    private sealed class PlugInRow : CustomCell
-    {
-
-        // Controls
-        protected override Control OnCreateCell(CellEventArgs args)
-        {
-            // TODO : Default icon image
-            ImageView image = new();
-            image.BindDataContext(v => v.Image, (AgenticPlugInInfo i) => i.Icon);
-
-            Label name = new();
-            name.BindDataContext(v => v.Text, (AgenticPlugInInfo i) => i.Name);
-
-            CheckBox enabled = new() { Text = "Enabled" };
-            enabled.BindDataContext(e => e.Checked, (AgenticPlugInInfo i) => i.Enabled);
-
-            DynamicLayout layout = new();
-            layout.BeginHorizontal();
-            layout.Add(image);
-            layout.Add(name);
-            layout.AddSpace();
-            layout.Add(enabled);
-            layout.EndHorizontal();
-            return layout;
-        }
-
-        // Context
-        protected override void OnConfigureCell(CellEventArgs args, Control control)
-        {
-            control.DataContext = args.Item;
-            // if (args.Item is not PlugInDataItem item ) return;
-        }
-
-    }
-
 }
 
 internal sealed class AgenticPlugInInfo
@@ -190,7 +182,7 @@ internal sealed class AgenticPlugInInfo
 
     public bool Enabled
     {
-        get => Enabled = PlugInRegistry.HasPermission(Token);
+        get => PlugInRegistry.HasPermission(Token);
         set
         {
             if (value == Enabled) return;
@@ -230,9 +222,20 @@ internal sealed class AgenticPlugInInfo
 internal sealed class AIPluginPageViewModel : SimpleViewModel
 {
 
-    public ObservableCollection<AgenticPlugInInfo> PlugIns { get; }
-
-    public int SelectedIndex { get; set; } = 0;
+    public ObservableCollection<AgenticPlugInInfo> PlugIns { get; } = new();
+    
+    private int selectedIndex = 0;
+    public int SelectedIndex
+    {
+        get => selectedIndex;
+        set
+        {
+            if (SetProperty(ref selectedIndex, value))
+            {
+                RaisePropertyChanged(nameof(Selected));
+            }
+        }
+    }
 
     // TODO : Default icon Id (Jigsaw puzzle piece?)
     public AgenticPlugInInfo Selected
@@ -241,7 +244,18 @@ internal sealed class AIPluginPageViewModel : SimpleViewModel
 
     public AIPluginPageViewModel()
     {
-        PlugIns = new(PlugInRegistry.PlugIns.Select(kvp => new AgenticPlugInInfo(kvp.Key, kvp.Value.Assembly, kvp.Value.Id, kvp.Value.Name, kvp.Value.IconResource)));
+        Update();
+    }
+
+    public void Update()
+    {
+        PlugIns.Clear();
+        foreach(KeyValuePair<PlugInToken, PlugInRegistry.AgenticPlugIn> kvp in PlugInRegistry.PlugIns)
+        {
+            PlugIns.Add(new AgenticPlugInInfo(kvp.Key, kvp.Value.Assembly, kvp.Value.Id, kvp.Value.Name, kvp.Value.IconResource));
+        }
+
+        RaisePropertyChanged(nameof(Selected));
     }
 
 }

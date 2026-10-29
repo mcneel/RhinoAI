@@ -1,6 +1,7 @@
 {
   "definitions": [
     {
+      "id": "d07df3c4-2c1d-40a1-a90c-7e85f1acae62",
       "kind": "cli",
       "name": "Claude",
       "company": "Anthropic",
@@ -47,6 +48,7 @@
       ]
     },
     {
+      "id": "82e63c9f-eb84-410c-9a3e-f47c6528f69f",
       "kind": "cli",
       "name": "Codex",
       "company": "OpenAI",
@@ -72,6 +74,7 @@
       ]
     },
     {
+      "id": "e60c182a-7224-40fb-ac23-aa388f658b4d",
       "kind": "api",
       "name": "Claude API",
       "company": "Anthropic",
@@ -99,6 +102,7 @@
       ]
     },
     {
+      "id": "3634d1fb-82e7-4151-902c-550ad7684267",
       "kind": "api",
       "name": "OpenAI API",
       "company": "OpenAI",
@@ -115,6 +119,7 @@
       ]
     },
     {
+      "id": "668294b4-1981-47b3-8d73-2f3737e808ab",
       "kind": "api",
       "name": "Gemini API",
       "company": "Google",
@@ -129,6 +134,7 @@
       ]
     },
     {
+      "id": "08a54505-f18e-4761-91b2-b1fb0bee52b5",
       "kind": "api",
       "name": "DeepSeek API",
       "company": "DeepSeek",
@@ -141,6 +147,7 @@
       ]
     },
     {
+      "id": "cf5b25e4-6267-4793-8ad9-366c70f1ec30",
       "kind": "local",
       "name": "LM Studio",
       "company": "LM Studio",
@@ -150,6 +157,7 @@
       "models": []
     },
     {
+      "id": "55e8aa26-90ce-4c6b-8546-240478ffc1ca",
       "kind": "local",
       "name": "Ollama",
       "company": "Ollama",
@@ -159,6 +167,7 @@
       "models": []
     },
     {
+      "id": "cbb7828b-bd18-4939-829f-53881c22daba",
       "kind": "local",
       "name": "Apple Intelligence",
       "company": "Apple",

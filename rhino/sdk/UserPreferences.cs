@@ -16,7 +16,7 @@ public class UserPreferences
     // AutoLoadMcpBox.Checked = AISettings.AutoLoadMCP;
     // AutoLoadScriptPlugInBox.Checked = AISettings.AutoLoadScriptPlugIn;
     
-    public Guid PreferedAgentId { get; }
+    public Guid PreferedAgentId { get; set; } = new Guid("d07df3c4-2c1d-40a1-a90c-7e85f1acae62");
     
     /// <summary>
     /// Global user Permissions

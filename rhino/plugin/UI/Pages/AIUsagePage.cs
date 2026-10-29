@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 using Eto.Forms;
 using Eto.Drawing;
 
@@ -27,17 +29,27 @@ internal sealed class AIUsagePage : AIPage
         InitLayout();
     }
 
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Model.Update();
+    }
+
     private void InitLayout()
     {
         DynamicLayout layout = new();
         layout.BeginVertical();
 
-        // layout.Add
+        Label total = new() { Font = Fonts.Sans(16, FontStyle.Bold) };
+        total.TextBinding.BindDataContext(Binding.Property((AIUsageViewModel vm) => vm.OverallTotal).Convert(t => string.Format("{0:N0} tokens", t)));
+        layout.Add(total);
 
         // TODO : I would like things to NOT be selectable in this grid view
         GridView view = new()
         {
             SelectedRow = -1, // Default to nothing selected
+            DataStore = Model.Stats,
+            RowHeight = 44,
 
             Enabled = false,
             AllowDrop = false,
@@ -52,7 +64,8 @@ internal sealed class AIUsagePage : AIPage
             {
                 new GridColumn()
                 {
-                    DataCell = new StatisticCell()
+                    DataCell = new StatisticCell(),
+                    Expand = true,
                 }
             }
         };
@@ -77,10 +90,10 @@ internal sealed class StatisticCell : CustomCell
         // icon.BindDataContext(i => i.Image, Binding.Property((Statistics s) => s.Image));
 
         Label tokenCount = new();
-        // tokenCount.BindDataContext(tc => tc.Text, Binding.Property((Statistics s) => s.Name));
+        tokenCount.BindDataContext(tc => tc.Text, Binding.Delegate((PlugInUsage u) => string.Format("{0} : {1:N0} tokens", u.Name, u.TokenCount)));
 
         ModelBar modelBreakdown = new();
-        modelBreakdown.BindDataContext(tc => tc.ModelList, Binding.Property((PlugInStatistics s) => s.Statistics).Cast<List<PlugInModelStatistic>?>());
+        modelBreakdown.BindDataContext(tc => tc.ModelList, Binding.Property((PlugInUsage u) => u.Models).Cast<List<PlugInModelStatistic>?>());
 
         DynamicLayout data = new();
         data.BeginVertical();
@@ -196,21 +209,33 @@ internal sealed class ModelBar : Drawable
 internal sealed class AIUsageViewModel : SimpleViewModel
 {
 
-    public int OverallTotal { get; } = 0;
+    private int overallTotal;
+    public int OverallTotal { get => overallTotal; private set => SetProperty(ref overallTotal, value); }
 
-    public List<PlugInStatistics> Stats { get; } = [];
+    public ObservableCollection<PlugInUsage> Stats { get; } = [];
 
     public AIUsageViewModel()
     {
+        Update();
+    }
+
+    public void Update()
+    {
+        Stats.Clear();
+        int total = 0;
         IEnumerable<PlugIns.PlugInToken> tokens = PlugIns.PlugInRegistry.PlugIns.Keys;
         foreach (PlugIns.PlugInToken token in tokens)
         {
             PlugInStatistics? stats = PlugInStatistics.Usage(token);
             if (stats is null) continue;
 
-            OverallTotal += stats.TotalTokenUsage;
-            Stats.Add(stats);
+            total += stats.TotalTokenUsage;
+            Stats.Add(new PlugInUsage(token.Name, stats.TotalTokenUsage, stats.Statistics));
         }
+
+        OverallTotal = total;
     }
 
 }
+
+internal sealed record PlugInUsage(string Name, int TokenCount, List<PlugInModelStatistic> Models);

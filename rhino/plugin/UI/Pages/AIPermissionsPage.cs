@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 using Eto.Forms;
 
 namespace Rhino.AI.UI;
@@ -48,6 +50,12 @@ internal sealed class AIPermissionsPage : AIPage
         InitLayout();
     }
 
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Model.Update();
+    }
+
     private void InitLayout()
     {
         DynamicLayout layout = new();
@@ -78,14 +86,25 @@ internal sealed class AIPermissionsPage : AIPage
 internal sealed class AIPermissionsViewModel : SimpleViewModel
 {
 
-    public UIPermission GlobalPermissions { get; }
-    
-    public List<UIPermission> AgentPermissions { get; } = [];
-    
+    public UIPermission GlobalPermissions { get; private set; } = new(Instances.Preferences.Permissions);
+
+    public ObservableCollection<UIPermission> AgentPermissions { get; } = [];
+
     public AIPermissionsViewModel()
     {
+        Update();
+    }
+
+    public void Update()
+    {
         GlobalPermissions = new UIPermission(Instances.Preferences.Permissions);
-        AgentPermissions = new (Instances.Agents.Definitions.Select(d => new UIPermission(d)));
+        RaisePropertyChanged(nameof(GlobalPermissions));
+
+        AgentPermissions.Clear();
+        foreach (IAgentDefinition definition in Instances.Agents.Definitions)
+        {
+            AgentPermissions.Add(new UIPermission(definition));
+        }
     }
 
     public record UIPermission

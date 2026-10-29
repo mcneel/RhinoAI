@@ -1,12 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Linq.Expressions;
-
+using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
 
 using Rhino.AI.Models;
 using Rhino.AI.PlugIns;
 using Rhino.Runtime;
+using Rhino.UI;
 
 namespace Rhino.AI.UI;
 
@@ -20,6 +21,19 @@ internal sealed class AIAgentDefinitionsPage : AIPage
     {
         DataContext = new AIAgentDefinitionsViewModel();
         InitLayout();
+        Model.PropertyChanged += UpdateGrid;
+    }
+
+    private void UpdateGrid(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(UIAgentDefinition.Preferred)) return;
+        Invalidate(true);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Model.Update();
     }
 
     private void InitLayout()
@@ -48,6 +62,9 @@ internal sealed class AIAgentDefinitionsPage : AIPage
         CheckBox enabled = new();
         enabled.BindDataContext(c => c.Checked, Binding.Property((UIAgentDefinition d) => d.Enabled).Cast<bool?>());
 
+        CheckBox preferred = new();
+        preferred.BindDataContext(c => c.Checked, Binding.Property((UIAgentDefinition d) => d.Preferred).Cast<bool?>());
+
         Label available = new();
         available.BindDataContext(
             l => l.Text,
@@ -58,6 +75,7 @@ internal sealed class AIAgentDefinitionsPage : AIPage
         layout.AddRow(Caption("Name"), BindText(new TextBox(), d => d.DisplayName));
         layout.AddRow(Caption("Vendor"), BindText(new TextBox(), d => d.Vendor));
         layout.AddRow(Caption("Enabled"), enabled);
+        layout.AddRow(Caption("Preferred"), preferred);
         layout.AddRow(Caption("Status"), available);
         layout.AddRow(Caption("Default model"), GetDefaultModelDropDown());
         layout.EndVertical();
@@ -306,17 +324,26 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             {
                 new GridColumn()
                 {
-                    DataCell = new ImageViewCell(nameof(UIAgentDefinition.Icon))
+                    DataCell = new ImageViewCell(nameof(UIAgentDefinition.Icon)),
+                    Editable = false,
                 },
                 new GridColumn()
                 {
+                    HeaderText = "Name",
                     DataCell = new TextBoxCell(nameof(UIAgentDefinition.DisplayName)),
                     Expand = true,
                 },
                 new GridColumn()
                 {
+                    HeaderText = "Enabled",
                     DataCell = new CheckBoxCell(nameof(UIAgentDefinition.Enabled)),
                     Editable = true,
+                },
+                new GridColumn()
+                {
+                    DataCell = new ImageViewCell(nameof(UIAgentDefinition.PreferredImage)),
+                    CellToolTipBinding = Binding.Property((UIAgentDefinition d) => d.PreferredToolTip),
+                    Editable = false,
                 },
             }
         };
@@ -338,7 +365,7 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             },
         };
 
-        DynamicLayout layout = new() { Width = 160 };
+        DynamicLayout layout = new() { Width = 180 };
         layout.BeginVertical();
         layout.Add(new Label() { Text = "Agent Definitions" });
         layout.Add(grid, yscale: true);
@@ -357,9 +384,9 @@ internal sealed class AIAgentDefinitionsPage : AIPage
 internal sealed class AIAgentDefinitionsViewModel : SimpleViewModel
 {
 
-    public ObservableCollection<UIAgentDefinition> Definitions { get; }
+    public ObservableCollection<UIAgentDefinition> Definitions { get; } = [];
 
-    private int index;
+    private int index = -1;
     public int Index
     {
         get => index;
@@ -379,15 +406,35 @@ internal sealed class AIAgentDefinitionsViewModel : SimpleViewModel
 
     public static List<object> Types { get; } = [AgentType.Cli, AgentType.Api, AgentType.Local];
 
-    private HashSet<Guid> AppliedIds { get; set; }
+    private HashSet<Guid> AppliedIds { get; set; } = [];
 
     public AIAgentDefinitionsViewModel()
     {
-        Definitions = new(Instances.Agents.Definitions.Select(d => new UIAgentDefinition(d)));
-        AppliedIds = [.. Instances.Agents.Definitions.Select(d => d.Id)];
-        index = Definitions.Count > 0 ? 0 : -1;
         AddCommand = new Command(AddMethod);
         RemoveCommand = new Command(RemoveMethod);
+        Update();
+    }
+
+    public void Update()
+    {
+        Definitions.Clear();
+        foreach (IAgentDefinition definition in Instances.Agents.Definitions)
+        {
+            UIAgentDefinition newDef = new UIAgentDefinition(definition);
+            Definitions.Add(newDef);
+
+            newDef.PropertyChanged += UpdateGrid;
+        }
+
+        AppliedIds = [.. Instances.Agents.Definitions.Select(d => d.Id)];
+        Index = Definitions.Count > 0 ? 0 : -1;
+        RaisePropertyChanged(nameof(Current));
+    }
+
+    private void UpdateGrid(object? _, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(UIAgentDefinition.Preferred)) return;
+        this.RaisePropertyChanged(nameof(UIAgentDefinition.Preferred));
     }
 
     private void AddMethod(object? sender, EventArgs e)
@@ -537,6 +584,39 @@ internal sealed class UIAgentDefinition : SimpleViewModel
 
     private bool enabled = true;
     public bool Enabled { get => enabled; set => SetProperty(ref enabled, value); }
+
+    public bool Preferred
+    {
+        get => Instances.Preferences.PreferedAgentId == this.Id;
+        set
+        {
+            Instances.Preferences.PreferedAgentId = this.Id;
+            // TODO : Does this refresh other items?
+            RaisePropertyChanged(nameof(Preferred));
+        }
+    }
+
+    private const string PreferredIconResourceName = "Rhino.AI.Panel_light.svg";
+    private const string PreferredDarkIconResourceName = "Rhino.AI.Panel_dark.svg";
+    private static Bitmap? PreferredLightImage { get; set; }
+    private static Bitmap? PreferredDarkImage { get; set; }
+
+    public Bitmap? PreferredImage
+    {
+        get
+        {
+            if (!Preferred) return null;
+            return HostUtils.RunningInDarkMode
+                ? PreferredDarkImage ??= LoadPreferredImage(PreferredDarkIconResourceName)
+                : PreferredLightImage ??= LoadPreferredImage(PreferredIconResourceName);
+        }
+    }
+
+    public string PreferredToolTip => LOC.STR("Preferred Agent");
+
+    // The light and dark artwork are separate files, so the svg needs no dark-mode adjustment.
+    private static Bitmap? LoadPreferredImage(string resourceName)
+        => Rhino.UI.ImageResources.CreateEtoBitmap(resourceName, typeof(UIAgentDefinition).Assembly, 32, 32, false);
 
     private string defaultModelId = string.Empty;
     public string DefaultModelId { get => defaultModelId; set => SetProperty(ref defaultModelId, value); }
