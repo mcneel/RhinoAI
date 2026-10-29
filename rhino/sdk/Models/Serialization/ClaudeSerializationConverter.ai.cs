@@ -73,7 +73,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: (int?)message["usage"]?["output_tokens"]));
+        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: Tokens(message["usage"])));
 
         return turns;
     }
@@ -166,5 +166,12 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
 
         _ => StopReason.Other,
     };
+
+    // Claude reports no total, and input_tokens excludes whatever was read from or written to the prompt cache.
+    private static int? Tokens(JsonNode? usage) => usage is null ? null
+        : ((int?)usage["input_tokens"] ?? 0)
+        + ((int?)usage["cache_creation_input_tokens"] ?? 0)
+        + ((int?)usage["cache_read_input_tokens"] ?? 0)
+        + ((int?)usage["output_tokens"] ?? 0);
 
 }

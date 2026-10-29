@@ -35,6 +35,7 @@ public class AgentTests
         IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
         AssertUsedWeatherTool(turns.ToList());
+        Assert.That(turns.Sum(t => t.TokenCount), Is.GreaterThan(0));
     }
 
     [Test, CancelAfter(5000)]

@@ -33,6 +33,8 @@ public sealed class Loop(Harness harness)
     {
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
+        StopReason reason = StopReason.EndTurn;
+        int? tokenCount = null;
 
         if (agent.Model is null)
             throw new Exception("Agent does not have a valid model");
@@ -45,7 +47,15 @@ public sealed class Loop(Harness harness)
 
             await foreach (ITurn turn in agent.Model.StreamAsync(Harness, conversation, token))
             {
-                if (turn is TurnEnd) continue;
+                // Each request ends with its own TurnEnd; the caller gets one for the whole loop.
+                if (turn is TurnEnd end)
+                {
+                    reason = end.Reason;
+                    if (end.TokenCount is int count)
+                        tokenCount = (tokenCount ?? 0) + count;
+                    continue;
+                }
+
                 conversation.Add(turn);
                 yield return turn;
 
@@ -59,6 +69,8 @@ public sealed class Loop(Harness harness)
 
         }
         while (results.Count > 0);
+
+        yield return new TurnEnd(reason, tokenCount: tokenCount);
     }
 
     private async Task<ToolReturn> UseAsync(Agent agent, ToolTurn tool, CancellationToken token)
