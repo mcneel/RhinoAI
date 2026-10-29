@@ -345,6 +345,13 @@ internal static class RhinoAIHost
         if (doc is null)
             return true;
 
+        // Headless docs (RhinoDoc.CreateHeadless) are ours to dispose; the scripted close below is for UI docs.
+        if (doc.IsHeadless)
+        {
+            doc.Dispose();
+            return true;
+        }
+
         var tempPath = Path.Combine(
             Path.GetTempPath(),
             $"rh-mcp-slot-close-{docSerial}-{Guid.NewGuid():N}.3dm");
