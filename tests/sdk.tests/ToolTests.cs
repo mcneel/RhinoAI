@@ -73,8 +73,8 @@ public class ToolTests
         Agent? agent = Agent.GetDeepSeekAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a {DeepSeekModel.Default().Name} subagent to write a letter of resignation from its job as a subagent", token);
-        Assert.That(turns, Turns.EndsWith("resign"));
+        IAgentResult result = await agent.SendAsync($"Spawn a {DeepSeekModel.Default().Name} subagent to write a letter of resignation from its job as a subagent", token);
+        Assert.That(result, Replied.With("resign"));
     }
 
     [Test, CancelAfter(40_000)]
@@ -83,8 +83,8 @@ public class ToolTests
         Agent? agent = Agent.GetDeepSeekAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync($"Spawn a subagent to write a letter of resignation from its job as a subagent", token);
-        Assert.That(turns, Turns.EndsWith("resign"));
+        IAgentResult result = await agent.SendAsync($"Spawn a subagent to write a letter of resignation from its job as a subagent", token);
+        Assert.That(result, Replied.With("resign"));
     }
 
 }

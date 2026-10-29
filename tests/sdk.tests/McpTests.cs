@@ -50,11 +50,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -70,11 +69,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -90,11 +88,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [TestCase(ToolArgType.String, typeof(ToolString))]
@@ -118,11 +115,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]

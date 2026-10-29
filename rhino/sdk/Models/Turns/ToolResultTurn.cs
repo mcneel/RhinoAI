@@ -1,15 +1,20 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-internal sealed record ToolResultTurn : Turn
+/// <summary>
+/// The result of a tool
+/// </summary>
+public sealed record ToolResultTurn : Turn
 {
 
     public string Id { get; }
     public string Name { get; }
     public ToolReturn Return { get; }
 
-    public ToolResultTurn(string id, string name, ToolReturn @return, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    [JsonConstructor]
+    internal ToolResultTurn(string id, string name, ToolReturn @return, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("result")
     {
         Id = id;

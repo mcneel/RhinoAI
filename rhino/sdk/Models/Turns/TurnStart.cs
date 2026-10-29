@@ -1,11 +1,16 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-internal sealed record TurnStart : Turn
+/// <summary>
+/// A turn start, signalling the beginning of a request
+/// </summary>
+public sealed record TurnStart : Turn
 {
 
-    public TurnStart(DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    [JsonConstructor]
+    internal TurnStart(DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("start")
     {
         Success = true;

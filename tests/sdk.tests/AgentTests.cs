@@ -32,10 +32,10 @@ public class AgentTests
 
         agent.Harness.AddMcp(mcp);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
-        Assert.That(turns.Sum(t => t.TokenCount), Is.GreaterThan(0));
+        AssertUsedWeatherTool(result);
+        Assert.That(result.TokenCount, Is.GreaterThan(0));
     }
 
     [Test, CancelAfter(5000)]
@@ -66,7 +66,7 @@ public class AgentTests
         throw new NotImplementedException("What's the deal with below");
         // agent.Harness.AskUser += async (e, _) => e.HasPermission = false;
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
 
     [Test, Category("Manual")]
@@ -92,9 +92,9 @@ public class AgentTests
 
         agent.Harness.AddMcp(mcp);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [Test, Category("Manual")]
@@ -117,9 +117,9 @@ public class AgentTests
         Assert.That(agent, Is.Not.Null);
         agent.Harness.AddMcp(mcp);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [Test, Category("Manual")]
@@ -143,9 +143,9 @@ public class AgentTests
             Assert.That(e.HasPermission);
         };
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [Test, Category("Manual")]
@@ -169,9 +169,9 @@ public class AgentTests
             Assert.That(e.HasPermission);
         };
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [TestCase("--resume;cheese")]
@@ -206,7 +206,7 @@ public class AgentTests
 
         agent.Config.ModelEffort = "max";
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("What effort level are you using?", token);
+        IAgentResult result = await agent.SendAsync("What effort level are you using?", token);
         // TODO : Assert a message contains "max" and not "low" etc.
     }
 
@@ -233,20 +233,18 @@ public class AgentTests
         return process;
     }
 
-    private static void AssertUsedWeatherTool(List<ITurn> transcript)
+    private static void AssertUsedWeatherTool(IAgentResult result)
     {
-        Assert.That(transcript, Is.Not.Empty);
-        if (transcript.Last() is TurnEnd end)
-            Assert.That(end.Reason, Is.EqualTo(StopReason.EndTurn));
+        Assert.That(result.Reason, Is.EqualTo(StopReason.EndTurn));
 
-        Assert.That(transcript.OfType<ToolTurn>().Any(t => t.Name.EndsWith("get_weather")), "The model never called the weather tool.");
-        Assert.That(transcript.OfType<ToolResultTurn>().Any(r => r.Return.Result == ToolResult.Success), "The weather tool's result never came back.");
+        ToolCall? weather = result.ToolCalls.FirstOrDefault(c => c.Name.EndsWith("get_weather"));
+        Assert.That(weather, Is.Not.Null, "The model never called the weather tool.");
+        Assert.That(weather?.Success, Is.True, "The weather tool's result never came back.");
 
-        MessageTurn? answer = transcript.OfType<MessageTurn>().LastOrDefault(m => m.Role == RoleType.Assistant);
-        Assert.That(answer, Is.Not.Null, "The model never answered.");
-        Assert.That(answer!.Message, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
+        Assert.That(result.Text, Is.Not.Null, "The model never answered.");
+        Assert.That(result.Text, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
 
-        Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
+        Assert.That(result, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
     }
 
     private sealed record WeatherTool() : Tool("get_weather", "Gets the current weather", true, false,

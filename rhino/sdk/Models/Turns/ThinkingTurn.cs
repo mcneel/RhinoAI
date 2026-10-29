@@ -1,13 +1,18 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-internal sealed record ThinkingTurn : Turn
+/// <summary>
+/// A turn spent thinking
+/// </summary>
+public sealed record ThinkingTurn : Turn
 {
 
     public ThoughtSignature? Signature { get; }
 
-    public ThinkingTurn(string Thinking, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    [JsonConstructor]
+    internal ThinkingTurn(string Thinking, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("think")
     {
         Data = Thinking;

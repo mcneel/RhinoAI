@@ -6,7 +6,10 @@ using System.Text.Json;
 
 namespace Rhino.AI;
 
-internal sealed record MessageTurn : Turn
+/// <summary>
+/// A turn containing a string
+/// </summary>
+public sealed record MessageTurn : Turn
 {
 
     // TODO : Improve!
@@ -18,7 +21,8 @@ internal sealed record MessageTurn : Turn
     private List<IMessageContent> PrivateContent { get; }
     public IReadOnlyList<IMessageContent> Content => PrivateContent;
 
-    public MessageTurn(IEnumerable<IMessageContent> message, RoleType role = RoleType.User, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    [JsonConstructor]
+    internal MessageTurn(IEnumerable<IMessageContent> message, RoleType role = RoleType.User, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("message")
     {
         PrivateContent = new(message);
@@ -28,7 +32,7 @@ internal sealed record MessageTurn : Turn
         TokenCount = tokenCount;
     }
 
-    public MessageTurn(string message, RoleType role = RoleType.User, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    internal MessageTurn(string message, RoleType role = RoleType.User, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : this([new TextContent(message)], role, timestamp, duration, tokenCount)
     {
 
@@ -57,7 +61,7 @@ public interface IMessageContent
 /// Text content
 /// </summary>
 /// <param name="Text">The content</param>
-internal sealed record TextContent(string Text) : IMessageContent
+public sealed record TextContent(string Text) : IMessageContent
 {
     public string Type { get; init; } = "text";
     public IMessageContent Copy() => this;
@@ -68,7 +72,7 @@ internal sealed record TextContent(string Text) : IMessageContent
 /// </summary>
 /// <param name="Bytes">The bytes of the image</param>
 /// <param name="MediaType">The image type</param>
-internal sealed record ImageContent(byte[] Bytes, string MediaType) : IMessageContent
+public sealed record ImageContent(byte[] Bytes, string MediaType) : IMessageContent
 {
     public string Type { get; init; } = "image";
     public IMessageContent Copy() => new ImageContent([.. Bytes], MediaType);
@@ -79,7 +83,7 @@ internal sealed record ImageContent(byte[] Bytes, string MediaType) : IMessageCo
 /// </summary>
 /// <param name="Uri">The path of the file</param>
 /// <param name="MediaType">The files content</param>
-internal sealed record FileContent(Uri Uri, string MediaType) : IMessageContent
+public sealed record FileContent(Uri Uri, string MediaType) : IMessageContent
 {
     public string Type { get; init; } = "file";
     public IMessageContent Copy() => this;

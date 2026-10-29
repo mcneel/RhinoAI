@@ -6,7 +6,10 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed record ToolTurn : Turn
+/// <summary>
+/// A turn where the agent requests a tool
+/// </summary>
+public sealed record ToolTurn : Turn
 {
 
     public string Id { get; }
@@ -15,8 +18,9 @@ internal sealed record ToolTurn : Turn
     public IReadOnlyList<IToolArg> Args { get; init; }
     public ThoughtSignature? Signature { get; init; }
 
-    public ToolTurn(string id, string name, IReadOnlyList<IToolArg> args, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
-        : base("result")
+    [JsonConstructor]
+    internal ToolTurn(string id, string name, IReadOnlyList<IToolArg> args, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("tool")
     {
         Id = id;
         Name = name;

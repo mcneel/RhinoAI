@@ -7,12 +7,12 @@ namespace Rhino.AI;
 /// A conversation turn
 /// </summary>
 [JsonConverter(typeof(TurnJsonConverter))]
-internal abstract record Turn : ITurn
+public abstract record Turn : ITurn
 {
-    
+
     public string Type { get; init;}
 
-    public Turn(string type)
+    internal Turn(string type)
     {
         Type = type;
     }

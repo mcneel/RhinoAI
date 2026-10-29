@@ -32,9 +32,9 @@ public class PermissionTests
         throw new NotImplementedException("Below is commented out, what is going on there?");
         // agent.Harness.AskUser += async (e, __) => e.HasPermission = permissionRequested = true;
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
+        IAgentResult result = await agent.SendAsync("Please run the Smoople tool", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn), "The model answered without calling a tool, so the permission gate was never reached.");
+        Assert.That(result.ToolCalls, Is.Not.Empty, "The model answered without calling a tool, so the permission gate was never reached.");
         Assert.That(permissionRequested);
     }
 
@@ -51,8 +51,8 @@ public class PermissionTests
 
         Assert.That(Instances.Preferences.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Please run the Smoople tool", token);
-        Assert.That(turns.Any(t => t is ToolResultTurn result && result.Return.Result == ToolResult.Failure));
+        IAgentResult result = await agent.SendAsync("Please run the Smoople tool", token);
+        Assert.That(result.ToolCalls.Any(c => c.Return?.Result == ToolResult.Failure));
     }
 
     [TestCase(Permissability.Always)]

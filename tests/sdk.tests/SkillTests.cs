@@ -67,8 +67,8 @@ public class SkillTests
 
         agent.Harness.AddSkill(new Skill("Smoofle", "Teaches you about a Smoofle.", "A Smoofle is a large orange chicken with wheels."));
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("What is a Smoofle?", token);
-        Assert.That(turns, Turns.EndsWith("large", "orange", "chicken", "wheels"));
+        IAgentResult result = await agent.SendAsync("What is a Smoofle?", token);
+        Assert.That(result, Replied.With("large", "orange", "chicken", "wheels"));
     }
 
     [Test, CancelAfter(5000)]

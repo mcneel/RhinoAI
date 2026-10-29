@@ -1,16 +1,22 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
 // Each parameter in the deserialization constructor on type 'Rhino.AI.TurnEnd'
 // must bind to an object property or field on deserialization.
 // Each parameter name and type must match with a property or field on the object.
-internal sealed record TurnEnd : Turn
+
+/// <summary>
+/// And end turn, signalling the end of the request
+/// </summary>
+public sealed record TurnEnd : Turn
 {
 
     public StopReason Reason { get; init; }
 
-    public TurnEnd(StopReason reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    [JsonConstructor]
+    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("end")
     {
         Role = RoleType.Assistant;

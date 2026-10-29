@@ -88,7 +88,7 @@ public sealed class Agent
     /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
     /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public IAsyncEnumerable<ITurn> StreamAsync(string message, CancellationToken token)
+    public StreamedAgentResult StreamAsync(string message, CancellationToken token)
         => StreamAsync([new TextContent(message)], token);
 
     /// <summary>
@@ -99,7 +99,7 @@ public sealed class Agent
     /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
     /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public IAsyncEnumerable<ITurn> StreamAsync(IMessageContent content, CancellationToken token)
+    public StreamedAgentResult StreamAsync(IMessageContent content, CancellationToken token)
         => StreamAsync([content], token);
 
     /// <summary>
@@ -110,7 +110,10 @@ public sealed class Agent
     /// <returns>Each <see cref="ITurn"/> as the Harness loop produces it</returns>
     /// <exception cref="InvalidOperationException">Calls to this method may not run simultaneously for the same agent</exception>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public async IAsyncEnumerable<ITurn> StreamAsync(IEnumerable<IMessageContent> contents, [EnumeratorCancellation] CancellationToken token)
+    public StreamedAgentResult StreamAsync(IEnumerable<IMessageContent> contents, CancellationToken token)
+        => new(StreamTurnsAsync(contents, token));
+
+    private async IAsyncEnumerable<ITurn> StreamTurnsAsync(IEnumerable<IMessageContent> contents, [EnumeratorCancellation] CancellationToken token)
     {
         if (!TurnGate.Wait(0, CancellationToken.None))
             throw new InvalidOperationException($"{nameof(StreamAsync)} cannot be run until the previous call has finished on the same agent.");
@@ -166,7 +169,7 @@ public sealed class Agent
     /// <param name="token">A cancellation token</param>
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public async Task<IEnumerable<ITurn>> SendAsync(string message, CancellationToken token)
+    public async Task<IAgentResult> SendAsync(string message, CancellationToken token)
         => await SendAsync([new TextContent(message)], token);
 
     /// <summary>
@@ -176,7 +179,7 @@ public sealed class Agent
     /// <param name="token">A cancellation token</param>
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public async Task<IEnumerable<ITurn>> SendAsync(IMessageContent content, CancellationToken token)
+    public async Task<IAgentResult> SendAsync(IMessageContent content, CancellationToken token)
         => await SendAsync([content], token);
 
     /// <summary>
@@ -186,7 +189,7 @@ public sealed class Agent
     /// <param name="token">A cancellation token</param>
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
     /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
-    public async Task<IEnumerable<ITurn>> SendAsync(IEnumerable<IMessageContent> contents, CancellationToken token)
+    public async Task<IAgentResult> SendAsync(IEnumerable<IMessageContent> contents, CancellationToken token)
     {
         List<ITurn> turns = [];
         await foreach (ITurn turn in StreamAsync(contents, token).ConfigureAwait(false))
@@ -194,7 +197,7 @@ public sealed class Agent
             turns.Add(turn);
         }
 
-        return turns;
+        return new AgentResult(turns);
     }
 
     private string? SkillsPrompt(IReadOnlyDictionary<string, ISkill> skills)
