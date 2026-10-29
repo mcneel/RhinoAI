@@ -26,24 +26,35 @@ internal static class RouterControlTool
         {
             try
             {
-                HashSet<uint> seen = RhinoDoc.OpenDocuments()
-                    .Select(d => d.RuntimeSerialNumber)
-                    .ToHashSet();
+                if (RhinoApp.IsRunningHeadless)
+                {
+                    // RhinoCore (Linux, Compute) has no `_New`: the command is not built there
+                    // (cross-app builds stub CRhinoApp::FileNew), and a headless doc is the only
+                    // kind of document such a host has. InvokeAndWait is fine here since
+                    // RH-99874: with no UI thread it runs the action inline.
+                    newDoc = RhinoDoc.CreateHeadless(null);
+                }
+                else
+                {
+                    HashSet<uint> seen = RhinoDoc.OpenDocuments()
+                        .Select(d => d.RuntimeSerialNumber)
+                        .ToHashSet();
 
-                // `_New` (no dash). The dash-form `_-New` creates a *headless* doc with
-                // no viewport/UI plumbing, which would break this whole flow.
-                RhinoApp.RunScript("_New", false);
+                    // `_New` (no dash). The dash-form `_-New` creates a *headless* doc with
+                    // no viewport/UI plumbing, which would break this whole flow.
+                    RhinoApp.RunScript("_New", false);
 
-                // ActiveDoc is focus-driven and unreliable across UI events — diff the
-                // open-doc set instead to identify the doc we just created.
-                newDoc = RhinoDoc.OpenDocuments()
-                    .Where(d => !seen.Contains(d.RuntimeSerialNumber))
-                    .OrderByDescending(d => d.RuntimeSerialNumber)
-                    .FirstOrDefault();
+                    // ActiveDoc is focus-driven and unreliable across UI events — diff the
+                    // open-doc set instead to identify the doc we just created.
+                    newDoc = RhinoDoc.OpenDocuments()
+                        .Where(d => !seen.Contains(d.RuntimeSerialNumber))
+                        .OrderByDescending(d => d.RuntimeSerialNumber)
+                        .FirstOrDefault();
+                }
 
                 if (newDoc is null)
                 {
-                    error = "_New ran but no new RhinoDoc appeared.";
+                    error = "No new RhinoDoc appeared.";
                     return;
                 }
                 
@@ -83,6 +94,13 @@ internal static class RouterControlTool
     // close.
     private static void DiscardDoc(RhinoDoc doc)
     {
+        // Headless docs (RhinoDoc.CreateHeadless) are ours to dispose; `_-Close` is for UI docs.
+        if (doc.IsHeadless)
+        {
+            doc.Dispose();
+            return;
+        }
+
         string tempPath = Path.Combine(
             Path.GetTempPath(),
             $"rh-mcp-spawn-discard-{doc.RuntimeSerialNumber}-{Guid.NewGuid():N}.3dm");
