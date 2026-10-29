@@ -82,7 +82,10 @@ public class AgentTests
             CurrentModelId = "qwen/qwen3-1.7b",
             Protocol = ProtocolKind.Default,
             Host = "http://localhost:1234",
+            ModelsRoute = "/v1/models",
         };
+        Instances.Agents.Add(def);
+        def.Add(LocalModel.Completions(def.CurrentModelId, new Uri(def.Host)));
         Agent? agent = def.GetAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
@@ -103,7 +106,7 @@ public class AgentTests
         mcp.RegisterTool(tool);
 
         ModelDefinition modelDefinition = new("LM Studio", "Qwen 3-1.7b", "qwen/qwen3-1.7b");
-        HttpAgentDefinition definition = new("LM Studio", "LM Studio Community") { Protocol = ProtocolKind.Completions, Host = "http://localhost:1234" };
+        HttpAgentDefinition definition = new("LM Studio", "LM Studio Community") { Protocol = ProtocolKind.Completions, Host = "http://localhost:1234", ModelsRoute = "/v1/models" };
         definition.Add(modelDefinition);
         definition.CurrentModelId = modelDefinition.ModelId;
 
