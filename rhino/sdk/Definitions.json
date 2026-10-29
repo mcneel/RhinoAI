@@ -154,7 +154,9 @@
       "host": "http://localhost:1234",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
-      "models": []
+      "models": [
+        { "display": "Qwen", "id": "qwen/qwen3-1.7b" }
+      ]
     },
     {
       "id": "55e8aa26-90ce-4c6b-8546-240478ffc1ca",
