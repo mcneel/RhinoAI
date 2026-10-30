@@ -80,7 +80,6 @@
       "company": "Anthropic",
       "host": "https://api.anthropic.com",
       "protocol": "messages",
-      "apiKey": "<>",
       "EnvVar" : "ANTHROPIC_API_KEY",
       "models": [
         { "display": "Fable 5.1", "id": "claude-fable-5-1" },
@@ -108,7 +107,6 @@
       "company": "OpenAI",
       "host": "https://api.openai.com",
       "protocol": "responses",
-      "apiKey": "<>",
       "EnvVar" : "OPENAI_API_KEY",
       "models": [
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
@@ -125,7 +123,6 @@
       "company": "Google",
       "host": "https://generativelanguage.googleapis.com",
       "protocol": "generateContent",
-      "apiKey": "<>",
       "EnvVar" : "GEMINI_API_KEY",
       "models": [
         { "display": "Gemini 2.5 Pro", "id": "gemini-2.5-pro" },
@@ -140,7 +137,6 @@
       "company": "DeepSeek",
       "host": "https://api.deepseek.com",
       "protocol": "chatCompletions",
-      "apiKey": "<>",
       "EnvVar" : "DEEPSEEK_API_KEY",
       "models": [
         { "display": "DeepSeek Flash", "id": "deepseek-flash" }
