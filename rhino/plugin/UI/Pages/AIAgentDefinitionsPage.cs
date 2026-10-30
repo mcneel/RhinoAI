@@ -282,7 +282,6 @@ internal sealed class AIAgentDefinitionsPage : AIPage
             [
                 ("Host", BindText(new TextBox { PlaceholderText = "https://" }, d => d.Host)),
                 ("Protocol", GetProtocolDropDown()),
-                ("API key variable", BindText(new TextBox(), d => d.ApiKeyEnvVar)),
                 ("API key", BindText(new PasswordBox(), d => d.ApiKey)),
             ],
             _ => throw new ArgumentOutOfRangeException(nameof(type)),
@@ -645,9 +644,6 @@ internal sealed class UIAgentDefinition : SimpleViewModel
 
     private string? modelsRoute;
     public string? ModelsRoute { get => modelsRoute; set => SetProperty(ref modelsRoute, value); }
-
-    private string? apiKeyEnvVar;
-    public string? ApiKeyEnvVar { get => apiKeyEnvVar; set => SetProperty(ref apiKeyEnvVar, value); }
 
     private string? apiKey;
     public string? ApiKey { get => apiKey; set => SetProperty(ref apiKey, value); }
