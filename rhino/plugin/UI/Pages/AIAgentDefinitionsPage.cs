@@ -699,7 +699,6 @@ internal sealed class UIAgentDefinition : SimpleViewModel
                 host = http.Host;
                 protocol = http.Protocol;
                 modelsRoute = http.ModelsRoute;
-                apiKeyEnvVar = http.ApiKeyEnvVar;
                 apiKey = http.ApiKey;
                 LoadedApiKey = apiKey;
                 break;
@@ -765,7 +764,6 @@ internal sealed class UIAgentDefinition : SimpleViewModel
             Host = trimmedHost,
             Protocol = Protocol,
             ModelsRoute = route,
-            ApiKeyEnvVar = string.IsNullOrWhiteSpace(ApiKeyEnvVar) ? null : ApiKeyEnvVar.Trim(),
         };
 
         foreach (ModelDefinition model in ModelDefinitions) http.Add(model);
