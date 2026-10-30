@@ -89,7 +89,7 @@ internal static class AgentDefinitionsJson
             Host = dto.Host,
             Protocol = protocol,
             ModelsRoute = dto.ModelsRoute,
-            ApiKeyEnvVar = dto.ApiKey,
+            ApiKeyEnvVar = dto.EnvVar,
         };
     }
 
@@ -139,7 +139,7 @@ internal static class AgentDefinitionsJson
         SearchPathsDto? SearchPaths,
         string? Host,
         string? Protocol,
-        string? ApiKey,
+        string? EnvVar,
         string? ModelsRoute,
         List<ModelDto>? Models);
 
