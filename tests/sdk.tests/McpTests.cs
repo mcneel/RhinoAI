@@ -69,7 +69,7 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle? And do not use any tool parameters.", token);
 
         Assert.That(result.ToolCalls.Any(c => c.Success));
         Assert.That(result, Replied.With("cat", "small", "red"));
