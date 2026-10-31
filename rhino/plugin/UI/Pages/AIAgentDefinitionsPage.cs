@@ -645,6 +645,9 @@ internal sealed class UIAgentDefinition : SimpleViewModel
     private string? modelsRoute;
     public string? ModelsRoute { get => modelsRoute; set => SetProperty(ref modelsRoute, value); }
 
+    private string? apiKeyEnvVar;
+    public string? ApiKeyEnvVar { get => apiKeyEnvVar; set => SetProperty(ref apiKeyEnvVar, value); }
+    
     private string? apiKey;
     public string? ApiKey { get => apiKey; set => SetProperty(ref apiKey, value); }
 
@@ -700,6 +703,7 @@ internal sealed class UIAgentDefinition : SimpleViewModel
                 protocol = http.Protocol;
                 modelsRoute = http.ModelsRoute;
                 apiKey = http.ApiKey;
+                apiKeyEnvVar = http.ApiKeyEnvVar;
                 LoadedApiKey = apiKey;
                 break;
         }
@@ -764,6 +768,7 @@ internal sealed class UIAgentDefinition : SimpleViewModel
             Host = trimmedHost,
             Protocol = Protocol,
             ModelsRoute = route,
+            ApiKeyEnvVar = string.IsNullOrWhiteSpace(ApiKeyEnvVar) ? null : ApiKeyEnvVar.Trim(),
         };
 
         foreach (ModelDefinition model in ModelDefinitions) http.Add(model);
