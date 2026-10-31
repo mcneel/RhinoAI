@@ -18,7 +18,12 @@ internal sealed class TestDefinition() : AgentDefinition("Test", "Test Def")
 
     public override Agent? WithModel(PlugInToken token, string modelName)
     {
-        throw new NotImplementedException();
+        AgentDefinition definition = new HttpAgentDefinition(Vendor, DisplayName)
+        {
+            CurrentModelId = modelName
+        };
+
+        return definition.GetAgent(token);
     }
 
     public new bool Add(IModel model)
