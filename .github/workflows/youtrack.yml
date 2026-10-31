@@ -1,0 +1,108 @@
+name: YouTrack
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+env:
+  YOUTRACK_URL: https://mcneel.myjetbrains.com/youtrack
+  YOUTRACK_PROJECT: RH
+
+jobs:
+  sync:
+    if: >-
+      github.event_name == 'issues' && github.event.issue.user.type != 'Bot' ||
+      github.event_name == 'issue_comment' && github.event.comment.user.type != 'Bot' && !github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v8
+        env:
+          YOUTRACK_TOKEN: ${{ secrets.YOUTRACK_TOKEN }}
+        with:
+          script: |
+            // Mirrors the c= parameters of the RhinoAI new-issue link.
+            const commands = [
+              'RhFeature RF-303',
+              'Subsystem AI: Connector',
+              'Release target 9.x',
+              'Assignee callum',
+              'add Board Rhino 9.x',
+              'add Board Rhino 6 9.x',
+              'add Board My Schedule',
+              'add Board Testing Board',
+            ];
+
+            const base = process.env.YOUTRACK_URL;
+            const shortName = process.env.YOUTRACK_PROJECT;
+            const yt = async (path, body) => {
+              const res = await fetch(`${base}${path}`, {
+                method: body ? 'POST' : 'GET',
+                headers: {
+                  Authorization: `Bearer ${process.env.YOUTRACK_TOKEN}`,
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json',
+                },
+                body: body && JSON.stringify(body),
+              });
+              const text = await res.text();
+              if (!res.ok) throw new Error(`${path}: ${res.status} ${text}`);
+              return text ? JSON.parse(text) : null;
+            };
+
+            const issue = context.payload.issue;
+            const marker = /^Tracked as \[(RH-\d+)\]/;
+
+            if (context.eventName === 'issue_comment') {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+              });
+              const link = comments.find(c => c.user.login === 'github-actions[bot]' && marker.test(c.body));
+              if (!link) {
+                core.notice(`#${issue.number} has no linked YouTrack issue`);
+                return;
+              }
+              const id = link.body.match(marker)[1];
+              const comment = context.payload.comment;
+              await yt(`/api/issues/${id}/comments?fields=id`, {
+                text: `${comment.user.login} commented on GitHub (${comment.html_url}):\n\n${comment.body}`,
+              });
+              return;
+            }
+
+            const projects = await yt(`/api/admin/projects?fields=id,shortName&query=${shortName}`);
+            const project = projects.find(p => p.shortName === shortName);
+            if (!project) throw new Error(`YouTrack project ${shortName} not found`);
+
+            const created = await yt('/api/issues?fields=idReadable', {
+              project: { id: project.id },
+              summary: issue.title,
+              description: `${issue.body ?? ''}\n\n# Notes\nReported here - ${issue.html_url}`,
+            });
+            const id = created.idReadable;
+
+            const failed = [];
+            for (const query of commands) {
+              try {
+                await yt('/api/commands', { query, issues: [{ idReadable: id }] });
+              } catch (e) {
+                failed.push(query);
+                core.warning(e.message);
+              }
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Tracked as [${id}](${base}/issue/${id}). The PR that fixes this should mention both ${id} and #${issue.number}.`,
+            });
+
+            if (failed.length) core.setFailed(`${id} created, but these commands failed: ${failed.join('; ')}`);
