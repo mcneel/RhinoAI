@@ -43,7 +43,7 @@ public class PermissionTests
         Agent? agent = Agent.GetDeepSeekAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
-        MemoryMcp mcp = new ("Smoople");
+        MemoryMcp mcp = new ("Blocked");
         TestUtils.TestTool tool = new ("Smoople", "The Smoople Tool", []);
         mcp.RegisterTool(tool);
         agent.Harness.AddMcp(mcp);
