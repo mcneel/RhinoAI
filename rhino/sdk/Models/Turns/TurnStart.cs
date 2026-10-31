@@ -10,6 +10,11 @@ public sealed record TurnStart : Turn
 {
 
     [JsonConstructor]
+    private TurnStart(DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this((DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
     internal TurnStart(DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("start")
     {

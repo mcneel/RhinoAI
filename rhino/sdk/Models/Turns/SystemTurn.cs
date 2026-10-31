@@ -6,9 +6,10 @@ namespace Rhino.AI;
 public sealed record SystemTurn : Turn
 {
     
-    internal SystemTurn(string prompt) : base("system")
+    [JsonConstructor]
+    internal SystemTurn(string data) : base("system")
     {
-        Data = prompt;
+        Data = data;
         Role = RoleType.System;
     }
 

@@ -561,7 +561,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
     private IEnumerable<string> GetMcpArgs(Agent agent)
     {
-        string disabledTools = TomlArray(Instances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
+        string disabledTools = TomlArray(AIInstances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (Mcp mcp in Mcps.Values)

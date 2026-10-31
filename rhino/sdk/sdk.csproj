@@ -14,6 +14,7 @@
 
   <PropertyGroup>
     <PackageId>RhinoAI</PackageId>
+    <AssemblyName>RhinoAI.Sdk</AssemblyName>
     <PackageVersion>$(RhinoAIPackageVersion)</PackageVersion>
     <Authors>Robert McNeel &amp; Associates</Authors>
     <Description>SDK for building agents, harnesses, models and MCP integrations for RhinoAI.</Description>

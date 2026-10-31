@@ -417,7 +417,7 @@ internal sealed class AIAgentDefinitionsViewModel : SimpleViewModel
     public void Update()
     {
         Definitions.Clear();
-        foreach (IAgentDefinition definition in Instances.Agents.Definitions)
+        foreach (IAgentDefinition definition in AIInstances.Agents.Definitions)
         {
             UIAgentDefinition newDef = new UIAgentDefinition(definition);
             Definitions.Add(newDef);
@@ -425,7 +425,7 @@ internal sealed class AIAgentDefinitionsViewModel : SimpleViewModel
             newDef.PropertyChanged += UpdateGrid;
         }
 
-        AppliedIds = [.. Instances.Agents.Definitions.Select(d => d.Id)];
+        AppliedIds = [.. AIInstances.Agents.Definitions.Select(d => d.Id)];
         Index = Definitions.Count > 0 ? 0 : -1;
         RaisePropertyChanged(nameof(Current));
     }
@@ -518,14 +518,14 @@ internal sealed class AIAgentDefinitionsViewModel : SimpleViewModel
         HashSet<Guid> keptIds = [.. built.Select(d => d.Id)];
         foreach (Guid removedId in AppliedIds.Except(keptIds))
         {
-            Instances.Agents.Remove(removedId);
+            AIInstances.Agents.Remove(removedId);
         }
 
         bool result = true;
         foreach (IAgentDefinition agent in built)
         {
-            Instances.Agents.Remove(agent.Id);
-            result &= Instances.Agents.Add(agent);
+            AIInstances.Agents.Remove(agent.Id);
+            result &= AIInstances.Agents.Add(agent);
         }
 
         AppliedIds = keptIds;
@@ -586,10 +586,10 @@ internal sealed class UIAgentDefinition : SimpleViewModel
 
     public bool Preferred
     {
-        get => Instances.Preferences.PreferedAgentId == this.Id;
+        get => AIInstances.Preferences.PreferedAgentId == this.Id;
         set
         {
-            Instances.Preferences.PreferedAgentId = this.Id;
+            AIInstances.Preferences.PreferedAgentId = this.Id;
             // TODO : Does this refresh other items?
             RaisePropertyChanged(nameof(Preferred));
         }

@@ -10,7 +10,7 @@ public class StatisticsTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
     }
 
     [Test]

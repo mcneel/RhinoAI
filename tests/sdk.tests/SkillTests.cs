@@ -33,7 +33,7 @@ public class SkillTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
     }
 
 
@@ -45,7 +45,7 @@ public class SkillTests
         TestDefinition definition = new () { CurrentModelId = model.Name };
         definition.Add(model);
         
-        Instances.Agents.Add(definition);
+        AIInstances.Agents.Add(definition);
 
         Agent? agent = definition.GetAgent(Token);
         Assert.That(agent, Is.Not.Null);

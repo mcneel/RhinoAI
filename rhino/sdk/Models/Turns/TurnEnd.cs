@@ -3,10 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-// Each parameter in the deserialization constructor on type 'Rhino.AI.TurnEnd'
-// must bind to an object property or field on deserialization.
-// Each parameter name and type must match with a property or field on the object.
-
 /// <summary>
 /// And end turn, signalling the end of the request
 /// </summary>
@@ -16,13 +12,18 @@ public sealed record TurnEnd : Turn
     public StopReason Reason { get; init; }
 
     [JsonConstructor]
-    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(reason, data, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
+    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("end")
     {
         Role = RoleType.Assistant;
         Reason = reason;
         Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
-        Data = error ?? string.Empty;
+        Data = data ?? string.Empty;
 
         Role = RoleType.Assistant;
         Duration = duration;

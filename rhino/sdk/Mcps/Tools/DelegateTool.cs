@@ -42,7 +42,7 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         if (!args.TryGetString(Args[1].Name, out string prompt))
             return ToolReturn.Failure("prompt parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
 
-        if (!Instances.Agents.Definitions.Any(d => d.AvailableModels.Count > 0))
+        if (!AIInstances.Agents.Definitions.Any(d => d.AvailableModels.Count > 0))
         {
             return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
         }
@@ -105,7 +105,7 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         // TODO : Put the preferred agent _first_
 
         List<(IAgentDefinition, IModel)> pairs = new ();
-        foreach(IAgentDefinition agentDef in Instances.Agents.Definitions)
+        foreach(IAgentDefinition agentDef in AIInstances.Agents.Definitions)
         {
             if (!agentDef.Available) continue;
             foreach(ModelDefinition modelDef in agentDef.AvailableModels)

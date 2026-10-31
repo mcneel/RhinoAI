@@ -86,7 +86,7 @@ internal sealed class AIPermissionsPage : AIPage
 internal sealed class AIPermissionsViewModel : SimpleViewModel
 {
 
-    public UIPermission GlobalPermissions { get; private set; } = new(Instances.Preferences.Permissions);
+    public UIPermission GlobalPermissions { get; private set; } = new(AIInstances.Preferences.Permissions);
 
     public ObservableCollection<UIPermission> AgentPermissions { get; } = [];
 
@@ -97,11 +97,11 @@ internal sealed class AIPermissionsViewModel : SimpleViewModel
 
     public void Update()
     {
-        GlobalPermissions = new UIPermission(Instances.Preferences.Permissions);
+        GlobalPermissions = new UIPermission(AIInstances.Preferences.Permissions);
         RaisePropertyChanged(nameof(GlobalPermissions));
 
         AgentPermissions.Clear();
-        foreach (IAgentDefinition definition in Instances.Agents.Definitions)
+        foreach (IAgentDefinition definition in AIInstances.Agents.Definitions)
         {
             AgentPermissions.Add(new UIPermission(definition));
         }
@@ -127,7 +127,7 @@ internal sealed class AIPermissionsViewModel : SimpleViewModel
         {
             if (Definition is null)
             {
-                return Push(Instances.Preferences.Permissions);
+                return Push(AIInstances.Preferences.Permissions);
             }
             
             return Push(Definition.Permissions);

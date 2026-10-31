@@ -22,6 +22,11 @@ public sealed record MessageTurn : Turn
     public IReadOnlyList<IMessageContent> Content => PrivateContent;
 
     [JsonConstructor]
+    private MessageTurn(IReadOnlyList<IMessageContent> content, RoleType role, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this((IEnumerable<IMessageContent>)content, role, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
     internal MessageTurn(IEnumerable<IMessageContent> message, RoleType role = RoleType.User, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("message")
     {
@@ -97,7 +102,7 @@ internal sealed class MessageJsonConverter : JsonConverter<IMessageContent>
     {
         using JsonDocument doc = JsonDocument.ParseValue(ref reader);
         JsonElement root = doc.RootElement;
-        string? disc = root.TryGetProperty("type", out JsonElement d) ? d.GetString() : null;
+        string? disc = root.TryGetProperty("Type", out JsonElement d) ? d.GetString() : null;
         return disc?.ToLowerInvariant() switch
         {
             "text" => root.Deserialize<TextContent>(options),

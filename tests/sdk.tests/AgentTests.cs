@@ -13,7 +13,7 @@ public class AgentTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
     }
 
     [TestCase(ProtocolKind.Completions)]
@@ -85,7 +85,7 @@ public class AgentTests
             Host = "http://localhost:1234",
             ModelsRoute = "/v1/models",
         };
-        Instances.Agents.Add(def);
+        AIInstances.Agents.Add(def);
         def.Add(LocalModel.Completions(def.CurrentModelId, new Uri(def.Host)));
         Agent? agent = def.GetAgent(Token);
         Assert.That(agent, Is.Not.Null);
@@ -111,7 +111,7 @@ public class AgentTests
         definition.Add(modelDefinition);
         definition.CurrentModelId = modelDefinition.ModelId;
 
-        Assert.That(Instances.Agents.Add(definition));
+        Assert.That(AIInstances.Agents.Add(definition));
 
         Agent? agent = Agent.GetCustomAgent(definition, Token);
         Assert.That(agent, Is.Not.Null);
@@ -212,7 +212,7 @@ public class AgentTests
 
     private static Process GetClaudeProcess()
     {
-        ClaudeDesktopModel desktopModel = (ClaudeDesktopModel)Instances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetModel("opus")!;
+        ClaudeDesktopModel desktopModel = (ClaudeDesktopModel)AIInstances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetModel("opus")!;
         string exePath = desktopModel.ExePath;
 
         Process process = new()

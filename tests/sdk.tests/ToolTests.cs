@@ -12,7 +12,7 @@ public class ToolTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
     }
     
     [Test, CancelAfter(5000)]

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -22,6 +23,12 @@ public sealed record ToolReturn
     public string? Guidance { get; }
 
     public string Message => string.Concat(Content.OfType<TextContent>().Select(p => p.Text));
+
+    [JsonConstructor]
+    private ToolReturn(IReadOnlyList<IMessageContent> content, ToolResult result, string? guidance)
+        : this((IEnumerable<IMessageContent>)content, result, guidance)
+    {
+    }
 
     public ToolReturn(IEnumerable<IMessageContent> content, ToolResult result, string? guidance)
     {

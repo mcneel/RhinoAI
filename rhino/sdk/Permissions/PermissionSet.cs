@@ -56,14 +56,14 @@ public sealed class PermissionSet
 
     internal static Permissability ResolvePermissionChain(IAgentDefinition definition, string mcpName, string toolName, IList<IToolArg> args)
     {
-        Permissability globalPermissions = Instances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
+        Permissability globalPermissions = AIInstances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
         if (globalPermissions == Permissability.Deny) return Permissability.Deny;
 
         Permissability defPermissions = definition.Permissions.HasPermission(mcpName, toolName, args);
         if (defPermissions == Permissability.Deny) return Permissability.Deny;
         
         // Never specified
-        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Unset) return Instances.Preferences.DefaultPermission;
+        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Unset) return AIInstances.Preferences.DefaultPermission;
 
         if (globalPermissions == Permissability.Always && defPermissions == Permissability.Unset) return globalPermissions;
         if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Always) return defPermissions;

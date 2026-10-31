@@ -12,6 +12,11 @@ public sealed record ThinkingTurn : Turn
     public ThoughtSignature? Signature { get; }
 
     [JsonConstructor]
+    private ThinkingTurn(string data, ThoughtSignature? signature, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(data, signature, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
     internal ThinkingTurn(string Thinking, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("think")
     {

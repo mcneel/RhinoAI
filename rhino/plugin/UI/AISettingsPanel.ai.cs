@@ -55,7 +55,7 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        if (Rhino.AI.Instances.Preferences.UseSdk)
+        if (AIInstances.Preferences.UseSdk)
         {
             // Human written pages
             AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());

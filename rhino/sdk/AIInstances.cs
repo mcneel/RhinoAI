@@ -4,7 +4,7 @@ namespace Rhino.AI;
 /// <summary>
 /// All of the static instances
 /// </summary>
-public static class Instances
+public static class AIInstances
 {
 
     public static Agents Agents { get; internal set; } = new ();

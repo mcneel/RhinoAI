@@ -14,6 +14,11 @@ public sealed record ToolResultTurn : Turn
     public ToolReturn Return { get; }
 
     [JsonConstructor]
+    private ToolResultTurn(string id, string name, ToolReturn @return, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(id, name, @return, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
     internal ToolResultTurn(string id, string name, ToolReturn @return, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("result")
     {

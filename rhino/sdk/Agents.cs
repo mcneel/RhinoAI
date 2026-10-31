@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Rhino.AI;
@@ -11,17 +12,17 @@ namespace Rhino.AI;
 public sealed class Agents
 {
 
-    private Dictionary<Guid, IAgentDefinition> PrivateDefinitions { get; } = [];
-    public IReadOnlyCollection<IAgentDefinition> Definitions => PrivateDefinitions.Values;
+    private ConcurrentDictionary<Guid, IAgentDefinition> PrivateDefinitions { get; } = new();
+    public IReadOnlyCollection<IAgentDefinition> Definitions => PrivateDefinitions.Values.ToList();
 
     public IAgentDefinition? PreferredDefinition
-        => PrivateDefinitions.TryGetValue(Instances.Preferences.PreferedAgentId, out IAgentDefinition? def) ? def : null;
+        => PrivateDefinitions.TryGetValue(AIInstances.Preferences.PreferedAgentId, out IAgentDefinition? def) ? def : null;
 
     internal bool Add(IAgentDefinition definition)
         => PrivateDefinitions.TryAdd(definition.Id, definition);
-    
+
     internal bool Remove(Guid id)
-        => PrivateDefinitions.Remove(id);
+        => PrivateDefinitions.TryRemove(id, out _);
 
     public bool Exists(IAgentDefinition definition)
         => PrivateDefinitions.ContainsKey(definition.Id);
@@ -31,7 +32,6 @@ public sealed class Agents
         IReadOnlyList<AgentDefinition>? definitions = AgentDefinitionsJson.Parse(json);
         if (definitions is null) return false;
 
-        PrivateDefinitions.Clear();
         foreach (AgentDefinition definition in definitions)
         {
             Add(definition);
@@ -42,10 +42,15 @@ public sealed class Agents
 
     internal bool LoadAgentsFromJson()
     {
-        using Stream? stream = typeof(Agents).Assembly.GetManifestResourceStream("Rhino.AI.Definitions.json");
-        using StreamReader reader = new(stream!);
-        string json = reader.ReadToEnd();
-        return LoadAgentsFromJson(json);
+        try
+        {
+            using Stream? stream = typeof(Agents).Assembly.GetManifestResourceStream("Rhino.AI.Definitions.json");
+            using StreamReader reader = new(stream!);
+            string json = reader.ReadToEnd();
+            return LoadAgentsFromJson(json);
+        }
+        catch { }
+        return false;
     }
 
     // NOTE : These are ONLY ones used for the AI Panel
@@ -63,7 +68,7 @@ public sealed class Agents
 
     public IAgentDefinition? FromParameters(string vendor, AgentType type)
     {
-        foreach(IAgentDefinition def in Definitions)
+        foreach (IAgentDefinition def in Definitions)
         {
             if (!string.Equals(def.Vendor, vendor, StringComparison.OrdinalIgnoreCase)) continue;
             if (type == AgentType.Cli && def is not CliAgentDefinition) continue;

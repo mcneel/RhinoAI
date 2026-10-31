@@ -251,7 +251,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
         string disallowedTools = string.Empty;
-        foreach (Permission permission in Instances.Preferences.Permissions.ProhibitedTools())
+        foreach (Permission permission in AIInstances.Preferences.Permissions.ProhibitedTools())
         {
             disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions

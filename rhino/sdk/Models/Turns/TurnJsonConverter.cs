@@ -18,6 +18,8 @@ internal sealed class TurnJsonConverter : JsonConverter<ITurn>
             "tool" => root.Deserialize<ToolTurn>(options),
             "end" => root.Deserialize<TurnEnd>(options),
             "start" => root.Deserialize<TurnStart>(options),
+            "result" => root.Deserialize<ToolResultTurn>(options),
+            "system" => root.Deserialize<SystemTurn>(options),
             
             _ => throw new JsonException($"Unknown ITurn type: {disc}"),
         };

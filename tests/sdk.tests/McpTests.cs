@@ -15,7 +15,7 @@ public class McpTests
 
     public McpTests()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
 
         Agent = Agent.GetDeepSeekAgent(Token)!;
         Agent.Harness.AddMcp(Mcp);

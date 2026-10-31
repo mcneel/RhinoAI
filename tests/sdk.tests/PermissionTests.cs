@@ -12,7 +12,7 @@ public class PermissionTests
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Assert.That(Instances.Agents.LoadAgentsFromJson(), Is.True);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
     }
 
     [Test, CancelAfter(5000)]
@@ -49,7 +49,7 @@ public class PermissionTests
         mcp.RegisterTool(tool);
         agent.Harness.AddMcp(mcp);
 
-        Assert.That(Instances.Preferences.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
+        Assert.That(AIInstances.Preferences.Permissions.AddPermission(new Permission(mcp, tool, Permissability.Deny, [])));
 
         IAgentResult result = await agent.SendAsync("Please run the Smoople tool", token);
         Assert.That(result.ToolCalls.Any(c => c.Return?.Result == ToolResult.Failure));

@@ -19,6 +19,11 @@ public sealed record ToolTurn : Turn
     public ThoughtSignature? Signature { get; init; }
 
     [JsonConstructor]
+    private ToolTurn(string id, string name, IReadOnlyList<IToolArg> args, ThoughtSignature? signature, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(id, name, args, signature, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
+
     internal ToolTurn(string id, string name, IReadOnlyList<IToolArg> args, ThoughtSignature? signature = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
         : base("tool")
     {

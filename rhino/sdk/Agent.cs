@@ -120,7 +120,7 @@ public sealed class Agent
         
         // NOTE : A Developer cannot check this _before_ running and this is kind of a slap in the face!
 
-        if (!Instances.Agents.Exists(Definition))
+        if (!AIInstances.Agents.Exists(Definition))
             throw new InvalidOperationException("User removed the source of this agent");
 
         if (!Definition.Available)
@@ -224,7 +224,7 @@ public sealed class Agent
     /// <param name="type">The type of Agent</param>
     /// <returns>An Agent if one is available, otherwise null</returns>
     public static Agent? GetAgentFromParameters(PlugIns.PlugInToken token, string vendor, AgentType type)
-        => Instances.Agents.FromParameters(vendor, type)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters(vendor, type)?.GetAgent(token);
 
     /// <summary>
     /// Returns a claude desktop agent that uses the desktop harness
@@ -232,7 +232,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetClaudeDesktopAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetAgent(token);
 
     /// <summary>
     /// Returns a CodexDesktop agent that uses a <see cref="CodexHarness"/>
@@ -240,7 +240,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetCodexDesktopAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("OpenAI", AgentType.Cli)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("OpenAI", AgentType.Cli)?.GetAgent(token);
 
     /// <summary>
     /// Returns a Claude agent that uses a <see cref="AI.Harness"/>
@@ -248,7 +248,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetClaudeAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("Anthropic", AgentType.Api)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("Anthropic", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
     /// Returns a ChatGPT agent that uses a <see cref="AI.Harness"/>
@@ -256,7 +256,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetChatGptAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("OpenAI", AgentType.Api)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("OpenAI", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
     /// Returns a Gemini agent that uses a <see cref="AI.Harness"/>
@@ -264,7 +264,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetGeminiAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("Google", AgentType.Api)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("Google", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
     /// Returns a DeepSeek agent that uses a <see cref="AI.Harness"/>
@@ -272,7 +272,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetDeepSeekAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.FromParameters("DeepSeek", AgentType.Api)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters("DeepSeek", AgentType.Api)?.GetAgent(token);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="AI.Harness"/>
@@ -281,7 +281,7 @@ public sealed class Agent
     /// <param name="vendor">The AI Model vendor</param>
     /// <returns>An Agent</returns>
     internal static Agent? GetLocalAgent(PlugIns.PlugInToken token, string vendor)
-        => Instances.Agents.FromParameters(vendor, AgentType.Local)?.GetAgent(token);
+        => AIInstances.Agents.FromParameters(vendor, AgentType.Local)?.GetAgent(token);
 
     /// <summary>
     /// Returns a LMStudio agent that uses a <see cref="AI.Harness"/>
@@ -309,7 +309,7 @@ public sealed class Agent
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>
     public static Agent? GetPreferredAgent(PlugIns.PlugInToken token)
-        => Instances.Agents.PreferredDefinition?.GetAgent(token);
+        => AIInstances.Agents.PreferredDefinition?.GetAgent(token);
 
     /// <summary>
     /// Empties all previous turns
