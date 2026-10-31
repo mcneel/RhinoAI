@@ -43,7 +43,7 @@ public interface IAgentDefinition
 
     public bool Enabled { get; set; }
 
-    public IReadOnlySet<ModelDefinition> AvailableModels { get; }
+    public IReadOnlyCollection<ModelDefinition> AvailableModels { get; }
 
     internal IEnumerable<Agent> RegisteredAgents { get; }
 
@@ -82,7 +82,7 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
     public PermissionSet Permissions { get; } = new();
 
     protected HashSet<ModelDefinition> PrivateAvailableModels { get; init; } = [];
-    public IReadOnlySet<ModelDefinition> AvailableModels => PrivateAvailableModels;
+    public IReadOnlyCollection<ModelDefinition> AvailableModels => PrivateAvailableModels;
 
     public bool Add(ModelDefinition definition) => PrivateAvailableModels.Add(definition);
 

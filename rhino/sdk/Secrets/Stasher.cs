@@ -8,11 +8,15 @@ internal static class Stasher
 {
     private const string Service = "Rhino.AI";
 
+#if NET48
+    private static ISecretVault? Vault { get; } = new CredentialVault(Service);
+#else
     private static ISecretVault? Vault { get; } =
         OperatingSystem.IsWindows() ? new CredentialVault(Service)
         : OperatingSystem.IsMacOS() ? new KeychainVault(Service)
         : OperatingSystem.IsLinux() ? SecretServiceVault.TryCreate(Service)
         : null;
+#endif
 
     public static bool IsAvailable => Vault is not null;
 

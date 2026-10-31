@@ -37,6 +37,11 @@
     <AppendTargetFrameworkToOutputPath Condition="'$(PluginOS)' == 'osx'">false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
+  <!-- The net48 BCL has no nullable annotations, so its warnings are noise; net8.0 does the checking. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Nullable>annotations</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
     <ProjectReference Include="../sdk/sdk.csproj" />
@@ -49,6 +54,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <Reference Include="System.Net.Http" />
     <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->

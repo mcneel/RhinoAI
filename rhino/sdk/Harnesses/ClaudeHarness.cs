@@ -98,8 +98,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         try
         {
             using Process claude = GetClaudeProcess(token, claudeModel);
-            claude.StartInfo.ArgumentList.Add("auth");
-            claude.StartInfo.ArgumentList.Add("status");
+            claude.StartInfo.AddArgument("auth");
+            claude.StartInfo.AddArgument("status");
 
             using CancellationTokenRegistration _ = token.Register(() =>
             {
@@ -137,9 +137,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     private async Task<bool> LogIn(CancellationToken token, ClaudeDesktopModel model)
     {
         using Process claude = GetClaudeProcess(token, model);
-        claude.StartInfo.ArgumentList.Add("auth");
-        claude.StartInfo.ArgumentList.Add("login");
-        claude.StartInfo.ArgumentList.Add("--claudeai");
+        claude.StartInfo.AddArgument("auth");
+        claude.StartInfo.AddArgument("login");
+        claude.StartInfo.AddArgument("--claudeai");
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -204,7 +204,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         };
 
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         process.StartInfo.StandardInputEncoding = utf8;
+#endif
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
@@ -218,20 +220,20 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
-        process.StartInfo.ArgumentList.Add("-p");
+        process.StartInfo.AddArgument("-p");
 
         if (agent.Config.SessionId != Guid.Empty)
         {
-            process.StartInfo.ArgumentList.Add("--resume");
+            process.StartInfo.AddArgument("--resume");
         }
         else
         {
             // TODO : If Call fails, this must be un-set
             agent.Config.SessionId = Guid.NewGuid();
-            process.StartInfo.ArgumentList.Add("--session-id");
+            process.StartInfo.AddArgument("--session-id");
         }
 
-        process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString()!);
+        process.StartInfo.AddArgument(agent.Config.SessionId.ToString()!);
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;
@@ -243,8 +245,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
             allowedTools += " ";
         }
-        process.StartInfo.ArgumentList.Add("--allowedTools");
-        process.StartInfo.ArgumentList.Add(allowedTools);
+        process.StartInfo.AddArgument("--allowedTools");
+        process.StartInfo.AddArgument(allowedTools);
 
 
         // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
@@ -255,65 +257,65 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions
             disallowedTools += " ";
         }
-        process.StartInfo.ArgumentList.Add("--disallowedTools");
-        process.StartInfo.ArgumentList.Add(disallowedTools);
+        process.StartInfo.AddArgument("--disallowedTools");
+        process.StartInfo.AddArgument(disallowedTools);
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model!.Name);
+        process.StartInfo.AddArgument("--model");
+        process.StartInfo.AddArgument(agent.Model!.Name);
 
         // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
-        process.StartInfo.ArgumentList.Add("--fallback-model");
-        process.StartInfo.ArgumentList.Add("opus");
+        process.StartInfo.AddArgument("--fallback-model");
+        process.StartInfo.AddArgument("opus");
 
         // --effort <level>                      Effort level for the current session (low, medium, high, xhigh, max)
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
         {
-            process.StartInfo.ArgumentList.Add("--effort");
-            process.StartInfo.ArgumentList.Add(agent.Config.ModelEffort);
+            process.StartInfo.AddArgument("--effort");
+            process.StartInfo.AddArgument(agent.Config.ModelEffort);
         }
 
         // --strict-mcp-config                   Only use MCP servers from --mcp-config, ignoring all other MCP configurations
-        process.StartInfo.ArgumentList.Add("--strict-mcp-config");
+        process.StartInfo.AddArgument("--strict-mcp-config");
 
         // --mcp-config <configs...>             Load MCP servers from JSON files or strings (space-separated)
-        process.StartInfo.ArgumentList.Add("--mcp-config");
-        process.StartInfo.ArgumentList.Add(GetMcpJsons(agent));
+        process.StartInfo.AddArgument("--mcp-config");
+        process.StartInfo.AddArgument(GetMcpJsons(agent));
 
         // --effort <level>  Effort level for the current session (low, medium, high, xhigh, max)
-        process.StartInfo.ArgumentList.Add("--effort");
-        process.StartInfo.ArgumentList.Add("high");
+        process.StartInfo.AddArgument("--effort");
+        process.StartInfo.AddArgument("high");
 
         // --prompt-suggestions [value]          Enable prompt suggestions
-        process.StartInfo.ArgumentList.Add("--prompt-suggestions");
-        process.StartInfo.ArgumentList.Add("false");
+        process.StartInfo.AddArgument("--prompt-suggestions");
+        process.StartInfo.AddArgument("false");
 
-        process.StartInfo.ArgumentList.Add("--input-format");
-        process.StartInfo.ArgumentList.Add("stream-json");
+        process.StartInfo.AddArgument("--input-format");
+        process.StartInfo.AddArgument("stream-json");
 
         // Output as JSON
-        process.StartInfo.ArgumentList.Add("--output-format");
-        process.StartInfo.ArgumentList.Add("stream-json");
+        process.StartInfo.AddArgument("--output-format");
+        process.StartInfo.AddArgument("stream-json");
 
-        process.StartInfo.ArgumentList.Add("--verbose");
+        process.StartInfo.AddArgument("--verbose");
 
         if (!agent.Config.UseLocalSettings)
         {
-            process.StartInfo.ArgumentList.Add("--tools");
-            process.StartInfo.ArgumentList.Add("");
-            process.StartInfo.ArgumentList.Add("--setting-sources");
-            process.StartInfo.ArgumentList.Add("");
+            process.StartInfo.AddArgument("--tools");
+            process.StartInfo.AddArgument("");
+            process.StartInfo.AddArgument("--setting-sources");
+            process.StartInfo.AddArgument("");
         }
 
         string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
         if (systemPrompt.Length > 0)
         {
-            process.StartInfo.ArgumentList.Add("--append-system-prompt");
-            process.StartInfo.ArgumentList.Add(systemPrompt);
+            process.StartInfo.AddArgument("--append-system-prompt");
+            process.StartInfo.AddArgument(systemPrompt);
         }
 
-        process.StartInfo.ArgumentList.Add("--disable-slash-commands");
+        process.StartInfo.AddArgument("--disable-slash-commands");
 
         AIProcess turnProcess = new(process);
 

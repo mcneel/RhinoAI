@@ -1,8 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <RootNamespace>Rhino.AI</RootNamespace>
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
+  </PropertyGroup>
+
+  <!-- The net48 BCL has no nullable annotations, so its warnings are noise; net8.0 does the checking. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Nullable>annotations</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -36,6 +43,13 @@
 
   <ItemGroup>
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" />    <Reference Include="System.Net.Http" />
+    <Compile Remove="Secrets/KeychainVault.ai.cs;Secrets/SecretServiceVault.ai.cs" />
   </ItemGroup>
 
 </Project>

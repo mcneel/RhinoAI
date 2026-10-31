@@ -129,7 +129,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         };
 
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         process.StartInfo.StandardInputEncoding = utf8;
+#endif
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
@@ -140,21 +142,21 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     {
         Process process = GetCodexProcess(agent.Model!, token);
 
-        process.StartInfo.ArgumentList.Add("exec");
+        process.StartInfo.AddArgument("exec");
 
         if (agent.Config.SessionId != Guid.Empty)
         {
-            process.StartInfo.ArgumentList.Add("resume");
+            process.StartInfo.AddArgument("resume");
         }
 
         // Not a git repo
 
-        process.StartInfo.ArgumentList.Add("--skip-git-repo-check");
+        process.StartInfo.AddArgument("--skip-git-repo-check");
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model!.Name);
+        process.StartInfo.AddArgument("--model");
+        process.StartInfo.AddArgument(agent.Model!.Name);
 
         // Effort
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
@@ -164,32 +166,32 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
         foreach (string mcpArg in GetMcpArgs(agent))
         {
-            process.StartInfo.ArgumentList.Add(mcpArg);
+            process.StartInfo.AddArgument(mcpArg);
         }
 
-        process.StartInfo.ArgumentList.Add("-c");
-        process.StartInfo.ArgumentList.Add("model_reasoning_effort=\"high\"");
+        process.StartInfo.AddArgument("-c");
+        process.StartInfo.AddArgument("model_reasoning_effort=\"high\"");
 
         string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
         if (systemPrompt.Length > 0)
         {
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
         }
 
         // Output as JSON
-        process.StartInfo.ArgumentList.Add("--json");
+        process.StartInfo.AddArgument("--json");
 
         if (!agent.Config.UseLocalSettings)
         {
-            process.StartInfo.ArgumentList.Add("--ignore-user-config");
-            process.StartInfo.ArgumentList.Add("--ignore-rules");
+            process.StartInfo.AddArgument("--ignore-user-config");
+            process.StartInfo.AddArgument("--ignore-rules");
 
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add("sandbox_mode=\"read-only\"");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument("sandbox_mode=\"read-only\"");
 
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add("web_search=\"disabled\"");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument("web_search=\"disabled\"");
 
             // code_mode_host stays enabled: this model routes every tool call, MCP included, through code mode.
             string[] codexTools = ["shell_tool", "unified_exec", "multi_agent", "goals",
@@ -198,22 +200,22 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             foreach (string builtInTool in codexTools)
             {
-                process.StartInfo.ArgumentList.Add("--disable");
-                process.StartInfo.ArgumentList.Add(builtInTool);
+                process.StartInfo.AddArgument("--disable");
+                process.StartInfo.AddArgument(builtInTool);
             }
         }
 
         if (agent.Config.SessionId != Guid.Empty)
-            process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString());
+            process.StartInfo.AddArgument(agent.Config.SessionId.ToString());
 
         // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
         foreach (string imagePath in imagePaths)
         {
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(imagePath);
+            process.StartInfo.AddArgument("-i");
+            process.StartInfo.AddArgument(imagePath);
         }
 
-        process.StartInfo.ArgumentList.Add("-");
+        process.StartInfo.AddArgument("-");
 
         AIProcess turnProcess = new(process);
 
@@ -324,8 +326,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         try
         {
             using Process codex = GetCodexProcess(codexModel, token);
-            codex.StartInfo.ArgumentList.Add("login");
-            codex.StartInfo.ArgumentList.Add("status");
+            codex.StartInfo.AddArgument("login");
+            codex.StartInfo.AddArgument("status");
 
             using CancellationTokenRegistration _ = token.Register(() =>
             {
@@ -354,7 +356,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     private async Task<bool> LogIn(CancellationToken token, CodexDesktopModel codexModel)
     {
         using Process codex = GetCodexProcess(codexModel, token);
-        codex.StartInfo.ArgumentList.Add("login");
+        codex.StartInfo.AddArgument("login");
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {

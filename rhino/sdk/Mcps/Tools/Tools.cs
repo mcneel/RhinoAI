@@ -89,7 +89,11 @@ public abstract record Tool : ITool
 
     internal static string CorrectName(string name)
     {
+#if NET48
+        if (string.IsNullOrEmpty(name)) throw new ArgumentException("Value cannot be null or empty.", nameof(name));
+#else
         ArgumentException.ThrowIfNullOrEmpty(name);
+#endif
         name = name.Replace(' ', '_').Replace("__", "_");
         ValidateName(name);
         return name;
