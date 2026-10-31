@@ -24,6 +24,8 @@ public class UserPreferences
     public PermissionSet Permissions { get; } = new();
 
     public Permissability DefaultPermission { get; set; } = Permissability.Ask;
+    
+    public bool UseSdk { get; set; } = false;
 
     // NOTE : I think the below is unnecessary
 

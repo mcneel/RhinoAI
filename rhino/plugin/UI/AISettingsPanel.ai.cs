@@ -59,10 +59,17 @@ internal sealed class AISettingsPanel : Panel
         tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
         tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
 
-        // Human written pages
-        AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
-        AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
-        AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
+        if (Rhino.AI.Instances.Preferences.UseSdk)
+        {
+            // Human written pages
+            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
+            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
+            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
+        }
+        else
+        {
+            // AI : Restore the pages I removed in this Branch in this else statement
+        }
 
         Content = tabs;
     }

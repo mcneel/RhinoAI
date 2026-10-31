@@ -8,7 +8,7 @@ namespace Rhino.AI;
 /// <summary>
 /// Storage for the current Agents
 /// </summary>
-internal sealed class Agents
+public sealed class Agents
 {
 
     private Dictionary<Guid, IAgentDefinition> PrivateDefinitions { get; } = [];
@@ -17,16 +17,16 @@ internal sealed class Agents
     public IAgentDefinition? PreferredDefinition
         => PrivateDefinitions.TryGetValue(Instances.Preferences.PreferedAgentId, out IAgentDefinition? def) ? def : null;
 
-    public bool Add(IAgentDefinition definition)
+    internal bool Add(IAgentDefinition definition)
         => PrivateDefinitions.TryAdd(definition.Id, definition);
     
-    public bool Remove(Guid id)
+    internal bool Remove(Guid id)
         => PrivateDefinitions.Remove(id);
 
     public bool Exists(IAgentDefinition definition)
         => PrivateDefinitions.ContainsKey(definition.Id);
 
-    public bool LoadAgentsFromJson(string json)
+    internal bool LoadAgentsFromJson(string json)
     {
         IReadOnlyList<AgentDefinition>? definitions = AgentDefinitionsJson.Parse(json);
         if (definitions is null) return false;
@@ -40,7 +40,7 @@ internal sealed class Agents
         return true;
     }
 
-    public bool LoadAgentsFromJson()
+    internal bool LoadAgentsFromJson()
     {
         using Stream? stream = typeof(Agents).Assembly.GetManifestResourceStream("Rhino.AI.Definitions.json");
         using StreamReader reader = new(stream!);
