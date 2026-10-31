@@ -196,7 +196,7 @@ public static class PlugInRegistry
 
                     // DescriptionType -> 8
                     PropertyInfo? descInfo = type.GetProperty("DescriptionType");
-                    int enumIntValue = (int)descInfo?.GetValue(attrib);
+                    int enumIntValue = (int)descInfo?.GetValue(attrib)!;
                     if (enumIntValue != 8) continue;
 
                     // Value -> is the resource

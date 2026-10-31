@@ -20,7 +20,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "Codex: no approval in codex exec. You'd have to switch CodexHarness to codex app-server, which has a published schema but is labelled experimental.")]
-    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
@@ -92,7 +94,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             yield return new TurnEnd(StopReason.Error);
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    public override async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not CodexDesktopModel) return [];
 
@@ -136,7 +138,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
-        Process process = GetCodexProcess(agent.Model, token);
+        Process process = GetCodexProcess(agent.Model!, token);
 
         process.StartInfo.ArgumentList.Add("exec");
 
@@ -152,7 +154,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
         process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model.Name);
+        process.StartInfo.ArgumentList.Add(agent.Model!.Name);
 
         // Effort
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))

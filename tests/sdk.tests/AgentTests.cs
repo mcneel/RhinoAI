@@ -139,7 +139,7 @@ public class AgentTests
         harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
-            e.HasPermission = true;
+            if (e is PermissionRequest pr) pr.HasPermission = true;
             Assert.That(e.HasPermission);
         };
 
@@ -165,7 +165,7 @@ public class AgentTests
         harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
-            e.HasPermission = true;
+            if (e is PermissionRequest pr) pr.HasPermission = true;
             Assert.That(e.HasPermission);
         };
 

@@ -127,7 +127,7 @@ public class Harness
     /// <summary>
     /// Awaitable Permissions request. If null, permissions are assumed true.
     /// </summary>
-    public Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+    public virtual Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
 }
 

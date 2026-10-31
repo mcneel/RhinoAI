@@ -20,7 +20,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "--permission-prompt-tool would resolve this")]
-    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
@@ -212,7 +214,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         // TODO : Check agent.Model
-        Process process = GetClaudeProcess(token, agent.Model);
+        Process process = GetClaudeProcess(token, agent.Model!);
 
         process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
@@ -259,7 +261,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
         process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model.Name);
+        process.StartInfo.ArgumentList.Add(agent.Model!.Name);
 
         // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
         process.StartInfo.ArgumentList.Add("--fallback-model");

@@ -6,6 +6,7 @@
     <AssemblyName>Acp.Codegen</AssemblyName>
     <RootNamespace>Acp.Codegen</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS1591;NU1900</NoWarn>
     <IsPackable>false</IsPackable>
     <!-- Windows Application Control blocks the unsigned apphost, so run through dotnet instead. -->
     <UseAppHost>false</UseAppHost>
