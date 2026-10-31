@@ -42,7 +42,7 @@ public class SkillTests
     {
         RecordingModel model = new();
 
-        TestDefinition definition = new () { CurrentModelId = model.Name };
+        TestDefinition definition = new ();
         definition.Add(model);
         
         AIInstances.Agents.Add(definition);
@@ -55,8 +55,8 @@ public class SkillTests
         await agent.SendAsync("second", token);
 
         List<SystemTurn> systemTurns = model.Received[1].OfType<SystemTurn>().ToList();
-        Assert.That(systemTurns, Has.Count.EqualTo(2));
-        Assert.That(systemTurns[1].Prompt, Does.Contain("- boxes: How to draw boxes"));
+        Assert.That(systemTurns, Has.Count.EqualTo(1));
+        Assert.That(systemTurns[0].Prompt, Does.Contain("- boxes: How to draw boxes"));
     }
 
     [Test, CancelAfter(5000)]

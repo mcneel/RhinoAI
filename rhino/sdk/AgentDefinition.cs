@@ -86,7 +86,13 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
 
     public bool Add(ModelDefinition definition) => PrivateAvailableModels.Add(definition);
 
-    public bool Add(IModel definition) => PrivateAvailableModels.Add(new ModelDefinition(definition.Vendor, definition.Name, definition.Name));
+    public bool Add(IModel definition)
+    {
+        // TODO : IModel.Id?
+        if (!PrivateAvailableModels.Add(new ModelDefinition(definition.Vendor, definition.Name, definition.Name))) return false;
+        if (string.IsNullOrEmpty(CurrentModelId)) DefaultModelId = definition.Name;
+        return true;
+    }
 
     public abstract bool Available { get; }
 

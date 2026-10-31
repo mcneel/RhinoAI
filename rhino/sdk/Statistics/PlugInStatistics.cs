@@ -15,23 +15,18 @@ internal class PlugInStatistics
         public string Name { get; }
         public string Vendor { get; }
 
-        public ModelKey(Models.IModel model)
+        public ModelKey(Models.IModel model) : this(model.Name, model.Vendor) { }
+
+        public ModelKey(string name, string vendor)
         {
-            Name = model.Name.ToLowerInvariant();
-            Vendor = model.Vendor.ToLowerInvariant();
+            Name = name.ToLowerInvariant();
+            Vendor = vendor.ToLowerInvariant();
         }
     }
 
-    private readonly record struct PlugIn
+    private readonly record struct PlugIn(string Name, Guid Id)
     {
-        public string Name { get; }
-        public Guid Id { get; }
-
-        public PlugIn(PlugIns.PlugInToken token)
-        {
-            Name = token.Name;
-            Id = token.Id;
-        }
+        public PlugIn(PlugIns.PlugInToken token) : this(token.Name, token.Id) { }
     }
 
     // PlugIn Image (via method?)
@@ -79,33 +74,41 @@ internal class PlugInStatistics
 
     internal static bool LoadFromJson(string json)
     {
+        PlugInStatisticsDocument? document;
         try
         {
-            Stats.Clear();
-
-            Dictionary<PlugIn, PlugInStatistics>? dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<PlugIn, PlugInStatistics>>(json);
-            if (dict is null) return false;
-
-            foreach (KeyValuePair<PlugIn, PlugInStatistics> kvp in dict)
-            {
-                Stats[kvp.Key] = kvp.Value;
-            }
-
-            return true;
+            document = System.Text.Json.JsonSerializer.Deserialize<PlugInStatisticsDocument>(json);
         }
-        catch { }
-        return false;
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+        if (document is null) return false;
+
+        Stats.Clear();
+        foreach (PlugInUsageEntry entry in document.PlugIns)
+        {
+            PlugInStatistics stats = new();
+            foreach (ModelUsageEntry model in entry.Models)
+                stats.PrivateModelUsage[new ModelKey(model.Name, model.Vendor)] = model.TokenCount;
+
+            Stats[new PlugIn(entry.Name, entry.Id)] = stats;
+        }
+        return true;
     }
 
-    internal static string? GetJson()
+    internal static string GetJson()
     {
-        try
-        {
-            string json = System.Text.Json.JsonSerializer.Serialize(Stats);
-            return json;
-        }
-        catch { }
-        return null;
+        PlugInStatisticsDocument document = new(
+            Stats.Select(kvp => new PlugInUsageEntry(
+                kvp.Key.Id,
+                kvp.Key.Name,
+                kvp.Value.PrivateModelUsage
+                    .Select(m => new ModelUsageEntry(m.Key.Name, m.Key.Vendor, m.Value))
+                    .ToList()))
+            .ToList());
+
+        return System.Text.Json.JsonSerializer.Serialize(document);
     }
 
 }

@@ -29,8 +29,7 @@ public class PermissionTests
         });
         agent.Harness.AddMcp(mcp);
 
-        throw new NotImplementedException("Below is commented out, what is going on there?");
-        // agent.Harness.AskUser += async (e, __) => e.HasPermission = permissionRequested = true;
+        agent.Harness.AskUser += async (e, __) => { ((PermissionRequest)e).HasPermission = true; permissionRequested = true; };
 
         IAgentResult result = await agent.SendAsync("Please run the Smoople tool", token);
 

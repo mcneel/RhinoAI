@@ -63,8 +63,7 @@ public class AgentTests
         
         agent.Harness.AddMcp(mcp);
 
-        throw new NotImplementedException("What's the deal with below");
-        // agent.Harness.AskUser += async (e, _) => e.HasPermission = false;
+        agent.Harness.AskUser += async (e, __) => { ((PermissionRequest)e).HasPermission = false; };
 
         IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
