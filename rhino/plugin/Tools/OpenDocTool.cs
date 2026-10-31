@@ -11,7 +11,7 @@ internal static class OpenDocTool
     public static IToolResult OpenDoc(
         RhinoDoc doc,
         [Description("Absolute path to the file to import")] string path,
-        [Description("If true, delete all objects in the current document before importing")] bool clearFirst = false)
+        [Description("If true, delete all objects and groups in the current document before importing, so the imported objects keep the ids they have in the file. Clears the undo history.")] bool clearFirst = false)
     {
         if (string.IsNullOrWhiteSpace(path))
             return Failure(ToolError.BadArgument, "path is required.");
@@ -19,30 +19,57 @@ internal static class OpenDocTool
         if (!System.IO.File.Exists(path))
             return Failure(ToolError.RH_File_NotFound, $"File not found: {path}");
 
-        List<RhinoObject> removables = new(doc.Objects.Count);
+        ObjectEnumeratorSettings all = new()
+        {
+            NormalObjects = true,
+            LockedObjects = true,
+            HiddenObjects = true,
+            IncludeLights = true,
+        };
+
+        List<RhinoObject> removed = new();
+        List<int> removedGroups = new();
         if (clearFirst)
         {
-            foreach (RhinoObject? obj in doc.Objects)
+            // Import gives an incoming object a new id when a live object already has that
+            // id, and renames an incoming group when its name is taken. So the old content
+            // goes before the import, not after it.
+            List<RhinoObject> old = new(doc.Objects.Count);
+            foreach (RhinoObject? obj in doc.Objects.GetObjectList(all))
             {
                 if (obj is null) continue;
-                if (!obj.IsDeletable) continue;
-                removables.Add(obj);
+                old.Add(obj);
+            }
+
+            foreach (RhinoObject obj in old)
+            {
+                if (doc.Objects.Delete(obj, true, true)) removed.Add(obj);
+            }
+
+            // Deleting its objects leaves a group in the table, empty.
+            for (int i = 0; i < doc.Groups.Count; i++)
+            {
+                if (doc.Groups.IsDeleted(i)) continue;
+                if (doc.Groups.Delete(i)) removedGroups.Add(i);
             }
         }
 
-        int before = doc.Objects.Count - removables.Count;
+        // doc.Objects.Count still counts deleted objects, so it cannot tell what was imported.
+        int before = doc.Objects.ObjectCount(all);
         if (!doc.Import(path))
-            return Failure(ToolError.Failed, $"Failed to import: {path}");
-
-        foreach(RhinoObject obj in removables)
         {
-            doc.Objects.Delete(obj.Id, true);
+            foreach (RhinoObject obj in removed) doc.Objects.Undelete(obj);
+            foreach (int i in removedGroups) doc.Groups.Undelete(i);
+            return Failure(ToolError.Failed, $"Failed to import: {path}");
         }
+
+        // An undo step recorded before the clear would bring old objects back beside the new.
+        if (clearFirst) doc.ClearUndoRecords(true);
 
         // TODO : Non 3dm files will offer options and so get stuck!
         // RhinoApp.RunScript(doc.RuntimeSerialNumber, "!_E nter", false);
 
-        int imported = doc.Objects.Count - before;
+        int imported = doc.Objects.ObjectCount(all) - before;
 
         foreach (RhinoView? view in doc.Views)
         {
@@ -56,7 +83,7 @@ internal static class OpenDocTool
         {
             path,
             imported,
-            cleared = removables.Count,
+            cleared = removed.Count,
         });
     }
 }
