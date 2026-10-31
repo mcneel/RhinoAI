@@ -55,20 +55,22 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-
         if (Rhino.AI.Instances.Preferences.UseSdk)
         {
             // Human written pages
+            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
             AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
             AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
             AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
         }
         else
         {
-            // AI : Restore the pages I removed in this Branch in this else statement
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
         }
 
         Content = tabs;
@@ -122,6 +124,9 @@ internal sealed class AISettingsPanel : Panel
         AISettings.ExtraMcpServersJson = normalizedJson;
         AISettings.AutoLoadMCP = AutoLoadMcpBox.Checked == true;
         AISettings.AutoLoadScriptPlugIn = AutoLoadScriptPlugInBox.Checked == true;
+
+        if (ToolLeaves.Count == 0)
+            return true;
 
         // ScanTools hides router-internal underscore tools from the grid, so they have no checkbox to
         // round-trip; carry forward any that were already disabled instead of silently dropping them.

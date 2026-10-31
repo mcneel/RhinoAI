@@ -12,13 +12,13 @@ public class TestAgenticCommand : RhinoCommand
 
     public TestAgenticCommand()
     {
-        // Instances.Preferences.UseSdk = UseSdkSetting;
+        
     }
 
     protected override Commands.Result RunCommand(RhinoDoc doc, Commands.RunMode mode)
     {
-        // AI : Toggle Instances.Preferences.UseSdk like any other Test Command
-        
+        Instances.Preferences.UseSdk = !Instances.Preferences.UseSdk;
+        RhinoApp.WriteLine("UseSdk is now {0}", Instances.Preferences.UseSdk ? "on" : "off");
         return Commands.Result.Success;
     }
 }
