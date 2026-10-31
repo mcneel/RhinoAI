@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-
 using System.Text;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 using FuzzySharp;
 using FuzzySharp.PreProcess;
+
+using Rhino.AI.Models;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Rhino.AI.Tools;
 
@@ -41,30 +42,33 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         if (!args.TryGetString(Args[1].Name, out string prompt))
             return ToolReturn.Failure("prompt parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
 
-        if (Agent.Models.Count <= 0)
-            return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
-
-        if (!Agent.Models.TryGetValue(modelName, out Models.IModel? model))
+        if (!AIInstances.Agents.Definitions.Any(d => d.AvailableModels.Count > 0))
         {
-            IEnumerable<Models.IModel> models = Agent.Models.Values.Where(m => m.Name.Contains(modelName, StringComparison.InvariantCultureIgnoreCase) && m.Available);
-            IEnumerable<Models.IModel> availableModels = (models.Any() ? models : Agent.Models.Values).Where(m => m.Available);
+            return ToolReturn.Failure("This session cannot create sub agents.", "Do the work yourself instead of delegating it.");
+        }
 
-            string modelList = string.Join(";", availableModels);
-
-            IEnumerable<Models.IModel> likelyModels = Agent.Models.Values
-                .OrderByDescending(m => Fuzz.WeightedRatio(modelName, m.Name, PreprocessMode.Full))
-                .Take(3);
+        IEnumerable<(IAgentDefinition, IModel)> filteredModels = AvailableModels(modelName);
+        if (filteredModels is null || !filteredModels.Any())
+        {
+            IEnumerable<IModel> availableModels = AvailableModels()
+                                                    .Select(i => i.Item2).ToHashSet(new ModelComparer());
+            IEnumerable<IModel> likelyModels = availableModels
+                                                    .OrderByDescending(m => Fuzz.WeightedRatio(modelName, m.Name, PreprocessMode.Full))
+                                                    .Take(3);
             IEnumerable<string> likelyModelNames = likelyModels.Select(t => t.Name);
             string likelyModelString = string.Join(" or ", likelyModelNames);
             return ToolReturn.Failure($"{modelName} is not available", $"Did you mean {likelyModelString}?");
         }
-        
-        if (!model.Available)
+
+        // TODO : Choose model
+        IAgentDefinition definition = filteredModels.First().Item1;
+        Agent? agent = definition.WithModel(Token, modelName);
+        if (agent is null)
         {
-            return ToolReturn.Failure($"{model.Name} is not available", $"Try one of {string.Join(", ", Agent.AvailableModels.Select(m => m.Name))}");
+            // TODO : Improve this message. Why it this ever happen?
+            return ToolReturn.Failure($"{modelName} is not available", $"Try one of {string.Join(", ", filteredModels.Select(m => m.Item2.Name))}");
         }
 
-        Agent agent = Agent.FromModel(Token, model, prompt);
         IEnumerable<ITurn> turns = await agent.SendAsync(context, token).ConfigureAwait(false);
 
         StringBuilder report = new();
@@ -79,6 +83,44 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         return report.Length == 0
             ? ToolReturn.Failure("The sub agent finished without reporting anything.", "Delegate again with a context that states what the sub agent should report back.")
             : ToolReturn.Success(report.ToString().TrimEnd());
+    }
+
+    private class ModelComparer : IEqualityComparer<IModel>
+    {
+        public bool Equals(IModel? x, IModel? y)
+        {
+            if (x is null && y is null) return true;
+            if (x is null && y is not null) return false;
+            if (y is null && x is not null) return false;
+            
+            return string.Equals(x!.Name, y!.Name, System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode([DisallowNull] IModel obj) => obj.Name.GetHashCode();
+        
+    }
+
+    private static List<(IAgentDefinition, IModel)> AvailableModels(string? modelName = null)
+    {
+        // TODO : Put the preferred agent _first_
+
+        List<(IAgentDefinition, IModel)> pairs = new ();
+        foreach(IAgentDefinition agentDef in AIInstances.Agents.Definitions)
+        {
+            if (!agentDef.Available) continue;
+            foreach(ModelDefinition modelDef in agentDef.AvailableModels)
+            {
+                IModel? model = agentDef.GetModel(modelDef.ModelId);
+                if (model is null) continue;
+                if (!string.IsNullOrEmpty(modelName))
+                {
+                    if (!string.Equals(model.Name, modelName, System.StringComparison.OrdinalIgnoreCase)) continue;
+                }
+                pairs.Add((agentDef, model));
+            }
+        }
+
+        return pairs;
     }
 
 }

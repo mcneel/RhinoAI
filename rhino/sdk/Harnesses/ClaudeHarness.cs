@@ -15,34 +15,19 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class ClaudeHarness : IHarness
+internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 {
-
-    public PermissionSet Permissions { get; } = new();
-
-    private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
-
-    private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
-
-    public HarnessConfig Config { get; } = new();
-
-    public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
-
-    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
-
-    public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "--permission-prompt-tool would resolve this")]
-    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
-    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
-        if (!await EnsureLoggedIn(token))
+        if (!await EnsureLoggedIn(token, claudeModel))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -107,14 +92,14 @@ internal sealed class ClaudeHarness : IHarness
     }
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, ClaudeDesktopModel claudeModel)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process claude = GetClaudeProcess(token);
-            claude.StartInfo.ArgumentList.Add("auth");
-            claude.StartInfo.ArgumentList.Add("status");
+            using Process claude = GetClaudeProcess(token, claudeModel);
+            claude.StartInfo.AddArgument("auth");
+            claude.StartInfo.AddArgument("status");
 
             using CancellationTokenRegistration _ = token.Register(() =>
             {
@@ -140,7 +125,7 @@ internal sealed class ClaudeHarness : IHarness
                 LoggedIn = true;
                 return LoggedIn;
             }
-            LoggedIn = await LogIn(token);
+            LoggedIn = await LogIn(token, claudeModel);
             return LoggedIn;
         }
         catch
@@ -149,12 +134,12 @@ internal sealed class ClaudeHarness : IHarness
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token)
+    private async Task<bool> LogIn(CancellationToken token, ClaudeDesktopModel model)
     {
-        using Process claude = GetClaudeProcess(token);
-        claude.StartInfo.ArgumentList.Add("auth");
-        claude.StartInfo.ArgumentList.Add("login");
-        claude.StartInfo.ArgumentList.Add("--claudeai");
+        using Process claude = GetClaudeProcess(token, model);
+        claude.StartInfo.AddArgument("auth");
+        claude.StartInfo.AddArgument("login");
+        claude.StartInfo.AddArgument("--claudeai");
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -184,7 +169,7 @@ internal sealed class ClaudeHarness : IHarness
         return false;
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    public override async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) return [];
 
@@ -197,9 +182,10 @@ internal sealed class ClaudeHarness : IHarness
         return turns;
     }
 
-    private Process GetClaudeProcess(CancellationToken token)
+    private Process GetClaudeProcess(CancellationToken token, IModel model)
     {
-        string exePath = ClaudeDesktopModel.ExePath;
+        ClaudeDesktopModel claudeModel = (ClaudeDesktopModel)model;
+        string exePath = claudeModel.ExePath;
 
         Process process = new()
         {
@@ -218,7 +204,9 @@ internal sealed class ClaudeHarness : IHarness
         };
 
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         process.StartInfo.StandardInputEncoding = utf8;
+#endif
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
@@ -227,102 +215,107 @@ internal sealed class ClaudeHarness : IHarness
 
     private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
-        Process process = GetClaudeProcess(token);
+        // TODO : Check agent.Model
+        Process process = GetClaudeProcess(token, agent.Model!);
 
         process.StartInfo.Environment["MCP_TIMEOUT"] = ((long)McpTimeouts.Startup.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
-        process.StartInfo.ArgumentList.Add("-p");
+        process.StartInfo.AddArgument("-p");
 
         if (agent.Config.SessionId != Guid.Empty)
         {
-            process.StartInfo.ArgumentList.Add("--resume");
+            process.StartInfo.AddArgument("--resume");
         }
         else
         {
             // TODO : If Call fails, this must be un-set
             agent.Config.SessionId = Guid.NewGuid();
-            process.StartInfo.ArgumentList.Add("--session-id");
+            process.StartInfo.AddArgument("--session-id");
         }
 
-        process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString()!);
+        process.StartInfo.AddArgument(agent.Config.SessionId.ToString()!);
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;
 
         // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             // TODO : Check Permissions.ProhibitedTools()
             allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
             allowedTools += " ";
         }
-        process.StartInfo.ArgumentList.Add("--allowedTools");
-        process.StartInfo.ArgumentList.Add(allowedTools);
+        process.StartInfo.AddArgument("--allowedTools");
+        process.StartInfo.AddArgument(allowedTools);
 
 
         // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
         string disallowedTools = string.Empty;
-        foreach (Permission permission in Permissions.ProhibitedTools())
+        foreach (Permission permission in AIInstances.Preferences.Permissions.ProhibitedTools())
         {
             disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
             // permission.ArgumentPermissions // TODO : Use these for smarter permissions
             disallowedTools += " ";
         }
-        process.StartInfo.ArgumentList.Add("--disallowedTools");
-        process.StartInfo.ArgumentList.Add(disallowedTools);
+        process.StartInfo.AddArgument("--disallowedTools");
+        process.StartInfo.AddArgument(disallowedTools);
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model.Name);
+        process.StartInfo.AddArgument("--model");
+        process.StartInfo.AddArgument(agent.Model!.Name);
 
-        if (UserPermissions.IsPermitted("anthropic", "opus"))
+        // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
+        process.StartInfo.AddArgument("--fallback-model");
+        process.StartInfo.AddArgument("opus");
+
+        // --effort <level>                      Effort level for the current session (low, medium, high, xhigh, max)
+        if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
         {
-            // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
-            process.StartInfo.ArgumentList.Add("--fallback-model");
-            process.StartInfo.ArgumentList.Add("opus");
+            process.StartInfo.AddArgument("--effort");
+            process.StartInfo.AddArgument(agent.Config.ModelEffort);
         }
 
         // --strict-mcp-config                   Only use MCP servers from --mcp-config, ignoring all other MCP configurations
-        process.StartInfo.ArgumentList.Add("--strict-mcp-config");
+        process.StartInfo.AddArgument("--strict-mcp-config");
 
         // --mcp-config <configs...>             Load MCP servers from JSON files or strings (space-separated)
-        process.StartInfo.ArgumentList.Add("--mcp-config");
-        process.StartInfo.ArgumentList.Add(GetMcpJsons());
+        process.StartInfo.AddArgument("--mcp-config");
+        process.StartInfo.AddArgument(GetMcpJsons(agent));
 
         // --effort <level>  Effort level for the current session (low, medium, high, xhigh, max)
-        process.StartInfo.ArgumentList.Add("--effort");
-        process.StartInfo.ArgumentList.Add("high");
+        process.StartInfo.AddArgument("--effort");
+        process.StartInfo.AddArgument("high");
 
         // --prompt-suggestions [value]          Enable prompt suggestions
-        process.StartInfo.ArgumentList.Add("--prompt-suggestions");
-        process.StartInfo.ArgumentList.Add("false");
+        process.StartInfo.AddArgument("--prompt-suggestions");
+        process.StartInfo.AddArgument("false");
 
-        process.StartInfo.ArgumentList.Add("--input-format");
-        process.StartInfo.ArgumentList.Add("stream-json");
+        process.StartInfo.AddArgument("--input-format");
+        process.StartInfo.AddArgument("stream-json");
 
         // Output as JSON
-        process.StartInfo.ArgumentList.Add("--output-format");
-        process.StartInfo.ArgumentList.Add("stream-json");
+        process.StartInfo.AddArgument("--output-format");
+        process.StartInfo.AddArgument("stream-json");
 
-        process.StartInfo.ArgumentList.Add("--verbose");
+        process.StartInfo.AddArgument("--verbose");
 
         if (!agent.Config.UseLocalSettings)
         {
-            process.StartInfo.ArgumentList.Add("--tools");
-            process.StartInfo.ArgumentList.Add("");
-            process.StartInfo.ArgumentList.Add("--setting-sources");
-            process.StartInfo.ArgumentList.Add("");
+            process.StartInfo.AddArgument("--tools");
+            process.StartInfo.AddArgument("");
+            process.StartInfo.AddArgument("--setting-sources");
+            process.StartInfo.AddArgument("");
         }
 
         string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
         if (systemPrompt.Length > 0)
         {
-            process.StartInfo.ArgumentList.Add("--append-system-prompt");
-            process.StartInfo.ArgumentList.Add(systemPrompt);
+            process.StartInfo.AddArgument("--append-system-prompt");
+            process.StartInfo.AddArgument(systemPrompt);
         }
 
-        process.StartInfo.ArgumentList.Add("--disable-slash-commands");
+        process.StartInfo.AddArgument("--disable-slash-commands");
 
         AIProcess turnProcess = new(process);
 
@@ -633,13 +626,13 @@ internal sealed class ClaudeHarness : IHarness
     }
 
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
-    private string GetMcpJsons()
+    private string GetMcpJsons(Agent agent)
     {
         JsonObject array = new();
 
         // NOTE : Do the MCP configs need to be done? Can turns not just be run?
         string mcpJson = string.Empty;
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             // TODO : MCP's
             if (mcp is StdioMcp stdioMcp)
@@ -666,7 +659,7 @@ internal sealed class ClaudeHarness : IHarness
             }
             else if (mcp is MemoryMcp memoryMcp)
             {
-                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, memoryMcp);
+                Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, memoryMcp);
                 Leases.Add(lease);
 
                 array[mcp.Name] = new JsonObject()

@@ -2,26 +2,25 @@ using NUnit.Framework.Constraints;
 
 using Rhino.AI;
 
-public static class Turns
+public static class Replied
 {
 
-    public static Constraint EndsWith(params string[] keywords) => new EndsWithMessageConstraint(keywords);
+    public static Constraint With(params string[] keywords) => new RepliedWithConstraint(keywords);
 
-    private sealed class EndsWithMessageConstraint(string[] keywords) : Constraint
+    private sealed class RepliedWithConstraint(string[] keywords) : Constraint
     {
 
-        public override string Description => $"last turn to be a message containing {string.Join(", ", keywords.Select(k => $"\"{k}\""))}";
+        public override string Description => $"a reply containing {string.Join(", ", keywords.Select(k => $"\"{k}\""))}";
 
         public override ConstraintResult ApplyTo<TActual>(TActual actual)
         {
-            if (actual is not IEnumerable<ITurn> turns)
-                throw new ArgumentException($"Expected IEnumerable<ITurn> but was {actual?.GetType().Name ?? "null"}", nameof(actual));
+            if (actual is not IAgentResult result)
+                throw new ArgumentException($"Expected {nameof(IAgentResult)} but was {actual?.GetType().Name ?? "null"}", nameof(actual));
 
-            ITurn? last = turns.LastOrDefault();
-            bool isSuccess = last is MessageTurn message
-                && keywords.All(k => message.Message.Contains(k, StringComparison.OrdinalIgnoreCase));
+            bool isSuccess = result.Text is string text
+                && keywords.All(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
 
-            return new ConstraintResult(this, last, isSuccess);
+            return new ConstraintResult(this, result.Text, isSuccess);
         }
 
     }

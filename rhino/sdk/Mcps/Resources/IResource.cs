@@ -26,9 +26,8 @@ public interface IResource
     /// <summary>
     /// A call to read the resource
     /// </summary>
-    /// <param name="args">The arguments for the tool call</param>
     /// <param name="token">A cancellation token</param>
-    /// <returns>The <see cref="ToolReturn"/></returns>
+    /// <returns>The <see cref="ResourceReturn"/></returns>
     public Task<ResourceReturn> ReadAsync(CancellationToken token);
 
 }

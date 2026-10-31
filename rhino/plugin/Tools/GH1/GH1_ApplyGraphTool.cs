@@ -141,7 +141,7 @@ internal static class GH1_ApplyGraphTool
         obj = null;
         if (Guid.TryParse(c.Selector, out Guid guid))
         {
-            obj = Instances.ComponentServer.EmitObject(guid);
+            obj = Grasshopper.Instances.ComponentServer.EmitObject(guid);
             if (obj is null)
             { error = $"No component with guid '{guid}'"; return false; }
         }

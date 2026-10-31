@@ -1,4 +1,6 @@
 #if NETFRAMEWORK
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -66,6 +68,14 @@ namespace Rhino.AI
             };
 
         public static int Max(int one, int two) => one > two ? one : two;
+
+        public static float Max(float one, float two) => System.Math.Max(one, two);
+
+        public static int Min(int one, int two) => System.Math.Min(one, two);
+
+        public static float Min(float one, float two) => System.Math.Min(one, two);
+
+        public static float Abs(float value) => System.Math.Abs(value);
 
         public static double Round(double input) => System.Math.Round(input);
 
@@ -214,26 +224,54 @@ namespace Rhino.AI
 #endif
         }
 
-    }
+        public static TValue? GetValueOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary, TKey key)
+            => dictionary.TryGetValue(key, out TValue? value) ? value : default;
 
-}
+        public static async Task WaitForExitAsync(this Process process, CancellationToken token = default)
+        {
+            TaskCompletionSource<bool> exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            process.EnableRaisingEvents = true;
+            process.Exited += (_, _) => exited.TrySetResult(true);
+            if (process.HasExited)
+                exited.TrySetResult(true);
 
-namespace System.Runtime.CompilerServices
-{
+            using (token.Register(() => exited.TrySetCanceled(token)))
+                await exited.Task.ConfigureAwait(false);
+        }
 
-    internal static class IsExternalInit { }
+        public static Task<string?> ReadLineAsync(this TextReader reader, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return reader.ReadLineAsync()!;
+        }
 
-}
+        public static Task<string> ReadToEndAsync(this TextReader reader, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return reader.ReadToEndAsync();
+        }
 
-namespace System.Diagnostics.CodeAnalysis
-{
+        public static Task WriteLineAsync(this TextWriter writer, ReadOnlyMemory<char> text, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return writer.WriteLineAsync(text.ToString());
+        }
 
-    [AttributeUsage(AttributeTargets.Parameter)]
-    internal sealed class NotNullWhenAttribute : Attribute
-    {
-        public NotNullWhenAttribute(bool returnValue) => ReturnValue = returnValue;
+        public static Task FlushAsync(this TextWriter writer, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return writer.FlushAsync();
+        }
 
-        public bool ReturnValue { get; }
+        public static Task WriteAsync(this Stream stream, byte[] buffer, CancellationToken token)
+            => stream.WriteAsync(buffer, 0, buffer.Length, token);
+
+        public static Task<string> ReadAsStringAsync(this System.Net.Http.HttpContent content, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return content.ReadAsStringAsync();
+        }
+
     }
 
 }

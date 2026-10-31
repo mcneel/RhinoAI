@@ -11,7 +11,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
 
     public string Vendor { get; } = vendor;
 
-    public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
+    public JsonObject ToRequest(RequestSettings settings, Harness harness, IEnumerable<ITurn> turns)
     {
         StringBuilder system = new();
         JsonArray messages = [];
@@ -61,7 +61,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
         return body;
     }
 
-    public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response)
+    public IReadOnlyList<ITurn> FromResponse(Harness harness, JsonNode response)
     {
         if (response is not JsonObject message)
             throw new JsonException("Claude returned something other than a message object.");
@@ -73,7 +73,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: (int?)message["usage"]?["output_tokens"]));
+        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: Tokens(message["usage"])));
 
         return turns;
     }
@@ -104,9 +104,9 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
 
     private static JsonObject ToThinking(ThinkingTurn thinking, ThoughtSignature signature) => signature.IsRedacted
         ? new JsonObject { ["type"] = "redacted_thinking", ["data"] = signature.Value }
-        : new JsonObject { ["type"] = "thinking", ["thinking"] = thinking.Thinking, ["signature"] = signature.Value };
+        : new JsonObject { ["type"] = "thinking", ["thinking"] = thinking.Data, ["signature"] = signature.Value };
 
-    private ITurn? ToTurn(IHarness harness, JsonObject block) => (string?)block["type"] switch
+    private ITurn? ToTurn(Harness harness, JsonObject block) => (string?)block["type"] switch
     {
         "text" => new MessageTurn((string?)block["text"] ?? string.Empty, RoleType.Assistant),
         "thinking" => new ThinkingTurn((string?)block["thinking"] ?? string.Empty, new ThoughtSignature(Vendor, null, (string?)block["signature"] ?? string.Empty)),
@@ -115,16 +115,16 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
         _ => null,
     };
 
-    private static ToolTurn ToolCall(IHarness harness, JsonObject block)
+    private static ToolTurn ToolCall(Harness harness, JsonObject block)
     {
         string name = (string?)block["name"] ?? string.Empty;
         return new ToolTurn((string?)block["id"] ?? string.Empty, name, ToolArgs.FromJson(harness, name, block["input"]));
     }
 
-    private static JsonArray Declarations(IHarness harness)
+    private static JsonArray Declarations(Harness harness)
     {
         JsonArray declarations = [];
-        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
+        foreach ((Mcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {
@@ -166,5 +166,12 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
 
         _ => StopReason.Other,
     };
+
+    // Claude reports no total, and input_tokens excludes whatever was read from or written to the prompt cache.
+    private static int? Tokens(JsonNode? usage) => usage is null ? null
+        : ((int?)usage["input_tokens"] ?? 0)
+        + ((int?)usage["cache_creation_input_tokens"] ?? 0)
+        + ((int?)usage["cache_read_input_tokens"] ?? 0)
+        + ((int?)usage["output_tokens"] ?? 0);
 
 }

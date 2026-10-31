@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using Eto.Drawing;
 using Eto.Forms;
+using Rhino.AI.UI;
 using Rhino.UI;
 
 namespace Rhino.AI;
@@ -44,6 +45,8 @@ internal sealed class AISettingsPanel : Panel
     // the editor from a freshly selected row.
     private bool Loading { get; set; }
 
+    private List<(string Name, AIPage Page)> Pages { get; } = [];
+
     public AISettingsPanel()
     {
         Padding = new Padding(20);
@@ -52,12 +55,31 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
+        if (AIInstances.Preferences.UseSdk)
+        {
+            // Human written pages
+            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
+            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
+            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
+            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
+        }
+        else
+        {
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
+        }
 
         Content = tabs;
+    }
+
+    private void AddPage(TabControl tabs, string name, AIPage page)
+    {
+        tabs.Pages.Add(new TabPage { Text = name, Content = page });
+        Pages.Add((name, page));
     }
 
     // Persists every tab back to AISettings. Returns false (and shows the MCP error inline) when the
@@ -75,6 +97,20 @@ internal sealed class AISettingsPanel : Panel
         }
         McpErrorLabel.Visible = false;
 
+        foreach ((string name, AIPage page) in Pages)
+        {
+            if (page.Validate()) continue;
+            error = string.Format(LOC.STR("The {0} settings are not valid."), name);
+            return false;
+        }
+
+        foreach ((string name, AIPage page) in Pages)
+        {
+            if (page.TryApplyChanges()) continue;
+            error = string.Format(LOC.STR("The {0} settings could not be applied."), name);
+            return false;
+        }
+
         foreach (AgentRow row in Rows)
         {
             AISettings.SetAgentEnabled(row.Name, row.Enabled);
@@ -88,6 +124,9 @@ internal sealed class AISettingsPanel : Panel
         AISettings.ExtraMcpServersJson = normalizedJson;
         AISettings.AutoLoadMCP = AutoLoadMcpBox.Checked == true;
         AISettings.AutoLoadScriptPlugIn = AutoLoadScriptPlugInBox.Checked == true;
+
+        if (ToolLeaves.Count == 0)
+            return true;
 
         // ScanTools hides router-internal underscore tools from the grid, so they have no checkbox to
         // round-trip; carry forward any that were already disabled instead of silently dropping them.

@@ -3,27 +3,36 @@ using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record TurnEnd(StopReason Reason = StopReason.EndTurn, string? error = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+/// <summary>
+/// And end turn, signalling the end of the request
+/// </summary>
+public sealed record TurnEnd : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.Assistant;
+    public StopReason Reason { get; init; }
 
-    [JsonIgnore]
-    public bool Success => Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+    [JsonConstructor]
+    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(reason, data, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
+    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("end")
+    {
+        Role = RoleType.Assistant;
+        Reason = reason;
+        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+        Data = data ?? string.Empty;
 
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
+        Role = RoleType.Assistant;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
+    }
 
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data { get; } = error ?? string.Empty;
-
-    public ITurn Copy() => this;
+    // TODO : Improve
+    public override ITurn Copy() => this;
 
 }
 

@@ -12,26 +12,14 @@ using System.Diagnostics;
 namespace Rhino.AI;
 
 /// <summary>
-/// A standard input output MCP that drives an executable MCP
+/// A STandard Input Output MCP that drives an executable
 /// </summary>
-public sealed class StdioMcp(string name, Uri process) : IMcp
+public sealed class StdioMcp(string name, Uri process) : Mcp(name)
 {
 
     private const string ProtocolVersion = "2025-06-18";
     private const int RememberedErrorLines = 20;
     private const int GracefulExitMilliseconds = 2000;
-
-    public string Name { get; } = Tool.CorrectName(name);
-
-    // TODO : Read from MCP
-    private Dictionary<string, ITool> PrivateTools { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, ITool> Tools => PrivateTools;
-
-    // TODO : Read from MCP
-    private Dictionary<string, IResource> PrivateResources { get; } = [];
-    public IReadOnlyDictionary<string, IResource> Resources => PrivateResources;
-
-    public bool RegisterResource(IResource resource) => false;
 
     public Uri ProcessPath { get; } = process;
 
@@ -46,8 +34,10 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
     private Queue<string> RecentErrors { get; } = new(RememberedErrorLines);
     private Task ErrorDrain { get; set; } = Task.CompletedTask;
 
-    public async Task<bool> InitAsync(CancellationToken token)
+    private bool Initialized { get; set; } = false;
+    public override async Task<bool> InitAsync(CancellationToken token)
     {
+        if (Initialized) return true;
         Process = new()
         {
             StartInfo = new(ProcessPath.LocalPath)
@@ -91,6 +81,7 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
                 ToArgs(tool["inputSchema"]));
         }
 
+        Initialized = true;
         return true;
     }
 
@@ -98,6 +89,8 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
     {
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
             return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+
+        bool started = await InitAsync(token);
 
         JsonObject arguments = [];
         foreach (IToolArg argument in args)
@@ -308,7 +301,13 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
             return RecentErrors.Count == 0 ? "" : $" stderr: {string.Join(" | ", RecentErrors)}";
     }
 
-    public void Dispose()
+    ~StdioMcp()
+    {
+        // TODO : Claude = May be a better way
+        Dispose();
+    }
+
+    public override void Dispose()
     {
         if (Disposed)
             return;
@@ -336,12 +335,9 @@ public sealed class StdioMcp(string name, Uri process) : IMcp
         PrivateTools.Clear();
     }
 
-    public bool RegisterTool(ITool tool)
-        => PrivateTools.TryAdd(tool.Name, tool);
-
     private sealed record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
     {
-        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused();
+        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused(Name);
     }
 
 }

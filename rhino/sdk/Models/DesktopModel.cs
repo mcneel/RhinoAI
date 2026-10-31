@@ -6,15 +6,17 @@ using System.Runtime.CompilerServices;
 
 namespace Rhino.AI.Models;
 
-internal abstract class DesktopModel(string name, string vendor) : IModel
+internal abstract class DesktopModel(string name, string vendor, IEnumerable<string> searchPaths) : IModel
 {
 
     public string Name { get; } = name;
     public string Vendor { get; } = vendor;
 
     public abstract bool Available { get; }
+
+    protected IEnumerable<string> SearchPaths { get; } = searchPaths;
     
-    public async IAsyncEnumerable<ITurn> StreamAsync(IHarness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
+    public async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
     {
         throw new NotImplementedException($"Do not call {nameof(StreamAsync)} on desktop Models. Use the Agent.");
 
@@ -24,7 +26,7 @@ internal abstract class DesktopModel(string name, string vendor) : IModel
 #pragma warning restore CS0162 // Unreachable code detected
     }
     
-    public async Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
+    public async Task<IEnumerable<ITurn>> SendAsync(Harness harness, IEnumerable<ITurn> turns, CancellationToken token)
     {
         throw new NotImplementedException($"Do not call {nameof(SendAsync)} on desktop Models. Use the Agent.");
     }

@@ -15,10 +15,10 @@ internal static class GH1_StartTool
         try
         {
             RhinoApp.RunScript(doc.RuntimeSerialNumber, "_Grasshopper", true);
-            if (Instances.ActiveDocument is null)
+            if (Grasshopper.Instances.ActiveDocument is null)
             {
-                Grasshopper.Kernel.GH_Document ghDoc = Instances.DocumentServer.AddNewDocument();
-                Instances.ActiveCanvas.Document = ghDoc;
+                Grasshopper.Kernel.GH_Document ghDoc = Grasshopper.Instances.DocumentServer.AddNewDocument();
+                Grasshopper.Instances.ActiveCanvas.Document = ghDoc;
             }
         }
         catch (Exception ex)
@@ -26,7 +26,7 @@ internal static class GH1_StartTool
             return Failure(ex, "Grasshopper could not be started; ask the user to start it manually");
         }
 
-        return Instances.ActiveCanvas is not null
+        return Grasshopper.Instances.ActiveCanvas is not null
             ? Success(ContentBlock.CreateText("Opened Grasshopper"))
             : Failure(ToolError.GH_NotAvailable, "Grasshopper did not open");
     }

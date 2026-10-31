@@ -9,28 +9,73 @@ namespace Rhino.AI;
 public sealed class PermissionSet
 {
 
-    public Permissability DefaultPermission { get; set; } = Permissability.Ask;
+    /// <summary>
+    /// The default permission used when no prior permission has been requested
+    /// </summary>
+    public Permissability DefaultPermission { get; set; } = Permissability.Unset;
 
     private HashSet<Permission> Permissions { get; } = new();
 
-    public Permissability HasPermission(IMcp mcp, ITool tool, IReadOnlyList<IToolArg> args)
+    /// <summary>
+    /// What permission does this mcp/tool with the given args have?
+    /// </summary>
+    /// <param name="mcp">The MCP</param>
+    /// <param name="tool">A Tool of this MCP</param>
+    /// <param name="args">The arguments</param>
+    /// <returns>The given permission, or the default if none is found</returns>
+    public Permissability HasPermission(Mcp mcp, ITool tool, IList<IToolArg> args)
         => HasPermission(mcp.Name, tool.Name, args);
 
-    public Permissability HasPermission(string mcpName, string toolName, IReadOnlyList<IToolArg> args)
+    /// <summary>
+    /// What permission does this mcp/tool with the given args have?
+    /// </summary>
+    /// <param name="mcpName">The name of the MCP</param>
+    /// <param name="toolName">The name of the Tool</param>
+    /// <param name="args">The arguments</param>
+    /// <returns>The given permission, or the default if none is found</returns>
+    public Permissability HasPermission(string mcpName, string toolName, IList<IToolArg> args)
     {
         Permissability result = DefaultPermission;
-        foreach(Permission permission in Permissions)
+        foreach (Permission permission in Permissions)
         {
-            if (!string.Equals(permission.McpName, mcpName)) continue;
-            if (!string.Equals(permission.ToolName, toolName)) continue;
+            if (!string.Equals(permission.McpName, mcpName) &&
+                !string.Equals(permission.McpName, "*")) continue;
 
-            // TODO : What if there are multiple entries
+            if (!string.Equals(permission.ToolName, toolName) &&
+                !string.Equals(permission.ToolName, "*")) continue;
+
+            // TODO : What if there are multiple entries?
             result = ResolvePermissions(permission, args);
         }
 
         return result;
     }
 
+    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, Mcp mcp, ITool tool, IList<IToolArg> args)
+        => ResolvePermissionChain(definition, mcp.Name, tool.Name, args);
+
+    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, string mcpName, string toolName, IList<IToolArg> args)
+    {
+        Permissability globalPermissions = AIInstances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
+        if (globalPermissions == Permissability.Deny) return Permissability.Deny;
+
+        Permissability defPermissions = definition.Permissions.HasPermission(mcpName, toolName, args);
+        if (defPermissions == Permissability.Deny) return Permissability.Deny;
+        
+        // Never specified
+        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Unset) return AIInstances.Preferences.DefaultPermission;
+
+        if (globalPermissions == Permissability.Always && defPermissions == Permissability.Unset) return globalPermissions;
+        if (globalPermissions == Permissability.Unset && defPermissions == Permissability.Always) return defPermissions;
+        
+        // TODO : Add a test -- I think some scenarios are missing here
+        
+        return globalPermissions;
+    }
+    
+    /// <summary>
+    /// All tools that are Permissability.Always
+    /// </summary>
     public IEnumerable<Permission> AllowedTools()
     {
         foreach (Permission permission in Permissions)
@@ -40,6 +85,9 @@ public sealed class PermissionSet
         }
     }
 
+    /// <summary>
+    /// All tools that are Permissability.Deny
+    /// </summary>
     public IEnumerable<Permission> ProhibitedTools()
     {
         foreach (Permission permission in Permissions)
@@ -49,8 +97,11 @@ public sealed class PermissionSet
         }
     }
 
-    private Permissability ResolvePermissions(Permission permission, IReadOnlyList<IToolArg> args)
+    private Permissability ResolvePermissions(Permission permission, IList<IToolArg> args)
     {
+        if (permission.ArgumentPermissions.Count != args.Count)
+            return DefaultPermission;
+
         foreach (IToolArg inputArg in args)
         {
             if (permission.ArgumentPermissions.TryGetValue(inputArg.Name, out ToolArgPermission argPermission))
@@ -69,7 +120,7 @@ public sealed class PermissionSet
         return permission.Permissability;
     }
 
-    public bool AddPermission(Permission permission)
+    internal bool AddPermission(Permission permission)
         => Permissions.Add(permission);
 
 
@@ -90,28 +141,70 @@ public sealed class PermissionSet
         ToolPath path => rule.MatchesPath(path.Value),
         ToolUrl url => rule.MatchesUrl(url.Value),
         ToolString text => rule.MatchesText(text.Value),
+        ToolSecret secret => rule.MatchesText(secret.Value),
 
         _ => false
     };
 
 }
 
-public enum Permissability { Always, Ask, Deny };
+/// <summary>
+/// The current permission of a tool
+/// </summary>
+public enum Permissability { Unset = 0, Always, Ask, Deny };
 
-public record struct ToolArgPermission(string ArgName, Permissability Permissability, string Value);
+/// <summary>
+/// A given tool argument permission
+/// </summary>
+public readonly record struct ToolArgPermission
+{
 
+    public string ArgName { get; }
+    public string Value { get; }
+
+    public ToolArgPermission(string argName, string value)
+    {
+        ArgName = argName;
+        Value = value;
+    }
+
+}
+
+/// <summary>
+/// A single permission for a specific tool
+/// </summary>
 public sealed record Permission
 {
 
+    /// <summary>
+    /// The name of the MCP the tool belongs to
+    /// </summary>
     public string McpName { get; }
 
+    /// <summary>
+    /// The name of the Tool
+    /// </summary>
     public string ToolName { get; }
 
+    /// <summary>
+    /// The users specified permission
+    /// </summary>
     public Permissability Permissability { get; }
 
+    /// <summary>
+    /// The permission argumnets
+    /// </summary>
     public IReadOnlyDictionary<string, ToolArgPermission> ArgumentPermissions { get; }
 
-    public Permission(IMcp mcp, ITool tool, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    internal Permission(string mcpName, string toolName, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    {
+        McpName = mcpName;
+        ToolName = toolName;
+        Permissability = permissability;
+        ArgumentPermissions = argumentPermissions;
+    }
+    
+    public Permission(Mcp mcp, ITool tool, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcp.Name;
         ToolName = tool.Name;
@@ -119,7 +212,7 @@ public sealed record Permission
         ArgumentPermissions = argumentPermissions;
     }
 
-    public Permission(IMcp mcp, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+    public Permission(Mcp mcp, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcp.Name;
         ToolName = "*";

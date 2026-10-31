@@ -4,14 +4,14 @@ using System.Collections.Generic;
 namespace Rhino.AI.Models;
 
 /// <summary>Translates a transcript to and from one vendor's wire format.</summary>
-public interface ITurnConverter
+internal interface ITurnConverter
 {
 
     public string Vendor { get; }
 
-    public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns);
+    public JsonObject ToRequest(RequestSettings settings, Harness harness, IEnumerable<ITurn> turns);
 
-    public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response);
+    public IReadOnlyList<ITurn> FromResponse(Harness harness, JsonNode response);
 
 }
 

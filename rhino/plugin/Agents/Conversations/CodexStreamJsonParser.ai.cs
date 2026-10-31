@@ -168,7 +168,7 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
             "thread.started" => EmitSession(root),
             "item.started" => EmitItemStarted(root),
             "item.completed" => EmitItemCompleted(root),
-            "turn.completed" => ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root)),
+            "turn.completed" => ParsedLine.Complete(Acp.StopReason.EndTurn, ReadUsage(root)),
             "turn.failed" => EmitTurnFailed(root),
             _ => ParsedLine.None,
         };
@@ -208,8 +208,8 @@ internal sealed class CodexStreamJsonParser : IStreamJsonParser
 
     private ParsedLine EmitTurnFailed(JsonElement root) =>
         ReadFailureMessage(root) is { Length: > 0 } message
-            ? ParsedLine.Failed(StopReason.Refusal, Note($"{DisplayName} failed: {message}"))
-            : ParsedLine.Complete(StopReason.Refusal);
+            ? ParsedLine.Failed(Acp.StopReason.Refusal, Note($"{DisplayName} failed: {message}"))
+            : ParsedLine.Complete(Acp.StopReason.Refusal);
 
     private ParsedLine EmitNote(string message) =>
         message.Length > 0 ? ParsedLine.Emit(Note($"{DisplayName}: {message}")) : ParsedLine.None;
