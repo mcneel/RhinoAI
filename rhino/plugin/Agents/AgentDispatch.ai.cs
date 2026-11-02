@@ -205,11 +205,18 @@ internal static class AgentDispatch
         try
         {
             checkpoint = await TurnUndoCheckpoint.OpenAsync(doc, TurnUndoCheckpoint.Describe(message.Text)).ConfigureAwait(false);
-            await agent.PromptAsync(message, url, cwd).ConfigureAwait(false);
+            // Opening the checkpoint can complete synchronously on Rhino's UI thread. Agent startup
+            // may evaluate a system PAC script, so make sure it cannot block that thread.
+            await Task.Run(() => agent.PromptAsync(message, url, cwd)).ConfigureAwait(false);
         }
         catch (ObjectDisposedException)
         {
             // Agent torn down mid-turn (New conversation / Stop): expected, not an error.
+        }
+        catch (AgentProxyException ex)
+        {
+            agent.Conversation.NoteSystem(ex.Message);
+            RhinoApp.WriteLine($"[{agent.Name}] error: {ex.Message}");
         }
         catch (Exception ex)
         {

@@ -12,6 +12,7 @@ namespace Rhino.AI;
 internal sealed class AISettingsPanel : Panel
 {
     private ObservableCollection<AgentRow> Rows { get; } = [];
+    private TabControl Tabs { get; } = new();
     private GridView AgentGrid { get; } = new() { ShowHeader = true, AllowMultipleSelection = false, AllowColumnReordering = false, AllowEmptySelection = true };
 
     // Right-hand property list for the selected agent. Model/Enabled/Available used to live in the grid;
@@ -25,6 +26,10 @@ internal sealed class AISettingsPanel : Panel
 
     private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Eto.Drawing.Fonts.Monospace(11) };
     private Label McpErrorLabel { get; } = new() { TextColor = Colors.Red, Visible = false };
+
+    private DropDown ProxyModeBox { get; } = new();
+    private TextBox ProxyAddressBox { get; } = new();
+    private Label ProxyErrorLabel { get; } = new() { TextColor = Colors.Red, Visible = false, Wrap = WrapMode.Word };
 
     private CheckBox AutoLoadMcpBox { get; } = new() { Text = Localization.LocalizeString("Load MCP server at startup", 14) };
     private CheckBox AutoLoadScriptPlugInBox { get; } = new() { Text = Localization.LocalizeString("Load AI-created script plug-in at startup", 15) };
@@ -51,17 +56,16 @@ internal sealed class AISettingsPanel : Panel
 
         SeedRows();
 
-        TabControl tabs = new();
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
-        tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
+        Tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+        Tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+        Tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Network", 300), Content = NetworkTab() });
+        Tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+        Tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
 
-        Content = tabs;
+        Content = Tabs;
     }
 
-    // Persists every tab back to AISettings. Returns false (and shows the MCP error inline) when the
-    // MCP JSON is invalid, so the hosting dialog/page can keep itself open; true once everything is saved.
+    // Validate all tabs before saving, and show any error on the tab that needs attention.
     public bool TryCommit(out string error)
     {
         error = string.Empty;
@@ -70,10 +74,29 @@ internal sealed class AISettingsPanel : Panel
         {
             McpErrorLabel.Text = validationError;
             McpErrorLabel.Visible = true;
+            Tabs.SelectedIndex = 1;
             error = validationError;
             return false;
         }
         McpErrorLabel.Visible = false;
+
+        string mode = ProxyModeBox.SelectedKey ?? AgentProxyEnvironment.Inherit;
+        string proxyAddress = ProxyAddressBox.Text?.Trim() ?? string.Empty;
+        if (mode == AgentProxyEnvironment.Custom &&
+            !AgentProxyEnvironment.TryNormalizeAddress(proxyAddress, out proxyAddress))
+        {
+            error = Localization.LocalizeString("Enter an HTTP or HTTPS proxy address without credentials, a path, or a query.", 301);
+            ProxyErrorLabel.Text = error;
+            ProxyErrorLabel.Visible = true;
+            Tabs.SelectedIndex = 2;
+            return false;
+        }
+        // A disabled address field may still contain an invalid URL typed before changing modes.
+        // Never persist credentials (or any other invalid address) just because it is disabled.
+        if (mode != AgentProxyEnvironment.Custom &&
+            !AgentProxyEnvironment.TryNormalizeAddress(proxyAddress, out proxyAddress))
+            proxyAddress = string.Empty;
+        ProxyErrorLabel.Visible = false;
 
         foreach (AgentRow row in Rows)
         {
@@ -86,6 +109,8 @@ internal sealed class AISettingsPanel : Panel
             AISettings.DefaultAgentName = defaultRow.Name;
 
         AISettings.ExtraMcpServersJson = normalizedJson;
+        AISettings.NetworkProxyMode = mode;
+        AISettings.NetworkProxyAddress = proxyAddress;
         AISettings.AutoLoadMCP = AutoLoadMcpBox.Checked == true;
         AISettings.AutoLoadScriptPlugIn = AutoLoadScriptPlugInBox.Checked == true;
 
@@ -358,6 +383,51 @@ internal sealed class AISettingsPanel : Panel
                 new TableRow(help),
                 new TableRow(McpJsonBox) { ScaleHeight = true },
                 new TableRow(McpErrorLabel),
+            },
+        };
+    }
+
+    private Control NetworkTab()
+    {
+        ProxyModeBox.Items.Add(new ListItem { Key = AgentProxyEnvironment.Inherit, Text = Localization.LocalizeString("Inherit environment (default)", 302) });
+        ProxyModeBox.Items.Add(new ListItem { Key = AgentProxyEnvironment.System, Text = Localization.LocalizeString("Use system proxy", 303) });
+        ProxyModeBox.Items.Add(new ListItem { Key = AgentProxyEnvironment.Custom, Text = Localization.LocalizeString("Custom proxy", 304) });
+        ProxyModeBox.Items.Add(new ListItem { Key = AgentProxyEnvironment.Direct, Text = Localization.LocalizeString("Direct (clear proxy environment)", 305) });
+        string storedMode = AISettings.NetworkProxyMode;
+        ProxyModeBox.SelectedKey = AgentProxyEnvironment.IsMode(storedMode) ? storedMode : AgentProxyEnvironment.Inherit;
+        ProxyAddressBox.Text = AISettings.NetworkProxyAddress;
+        ProxyAddressBox.Enabled = ProxyModeBox.SelectedKey == AgentProxyEnvironment.Custom;
+        ProxyModeBox.SelectedValueChanged += (_, _) =>
+        {
+            ProxyAddressBox.Enabled = ProxyModeBox.SelectedKey == AgentProxyEnvironment.Custom;
+            ProxyErrorLabel.Visible = false;
+        };
+
+        Label help = new()
+        {
+            Wrap = WrapMode.Word,
+            TextColor = Colors.Gray,
+            Text = Localization.LocalizeString("Applies to newly started in-Rhino agent and sign-in processes. Start a new conversation to restart an agent. The system proxy is resolved for the agent's primary service; PAC rules for other destinations may differ. In system and custom modes, localhost MCP connections bypass the proxy.", 306),
+        };
+        Label addressHelp = new()
+        {
+            Wrap = WrapMode.Word,
+            TextColor = Colors.Gray,
+            Text = Localization.LocalizeString("Example: http://127.0.0.1:7890. Authenticated proxies can be supplied through the inherited environment.", 307),
+        };
+
+        return new TableLayout
+        {
+            Padding = new Padding(8),
+            Spacing = new Size(0, 8),
+            Rows =
+            {
+                new TableRow(help),
+                new TableRow(LabeledColumn(Localization.LocalizeString("Proxy mode:", 308), ProxyModeBox)),
+                new TableRow(LabeledColumn(Localization.LocalizeString("Custom proxy address:", 309), ProxyAddressBox)),
+                new TableRow(addressHelp),
+                new TableRow(ProxyErrorLabel),
+                new TableRow { ScaleHeight = true },
             },
         };
     }

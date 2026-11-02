@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="../../rhino/plugin/Agents/AgentProxyEnvironment.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/ToolResult.cs" LinkBase="PluginSources" />
     <Using Include="System.Text.Json" />
     <Using Include="Rhino.AI.Server" />
