@@ -62,7 +62,7 @@ public class AgentProxyEnvironmentTests
 
     [TestCase("codex", "chatgpt.com")]
     [TestCase("claude", "api.anthropic.com")]
-    [TestCase("gemini", "generativelanguage.googleapis.com")]
+    [TestCase("gemini", "cloudcode-pa.googleapis.com")]
     public void SystemProxyResolvesForTheAgentsPrimaryService(string agent, string host)
     {
         FakeSystemProxy systemProxy = new(new Uri("http://proxy.example:3128"));

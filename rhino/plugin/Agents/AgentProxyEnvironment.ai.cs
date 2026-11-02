@@ -104,7 +104,9 @@ internal static class AgentProxyEnvironment
     private static Uri AgentDestination(string agent) => agent.ToLowerInvariant() switch
     {
         "claude" => new Uri("https://api.anthropic.com/"),
-        "gemini" => new Uri("https://generativelanguage.googleapis.com/"),
+        // Gemini CLI's recommended Google sign-in uses the Code Assist endpoint. API-key
+        // and Vertex configurations use other hosts, which can have different PAC rules.
+        "gemini" => new Uri("https://cloudcode-pa.googleapis.com/"),
         _ => new Uri("https://chatgpt.com/"),
     };
 
