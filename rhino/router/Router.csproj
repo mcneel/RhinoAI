@@ -56,7 +56,8 @@
 
   <ItemGroup>
     <ProjectReference Include="codegen/Router.Codegen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <AdditionalFiles Include="../plugin/Tools/**/*.cs" />
+    <!-- Kept out of design-time builds: the IDE would see these files as both plugin code and router text, and C# features break in them. -->
+    <AdditionalFiles Include="../plugin/Tools/**/*.cs" Condition="'$(DesignTimeBuild)' != 'true'" />
     <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
