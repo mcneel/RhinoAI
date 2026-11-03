@@ -44,7 +44,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
-    <ProjectReference Include="../sdk/sdk.csproj" />
+    <ProjectReference Include="../sdk/sdk.csproj" Condition="'$(RhinoTarget)' == 'R9'" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
@@ -62,6 +62,9 @@
     <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="8.19.25132.1001" ExcludeAssets="runtime" />
     <Compile Remove="Tools/GH2/**/*.cs;Resources/GH2/**/*.cs" />
+    <!-- R8 does not ship the SDK, so the helpers it owns are compiled in directly. -->
+    <Compile Include="../sdk/ProcessArguments.ai.cs" Link="ProcessArguments.ai.cs" />
+    <Compile Include="../sdk/NetFrameworkPolyfills.ai.cs" Link="NetFrameworkPolyfills.ai.cs" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">

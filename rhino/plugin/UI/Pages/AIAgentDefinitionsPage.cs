@@ -1,3 +1,4 @@
+#if R9
 using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -10,6 +11,7 @@ using Rhino.Runtime;
 using Rhino.UI;
 
 namespace Rhino.AI.UI;
+
 
 // Displays and allows for adding and deleting Agents
 internal sealed class AIAgentDefinitionsPage : AIPage
@@ -817,3 +819,5 @@ internal sealed class UIModelDefinition : SimpleViewModel
         => new(vendor, string.IsNullOrWhiteSpace(DisplayName) ? ModelId.Trim() : DisplayName, ModelId.Trim());
 
 }
+
+#endif

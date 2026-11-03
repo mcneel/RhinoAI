@@ -1,3 +1,4 @@
+#if R9
 using RhinoCommand = Rhino.Commands.Command;
 using Rhino.UI;
 
@@ -22,3 +23,5 @@ public class TestAgenticCommand : RhinoCommand
         return Commands.Result.Success;
     }
 }
+
+#endif

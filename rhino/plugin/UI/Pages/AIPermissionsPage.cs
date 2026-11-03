@@ -1,3 +1,4 @@
+#if R9
 using System.Collections.ObjectModel;
 
 using Eto.Forms;
@@ -156,3 +157,5 @@ internal sealed class AIPermissionsViewModel : SimpleViewModel
     // TODO : How to put back?
 
 }
+
+#endif

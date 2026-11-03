@@ -55,6 +55,7 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
+#if R9
         if (AIInstances.Preferences.UseSdk)
         {
             // Human written pages
@@ -66,6 +67,7 @@ internal sealed class AISettingsPanel : Panel
             AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
         }
         else
+#endif
         {
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
