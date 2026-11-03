@@ -107,8 +107,15 @@ public class ProxyDispatcher(
                 // A clean shutdown leaves a departure tombstone; a crash doesn't.
                 // Check that first so a user closing the doc/Rhino mid-call isn't
                 // reported as a crash.
-                if (child.Pid is { } pid && child.Port is { } port && manager.TryConsumeDeparture(pid, port))
+                if (child.Pid is { } pid && child.Port is { } port && manager.TryConsumeDeparture(pid, port, out bool slotKept))
                 {
+                    if (slotKept)
+                    {
+                        log.LogInformation("Rhino slot '{Slot}' (pid {Pid}) replaced its listener during tool call '{Tool}'",
+                            child.SlotId, child.Pid, toolName);
+                        return WrapRestarted(child, toolName, autoSpawnedSlot);
+                    }
+
                     log.LogInformation("Rhino slot '{Slot}' (pid {Pid}) was closed during tool call '{Tool}'",
                         child.SlotId, child.Pid, toolName);
                     return WrapClosed(child, toolName, callerSlotArg: slotId, autoSpawnedSlot);
@@ -175,6 +182,14 @@ public class ProxyDispatcher(
             $"Rhino slot '{child.SlotId}' (Rhino {child.Version}) was closed (its document or the Rhino window was closed) " +
             $"during '{toolName}'. The slot has been pruned. " + nextAction;
         return WrapError(new ErrorInfo(Code: "rhino_closed", Message: message), autoSpawnedSlot);
+    }
+
+    private static string WrapRestarted(ChildRhino child, string toolName, SlotInfo? autoSpawnedSlot)
+    {
+        string message =
+            $"Rhino slot '{child.SlotId}' (Rhino {child.Version}) restarted its MCP listener during '{toolName}' " +
+            "(its document was replaced), so the call was dropped. The slot is still yours: retry the call.";
+        return WrapError(new ErrorInfo(Code: "rhino_restarted", Message: message), autoSpawnedSlot);
     }
 
     private string WrapCrash(ChildRhino child, string toolName, string? callerSlotArg, SlotInfo? autoSpawnedSlot)

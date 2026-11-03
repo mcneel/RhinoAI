@@ -458,6 +458,15 @@ public class RhinoManager(
                     continue;
                 }
 
+                // A spawned Rhino that replaced its listener keeps its slot.
+                if (store.RebindOwned(ann.Pid, ann.Port, IsPortListening) is { } rebound)
+                {
+                    log.LogInformation("Rebound slot '{Slot}' (pid {Pid}) to its replacement listener on port {Port}",
+                        rebound, ann.Pid, ann.Port);
+                    TryDelete(file);
+                    continue;
+                }
+
                 var slotId = store.AdoptIfNew(version, ann.Port, ann.Pid, _routerPid);
                 if (slotId is not null)
                 {
@@ -510,7 +519,7 @@ public class RhinoManager(
 
                 if (dep is not null && dep.Port > 0)
                 {
-                    foreach (string slotId in store.DeleteByListener(dep.Pid, dep.Port))
+                    foreach (string slotId in store.DeleteByListener(dep.Pid, dep.Port, keepOwned: IsProcessAlive(dep.Pid)))
                     {
                         log.LogInformation("Pruned slot '{Slot}' (pid {Pid}, port {Port}, Rhino {Version}) after graceful close",
                             slotId, dep.Pid, dep.Port, dep.Version ?? "?");
@@ -528,13 +537,18 @@ public class RhinoManager(
 
     // Did this listener leave a graceful-close tombstone? If so, consume it and
     // prune the slot. Lets the dispatcher report a user close as such, rather
-    // than a crash, when a tool call lands on a just-closed slot.
-    public bool TryConsumeDeparture(int pid, int port)
+    // than a crash, when a tool call lands on a just-closed slot. slotKept: the
+    // Rhino is still running and the slot was ours, so it stays for the
+    // replacement listener (see RebindOwned) rather than being pruned.
+    public bool TryConsumeDeparture(int pid, int port, out bool slotKept)
     {
+        slotKept = false;
         string path = Path.Combine(RouterPaths.ListenersDir, $"{pid}-{port}.gone");
         if (!File.Exists(path)) return false;
         TryDelete(path);
-        store.DeleteByListener(pid, port);
+        bool alive = IsProcessAlive(pid);
+        store.DeleteByListener(pid, port, keepOwned: alive);
+        slotKept = alive && store.ListReady().Any(c => c.Pid == pid && c.Port == port && !c.Adopted);
         return true;
     }
 
