@@ -58,10 +58,11 @@ jobs:
       matrix:
         rhino_target: [R8, R9]
         plugin:
-          - { os: win, yak: win }
-          - { os: osx, yak: mac }
+          # net48 is only a target when building on Windows, so the win plugin needs a Windows runner.
+          - { os: win, yak: win, runner: windows-latest, cli: yak.exe, cli_file: yak.exe }
+          - { os: osx, yak: mac, runner: macos-latest, cli: mac/yak, cli_file: yak }
 
-    runs-on: macos-latest
+    runs-on: ${{ matrix.plugin.runner }}
     needs: test
 
     steps:
@@ -83,19 +84,25 @@ jobs:
         shell: bash
         run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
 
+      - name: Check net48 build
+        if: matrix.plugin.os == 'win'
+        shell: bash
+        run: test -f net48/RhinoAI.rhp && test -f net8.0/RhinoAI.rhp
+        working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release
+
       # R9 ships inside Rhino, so it is compiled for coverage but never packaged.
       - name: Download yak CLI
         if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
-          curl -fsSL -o yak https://files.mcneel.com/yak/tools/0.13.0/mac/yak
-          chmod +x yak
+          curl -fsSL -o ${{ matrix.plugin.cli_file }} https://files.mcneel.com/yak/tools/0.13.0/${{ matrix.plugin.cli }}
+          chmod +x ${{ matrix.plugin.cli_file }}
 
       - name: Build yak package
         if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
-          "$GITHUB_WORKSPACE/yak" build --platform ${{ matrix.plugin.yak }}
+          "$GITHUB_WORKSPACE/${{ matrix.plugin.cli_file }}" build --platform ${{ matrix.plugin.yak }}
         working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release
 
       - name: Upload yak artifact
