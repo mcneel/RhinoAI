@@ -44,8 +44,9 @@ public static class PlugInRegistry
             token = new(id, name);
 
             bool permission = false;
-            // Default to true for Script Editor as this is users running their own scripts
-            if (id == new Guid("c9cba87a-23ce-4f15-a918-97645c05cde7"))
+            // Default to true for RhinoCode as this is users running their own scripts
+            // See Rhino3DProjectServer.TryRegisterAIToken
+            if (id == new Guid("F39F3E8F-9EB3-4C41-A74B-9CE4EF2EC3C7"))
             {
                 permission = true;
             }
