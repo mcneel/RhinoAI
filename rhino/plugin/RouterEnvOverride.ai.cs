@@ -25,6 +25,8 @@ internal sealed record RouterEnvOverride(IReadOnlyList<string> EnvVars, string L
         DefaultVersion,
         new(["RHINO_MCP_STARTUP_TIMEOUT"], LOC.STR("Startup timeout (s)"), "120",
             LOC.STR("Seconds to wait for Rhino to bind its port before failing. Raise for slow or debug builds.")),
+        new(["RHINO_MCP_TOOL_TIMEOUT"], LOC.STR("Tool call timeout (s)"), "600",
+            LOC.STR("Seconds a tool call may run before the router gives up on it. The script keeps running in Rhino.")),
         new(["RHINO_MCP_RHINO_EXE_8"], LOC.STR("Rhino 8 path"), "",
             LOC.STR("Custom Rhino.exe (Windows) or .app bundle (macOS) to launch for version 8.")),
         new(["RHINO_MCP_RHINO_EXE_9", "RHINO_MCP_RHINO_EXE_WIP"], LOC.STR("Rhino 9/WIP path"), "",

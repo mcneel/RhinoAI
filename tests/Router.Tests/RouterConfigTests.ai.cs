@@ -89,4 +89,28 @@ public class RouterConfigTests
         var config = RouterConfig.FromArgs(["--rhino-exe", "/no/version/prefix"]);
         Assert.That(config.RhinoExeOverrides, Is.Null);
     }
+
+    [Test]
+    public void Tool_call_timeout_defaults_to_the_harnesses_ten_minutes()
+    {
+        Assert.That(RouterConfig.FromArgs([]).ToolCallTimeoutSeconds, Is.EqualTo(600));
+    }
+
+    [Test]
+    public void Tool_call_timeout_arg_wins_over_env()
+    {
+        string? prev = Environment.GetEnvironmentVariable(RouterConfig.ToolCallTimeoutEnvVar);
+        try
+        {
+            Environment.SetEnvironmentVariable(RouterConfig.ToolCallTimeoutEnvVar, "1800");
+            Assert.That(RouterConfig.FromArgs([]).ToolCallTimeoutSeconds, Is.EqualTo(1800));
+            Assert.That(RouterConfig.FromArgs(["--tool-timeout", "90"]).ToolCallTimeoutSeconds, Is.EqualTo(90));
+            Environment.SetEnvironmentVariable(RouterConfig.ToolCallTimeoutEnvVar, "-5");
+            Assert.That(RouterConfig.FromArgs([]).ToolCallTimeoutSeconds, Is.EqualTo(600));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(RouterConfig.ToolCallTimeoutEnvVar, prev);
+        }
+    }
 }
