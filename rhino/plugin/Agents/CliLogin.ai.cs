@@ -26,7 +26,7 @@ internal static class CliLogin
 
     // Run the status command hidden and hand its output to the CLI's own reader. Every failure mode
     // (missing binary, timeout, non-zero exit with nothing to read) lands on Unknown by design.
-    public static async Task<State> ProbeAsync(string cliPath, IReadOnlyList<string> statusArguments, Func<string, int, State> read)
+    public static async Task<State> ProbeAsync(string cliPath, IReadOnlyList<string> statusArguments, Func<string, int, State> read, string agent)
     {
         if (cliPath.Length == 0 || statusArguments.Count == 0)
             return State.Unknown;
@@ -45,6 +45,7 @@ internal static class CliLogin
 
         try
         {
+            AgentProxyEnvironment.Configure(psi, AISettings.NetworkProxyMode, AISettings.NetworkProxyAddress, agent);
             using Process proc = Process.Start(psi) ?? throw new InvalidOperationException("no process");
             using CancellationTokenSource timeout = new(ProbeTimeout);
 
@@ -68,7 +69,7 @@ internal static class CliLogin
 
     // Keep login separate from the agent process, but hidden. Drain both pipes so CLI output cannot
     // block completion; do not copy authentication URLs/codes into logs or persisted transcripts.
-    public static async Task SignInAsync(string cliPath, IReadOnlyList<string> loginArguments, CancellationToken cancellationToken)
+    public static async Task SignInAsync(string cliPath, IReadOnlyList<string> loginArguments, string agent, CancellationToken cancellationToken)
     {
         if (cliPath.Length == 0)
             throw new InvalidOperationException("The CLI path is not known yet.");
@@ -88,6 +89,7 @@ internal static class CliLogin
         foreach (string argument in loginArguments)
             psi.AddArgument(argument);
 
+        AgentProxyEnvironment.Configure(psi, AISettings.NetworkProxyMode, AISettings.NetworkProxyAddress, agent);
         cancellationToken.ThrowIfCancellationRequested();
         using Process proc = Process.Start(psi) ?? throw new InvalidOperationException("Could not start sign-in.");
         // Browser login needs no console input. EOF lets a CLI that requires manual input fail

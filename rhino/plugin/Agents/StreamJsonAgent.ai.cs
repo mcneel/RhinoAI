@@ -210,6 +210,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
         Parser.ConfigureArguments(psi, McpUrl, AgentSessionIdText, ResolveMcpServers(), HasEverStarted, prompt);
+        AgentProxyEnvironment.Configure(psi, AISettings.NetworkProxyMode, AISettings.NetworkProxyAddress, Definition.Name);
 
         Process proc = new() { StartInfo = psi };
         proc.ErrorDataReceived += (_, e) =>
@@ -412,7 +413,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         lock (Gate)
             path = ExePath;
 
-        CliLogin.State state = await CliLogin.ProbeAsync(path, Parser.AuthStatusArguments, Parser.ReadAuthState).ConfigureAwait(false);
+        CliLogin.State state = await CliLogin.ProbeAsync(path, Parser.AuthStatusArguments, Parser.ReadAuthState, Definition.Name).ConfigureAwait(false);
         if (state != CliLogin.State.SignedOut)
             return string.Empty;
 
@@ -458,7 +459,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     {
         try
         {
-            await CliLogin.SignInAsync(path, Parser.LoginArguments, Lifetime.Token).ConfigureAwait(false);
+            await CliLogin.SignInAsync(path, Parser.LoginArguments, Definition.Name, Lifetime.Token).ConfigureAwait(false);
             if (!Lifetime.IsCancellationRequested)
                 Conversation.NoteSystem($"Signed in to {Parser.DisplayName}. You can send your message now.");
         }

@@ -14,6 +14,14 @@ keywords:
 
 Common issues. If you don't find your problem here, [open an issue on GitHub](https://github.com/mcneel/RhinoAI/issues) or ask in the [Rhino Discourse AI category](https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162).
 
+## The in-Rhino agent cannot connect through my proxy
+
+Open the AI panel's settings and select **Network**. By default, agents inherit Rhino's environment. Choose **Use system proxy** to resolve the operating system's proxy for the agent's primary service when it starts, or **Custom proxy** to enter an HTTP or HTTPS proxy URL such as `http://127.0.0.1:7890`. **Direct** clears inherited proxy variables for the spawned agent. Start a new conversation after changing the setting so persistent agents restart with the new environment.
+
+These settings apply to in-Rhino agent and sign-in processes, not external clients or Rhino itself. In system and custom modes, existing `NO_PROXY` entries are retained (except a bypass-all `*`), and `localhost`, `127.0.0.1`, and `::1` are added so the built-in local MCP connection can bypass the proxy. A PAC file can select different proxies for different destinations; system mode resolves it once for `chatgpt.com` (Codex), `api.anthropic.com` (Claude), or `cloudcode-pa.googleapis.com` (Gemini's Google sign-in), then applies that result process-wide. API-key, Vertex, custom, or other endpoints may need a different configuration. The supported CLI and its version ultimately determine which environment variables are honored.
+
+Custom URLs do not accept embedded usernames or passwords. For an authenticated proxy, supply the necessary environment through Rhino's launch environment and use **Inherit environment**.
+
 ## My AI Agent doesn't see Rhino at all
 
 Most often this means the connection wasn't made on startup.

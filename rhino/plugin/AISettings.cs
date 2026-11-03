@@ -21,6 +21,19 @@ internal static class AISettings
         set => Settings.SetString(nameof(DefaultAgentName), value);
     }
 
+    // Keep existing installations on their inherited environment until the user opts in.
+    public static string NetworkProxyMode
+    {
+        get => Settings.GetString(nameof(NetworkProxyMode), AgentProxyEnvironment.Inherit);
+        set => Settings.SetString(nameof(NetworkProxyMode), value);
+    }
+
+    public static string NetworkProxyAddress
+    {
+        get => Settings.GetString(nameof(NetworkProxyAddress), string.Empty);
+        set => Settings.SetString(nameof(NetworkProxyAddress), value);
+    }
+
     // Tools hidden from in-Rhino agents (Part 3). Empty = nothing hidden.
     public static string[] DisabledTools
     {

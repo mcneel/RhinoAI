@@ -28,6 +28,7 @@ internal static class GeminiConnection
         };
         CliProcess.ConfigureEncoding(psi);
         CliProcess.ConfigureFileName(psi, path);
+        AgentProxyEnvironment.Configure(psi, AISettings.NetworkProxyMode, AISettings.NetworkProxyAddress, def.Name);
         psi.AddArgument("--experimental-acp");
         // foreach (string arg in def.ExtraArgs)
         //     psi.AddArgument(arg);
