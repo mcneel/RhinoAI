@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
 
+using Rhino.AI;
+
 namespace sdk.tests;
 
 internal static class EnvVars

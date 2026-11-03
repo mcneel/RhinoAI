@@ -47,7 +47,11 @@ public sealed record EditTool() : Tool("edit",
 
         try
         {
+#if NET48
+            string data = File.ReadAllText(filePath);
+#else
             string data = await File.ReadAllTextAsync(filePath, token).ConfigureAwait(false);
+#endif
 
             int start = data.IndexOf(oldText, StringComparison.Ordinal);
             if (start < 0)
@@ -56,9 +60,13 @@ public sealed record EditTool() : Tool("edit",
             if (data.IndexOf(oldText, start + oldText.Length, StringComparison.Ordinal) >= 0)
                 return ToolReturn.Failure("The old text appears more than once.", "Include enough surrounding text to make it unique.");
 
-            string edited = string.Concat(data.AsSpan(0, start), newText, data.AsSpan(start + oldText.Length));
+            string edited = data.Remove(start, oldText.Length).Insert(start, newText);
 
+#if NET48
+            File.WriteAllText(filePath, edited);
+#else
             await File.WriteAllTextAsync(filePath, edited, token).ConfigureAwait(false);
+#endif
             return ToolReturn.Success($"Edited {filePath} successfully");
         }
         catch (UnauthorizedAccessException)

@@ -1,16 +1,15 @@
 using System;
-using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Rhino.AI.Mcps;
 
-// TODO : Public this!
+// NOTE : This needs GOOD doc strings
+//        I think the idea of this is that every memory MCP shares the same port and gets routed
+//        Http is likely the most dynamic solution, stdio would be less messy
 internal static class MemoryMcpManager
 {
 
@@ -23,13 +22,13 @@ internal static class MemoryMcpManager
     // TODO : Replace GUIDs with colours so it's more fun and easier to debug?
     private static ConcurrentDictionary<string, McpSession> RegisteredMcps { get; } = [];
 
-    public static McpLease RegisterMemoryMcp(IHarness harness, MemoryMcp mcp)
+    public static McpLease RegisterMemoryMcp(Agent agent, Harness harness, MemoryMcp mcp)
     {
         // TODO : Handle better
         if (!Start()) throw new Exception("Could not create lease");
 
         string guidKey = Guid.NewGuid().ToString().ToLowerInvariant();
-        RegisteredMcps[guidKey] = new (mcp, harness);
+        RegisteredMcps[guidKey] = new (agent, harness, mcp);
 
         Uri uri = new($"{ListenerUrl}/{guidKey}/");
         McpLease lease = new(guidKey, uri);
@@ -121,7 +120,7 @@ internal static class MemoryMcpManager
             if (RegisteredMcps.TryGetValue(segments[0], out McpSession? session) && session is not null)
             {
                 McpHttpRequest request = await McpHttpRequest.FromRequestAsync(context.Request, token);
-                McpResponse response = await McpProtocol.HandleAsync(request, session, token);
+                McpResponse response = await McpProtocol.HandleAsync(session.Agent, request, session, token);
 
                 context.Response.StatusCode = (int)response.Status;
                 if (response.Body is not null)

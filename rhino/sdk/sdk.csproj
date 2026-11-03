@@ -1,16 +1,56 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
     <RootNamespace>Rhino.AI</RootNamespace>
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- The net48 BCL has no nullable annotations, so its warnings are noise; net8.0 does the checking. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Nullable>annotations</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>RhinoAI</PackageId>
+    <AssemblyName>RhinoAI.Sdk</AssemblyName>
+    <PackageVersion>$(RhinoAIPackageVersion)</PackageVersion>
+    <Authors>Robert McNeel &amp; Associates</Authors>
+    <Description>SDK for building agents, harnesses, models and MCP integrations for RhinoAI.</Description>
+    <PackageTags>rhino;rhino3d;ai;agents;mcp</PackageTags>
+    <RepositoryUrl>https://github.com/mcneel/RhinoAI</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <ExposeInternalsToTests>true</ExposeInternalsToTests>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ExposeInternalsToTests)' == 'true'">
     <InternalsVisibleTo Include="sdk.tests" />
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RhinoAI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Definitions.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="PolySharp" Version="1.16.0" PrivateAssets="all" />    <Reference Include="System.Net.Http" />
+    <Compile Remove="Secrets/KeychainVault.ai.cs;Secrets/SecretServiceVault.ai.cs" />
   </ItemGroup>
 
 </Project>

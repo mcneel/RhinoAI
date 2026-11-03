@@ -3,26 +3,30 @@ using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record TurnStart(DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+/// <summary>
+/// A turn start, signalling the beginning of a request
+/// </summary>
+public sealed record TurnStart : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.Assistant;
+    [JsonConstructor]
+    private TurnStart(DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this((DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
 
-    [JsonIgnore]
-    public bool Success => true;
+    internal TurnStart(DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("start")
+    {
+        Success = true;
+        Role = RoleType.Assistant;
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
-
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
-
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data { get; } = string.Empty;
-
-    public ITurn Copy() => this;
+        Role = RoleType.Assistant;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
+    }
+    
+    public override ITurn Copy() => this;
 
 }

@@ -23,6 +23,10 @@ public class RhinoAIPlugin : PlugIn
         if (!RhinoApp.IsRunningHeadless)
             Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
 
+#if R9
+        AIInstances.Agents.LoadAgentsFromJson();
+#endif
+
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();
 

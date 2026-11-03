@@ -168,15 +168,15 @@ internal sealed class ClaudeStreamJsonParser : IStreamJsonParser
     private ParsedLine EmitResult(JsonElement root)
     {
         if (!IsFailure(root))
-            return ParsedLine.Complete(StopReason.EndTurn, ReadUsage(root));
+            return ParsedLine.Complete(Acp.StopReason.EndTurn, ReadUsage(root));
 
         string detail = Str(root, "result") is { Length: > 0 } text ? text : Str(root, "subtype");
         return detail.Length > 0
-            ? ParsedLine.Failed(StopReason.Refusal, new AgentMessageChunkSessionUpdate
+            ? ParsedLine.Failed(Acp.StopReason.Refusal, new AgentMessageChunkSessionUpdate
             {
                 Content = new TextContentBlock { Text = $"{DisplayName} failed: {detail}" },
             })
-            : ParsedLine.Complete(StopReason.Refusal, ReadUsage(root));
+            : ParsedLine.Complete(Acp.StopReason.Refusal, ReadUsage(root));
     }
 
     private static bool IsFailure(JsonElement root) =>

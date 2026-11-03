@@ -36,7 +36,11 @@ public sealed record ReadTool() : Tool("read",
 
         try
         {
+#if NET48
+            return ToolReturn.Success(File.ReadAllText(filePath));
+#else
             return ToolReturn.Success(await File.ReadAllTextAsync(filePath, token).ConfigureAwait(false));
+#endif
         }
         catch (UnauthorizedAccessException)
         {

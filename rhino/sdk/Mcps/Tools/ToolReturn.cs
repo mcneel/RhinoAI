@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -12,13 +13,22 @@ public enum ToolResult { Success, Mixed, Failure }
 public sealed record ToolReturn
 {
 
+    /// <summary>The content of the return</summary>
     public IReadOnlyList<IMessageContent> Content { get; }
 
+    /// <summary>The final result of the tool</summary>
     public ToolResult Result { get; }
 
+    /// <summary>Guidance for the AI if the return fails</summary>
     public string? Guidance { get; }
 
     public string Message => string.Concat(Content.OfType<TextContent>().Select(p => p.Text));
+
+    [JsonConstructor]
+    private ToolReturn(IReadOnlyList<IMessageContent> content, ToolResult result, string? guidance)
+        : this((IEnumerable<IMessageContent>)content, result, guidance)
+    {
+    }
 
     public ToolReturn(IEnumerable<IMessageContent> content, ToolResult result, string? guidance)
     {
@@ -32,6 +42,8 @@ public sealed record ToolReturn
     {
     }
 
+    /// <summary>A copy of the return</summary>
+    /// <returns>A deep copy</returns>
     public ToolReturn Copy() => new(Content.Select(c => c.Copy()), Result, Guidance);
 
     /// <summary>
@@ -62,6 +74,6 @@ public sealed record ToolReturn
     /// <summary>
     /// A refused tool call
     /// </summary>
-    internal static ToolReturn Refused() => new("Tool use was refused", ToolResult.Failure, "Ask the user what to do");
+    internal static ToolReturn Refused(string toolName) => new($"Use of {toolName} was refused", ToolResult.Failure, "Ask the user what to do");
 
 }
