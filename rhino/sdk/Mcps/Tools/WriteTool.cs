@@ -36,7 +36,11 @@ public sealed record WriteTool() : Tool("write",
             if (directory is not null && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
+#if NET48
+            File.WriteAllText(filePath, data);
+#else
             await File.WriteAllTextAsync(filePath, data, token).ConfigureAwait(false);
+#endif
             return ToolReturn.Success($"Wrote {data.Length} characters to {filePath}");
         }
         catch (UnauthorizedAccessException)

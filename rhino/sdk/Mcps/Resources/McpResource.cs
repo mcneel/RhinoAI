@@ -5,10 +5,18 @@ using System.Threading.Tasks;
 
 namespace Rhino.AI;
 
-public abstract record McpResource(string Key, string Title, string Description, Uri Uri, string MimeType) : IResource
+internal abstract record McpResource(string Key, string Title, string Description, Uri Uri, string MimeType) : IResource
 {
     public abstract Task<ResourceReturn> ReadAsync(CancellationToken token);
 
+    /// <summary>
+    /// Creates a resource from the given URI
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="title"></param>
+    /// <param name="description"></param>
+    /// <param name="uri"></param>
+    /// <returns></returns>
     public static IResource? TryCreateResourceFromUri(string key, string title, string description, Uri uri)
     {
         string path = uri.LocalPath;

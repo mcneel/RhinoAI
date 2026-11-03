@@ -15,10 +15,12 @@ public class McpTests
 
     public McpTests()
     {
-        DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        harness.AddMcp(Mcp);
-        Agent = new(Token, deepSeek, harness);
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
+
+        Agent = Agent.GetDeepSeekAgent(Token)!;
+        Agent.Harness.AddMcp(Mcp);
+
+        Assert.That(Agent, Is.Not.Null);
     }
 
     [OneTimeTearDown]
@@ -48,11 +50,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -68,11 +69,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle? And do not use any tool parameters.", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
@@ -88,11 +88,10 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [TestCase(ToolArgType.String, typeof(ToolString))]
@@ -116,23 +115,22 @@ public class McpTests
         };
         Mcp.RegisterTool(tool);
 
-        IEnumerable<ITurn> turns = await Agent.SendAsync("Hello! What is the bloogle?", token);
+        IAgentResult result = await Agent.SendAsync("Hello! What is the bloogle?", token);
 
-        Assert.That(turns.Any(t => t is ToolTurn));
-        Assert.That(turns.Any(t => t is ToolResultTurn));
-        Assert.That(turns, Turns.EndsWith("cat", "small", "red"));
+        Assert.That(result.ToolCalls.Any(c => c.Success));
+        Assert.That(result, Replied.With("cat", "small", "red"));
     }
 
     [Test, CancelAfter(5000)]
     public async Task FuzzyTool(CancellationToken token)
     {
-        GenericHarness harness = new(Token);
+        Harness harness = new(Token);
 
         TestTool tool = new("read", "", []);
         Mcp.RegisterTool(tool);
         harness.AddMcp(Mcp);
 
-        ToolReturn result = await harness.UseToolAsync("AnyMCP", "reed", [], token);
+        ToolReturn result = await harness.UseToolAsync(Agent, "AnyMCP", "reed", [], token);
         Assert.That(result.Guidance, Does.Contain(tool.Name));
         Assert.That(result.Result == ToolResult.Failure);
     }

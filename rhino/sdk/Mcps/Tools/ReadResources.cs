@@ -9,7 +9,7 @@ namespace Rhino.AI.Tools;
 /// <summary>
 /// An MCP tool to read a resource(s)
 /// </summary>
-public sealed record ReadResources(IHarness Harness) : Tool("read_resources",
+public sealed record ReadResources(Harness Harness) : Tool("read_resources",
                                 "Used for reading an MCP resource",
                                 true,
                                 false,
@@ -27,7 +27,7 @@ public sealed record ReadResources(IHarness Harness) : Tool("read_resources",
         if (!args.TryGetString(Args[1].Name, out string resourcePath))
             return ToolReturn.Failure($"{Args[1].Name} parameter is mandatory", $"Call {Name} again with {Args[1].Name} set to a resource from list_resources.");
 
-        if (!Harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null)
+        if (!Harness.Mcps.TryGetValue(mcpName, out Mcp? mcp) || mcp is null)
             return ToolReturn.Failure($"No MCP named '{mcpName}'.", $"Use one of: {string.Join(", ", Harness.Mcps.Keys)}.");
 
         if (!mcp.Resources.TryGetValue(resourcePath, out IResource? resource) || resource is null)

@@ -7,9 +7,9 @@ namespace Rhino.AI.Models;
 internal static class ToolSchema
 {
 
-    public static IEnumerable<(IMcp, ITool)> Tools(IHarness harness)
+    public static IEnumerable<(Mcp, ITool)> Tools(Harness harness)
     {
-        foreach (IMcp mcp in harness.Mcps.Values)
+        foreach (Mcp mcp in harness.Mcps.Values)
         {
             foreach (ITool tool in mcp.Tools.Values)
                 yield return (mcp, tool);

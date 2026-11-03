@@ -50,7 +50,7 @@ jobs:
           sudo apt-get install -y libsecret-1-0 gnome-keyring dbus-x11
 
       - name: Build sdk and sdk.tests
-        run: dotnet build tests/sdk.tests/sdk.tests.csproj --configuration Release
+        run: dotnet build tests/sdk.tests/sdk.tests.csproj --configuration Release -p:ExposeInternalsToTests=true
 
       # Category=Manual marks tests that drive a locally installed desktop app.
       # The Stasher tests need a D-Bus session with an unlocked keyring, which a headless runner lacks.

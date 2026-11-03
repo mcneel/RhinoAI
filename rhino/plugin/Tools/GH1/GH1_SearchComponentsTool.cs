@@ -38,7 +38,7 @@ internal static class GH1_SearchComponentsTool
         string[] tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
         List<(int Rank, ProxyHit Hit)> hits = [];
-        foreach (IGH_ObjectProxy p in Instances.ComponentServer.ObjectProxies)
+        foreach (IGH_ObjectProxy p in Grasshopper.Instances.ComponentServer.ObjectProxies)
         {
             IGH_InstanceDescription d = p.Desc;
             if (category is not null && !string.Equals(d.Category, category, StringComparison.OrdinalIgnoreCase)) continue;

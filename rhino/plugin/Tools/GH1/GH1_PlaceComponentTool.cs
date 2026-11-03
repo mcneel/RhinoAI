@@ -27,7 +27,7 @@ internal static class GH1_PlaceComponentTool
 
         if (Guid.TryParse(selector, out Guid guid))
         {
-            IGH_DocumentObject? emitted = Instances.ComponentServer.EmitObject(guid);
+            IGH_DocumentObject? emitted = Grasshopper.Instances.ComponentServer.EmitObject(guid);
             if (emitted is null)
                 return Failure(ToolError.GH_Component_NotFound, $"No component with guid '{guid}' found");
             return PlaceObject(doc, emitted, selector, x, y, solve);
