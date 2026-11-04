@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Eto.Forms;
 using Rhino.Commands;
+using Rhino.Input.Custom;
 using Rhino.UI;
 
 namespace Rhino.AI.Tools;
@@ -20,14 +21,17 @@ internal static class RunCommandTool
         // TODO : RhinoApp.CommandWindowCaptureEnabled is not document specific
 
         Stopwatch clock = Stopwatch.StartNew();
-        CommandPromptChangedEventArgs? latestPrompt = null;
+        PromptSnapshot? latestPrompt = null;
         long lastPromptMs = 0;
-        CommandPromptChangedEventArgs? stalledAt = null;
+        PromptSnapshot? stalledAt = null;
         long cancelSentMs = 0;
 
         void OnPromptChanged(object? sender, CommandPromptChangedEventArgs e)
         {
-            latestPrompt = e;
+            latestPrompt = new PromptSnapshot(
+                e.Prompt,
+                e.PromptDefault,
+                (e.Options ?? []).Where(o => o.OptionType != CommandLineOptionType.Hidden).Select(o => o.EnglishName).ToArray());
             lastPromptMs = clock.ElapsedMilliseconds;
         }
 
@@ -72,16 +76,9 @@ internal static class RunCommandTool
 
         if (stalledAt is not null && !ran)
         {
-            ContentBlock prompt = ContentBlock.CreateJson(new
-            {
-                stalledAt.Prompt,
-                stalledAt.PromptDefault,
-                Options = stalledAt.Options?.Select(o => o.EnglishName).ToArray(),
-            });
-
             return Failure(
                 ToolError.BadArgument,
-                [prompt, output],
+                [ContentBlock.CreateJson(stalledAt), output],
                 $"'{command}' stopped at a prompt waiting for input and was cancelled",
                 "Call run_command again with a command string that answers this prompt, e.g. a value, an option name, or _Enter to accept the default");
         }
@@ -90,4 +87,6 @@ internal static class RunCommandTool
             ? Success(output)
             : Failure(ToolError.Failed, output, $"Rhino did not run '{command}' to completion");
     }
+
+    private sealed record PromptSnapshot(string? Prompt, string? PromptDefault, string[] Options);
 }
