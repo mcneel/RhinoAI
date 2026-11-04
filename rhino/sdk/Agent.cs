@@ -201,7 +201,7 @@ public sealed class Agent
     }
 
     /// <summary>
-    /// Sends a message to the assigned model, opt for <see cref="SendAsync"/> over this if possible to avoid potential deadlocs
+    /// Sends a message to the assigned model, opt for <see cref="SendAsync(string, CancellationToken)"/> over this if possible to avoid potential deadlocks
     /// </summary>
     /// <param name="message">The message to send</param>
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
@@ -210,7 +210,7 @@ public sealed class Agent
         => Send([new TextContent(message)]);
 
     /// <summary>
-    /// Sends content to the assigned modelm, opt for <see cref="SendAsync"/> over this if possible to avoid potential deadlocs.
+    /// Sends content to the assigned model, opt for <see cref="SendAsync(IEnumerable{IMessageContent}, CancellationToken)"/> over this if possible to avoid potential deadlocks.
     /// </summary>
     /// <param name="contents">The contents to send</param>
     /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
