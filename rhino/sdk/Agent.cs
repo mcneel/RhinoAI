@@ -200,6 +200,24 @@ public sealed class Agent
         return new AgentResult(turns);
     }
 
+    /// <summary>
+    /// Sends a message to the assigned model, opt for <see cref="SendAsync(string, CancellationToken)"/> over this if possible to avoid potential deadlocks
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public IAgentResult Send(string message)
+        => Send([new TextContent(message)]);
+
+    /// <summary>
+    /// Sends content to the assigned model, opt for <see cref="SendAsync(IEnumerable{IMessageContent}, CancellationToken)"/> over this if possible to avoid potential deadlocks.
+    /// </summary>
+    /// <param name="contents">The contents to send</param>
+    /// <returns>The resulting <see cref="ITurn"/>s created within the Harness loop once finished</returns>
+    /// <exception cref="PermissionException">If the requested model or vendor is not allowed an exception will be raised</exception>
+    public IAgentResult Send(IEnumerable<IMessageContent> contents)
+        => Task.Run(() => SendAsync(contents, default)).GetAwaiter().GetResult();
+
     private string? SkillsPrompt(IReadOnlyDictionary<string, ISkill> skills)
     {
         if (skills.Count == 0) return null;
