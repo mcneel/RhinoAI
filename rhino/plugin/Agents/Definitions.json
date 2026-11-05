@@ -52,7 +52,7 @@
     {
       "name": "Codex",
       "company": "OpenAI",
-      "defaultModel": "gpt-5.5",
+      "defaultModel": "",
       "isBuiltIn": true,
       "defaultPrompt" : "",
       "searchPaths": {

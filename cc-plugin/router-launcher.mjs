@@ -299,7 +299,9 @@ function runInstallFallback(reason) {
     description:
       `The Rhino-MCP-Platform plugin is not installed in Rhino ${version} (reason: ${reason}). ` +
       `Ask the user whether to install it now via yak. If they agree, call this tool with no arguments. ` +
-      `After install the user must reload this connector (or restart Claude Desktop) so the real router takes over.`,
+      `After install the user must reload this connector or plugin (or restart the application) so the real router takes over.`,
+    title: "Install Rhino-MCP-Platform",
+    annotations: { title: "Install Rhino-MCP-Platform", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   };
 
@@ -321,7 +323,7 @@ function runInstallFallback(reason) {
       `yak ${args.join(" ")} (Rhino ${version}) exited ${res.status ?? "?"}` +
       (stdout ? `\n--- stdout ---\n${stdout}` : "") +
       (stderr ? `\n--- stderr ---\n${stderr}` : "") +
-      (ok ? `\n\nInstall reported success. Reload this connector or restart Claude Desktop for the real Rhino tools to appear.` : "");
+      (ok ? `\n\nInstall reported success. Reload this connector or plugin (or restart the application) for the real Rhino tools to appear.` : "");
     return { isError: !ok, content: [{ type: "text", text }] };
   }
 
@@ -339,8 +341,10 @@ function runRhinoMissingFallback(version) {
     name: "rhino_not_installed",
     description:
       `Rhino ${version} does not appear to be installed on this machine, so the Rhino MCP connector cannot start. ` +
-      `Tell the user to install Rhino ${version} from ${downloadUrl}, then reload this connector ` +
-      `(or restart Claude Desktop). Calling this tool just repeats the same instructions.`,
+      `Tell the user to install Rhino ${version} from ${downloadUrl}, then reload this connector or plugin ` +
+      `(or restart the application). Calling this tool just repeats the same instructions.`,
+    title: "Rhino not installed",
+    annotations: { title: "Rhino not installed", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   };
 
@@ -351,7 +355,7 @@ function runRhinoMissingFallback(version) {
     onCall: () => ({
       content: [{
         type: "text",
-        text: `Rhino ${version} is not installed. Download it from ${downloadUrl} and reload this connector once the install finishes.`,
+        text: `Rhino ${version} is not installed. Download it from ${downloadUrl} and reload this connector or plugin once the install finishes.`,
       }],
     }),
   });

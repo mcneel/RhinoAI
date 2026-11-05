@@ -14,23 +14,23 @@ internal sealed record RouterEnvOverride(IReadOnlyList<string> EnvVars, string L
 
     // Placeholder text shown in the empty field: the default value, or a hint
     // when the default is "unset".
-    public string Placeholder => Default.Length > 0 ? Default : LOC.STR("(installed default)");
+    public string Placeholder => Default.Length > 0 ? Default : Localization.LocalizeString("(installed default)", 243);
 
     public static RouterEnvOverride DefaultVersion { get; } =
-        new(["RHINO_MCP_DEFAULT_VERSION"], LOC.STR("Default version"), "8",
-            LOC.STR("Rhino version auto-spawned for un-pinned tool calls: 8, 9, or WIP."));
+        new(["RHINO_MCP_DEFAULT_VERSION"], Localization.LocalizeString("Default version", 244), "8",
+            Localization.LocalizeString("Rhino version auto-spawned for un-pinned tool calls: 8, 9, or WIP.", 245));
 
     public static IReadOnlyList<RouterEnvOverride> Catalog { get; } =
     [
         DefaultVersion,
-        new(["RHINO_MCP_STARTUP_TIMEOUT"], LOC.STR("Startup timeout (s)"), "120",
-            LOC.STR("Seconds to wait for Rhino to bind its port before failing. Raise for slow or debug builds.")),
+        new(["RHINO_MCP_STARTUP_TIMEOUT"], Localization.LocalizeString("Startup timeout (s)", 246), "120",
+            Localization.LocalizeString("Seconds to wait for Rhino to bind its port before failing. Raise for slow or debug builds.", 247)),
         new(["RHINO_MCP_TOOL_TIMEOUT"], LOC.STR("Tool call timeout (s)"), "600",
             LOC.STR("Seconds a tool call may run before the router gives up on it. The script keeps running in Rhino.")),
-        new(["RHINO_MCP_RHINO_EXE_8"], LOC.STR("Rhino 8 path"), "",
-            LOC.STR("Custom Rhino.exe (Windows) or .app bundle (macOS) to launch for version 8.")),
-        new(["RHINO_MCP_RHINO_EXE_9", "RHINO_MCP_RHINO_EXE_WIP"], LOC.STR("Rhino 9/WIP path"), "",
-            LOC.STR("Custom Rhino.exe / .app to launch for version 9 and WIP, which resolve to one build.")),
+        new(["RHINO_MCP_RHINO_EXE_8"], Localization.LocalizeString("Rhino 8 path", 248), "",
+            Localization.LocalizeString("Custom Rhino.exe (Windows) or .app bundle (macOS) to launch for version 8.", 249)),
+        new(["RHINO_MCP_RHINO_EXE_9", "RHINO_MCP_RHINO_EXE_WIP"], Localization.LocalizeString("Rhino 9/WIP path", 250), "",
+            Localization.LocalizeString("Custom Rhino.exe / .app to launch for version 9 and WIP, which resolve to one build.", 251)),
         // RHINO_MCP_HOME is deliberately NOT exposed: it's a shared contract read
         // independently by the router and the plugin (RouterPaths is linked into
         // both). Setting it in this env block reaches only the router, so the
