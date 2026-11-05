@@ -26,6 +26,10 @@ public class MCPSpawnCommand : Command
 
         try
         {
+            // The NewDocument auto-start may already have bound this port, and the
+            // router may already be sending to it: restarting would drop that request.
+            if (RhinoAIHost.TryGetPortFor(doc, out int existing) && existing == port)
+                return Result.Success;
             return RhinoAIHost.StartOrRestart(doc, port) ? Result.Success : Result.Failure;
         }
         catch (Exception ex)
