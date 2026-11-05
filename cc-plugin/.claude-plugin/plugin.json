@@ -1,11 +1,59 @@
 {
   "name": "rhino-mcp",
-  "description": "Drive Rhino 3D from Claude Code via the Rhino MCP server.",
-  "version": "0.1.3",
+  "displayName": "Rhino 3D",
+  "description": "Drive Rhino 3D and Grasshopper from Claude: model, inspect, script, and build definitions in your own copy of Rhino.",
+  "version": "0.2.0",
   "author": {
     "name": "McNeel",
-    "email": "callum@mcneel.com"
+    "email": "callum@mcneel.com",
+    "url": "https://www.rhino3d.com"
   },
-  "homepage": "https://github.com/mcneel/RhinoAI",
-  "license": "MIT"
+  "homepage": "https://github.com/mcneel/RhinoAI#readme",
+  "repository": "https://github.com/mcneel/RhinoAI",
+  "license": "MIT",
+  "keywords": [
+    "rhino",
+    "rhino3d",
+    "grasshopper",
+    "mcneel",
+    "cad",
+    "3d",
+    "modeling"
+  ],
+  "documentationUrl": "https://github.com/mcneel/RhinoAI#readme",
+  "supportUrl": "https://discourse.mcneel.com/c/rhino/artificial-intelligence-rhino/162",
+  "privacyPolicyUrl": "https://github.com/mcneel/RhinoAI/blob/HEAD/PRIVACY.md",
+  "userConfig": {
+    "rhino_version": {
+      "type": "string",
+      "title": "Rhino version",
+      "description": "Which installed Rhino to launch and connect to.",
+      "options": [
+        "8",
+        "9",
+        "WIP"
+      ],
+      "default": "8"
+    },
+    "startup_timeout": {
+      "type": "number",
+      "title": "Rhino startup timeout (seconds)",
+      "description": "How long to wait for Rhino to launch and become ready. Raise this on slow machines or when a license or EULA dialog needs clearing.",
+      "default": 120,
+      "min": 10,
+      "max": 600
+    },
+    "rhino_8_location": {
+      "type": "string",
+      "title": "Custom Rhino 8 location",
+      "description": "Advanced. Launch a specific Rhino 8 build instead of the installed one. Point to Rhino.exe (Windows) or the Rhino app bundle, e.g. Rhino 8.app (macOS). Leave blank to use the installed Rhino 8.",
+      "default": ""
+    },
+    "rhino_9_location": {
+      "type": "string",
+      "title": "Custom Rhino 9 / WIP location",
+      "description": "Advanced. Launch a specific Rhino 9 or WIP build instead of the installed one; both use this setting. Point to Rhino.exe (Windows) or the Rhino app bundle (macOS). Leave blank to use the installed Rhino.",
+      "default": ""
+    }
+  }
 }
