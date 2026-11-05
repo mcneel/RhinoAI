@@ -96,7 +96,16 @@ test("cc-plugin carries a byte-identical copy of the shared launcher", () => {
 
 test("cc-plugin .mcp.json spawns the launcher it ships", () => {
   const cfg = JSON.parse(readFileSync(join(HERE, "..", "..", "cc-plugin", ".mcp.json"), "utf8"));
-  assert.deepEqual(cfg.mcpServers.rhino.args, ["${CLAUDE_PLUGIN_ROOT}/router-launcher.mjs"]);
+  assert.deepEqual(cfg.mcpServers.rhino.args, [
+    "${CLAUDE_PLUGIN_ROOT}/router-launcher.mjs",
+    "--default-version", "${user_config.rhino_version}",
+    "--startup-timeout", "${user_config.startup_timeout}",
+  ]);
+  assert.deepEqual(cfg.mcpServers.rhino.env, {
+    RHINO_MCP_RHINO_EXE_8: "${user_config.rhino_8_location}",
+    RHINO_MCP_RHINO_EXE_9: "${user_config.rhino_9_location}",
+    RHINO_MCP_RHINO_EXE_WIP: "${user_config.rhino_9_location}",
+  });
 });
 
 // --- resolution -------------------------------------------------------------
