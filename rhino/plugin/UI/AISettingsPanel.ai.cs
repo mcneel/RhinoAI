@@ -62,9 +62,9 @@ internal sealed class AISettingsPanel : Panel
             AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
-            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
-            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
+            AddPage(tabs, Localization.LocalizeString("Usage", 252), new AIUsagePage());
+            AddPage(tabs, Localization.LocalizeString("PlugIns", 253), new AIPluginPage());
+            AddPage(tabs, Localization.LocalizeString("Permissions", 254), new AIPermissionsPage());
         }
         else
 #endif
@@ -102,14 +102,14 @@ internal sealed class AISettingsPanel : Panel
         foreach ((string name, AIPage page) in Pages)
         {
             if (page.Validate()) continue;
-            error = string.Format(LOC.STR("The {0} settings are not valid."), name);
+            error = string.Format(Localization.LocalizeString("The {0} settings are not valid.", 255), name);
             return false;
         }
 
         foreach ((string name, AIPage page) in Pages)
         {
             if (page.TryApplyChanges()) continue;
-            error = string.Format(LOC.STR("The {0} settings could not be applied."), name);
+            error = string.Format(Localization.LocalizeString("The {0} settings could not be applied.", 256), name);
             return false;
         }
 
