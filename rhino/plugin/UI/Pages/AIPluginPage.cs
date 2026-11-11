@@ -139,7 +139,7 @@ internal sealed class AIPluginPage : AIPage
             },
             new GridColumn()
             {
-                HeaderText = LOC.STR("Name"),
+                HeaderText = Localization.LocalizeString("Name", 258),
                 AutoSize = true,
                 Expand = true,
                 Sortable = false,
@@ -147,7 +147,7 @@ internal sealed class AIPluginPage : AIPage
             },
             new GridColumn()
             {
-                HeaderText = LOC.STR("Enabled"),
+                HeaderText = Localization.LocalizeString("Enabled", 259),
                 AutoSize = true,
                 Expand = false,
                 Sortable = false,

@@ -11,7 +11,7 @@ namespace Rhino.AI.Tools;
 internal static class GH2_DeleteComponentTool
 {
 
-    [McpServerTool("g2_delete_component", "Delete a GH2 Component", false, false)]
+    [McpServerTool("g2_delete_component", "Delete a GH2 Component", false, true)]
     [Description("Delete a GH2 component on the active canvas.")]
     public static IToolResult Delete(
         RhinoDoc rhDoc,

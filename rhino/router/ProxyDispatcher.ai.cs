@@ -17,6 +17,7 @@ public class ProxyDispatcher(
     RhinoManager manager,
     IHttpClientFactory httpFactory,
     RhinoCrashReportFinder crashFinder,
+    RouterConfig config,
     ILogger<ProxyDispatcher> log)
 {
     private const string ViewportImageToolName = "get_viewport_image";
@@ -87,7 +88,7 @@ public class ProxyDispatcher(
                 toolName, slotId, child.Endpoint, json);
 
             HttpClient http = httpFactory.CreateClient();
-            http.Timeout = TimeSpan.FromMinutes(5); // some tool calls can run long Python scripts
+            http.Timeout = TimeSpan.FromSeconds(config.ToolCallTimeoutSeconds); // some tool calls can run long Python scripts
 
             using StringContent content = new(json, Encoding.UTF8, "application/json");
             using HttpRequestMessage request = new(HttpMethod.Post, child.Endpoint + "/")

@@ -70,6 +70,10 @@
       },
       "models": [
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
+        { "display": "GPT 6.1 Sol", "id": "gpt-6.1-sol" },
+        { "display": "GPT 6.1 Terra", "id": "gpt-6.1-terra" },
+        { "display": "GPT 6 Sol", "id": "gpt-6-sol" },
+        { "display": "GPT 6 Luna", "id": "gpt-6-luna" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
         { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },

@@ -613,7 +613,7 @@ internal sealed class UIAgentDefinition : SimpleViewModel
         }
     }
 
-    public string PreferredToolTip => LOC.STR("Preferred Agent");
+    public string PreferredToolTip => Localization.LocalizeString("Preferred Agent", 257);
 
     // The light and dark artwork are separate files, so the svg needs no dark-mode adjustment.
     private static Bitmap? LoadPreferredImage(string resourceName)
