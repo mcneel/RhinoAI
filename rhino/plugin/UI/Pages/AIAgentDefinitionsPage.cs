@@ -350,11 +350,19 @@ internal sealed class AIAgentDefinitionsPage : AIPage
         };
 
         grid.SelectedRow = Model.Index;
-        grid.SelectedRowsChanged += (_, _) => Model.Index = grid.SelectedRow;
+        bool syncingSelection = false;
+        grid.SelectedRowsChanged += (_, _) =>
+        {
+            if (syncingSelection) return;
+            Model.Index = grid.SelectedRow;
+        };
         Model.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(AIAgentDefinitionsViewModel.Index)) return;
-            grid.SelectedRow = Model.Index;
+            if (grid.SelectedRow == Model.Index) return;
+            syncingSelection = true;
+            try { grid.SelectedRow = Model.Index; }
+            finally { syncingSelection = false; }
         };
 
         SegmentedButton addRemove = new()
