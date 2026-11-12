@@ -47,6 +47,40 @@ internal sealed class AISettingsPanel : Panel
 
     private List<(string Name, AIPage Page)> Pages { get; } = [];
 
+    protected override void OnLoad(EventArgs e)
+    {
+        if (Content is TabControl tabs)
+        {
+            tabs.Pages.Clear();
+#if R9
+            if (AIInstances.Preferences.UseSdk)
+            {
+                // Human written pages
+                AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
+                AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
+                AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
+                AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
+            }
+            else
+#endif
+            {
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
+            }
+        }
+
+        base.OnLoad(e);
+    }
+
+    protected override void OnUnLoad(EventArgs e)
+    {
+        base.OnUnLoad(e);
+    }
+
     public AISettingsPanel()
     {
         Padding = new Padding(20);
@@ -55,26 +89,6 @@ internal sealed class AISettingsPanel : Panel
         SeedRows();
 
         TabControl tabs = new();
-#if R9
-        if (AIInstances.Preferences.UseSdk)
-        {
-            // Human written pages
-            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-            AddPage(tabs, Localization.LocalizeString("Usage", 252), new AIUsagePage());
-            AddPage(tabs, Localization.LocalizeString("PlugIns", 253), new AIPluginPage());
-            AddPage(tabs, Localization.LocalizeString("Permissions", 254), new AIPermissionsPage());
-        }
-        else
-#endif
-        {
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
-        }
-
         Content = tabs;
     }
 
@@ -648,8 +662,8 @@ internal sealed class AISettingsPanel : Panel
 
         //public string DefaultGlyph => IsDefault ? "✓" : string.Empty;
 
-        private static Image DefaultCheckIcon => 
-            Rhino.Resources.Assets.Rhino.Eto.Icons.TryGet(Rhino.Resources.ResourceIds.CheckSvg, new Size(16,16));
+        private static Image DefaultCheckIcon =>
+            Rhino.Resources.Assets.Rhino.Eto.Icons.TryGet(Rhino.Resources.ResourceIds.CheckSvg, new Size(16, 16));
 
         public Image? DefaultImage => IsDefault ? DefaultCheckIcon : null;
 
