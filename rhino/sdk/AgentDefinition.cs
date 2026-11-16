@@ -266,7 +266,7 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             "openai" => Protocols(ChatGptModel.Default, null, ChatGptModel.Completions, ChatGptModel.Responses),
             "google" => Protocols(GeminiModel.Default, null, GeminiModel.Completions, null),
             "deepseek" => Protocols(DeepSeekModel.Default, DeepSeekModel.Anthropic, DeepSeekModel.Completions, DeepSeekModel.Responses),
-            "lm studio" => Protocols(LocalModel.Default, LocalModel.Anthropic, LocalModel.Completions, LocalModel.Responses),
+            "lm studio" or "local" => Protocols(LocalModel.Default, LocalModel.Anthropic, LocalModel.Completions, LocalModel.Responses),
             // TODO : Fix
             // "Ollama" => Protocols(null),
             "apple" => Protocols(LocalModel.Default, null, LocalModel.Completions, null),
