@@ -13,4 +13,8 @@
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Prompts\*.md" LogicalName="Rhino.AI.Prompts.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>
