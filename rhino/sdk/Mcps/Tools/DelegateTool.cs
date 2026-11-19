@@ -37,10 +37,10 @@ public sealed record DelegateTool(PlugIns.PlugInToken token) : Tool("delegate",
         string context = string.Empty;
 
         if (!args.TryGetString(Args[0].Name, out string modelName))
-            return ToolReturn.Failure("model parameter is mandatory", "Call delegate again with model set to the model the sub agent should run on.");
+            return ToolReturn.MissingArgument(Name, Args[0].Name, "the model the sub agent should run on");
 
         if (!args.TryGetString(Args[1].Name, out string prompt))
-            return ToolReturn.Failure("prompt parameter is mandatory", "Call delegate again with context set to everything the sub agent needs, since it starts with none.");
+            return ToolReturn.MissingArgument(Name, Args[1].Name, "everything the sub agent needs, since it starts with none");
 
         if (!AIInstances.Agents.Definitions.Any(d => d.AvailableModels.Count > 0))
         {

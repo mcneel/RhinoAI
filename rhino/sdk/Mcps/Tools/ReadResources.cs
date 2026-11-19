@@ -22,13 +22,13 @@ public sealed record ReadResources(Harness Harness) : Tool("read_resources",
     public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetString(Args[0].Name, out string mcpName))
-            return ToolReturn.Failure($"{Args[0].Name} parameter is mandatory", $"Call {Name} again with {Args[0].Name} set to the mcp value from list_resources.");
+            return ToolReturn.MissingArgument(Name, Args[0].Name, "the mcp value from list_resources");
 
         if (!args.TryGetString(Args[1].Name, out string resourcePath))
-            return ToolReturn.Failure($"{Args[1].Name} parameter is mandatory", $"Call {Name} again with {Args[1].Name} set to a resource from list_resources.");
+            return ToolReturn.MissingArgument(Name, Args[1].Name, "a resource from list_resources");
 
-        if (!Harness.Mcps.TryGetValue(mcpName, out Mcp? mcp) || mcp is null)
-            return ToolReturn.Failure($"No MCP named '{mcpName}'.", $"Use one of: {string.Join(", ", Harness.Mcps.Keys)}.");
+        if (!Harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null)
+            return ToolReturn.UnknownMcp(mcpName, Harness.Mcps.Keys);
 
         if (!mcp.Resources.TryGetValue(resourcePath, out IResource? resource) || resource is null)
             return ToolReturn.Failure($"MCP '{mcpName}' has no resource '{resourcePath}'.", $"Call list_resources with mcp_name '{mcpName}' to see what it offers.");

@@ -1,3 +1,5 @@
+using System;
+using System.Net;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -76,4 +78,44 @@ public sealed record ToolReturn
     /// </summary>
     internal static ToolReturn Refused(string toolName) => new($"Use of {toolName} was refused", ToolResult.Failure, "Ask the user what to do");
 
+    internal static ToolReturn MissingArgument(string toolName, string argName, string expected)
+        => Failure($"Tool '{toolName}' requires argument '{argName}'.", $"Call '{toolName}' again with '{argName}' set to {expected}.");
+
+    internal static ToolReturn MissingArgument(string toolName, string argName)
+        => Failure($"Tool '{toolName}' requires argument '{argName}'.", $"Call '{toolName}' again with '{argName}' supplied.");
+
+    internal static ToolReturn UnknownArgument(string toolName, string argName)
+        => Failure($"Tool '{toolName}' has no argument '{argName}'.", $"Call '{toolName}' again with only the arguments it declares.");
+
+    internal static ToolReturn UnknownTool(string mcpName, string toolName)
+        => Failure($"MCP '{mcpName}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+
+    internal static ToolReturn UnknownMcp(string mcpName, IEnumerable<string> available)
+        => Failure($"No MCP named '{mcpName}'.", $"Use one of: {string.Join(", ", available)}.");
+
+    internal static ToolReturn HttpFailure(HttpStatusCode status)
+    {
+        string guidance = (int)status switch
+        {
+            404 or 410 => "The page does not exist. Check the url for typos, or find the right page another way.",
+            401 or 403 => "The page needs a login or blocks automated clients. Do not retry; use another source or ask the user.",
+            429 => "The site is rate limiting requests. Do not retry straight away.",
+            >= 500 and <= 599 => "The site had a server fault. Retry once at most, then use another source.",
+            _ => "Do not retry the same call unchanged.",
+        };
+
+        return Failure($"The url responded with status code {(int)status} ({status}).", guidance);
+    }
+
+    internal static ToolReturn FileIsDirectory()
+        => Failure("File is a directory.", "Pass the path of a file, not a folder.");
+
+    internal static ToolReturn FileNotFound()
+        => Failure("File does not exist.", "Check the path, or create the file with the write tool first.");
+
+    internal static ToolReturn FileAccessDenied(string verb)
+        => Failure($"Did not have permission to {verb} file", $"Ask the user to grant access, or {verb} a different file.");
+
+    internal static ToolReturn FileError(Exception exception, string pastVerb)
+        => Failure(exception.Message, $"The file could not be {pastVerb}. Do not retry the same call unchanged.");
 }
