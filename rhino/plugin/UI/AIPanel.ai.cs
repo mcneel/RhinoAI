@@ -6,6 +6,8 @@ public partial class AIPanel
 {
     public static Guid PanelId => typeof(AIPanel).GUID;
 
+    internal bool PromptFromHost(string text) => Model.PromptFromHost(text);
+
     // A newly loaded page holds no tokens, so the fingerprint has to be cleared or the resend is suppressed.
     private void OnPageLoaded(object? sender, WebViewLoadedEventArgs e)
     {
