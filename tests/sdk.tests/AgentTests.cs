@@ -85,7 +85,7 @@ public class AgentTests
             ModelsRoute = "/v1/models",
         };
         AIInstances.Agents.Add(def);
-        def.Add(LocalModel.Completions(def.CurrentModelId, new Uri(def.Host)));
+        def.Add(LocalModel.Completions(def.CurrentModelId, def.Vendor, new Uri(def.Host)));
         Agent? agent = def.GetAgent(Token);
         Assert.That(agent, Is.Not.Null);
 
