@@ -1,20 +1,38 @@
 using System;
 using System.Linq;
 using System.Threading;
-using System.Globalization;
 using System.Collections.Generic;
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Rhino.AI;
 
 /// <summary>An MCP for Rhino Plugins</summary>
-public sealed class RhinoMcp(string name) : Mcp(name)
+public sealed class RhinoMcp(string name) : StdioMcp(name, new Uri(ResolvedRouter))
 {
-    // TODO : Register the Mcp tools here?
-    // TODO : Should this / harness be moved outside the SDK?
+
+    // '/Users/sykes/Library/Application Support/McNeel/Rhinoceros/ai/bin/rhino-mcp-router'
+    private static string? CachedResolvedRouter { get; set; }
+    public static string ResolvedRouter
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(CachedResolvedRouter))
+            {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string mcneel = Path.Combine(appData, "McNeel");
+                string rhinoceros = Path.Combine(mcneel, "Rhinoceros");
+                string ai = Path.Combine(rhinoceros, "ai");
+                string bin = Path.Combine(ai, "bin");
+                string router = Path.Combine(bin, "rhino-mcp-router");
+                CachedResolvedRouter = router;
+            }
+
+            return CachedResolvedRouter;
+        }
+    }
+
 }
 
 public abstract record RhinoTool : ITool
