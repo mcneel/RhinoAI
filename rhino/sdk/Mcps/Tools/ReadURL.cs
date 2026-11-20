@@ -40,7 +40,7 @@ public sealed record ReadURL(Harness Harness) : Tool("read_url",
             return ToolReturn.MissingArgument(Name, Args[0].Name, "a valid url");
 
         args.TryGetString(Args[1].Name, out string keywordString);
-        string[] keywords = keywordString?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+        string[] keywords = keywordString?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? [];
 
         int max = 2000;
         // if (!args.TryGetInt(Args[2].Name, out int max))
