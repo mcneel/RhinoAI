@@ -14,7 +14,7 @@ namespace Rhino.AI;
 /// <summary>
 /// A STandard Input Output MCP that drives an executable
 /// </summary>
-public sealed class StdioMcp(string name, Uri process) : Mcp(name)
+public class StdioMcp(string name, Uri process) : Mcp(name)
 {
 
     private const string ProtocolVersion = "2025-06-18";
@@ -279,6 +279,8 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         await input.FlushAsync(token).ConfigureAwait(false);
     }
 
+    public override bool RegisterTool(ITool tool) => false;
+
     private async Task DrainErrorAsync()
     {
         if (Error is not StreamReader error)
@@ -303,7 +305,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
 
     ~StdioMcp()
     {
-        // TODO : Claude = May be a better way
+        // AI : Claude = May be a better way
         Dispose();
     }
 

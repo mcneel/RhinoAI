@@ -37,7 +37,7 @@ public abstract class Mcp : IDisposable
     /// </summary>
     /// <param name="tool">The tool to register</param>
     /// <returns>True on success, false otherwise</returns>
-    public bool RegisterTool(ITool tool)
+    public virtual bool RegisterTool(ITool tool)
     {
         if (!PrivateTools.TryAdd(tool.Name, tool))
             return false;

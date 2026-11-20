@@ -32,6 +32,11 @@ public sealed class HttpMcp(string name, Uri url) : Mcp(name)
         return false;
     }
 
+    public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
+        => throw new NotImplementedException();
+
+    public override bool RegisterTool(ITool tool) => false;
+
     ~HttpMcp()
     {
         // TODO : Claude = May be a better way
@@ -40,7 +45,7 @@ public sealed class HttpMcp(string name, Uri url) : Mcp(name)
 
     public override void Dispose()
     {
-        // TODO : Close Server
+        // AI : Close Server
     }
 
 }
