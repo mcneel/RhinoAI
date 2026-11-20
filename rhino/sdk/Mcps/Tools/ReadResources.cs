@@ -27,7 +27,7 @@ public sealed record ReadResources(Harness Harness) : Tool("read_resources",
         if (!args.TryGetString(Args[1].Name, out string resourcePath))
             return ToolReturn.MissingArgument(Name, Args[1].Name, "a resource from list_resources");
 
-        if (!Harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null)
+        if (!Harness.Mcps.TryGetValue(mcpName, out Mcp? mcp) || mcp is null)
             return ToolReturn.UnknownMcp(mcpName, Harness.Mcps.Keys);
 
         if (!mcp.Resources.TryGetValue(resourcePath, out IResource? resource) || resource is null)
