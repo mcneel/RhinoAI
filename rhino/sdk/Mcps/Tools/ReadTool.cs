@@ -21,7 +21,7 @@ public sealed record ReadTool() : Tool("read",
     public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
-            return ToolReturn.Failure("file parameter is mandatory", "Call read again with file set to an absolute path.");
+            return ToolReturn.MissingArgument(Name, Args[0].Name, "an absolute path");
 
         FileInfo info = new(filePath);
 
@@ -29,9 +29,9 @@ public sealed record ReadTool() : Tool("read",
         {
             DirectoryInfo dInfo = new(filePath);
             if (dInfo.Exists)
-                return ToolReturn.Failure("File is a directory.", "Pass the path of a file, not a folder.");
+                return ToolReturn.FileIsDirectory();
 
-            return ToolReturn.Failure("File does not exist.", "Check the path, or create the file with the write tool first.");
+            return ToolReturn.FileNotFound();
         }
 
         try
@@ -44,11 +44,11 @@ public sealed record ReadTool() : Tool("read",
         }
         catch (UnauthorizedAccessException)
         {
-            return ToolReturn.Failure("Did not have permission to read file", "Ask the user to grant access, or read a different file.");
+            return ToolReturn.FileAccessDenied("read");
         }
         catch (Exception ex)
         {
-            return ToolReturn.Failure(ex.Message, "The file could not be read. Do not retry the same call unchanged.");
+            return ToolReturn.FileError(ex, "read");
         }
     }
 

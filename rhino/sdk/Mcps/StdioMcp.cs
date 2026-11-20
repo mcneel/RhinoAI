@@ -88,7 +88,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
     public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
-            return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+            return ToolReturn.UnknownTool(Name, toolName);
 
         bool started = await InitAsync(token);
 
@@ -96,7 +96,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         foreach (IToolArg argument in args)
         {
             if (Declared(tool, argument.Name) is not ToolParameter declared)
-                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
+                return ToolReturn.UnknownArgument(toolName, argument.Name);
 
             if (ToJson(declared, argument) is not JsonNode value)
                 return ToolReturn.Failure($"Argument '{declared.Name}' wants {declared.Type}, got {Describe(argument)}.", $"Call '{toolName}' again with '{declared.Name}' as {declared.Type}.");
@@ -107,7 +107,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !arguments.ContainsKey(declared.Name))
-                return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
+                return ToolReturn.MissingArgument(toolName, declared.Name);
         }
 
         JsonNode? result = await RequestAsync("tools/call", new JsonObject

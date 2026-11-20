@@ -76,14 +76,14 @@ public abstract class Mcp : IDisposable
     /// <returns><see cref="ToolReturn"/></returns>
     public async Task<ToolReturn> RunToolAsync(Agent agent, Harness harness, string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!PrivateTools.TryGetValue(toolName, out ITool? tool) || tool is null)
-            return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+        if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
+            return ToolReturn.UnknownTool(Name, toolName);
 
         List<IToolArg> supplied = new(args.Count);
         foreach (IToolArg argument in args)
         {
             if (Declared(tool, argument.Name) is not ToolParameter declared)
-                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
+                return ToolReturn.UnknownArgument(toolName, argument.Name);
 
             supplied.Add(argument);
         }
@@ -91,7 +91,7 @@ public abstract class Mcp : IDisposable
         foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !supplied.Any(s => string.Equals(s.Name, declared.Name)))
-                return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
+                return ToolReturn.MissingArgument(toolName, declared.Name);
         }
 
         List<IToolArg> argsList = args.ToList();
