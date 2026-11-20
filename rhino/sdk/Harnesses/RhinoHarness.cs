@@ -65,7 +65,7 @@ public sealed class RhinoHarness : Harness
             firstTurns.Insert(0, new MessageTurn(classifyPrompt, RoleType.System));
 
             bool done = false;
-            await foreach (ITurn turn in agent.Model.StreamAsync(this, firstTurns, token))
+            await foreach (ITurn turn in agent.Model!.StreamAsync(this, firstTurns, token))
             {
                 if (done) break;
                 if (turn is TurnStart) continue;
@@ -124,7 +124,7 @@ public sealed class RhinoHarness : Harness
                         contents.Add(content);
                     }
                     
-                    finalTurns.Add(new MessageTurn(contents, message.Role, message.Timestamp, message.Duration, message.TokenCount));
+                    finalTurns.Add(new MessageTurn(contents, message.Role, message.TimeStamp, message.Duration, message.TokenCount));
                     continue;
                 }
             }
@@ -164,6 +164,11 @@ public sealed class RhinoHarness : Harness
 
     private async Task<List<ITurn>> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
     {
+        if (agent.Model is null)
+        {
+            return [new TurnEnd(StopReason.Error, "Model on agent is null")];
+        }
+
         List<ITurn> turnsAsList = turns.ToList();
         int index = -1;
         for (int i = turnsAsList.Count - 1; i > 0; i--)
@@ -193,7 +198,7 @@ public sealed class RhinoHarness : Harness
                                                         "Convert all of them into a summary, excluding any unnecessary information such as tool calls and Turn Ends." +
                                                         "Do not include this preliminary information in the summary you return."));
 
-            await foreach (ITurn turn in agent.Model.StreamAsync(this, compactableTurns, token))
+            await foreach (ITurn turn in agent.Model!.StreamAsync(this, compactableTurns, token))
             {
                 compactedTurns.Add(turn);
             }
@@ -226,12 +231,12 @@ public sealed class RhinoHarness : Harness
         return tokenCalc > MaxTokenForContext;
     }
 
-    public override async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-    {
-        // TODO : It is possible that a tool call could ask the AI if it's SURE it needs it
-        //        e.g the Viewport Tool to validate. It's expensive.
+    // public override async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
+    // {
+    //     // TODO : It is possible that a tool call could ask the AI if it's SURE it needs it
+    //     //        e.g the Viewport Tool to validate. It's expensive.
 
-        throw new NotImplementedException("oops");
-    }
+    //     throw new NotImplementedException("oops");
+    // }
 
 }

@@ -12,6 +12,7 @@ public sealed class DefaultToolsMcp : MemoryMcp
     /// Creates a default MCP for the given Harness
     /// </summary>
     /// <param name="harness">The harness</param>
+    /// <param name="token">The permissions token</param>
     public DefaultToolsMcp(Harness harness, PlugIns.PlugInToken token) : base(NAME)
     {
         RegisterTool(new Tools.DelegateTool(token));

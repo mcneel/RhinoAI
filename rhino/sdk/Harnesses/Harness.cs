@@ -17,7 +17,7 @@ namespace Rhino.AI;
 public class Harness
 {
 
-    private Loop Loop { get; }
+    protected Loop Loop { get; }
 
     private Dictionary<string, Mcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
 
