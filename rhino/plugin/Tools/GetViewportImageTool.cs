@@ -8,6 +8,9 @@ using Rhino.Geometry;
 
 namespace Rhino.AI.Tools;
 
+// TODO : It might make sense to offer a model call from this tool.
+//        A smaller, simpler model may be able to summarise what is in the image for the Agent
+
 [McpServerToolType]
 internal static class GetViewportImageTool
 {
