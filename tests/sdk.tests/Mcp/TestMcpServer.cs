@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
+
+using StdioTestServer;
 
 namespace sdk.tests;
 
@@ -39,18 +40,5 @@ public sealed class TestMcpServer : IAsyncDisposable
         await App.StopAsync().ConfigureAwait(false);
         await App.DisposeAsync().ConfigureAwait(false);
     }
-
-}
-
-[McpServerToolType]
-public sealed class TestTools
-{
-
-    [McpServerTool(Name = "ping")]
-    public static string Ping() => "pong";
-
-    [McpServerTool(Name = "repeat")]
-    public static string Repeat(string text, int count, string separator = " ")
-        => string.Join(separator, Enumerable.Repeat(text, count));
 
 }

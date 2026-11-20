@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../rhino/sdk/sdk.csproj" />
+    <ProjectReference Include="../StdioTestServer/StdioTestServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
