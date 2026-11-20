@@ -3,28 +3,39 @@ using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
-public sealed record ToolResultTurn(string Id, string Name, ToolReturn Return, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null) : ITurn
+/// <summary>
+/// The result of a tool
+/// </summary>
+public sealed record ToolResultTurn : Turn
 {
 
-    [JsonPropertyName("role")]
-    public RoleType Role => RoleType.User;
+    public string Id { get; }
+    public string Name { get; }
+    public ToolReturn Return { get; }
 
-    [JsonIgnore]
-    public bool Success => Return.Result is not ToolResult.Failure;
+    [JsonConstructor]
+    private ToolResultTurn(string id, string name, ToolReturn @return, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
+        : this(id, name, @return, (DateTime?)timeStamp, duration, tokenCount)
+    {
+    }
 
-    [JsonIgnore]
-    public int? TokenCount { get; } = tokenCount;
+    internal ToolResultTurn(string id, string name, ToolReturn @return, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+        : base("result")
+    {
+        Id = id;
+        Name = name;
+        Role = RoleType.User;
+        Return = @return;
+        Success = @return.Result is not ToolResult.Failure;
+        Duration = duration;
+        TimeStamp = timestamp ?? DateTime.UtcNow;
+        TokenCount = tokenCount;
 
-    [JsonIgnore]
-    public DateTime Timestamp { get; } = timestamp ?? DateTime.UtcNow;
+        Data = @return.Guidance is string guidance
+        ? $"{@return.Message}\n\n{guidance}"
+        : @return.Message;
+    }
 
-    [JsonIgnore]
-    public TimeSpan? Duration { get; } = duration;
-
-    public string Data => Return.Guidance is string guidance
-        ? $"{Return.Message}\n\n{guidance}"
-        : Return.Message;
-
-    public ITurn Copy() => new ToolResultTurn(Id, Name, Return.Copy(), Timestamp, Duration, TokenCount);
+    public override ITurn Copy() => new ToolResultTurn(Id, Name, Return.Copy(), TimeStamp, Duration, TokenCount);
 
 }

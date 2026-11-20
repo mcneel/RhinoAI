@@ -3,9 +3,16 @@ namespace Rhino.AI.Router;
 public record RouterConfig(
     string DefaultVersion,
     int StartupTimeoutSeconds = 120,
-    IReadOnlyDictionary<string, string>? RhinoExeOverrides = null)
+    IReadOnlyDictionary<string, string>? RhinoExeOverrides = null,
+    int ToolCallTimeoutSeconds = 600)
 {
     public const int DefaultStartupTimeoutSeconds = 120;
+
+    // Per tool call, router -> Rhino. Matches McpTimeouts.ToolCall (10 min) in
+    // rhino/sdk, which the agent harnesses already give their clients. Env var
+    // fallback; the `--tool-timeout` CLI arg wins.
+    public const int DefaultToolCallTimeoutSeconds = 600;
+    public const string ToolCallTimeoutEnvVar = "RHINO_MCP_TOOL_TIMEOUT";
 
     // Env var fallback for the startup timeout; the `--startup-timeout` CLI arg wins.
     public const string StartupTimeoutEnvVar = "RHINO_MCP_STARTUP_TIMEOUT";
@@ -25,6 +32,7 @@ public record RouterConfig(
     {
         string defaultVersion = ReadDefaultVersionFromEnv();
         int startupTimeoutSeconds = ReadStartupTimeoutFromEnv();
+        int toolCallTimeoutSeconds = ReadPositiveIntFromEnv(ToolCallTimeoutEnvVar, DefaultToolCallTimeoutSeconds);
         Dictionary<string, string> overrides = ReadRhinoExeOverridesFromEnv();
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -38,6 +46,13 @@ public record RouterConfig(
                 if (int.TryParse(args[i + 1], out int parsed) && parsed > 0)
                 {
                     startupTimeoutSeconds = parsed;
+                }
+            }
+            else if (args[i] == "--tool-timeout")
+            {
+                if (int.TryParse(args[i + 1], out int parsed) && parsed > 0)
+                {
+                    toolCallTimeoutSeconds = parsed;
                 }
             }
             else if (args[i] == "--rhino-exe")
@@ -55,7 +70,8 @@ public record RouterConfig(
         return new RouterConfig(
             defaultVersion,
             startupTimeoutSeconds,
-            overrides.Count > 0 ? overrides : null);
+            overrides.Count > 0 ? overrides : null,
+            toolCallTimeoutSeconds);
     }
 
     private static string ReadDefaultVersionFromEnv()
@@ -64,14 +80,17 @@ public record RouterConfig(
         return string.IsNullOrWhiteSpace(raw) ? "8" : raw.Trim();
     }
 
-    private static int ReadStartupTimeoutFromEnv()
+    private static int ReadStartupTimeoutFromEnv() =>
+        ReadPositiveIntFromEnv(StartupTimeoutEnvVar, DefaultStartupTimeoutSeconds);
+
+    private static int ReadPositiveIntFromEnv(string name, int fallback)
     {
-        string? raw = Environment.GetEnvironmentVariable(StartupTimeoutEnvVar);
+        string? raw = Environment.GetEnvironmentVariable(name);
         if (int.TryParse(raw, out int parsed) && parsed > 0)
         {
             return parsed;
         }
-        return DefaultStartupTimeoutSeconds;
+        return fallback;
     }
 
     private static Dictionary<string, string> ReadRhinoExeOverridesFromEnv()

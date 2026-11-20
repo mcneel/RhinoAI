@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,10 +13,10 @@ namespace Rhino.AI;
 /// A harness loop
 /// </summary>
 /// <param name="harness">The harness</param>
-public sealed class Loop(IHarness harness)
+public sealed class Loop(Harness harness)
 {
 
-    private IHarness Harness { get; } = harness;
+    private Harness Harness { get; } = harness;
 
     public async Task<IEnumerable<ITurn>> StartAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
@@ -32,6 +33,11 @@ public sealed class Loop(IHarness harness)
     {
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
+        StopReason reason = StopReason.EndTurn;
+        int? tokenCount = null;
+
+        if (agent.Model is null)
+            throw new Exception("Agent does not have a valid model");
 
         do
         {
@@ -41,13 +47,21 @@ public sealed class Loop(IHarness harness)
 
             await foreach (ITurn turn in agent.Model.StreamAsync(Harness, conversation, token))
             {
-                if (turn is TurnEnd) continue;
+                // Each request ends with its own TurnEnd; the caller gets one for the whole loop.
+                if (turn is TurnEnd end)
+                {
+                    reason = end.Reason;
+                    if (end.TokenCount is int count)
+                        tokenCount = (tokenCount ?? 0) + count;
+                    continue;
+                }
+
                 conversation.Add(turn);
                 yield return turn;
 
                 if (turn is ToolTurn tool)
                 {
-                    ToolResultTurn result = new (tool.Id, tool.Name, await UseAsync(tool, token).ConfigureAwait(false));
+                    ToolResultTurn result = new (tool.Id, tool.Name, await UseAsync(agent, tool, token).ConfigureAwait(false));
                     results.Add(result);
                     yield return result;
                 }
@@ -55,14 +69,16 @@ public sealed class Loop(IHarness harness)
 
         }
         while (results.Count > 0);
+
+        yield return new TurnEnd(reason, tokenCount: tokenCount);
     }
 
-    private async Task<ToolReturn> UseAsync(ToolTurn tool, CancellationToken token)
+    private async Task<ToolReturn> UseAsync(Agent agent, ToolTurn tool, CancellationToken token)
     {
         if (!ToolSchema.TryParseWireName(tool.Name, out string mcpName, out string toolName))
             return ToolReturn.Failure($"Could not parse {tool.Name}.", "N/A");
 
-        return await Harness.UseToolAsync(mcpName, toolName, tool.Args.ToList(), token).ConfigureAwait(false);
+        return await Harness.UseToolAsync(agent, mcpName, toolName, tool.Args.ToList(), token).ConfigureAwait(false);
     }
 
 }

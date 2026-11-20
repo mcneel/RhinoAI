@@ -23,13 +23,13 @@ public sealed record EditTool() : Tool("edit",
     public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
-            return ToolReturn.Failure("file parameter is mandatory", "Call edit again with file set to an absolute path.");
+            return ToolReturn.MissingArgument(Name, Args[0].Name, "an absolute path");
 
         if (!args.TryGetString(Args[1].Name, out string oldText))
-            return ToolReturn.Failure("old parameter is mandatory", "Call edit again with old set to the exact text to replace.");
+            return ToolReturn.MissingArgument(Name, Args[1].Name, "the exact text to replace");
 
         if (!args.TryGetString(Args[2].Name, out string newText))
-            return ToolReturn.Failure("new parameter is mandatory", "Call edit again with new set to the replacement text.");
+            return ToolReturn.MissingArgument(Name, Args[2].Name, "the replacement text");
 
         if (oldText.Length == 0)
             return ToolReturn.Failure("old parameter cannot be empty.", "Use the write tool to create a file from nothing.");
@@ -40,14 +40,18 @@ public sealed record EditTool() : Tool("edit",
         {
             DirectoryInfo dInfo = new(filePath);
             if (dInfo.Exists)
-                return ToolReturn.Failure("File is a directory.", "Pass the path of a file, not a folder.");
+                return ToolReturn.FileIsDirectory();
 
-            return ToolReturn.Failure("File does not exist.", "Check the path, or create the file with the write tool first.");
+            return ToolReturn.FileNotFound();
         }
 
         try
         {
+#if NET48
+            string data = File.ReadAllText(filePath);
+#else
             string data = await File.ReadAllTextAsync(filePath, token).ConfigureAwait(false);
+#endif
 
             int start = data.IndexOf(oldText, StringComparison.Ordinal);
             if (start < 0)
@@ -56,18 +60,22 @@ public sealed record EditTool() : Tool("edit",
             if (data.IndexOf(oldText, start + oldText.Length, StringComparison.Ordinal) >= 0)
                 return ToolReturn.Failure("The old text appears more than once.", "Include enough surrounding text to make it unique.");
 
-            string edited = string.Concat(data.AsSpan(0, start), newText, data.AsSpan(start + oldText.Length));
+            string edited = data.Remove(start, oldText.Length).Insert(start, newText);
 
+#if NET48
+            File.WriteAllText(filePath, edited);
+#else
             await File.WriteAllTextAsync(filePath, edited, token).ConfigureAwait(false);
+#endif
             return ToolReturn.Success($"Edited {filePath} successfully");
         }
         catch (UnauthorizedAccessException)
         {
-            return ToolReturn.Failure("Did not have permission to edit file", "Ask the user to grant access, or edit a different file.");
+            return ToolReturn.FileAccessDenied("edit");
         }
         catch (Exception ex)
         {
-            return ToolReturn.Failure(ex.Message, "The file could not be edited. Do not retry the same call unchanged.");
+            return ToolReturn.FileError(ex, "edited");
         }
     }
 

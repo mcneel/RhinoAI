@@ -6,8 +6,11 @@ namespace Rhino.AI;
 /// <summary>
 /// A conversation turn
 /// </summary>
+[JsonConverter(typeof(TurnJsonConverter))]
 public interface ITurn
 {
+    
+    public string Type { get; }
 
     /// <summary>
     /// The creator of the turn
@@ -17,20 +20,17 @@ public interface ITurn
     /// <summary>
     /// The success status of the <see cref="ITurn"/>
     /// </summary>
-    [JsonIgnore]
     public bool Success { get; }
 
     /// <summary>
     /// Tokens this turn cost, or null when the endpoint did not break the count down this far.
     /// </summary>
-    [JsonIgnore]
     public int? TokenCount { get; }
 
     /// <summary>
     /// When the turn was created, in UTC
     /// </summary>
-    [JsonIgnore]
-    public DateTime Timestamp { get; }
+    public DateTime TimeStamp { get; }
 
     /// <summary>
     /// The duration of the turn

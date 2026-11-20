@@ -3,8 +3,10 @@ using System;
 namespace Rhino.AI.PlugIns;
 
 /// <summary>
-/// A Permissions Token for a PlugIn
+/// A Permissions Token for a PlugIn. These should not be shared between PlugIns.
 /// </summary>
+/// <remarks>Do not use another plugins token.</remarks>
+/// <code>PlugInRegistry.Register()</code>
 public sealed record PlugInToken
 {
 

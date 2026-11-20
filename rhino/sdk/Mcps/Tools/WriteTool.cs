@@ -22,13 +22,13 @@ public sealed record WriteTool() : Tool("write",
     public override async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetPath(Args[0].Name, out string filePath))
-            return ToolReturn.Failure("file parameter is mandatory", "Call write again with file set to an absolute path.");
+            return ToolReturn.MissingArgument(Name, Args[0].Name, "an absolute path");
 
         if (!args.TryGetString(Args[1].Name, out string data))
-            return ToolReturn.Failure("data parameter is mandatory", "Call write again with data set to the whole contents of the file.");
+            return ToolReturn.MissingArgument(Name, Args[1].Name, "the whole contents of the file");
 
         if (Directory.Exists(filePath))
-            return ToolReturn.Failure("File is a directory.", "Pass the path of a file, not a folder.");
+            return ToolReturn.FileIsDirectory();
 
         try
         {
@@ -36,16 +36,20 @@ public sealed record WriteTool() : Tool("write",
             if (directory is not null && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
+#if NET48
+            File.WriteAllText(filePath, data);
+#else
             await File.WriteAllTextAsync(filePath, data, token).ConfigureAwait(false);
+#endif
             return ToolReturn.Success($"Wrote {data.Length} characters to {filePath}");
         }
         catch (UnauthorizedAccessException)
         {
-            return ToolReturn.Failure("Did not have permission to write file", "Ask the user to grant access, or write to a different path.");
+            return ToolReturn.FileAccessDenied("write");
         }
         catch (Exception ex)
         {
-            return ToolReturn.Failure(ex.Message, "The file could not be written. Do not retry the same call unchanged.");
+            return ToolReturn.FileError(ex, "written");
         }
     }
 

@@ -31,7 +31,7 @@ internal static class GH1_ProxyResolver
     public static GH1_ProxyResolution Resolve(string name, bool includeDeprecated)
     {
         List<IGH_ObjectProxy> all = [];
-        foreach (IGH_ObjectProxy proxy in Instances.ComponentServer.ObjectProxies)
+        foreach (IGH_ObjectProxy proxy in Grasshopper.Instances.ComponentServer.ObjectProxies)
         {
             if (string.Equals(proxy.Desc.Name, name, StringComparison.OrdinalIgnoreCase))
                 all.Add(proxy);

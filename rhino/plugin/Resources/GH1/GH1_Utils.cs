@@ -19,13 +19,13 @@ internal static class GH1_Utils
   public static bool TryGetOrCreateDoc(RhinoDoc rhDoc, out GH_Document doc)
   {
     doc = default!;
-    if (Instances.ActiveCanvas is null)
+    if (Grasshopper.Instances.ActiveCanvas is null)
     {
       RhinoApp.RunScript(rhDoc.RuntimeSerialNumber, "_Grasshopper", true);
-      if (Instances.ActiveCanvas is null) return false;
+      if (Grasshopper.Instances.ActiveCanvas is null) return false;
     }
 
-    var canvas = Instances.ActiveCanvas;
+    var canvas = Grasshopper.Instances.ActiveCanvas;
 
     canvas.Document ??= new GH_Document();
     doc = canvas.Document;
@@ -35,16 +35,16 @@ internal static class GH1_Utils
   public static bool TryGetDoc(out GH_Document doc)
   {
     doc = default!;
-    if (Instances.ActiveCanvas is null) return false;
-    doc = Instances.ActiveCanvas.Document;
+    if (Grasshopper.Instances.ActiveCanvas is null) return false;
+    doc = Grasshopper.Instances.ActiveCanvas.Document;
     return doc is not null;
   }
 
-  public static void Redraw() => Instances.RedrawCanvas();
+  public static void Redraw() => Grasshopper.Instances.RedrawCanvas();
 
   public static void ZoomExtents()
   {
-    var canvas = Instances.ActiveCanvas;
+    var canvas = Grasshopper.Instances.ActiveCanvas;
     if (canvas?.Document is null) return;
     var attrs = new List<IGH_Attributes>();
     foreach (IGH_DocumentObject obj in canvas.Document.Objects)
@@ -53,7 +53,7 @@ internal static class GH1_Utils
     }
     if (attrs.Count == 0) return;
     canvas.Viewport.Focus(attrs);
-    Instances.RedrawCanvas();
+    Grasshopper.Instances.RedrawCanvas();
   }
 
   public record struct Message(string Level, string Text);

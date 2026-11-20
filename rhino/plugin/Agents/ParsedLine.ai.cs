@@ -14,18 +14,18 @@ namespace Rhino.AI;
 internal record struct ParsedLine(
     IReadOnlyList<SessionUpdate> Updates,
     bool IsTurnComplete,
-    StopReason Reason,
+    Acp.StopReason Reason,
     TokenUsage Usage,
     string? SessionId)
 {
-    public static ParsedLine None { get; } = new([], false, StopReason.EndTurn, TokenUsage.Empty, null);
+    public static ParsedLine None { get; } = new([], false, Acp.StopReason.EndTurn, TokenUsage.Empty, null);
 
-    public static ParsedLine Emit(params SessionUpdate[] updates) => new(updates, false, StopReason.EndTurn, TokenUsage.Empty, null);
+    public static ParsedLine Emit(params SessionUpdate[] updates) => new(updates, false, Acp.StopReason.EndTurn, TokenUsage.Empty, null);
 
-    public static ParsedLine Complete(StopReason reason, TokenUsage usage = default) => new([], true, reason, usage, null);
+    public static ParsedLine Complete(Acp.StopReason reason, TokenUsage usage = default) => new([], true, reason, usage, null);
 
     // A CLI-reported failure carries its reason into the transcript, so the turn never just stops with nothing shown.
-    public static ParsedLine Failed(StopReason reason, params SessionUpdate[] updates) => new(updates, true, reason, TokenUsage.Empty, null);
+    public static ParsedLine Failed(Acp.StopReason reason, params SessionUpdate[] updates) => new(updates, true, reason, TokenUsage.Empty, null);
 
-    public static ParsedLine Session(string sessionId) => new([], false, StopReason.EndTurn, TokenUsage.Empty, sessionId);
+    public static ParsedLine Session(string sessionId) => new([], false, Acp.StopReason.EndTurn, TokenUsage.Empty, sessionId);
 }

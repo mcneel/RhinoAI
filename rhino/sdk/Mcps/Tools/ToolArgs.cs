@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace Rhino.AI;
 
 /// <summary>
@@ -8,6 +11,7 @@ public enum ToolArgType { Unknown = 0, String, URL, FilePath, Number, Integer, B
 /// <summary>
 /// An input Argument for Tool calls
 /// </summary>
+[JsonConverter(typeof(ToolJsonConverter))]
 public interface IToolArg
 {
     
@@ -26,6 +30,8 @@ public abstract record ToolArg : IToolArg
     
     public string Name { get; }
 
+    public string Type => this.GetType().Name;
+
     private ToolArg()
     {
         Name = "Error";
@@ -35,6 +41,7 @@ public abstract record ToolArg : IToolArg
     {
         Name = name;
     }
+
 }
 
 /// <summary>
@@ -49,7 +56,7 @@ public sealed record ToolBoolean(string Name, bool Value) : ToolArg(Name) { }
 /// </summary>
 /// <param name="Name">The tool argument name</param>
 /// <param name="Value">The tool argument's value</param>
-public record struct ToolNumber(string Name, double Value) : IToolArg;
+public sealed record ToolNumber(string Name, double Value) : ToolArg(Name) { }
 
 /// <summary>
 /// A <see cref="int"/> argument for a tool call
@@ -85,3 +92,29 @@ public sealed record ToolString(string Name, string Value) : ToolArg(Name) { }
 /// <param name="Name">The tool argument name</param>
 /// <param name="Value">The tool argument's value</param>
 public sealed record ToolSecret(string Name, string Value) : ToolArg(Name) { }
+
+internal sealed class ToolJsonConverter : JsonConverter<IToolArg>
+{
+    public override IToolArg? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+        JsonElement root = doc.RootElement;
+        string? disc = root.TryGetProperty("Type", out JsonElement d) ? d.GetString() : null;
+        // TODO : Is this feasible or nah?
+        return disc?.ToLowerInvariant() switch
+        {
+            "toolboolean" => root.Deserialize<ToolBoolean>(options),
+            "toolnumber" => root.Deserialize<ToolNumber>(options),
+            "toolint" => root.Deserialize<ToolInt>(options),
+            "toolpath" => root.Deserialize<ToolPath>(options),
+            "toolurl" => root.Deserialize<ToolUrl>(options),
+            "toolstring" => root.Deserialize<ToolString>(options),
+            "toolsecret" => root.Deserialize<ToolSecret>(options),
+            
+            _ => throw new JsonException($"Unknown ITurn type: {disc}"),
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, IToolArg value, JsonSerializerOptions options)
+        => JsonSerializer.Serialize(writer, value, value.GetType(), options);
+}

@@ -15,34 +15,19 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class CodexHarness : IHarness
+internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 {
-
-    public PermissionSet Permissions { get; } = new();
-
-    private Dictionary<string, IMcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, IMcp> Mcps => PrivateMcps;
-
-    private Dictionary<string, ISkill> PrivateSkills { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyDictionary<string, ISkill> Skills => PrivateSkills;
-
-    public HarnessConfig Config { get; } = new();
-
-    public bool AddMcp(IMcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
-
-    public bool AddSkill(ISkill skill) => PrivateSkills.TryAdd(skill.Name, skill);
-
-    public async Task<ToolReturn> UseToolAsync(string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
-        => await GenericHarness.UseToolAsync(this, mcpName, toolName, args, token);
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
               "Codex: no approval in codex exec. You'd have to switch CodexHarness to codex app-server, which has a published schema but is labelled experimental.")]
-    public Func<PermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
-    public async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
+    public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel) yield break;
-        if (!await EnsureLoggedIn(token))
+        if (agent.Model is not CodexDesktopModel codexModel) yield break;
+        if (!await EnsureLoggedIn(token, codexModel))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -109,7 +94,7 @@ internal sealed class CodexHarness : IHarness
             yield return new TurnEnd(StopReason.Error);
     }
 
-    public async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    public override async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         if (agent.Model is not CodexDesktopModel) return [];
 
@@ -122,9 +107,10 @@ internal sealed class CodexHarness : IHarness
         return turns;
     }
 
-    private Process GetCodexProcess(CancellationToken token)
+    private Process GetCodexProcess(IModel model, CancellationToken token)
     {
-        string exePath = CodexDesktopModel.ExePath;
+        CodexDesktopModel codexModel = (CodexDesktopModel)model;
+        string exePath = codexModel.ExePath;
 
         Process process = new()
         {
@@ -143,7 +129,9 @@ internal sealed class CodexHarness : IHarness
         };
 
         UTF8Encoding utf8 = new(encoderShouldEmitUTF8Identifier: false);
+#if !NET48
         process.StartInfo.StandardInputEncoding = utf8;
+#endif
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
@@ -152,52 +140,58 @@ internal sealed class CodexHarness : IHarness
 
     private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
-        Process process = GetCodexProcess(token);
+        Process process = GetCodexProcess(agent.Model!, token);
 
-        process.StartInfo.ArgumentList.Add("exec");
+        process.StartInfo.AddArgument("exec");
 
         if (agent.Config.SessionId != Guid.Empty)
         {
-            process.StartInfo.ArgumentList.Add("resume");
+            process.StartInfo.AddArgument("resume");
         }
 
         // Not a git repo
 
-        process.StartInfo.ArgumentList.Add("--skip-git-repo-check");
+        process.StartInfo.AddArgument("--skip-git-repo-check");
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.ArgumentList.Add("--model");
-        process.StartInfo.ArgumentList.Add(agent.Model.Name);
+        process.StartInfo.AddArgument("--model");
+        process.StartInfo.AddArgument(agent.Model!.Name);
 
-        foreach (string mcpArg in GetMcpArgs())
+        // Effort
+        if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
         {
-            process.StartInfo.ArgumentList.Add(mcpArg);
+            // TODO : Put into the toml?
         }
 
-        process.StartInfo.ArgumentList.Add("-c");
-        process.StartInfo.ArgumentList.Add("model_reasoning_effort=\"high\"");
+        foreach (string mcpArg in GetMcpArgs(agent))
+        {
+            process.StartInfo.AddArgument(mcpArg);
+        }
+
+        process.StartInfo.AddArgument("-c");
+        process.StartInfo.AddArgument("model_reasoning_effort=\"high\"");
 
         string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
         if (systemPrompt.Length > 0)
         {
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
         }
 
         // Output as JSON
-        process.StartInfo.ArgumentList.Add("--json");
+        process.StartInfo.AddArgument("--json");
 
         if (!agent.Config.UseLocalSettings)
         {
-            process.StartInfo.ArgumentList.Add("--ignore-user-config");
-            process.StartInfo.ArgumentList.Add("--ignore-rules");
+            process.StartInfo.AddArgument("--ignore-user-config");
+            process.StartInfo.AddArgument("--ignore-rules");
 
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add("sandbox_mode=\"read-only\"");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument("sandbox_mode=\"read-only\"");
 
-            process.StartInfo.ArgumentList.Add("-c");
-            process.StartInfo.ArgumentList.Add("web_search=\"disabled\"");
+            process.StartInfo.AddArgument("-c");
+            process.StartInfo.AddArgument("web_search=\"disabled\"");
 
             // code_mode_host stays enabled: this model routes every tool call, MCP included, through code mode.
             string[] codexTools = ["shell_tool", "unified_exec", "multi_agent", "goals",
@@ -206,22 +200,22 @@ internal sealed class CodexHarness : IHarness
 
             foreach (string builtInTool in codexTools)
             {
-                process.StartInfo.ArgumentList.Add("--disable");
-                process.StartInfo.ArgumentList.Add(builtInTool);
+                process.StartInfo.AddArgument("--disable");
+                process.StartInfo.AddArgument(builtInTool);
             }
         }
 
         if (agent.Config.SessionId != Guid.Empty)
-            process.StartInfo.ArgumentList.Add(agent.Config.SessionId.ToString());
+            process.StartInfo.AddArgument(agent.Config.SessionId.ToString());
 
         // One -i per file: --image is variadic and a single flag would swallow the trailing "-".
         foreach (string imagePath in imagePaths)
         {
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(imagePath);
+            process.StartInfo.AddArgument("-i");
+            process.StartInfo.AddArgument(imagePath);
         }
 
-        process.StartInfo.ArgumentList.Add("-");
+        process.StartInfo.AddArgument("-");
 
         AIProcess turnProcess = new(process);
 
@@ -326,14 +320,14 @@ internal sealed class CodexHarness : IHarness
 
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, CodexDesktopModel codexModel)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process codex = GetCodexProcess(token);
-            codex.StartInfo.ArgumentList.Add("login");
-            codex.StartInfo.ArgumentList.Add("status");
+            using Process codex = GetCodexProcess(codexModel, token);
+            codex.StartInfo.AddArgument("login");
+            codex.StartInfo.AddArgument("status");
 
             using CancellationTokenRegistration _ = token.Register(() =>
             {
@@ -350,7 +344,7 @@ internal sealed class CodexHarness : IHarness
                 return LoggedIn;
             }
 
-            LoggedIn = await LogIn(token);
+            LoggedIn = await LogIn(token, codexModel);
             return LoggedIn;
         }
         catch
@@ -359,10 +353,10 @@ internal sealed class CodexHarness : IHarness
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token)
+    private async Task<bool> LogIn(CancellationToken token, CodexDesktopModel codexModel)
     {
-        using Process codex = GetCodexProcess(token);
-        codex.StartInfo.ArgumentList.Add("login");
+        using Process codex = GetCodexProcess(codexModel, token);
+        codex.StartInfo.AddArgument("login");
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -565,18 +559,18 @@ internal sealed class CodexHarness : IHarness
     }
 
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
-    private IEnumerable<string> GetMcpArgs()
+    private IEnumerable<string> GetMcpArgs(Agent agent)
     {
-        string disabledTools = TomlArray(Permissions.ProhibitedTools().Select(permission => permission.ToolName));
+        string disabledTools = TomlArray(AIInstances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
-        foreach (IMcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             string? transport = mcp switch
             {
                 StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",
                 HttpMcp httpMcp => $"url='{httpMcp.Url.AbsoluteUri}'",
-                MemoryMcp memMcp => HandleMemoryMcp(memMcp),
+                MemoryMcp memMcp => HandleMemoryMcp(agent, memMcp),
                 _ => null,
             };
             if (transport is null) continue;
@@ -588,9 +582,9 @@ internal sealed class CodexHarness : IHarness
 
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
 
-    private string HandleMemoryMcp(MemoryMcp mcp)
+    private string HandleMemoryMcp(Agent agent, MemoryMcp mcp)
     {
-        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(this, mcp);
+        Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, mcp);
         Leases.Add(lease);
         return $"url='{lease.Uri.AbsoluteUri}'";
     }

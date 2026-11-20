@@ -12,7 +12,7 @@ public sealed class DefaultToolsMcp : MemoryMcp
     /// Creates a default MCP for the given Harness
     /// </summary>
     /// <param name="harness">The harness</param>
-    public DefaultToolsMcp(IHarness harness, PlugIns.PlugInToken token) : base(NAME)
+    public DefaultToolsMcp(Harness harness, PlugIns.PlugInToken token) : base(NAME)
     {
         RegisterTool(new Tools.DelegateTool(token));
         // RegisterTool(new Tools.Compact()); // TODO : Compaction

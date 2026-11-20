@@ -11,7 +11,7 @@ namespace Rhino.AI.Tools;
 internal static class GH1_DeleteComponentTool
 {
 
-    [McpServerTool("g1_delete_component", "Delete GH1 Component", false, false)]
+    [McpServerTool("g1_delete_component", "Delete GH1 Component", false, true)]
     [Description("Delete a Grasshopper component on the active GH1 canvas.")]
     public static IToolResult Delete(
         RhinoDoc rhDoc,

@@ -12,14 +12,14 @@ namespace Rhino.AI.Tools;
 /// <summary>
 /// An MCP tool to read a resource(s)
 /// </summary>
-public sealed record ReadURL(IHarness Harness) : Tool("read_url",
+public sealed record ReadURL(Harness Harness) : Tool("read_url",
                                 "Used for reading a resource at a URL from the web",
                                 false,
                                 false,
                                 [
                                     new ("url", "The URL to read from", ToolArgType.URL, true),
                                     new ("keywords", "Keywords to search for, separated by ';'", ToolArgType.String, false),
-                                    new ("max_token_count", "The maximum number of tokens to return", ToolArgType.Integer, false, 1_000)
+                                    // new ("max_token_count", "The maximum number of tokens to return", ToolArgType.Integer, false, 1_000)
                                 ])
 {
 
@@ -42,8 +42,9 @@ public sealed record ReadURL(IHarness Harness) : Tool("read_url",
         args.TryGetString(Args[1].Name, out string keywordString);
         string[] keywords = keywordString?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 
-        if (!args.TryGetInt(Args[2].Name, out int max))
-            Args[2].TryGetAs(out max);
+        int max = 2000;
+        // if (!args.TryGetInt(Args[2].Name, out int max))
+        //     Args[2].TryGetAs(out max);
 
         HttpResponseMessage response = await Client.GetAsync(url, token);
         if (!response.IsSuccessStatusCode)

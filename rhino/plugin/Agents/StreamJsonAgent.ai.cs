@@ -30,13 +30,13 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     private Process? Proc { get; set; }
     private StreamWriter? Stdin { get; set; }
     private Task? StartTask { get; set; }
-    private TaskCompletionSource<StopReason>? CurrentTurn { get; set; }
+    private TaskCompletionSource<Acp.StopReason>? CurrentTurn { get; set; }
 
     private object Gate { get; } = new();
     private SemaphoreSlim WriteGate { get; } = new(1, 1);
     private SemaphoreSlim TurnGate { get; } = new(1, 1);
 
-    private record struct TurnCompletion(StopReason Reason, TokenUsage Usage);
+    private record struct TurnCompletion(Acp.StopReason Reason, TokenUsage Usage);
 
     // Resolved by the read-loop exit, so a one-turn-per-process CLI cannot hand the next prompt a stdin it already closed.
     private TurnCompletion? PendingCompletion { get; set; }
@@ -109,12 +109,12 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         await TurnGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            TaskCompletionSource<StopReason> turn = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<Acp.StopReason> turn = new(TaskCreationOptions.RunContinuationsAsynchronously);
             lock (Gate)
                 CurrentTurn = turn;
 
             await SendTurnAsync(request.Prompt).ConfigureAwait(false);
-            StopReason reason = await turn.Task.ConfigureAwait(false);
+            Acp.StopReason reason = await turn.Task.ConfigureAwait(false);
             return new PromptResponse { StopReason = reason };
         }
         finally
@@ -126,13 +126,13 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     }
 
     // Resolve the in-flight turn as a clean cancel before tearing the process down, so a deliberate
-    // cancel ends the turn with StopReason.Cancelled instead of faulting into the IOException the
+    // cancel ends the turn with Acp.StopReason.Cancelled instead of faulting into the IOException the
     // read loop raises on exit (which AgentDispatch would print as a user-visible error line). This
     // wins the TCS first; the read loop's later TrySetException is then a no-op. The next prompt
     // respawns with --resume.
     public ValueTask SessionCancelAsync(CancelNotification notification, CancellationToken cancellationToken = default)
     {
-        TaskCompletionSource<StopReason>? turn;
+        TaskCompletionSource<Acp.StopReason>? turn;
         lock (Gate)
         {
             turn = CurrentTurn;
@@ -141,7 +141,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             // below doesn't misread the kill as a rejected --resume and falsely 'start fresh'.
             ResumePending = false;
         }
-        turn?.TrySetResult(StopReason.Cancelled);
+        turn?.TrySetResult(Acp.StopReason.Cancelled);
         Kill();
         return default;
     }
@@ -317,7 +317,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
                     // A turn the CLI itself calls failed is the one moment worth asking why: the
                     // answer is often an expired login. Asked AFTER the turn resolves, so the probe
                     // never sits between the user and their (already finished) answer.
-                    if (parsed.IsTurnComplete && parsed.Reason == StopReason.Refusal)
+                    if (parsed.IsTurnComplete && parsed.Reason == Acp.StopReason.Refusal)
                         await NoteIfSignedOutAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
@@ -340,7 +340,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
             // Read-loop-exit ALWAYS faults the in-flight turn: a CLI that exits without emitting its
             // terminal event must never hang PromptAsync forever. A clean SessionCancelAsync has
             // already won the TCS by here, so this TrySetException is then a no-op.
-            TaskCompletionSource<StopReason>? turn = null;
+            TaskCompletionSource<Acp.StopReason>? turn = null;
             bool resumeRejected = false;
             TurnCompletion? completed = null;
             lock (Gate)
@@ -501,9 +501,9 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     private void Push(SessionUpdate update) =>
         _ = Client.SessionUpdateAsync(new SessionNotification { SessionId = AgentSessionIdText, Update = update });
 
-    private void CompleteTurn(object? token, StopReason reason, TokenUsage usage)
+    private void CompleteTurn(object? token, Acp.StopReason reason, TokenUsage usage)
     {
-        TaskCompletionSource<StopReason>? turn = null;
+        TaskCompletionSource<Acp.StopReason>? turn = null;
         lock (Gate)
             if (ReferenceEquals(Proc, token)) // both null in the loopback seam, so it matches there
             {
@@ -549,7 +549,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         // AgentHost pool must not spawn or tear down anything).
         Kill();
         Lifetime.Cancel(); // ...and stop browser sign-in before it posts into a replaced conversation
-        TaskCompletionSource<StopReason>? turn;
+        TaskCompletionSource<Acp.StopReason>? turn;
         lock (Gate)
             turn = CurrentTurn;
         turn?.TrySetException(new ObjectDisposedException(nameof(StreamJsonAgent)));
@@ -564,9 +564,9 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
     // test can script one turn (write the framed prompt, replay canned stdout lines) and assert the
     // SessionUpdates reach the client and the turn resolves. No process is spawned; the loop's owner
     // token is null so every Push/CompleteTurn applies. The caller writes to `stdin` to script input.
-    internal async Task<StopReason> RunLoopbackAsync(TextReader stdout, TextWriter stdin, IReadOnlyList<ContentBlock> prompt)
+    internal async Task<Acp.StopReason> RunLoopbackAsync(TextReader stdout, TextWriter stdin, IReadOnlyList<ContentBlock> prompt)
     {
-        TaskCompletionSource<StopReason> turn = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Acp.StopReason> turn = new(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (Gate)
             CurrentTurn = turn;
 
@@ -574,7 +574,7 @@ internal sealed class StreamJsonAgent : IAcpAgent, IDisposable
         await stdin.FlushAsync().ConfigureAwait(false);
 
         Task loop = ReadLoopAsync(stdout, owner: null);
-        StopReason reason = await turn.Task.ConfigureAwait(false);
+        Acp.StopReason reason = await turn.Task.ConfigureAwait(false);
         await loop.ConfigureAwait(false);
         return reason;
     }

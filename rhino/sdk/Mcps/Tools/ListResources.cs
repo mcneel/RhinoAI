@@ -10,7 +10,7 @@ namespace Rhino.AI.Tools;
 /// <summary>
 /// An MCP tool to list available resources
 /// </summary>
-public sealed record ListResources(IHarness Harness) : Tool("list_resources",
+public sealed record ListResources(Harness Harness) : Tool("list_resources",
                                 "Used for listing the available resources in all MCPs",
                                 true,
                                 false,
@@ -28,10 +28,10 @@ public sealed record ListResources(IHarness Harness) : Tool("list_resources",
             keywords = keywordString.Split(',', StringSplitOptions.RemoveEmptyEntries);
         }
 
-        List<(IMcp Mcp, IEnumerable<IResource> Resources)>? resources = null;
+        List<(Mcp Mcp, IEnumerable<IResource> Resources)>? resources = null;
         if (args.TryGetString("mcp_name", out string mcp_name))
         {
-            if (!Harness.Mcps.TryGetValue(mcp_name, out IMcp? mcp) || mcp is null)
+            if (!Harness.Mcps.TryGetValue(mcp_name, out Mcp? mcp) || mcp is null)
                 return ToolReturn.Failure($"No MCP named '{mcp_name}'.", $"Use one of: {string.Join(", ", Harness.Mcps.Keys)}, or leave mcp_name out to search all MCPs.");
 
             resources = [(mcp, mcp.Resources.Values)];
@@ -40,7 +40,7 @@ public sealed record ListResources(IHarness Harness) : Tool("list_resources",
         if (resources is null)
         {
             resources = [];
-            foreach (IMcp mcp in Harness.Mcps.Values)
+            foreach (Mcp mcp in Harness.Mcps.Values)
             {
                 resources.Add((mcp, mcp.Resources.Values));
             }
@@ -55,7 +55,7 @@ public sealed record ListResources(IHarness Harness) : Tool("list_resources",
         return ToolReturn.Success(listing.ToJsonString());
     }
 
-    private static IEnumerable<JsonNode> DescribeAndFilter((IMcp Mcp, IEnumerable<IResource> Resources) tuple, string[] keywords)
+    private static IEnumerable<JsonNode> DescribeAndFilter((Mcp Mcp, IEnumerable<IResource> Resources) tuple, string[] keywords)
     {
         foreach (IResource resource in tuple.Resources)
         {
@@ -79,7 +79,7 @@ public sealed record ListResources(IHarness Harness) : Tool("list_resources",
     private static bool MatchesAny(string description, string keyword)
         => description.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
-    private static JsonObject Describe(IMcp mcp, IResource resource) => new JsonObject
+    private static JsonObject Describe(Mcp mcp, IResource resource) => new JsonObject
     {
         ["mcp"] = mcp.Name,
         ["uri"] = resource.Uri.ToString(),

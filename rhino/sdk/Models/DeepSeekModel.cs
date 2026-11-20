@@ -4,6 +4,8 @@ namespace Rhino.AI.Models;
 
 // https://api-docs.deepseek.com/
 
+// NOTE : These models aren't specific. They're kind of templates.
+
 /// <summary>
 /// The DeepSeek AI Model
 /// </summary>
@@ -14,8 +16,6 @@ internal sealed class DeepSeekModel : ApiModel
 
     private DeepSeekModel(string name, Protocol protocol) : base(name, "DeepSeek", Host, protocol)
     {
-        ApiKey ??= Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
-        ApiKey ??= Secrets.Stasher.GetSecret("DEEPSEEK_API_KEY");
     }
 
     /// <summary>A DeepSeek Model using the default protocol.</summary>

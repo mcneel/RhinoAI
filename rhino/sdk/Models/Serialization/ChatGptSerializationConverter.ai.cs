@@ -11,7 +11,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
 
     public string Vendor { get; } = vendor;
 
-    public JsonObject ToRequest(RequestSettings settings, IHarness harness, IEnumerable<ITurn> turns)
+    public JsonObject ToRequest(RequestSettings settings, Harness harness, IEnumerable<ITurn> turns)
     {
         StringBuilder instructions = new();
         JsonArray input = [];
@@ -52,7 +52,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         return body;
     }
 
-    public IReadOnlyList<ITurn> FromResponse(IHarness harness, JsonNode response)
+    public IReadOnlyList<ITurn> FromResponse(Harness harness, JsonNode response)
     {
         if (response is not JsonObject payload)
             throw new JsonException("OpenAI returned something other than a response object.");
@@ -69,7 +69,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         }
 
         StopReason reason = Stop((string?)payload["status"], (string?)payload["incomplete_details"]?["reason"], calling);
-        turns.Add(new TurnEnd(reason, tokenCount: (int?)payload["usage"]?["output_tokens"]));
+        turns.Add(new TurnEnd(reason, tokenCount: (int?)payload["usage"]?["total_tokens"]));
 
         return turns;
     }
@@ -109,7 +109,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
     private ThoughtSignature? Replayable(ThoughtSignature? signature)
         => signature is not null && signature.Vendor == Vendor && signature.Id is not null ? signature : null;
 
-    private ITurn? ToTurn(IHarness harness, JsonObject item) => (string?)item["type"] switch
+    private ITurn? ToTurn(Harness harness, JsonObject item) => (string?)item["type"] switch
     {
         "reasoning" => new ThinkingTurn(Join(item["summary"]), new ThoughtSignature(Vendor, (string?)item["id"], (string?)item["encrypted_content"] ?? string.Empty)),
         "message" => new MessageTurn(Join(item["content"]), RoleType.Assistant),
@@ -117,7 +117,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         _ => null,
     };
 
-    private ToolTurn ToolCall(IHarness harness, JsonObject item)
+    private ToolTurn ToolCall(Harness harness, JsonObject item)
     {
         string name = (string?)item["name"] ?? string.Empty;
         JsonNode? arguments = ToolArgs.Parse(Vendor, name, (string?)item["arguments"]);
@@ -142,10 +142,10 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         return text.ToString();
     }
 
-    private static JsonArray Declarations(IHarness harness)
+    private static JsonArray Declarations(Harness harness)
     {
         JsonArray declarations = [];
-        foreach ((IMcp mcp, ITool tool) in ToolSchema.Tools(harness))
+        foreach ((Mcp mcp, ITool tool) in ToolSchema.Tools(harness))
         {
             declarations.Add(new JsonObject
             {

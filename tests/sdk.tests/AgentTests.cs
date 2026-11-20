@@ -10,38 +10,39 @@ public class AgentTests
 
     private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
-    [TestCase("completions")]
-    [TestCase("anthropic")]
-    [TestCase("responses")]
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
+    }
+
+    [TestCase(ProtocolKind.Completions)]
+    [TestCase(ProtocolKind.Messages)]
+    [TestCase(ProtocolKind.Responses)]
     [CancelAfter(5000)]
-    public async Task DeepSeekApi(string protocol, CancellationToken token)
+    public async Task DeepSeekApi(ProtocolKind protocol, CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
 
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        DeepSeekModel deepSeek = protocol switch
-        {
-            "completions" => DeepSeekModel.Completions("deepseek-flash"),
-            "anthropic" => DeepSeekModel.Anthropic("deepseek-flash"),
-            "responses" => DeepSeekModel.Responses("deepseek-flash"),
-            _ => throw new ArgumentOutOfRangeException(nameof(protocol)),
-        };
-        GenericHarness harness = new(Token);
-        harness.AddMcp(mcp);
-        Agent agent = new(Token, deepSeek, harness);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        agent.Harness.AddMcp(mcp);
 
-        AssertUsedWeatherTool(turns.ToList());
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+
+        AssertUsedWeatherTool(result);
+        Assert.That(result.TokenCount, Is.GreaterThan(0));
     }
 
     [Test, CancelAfter(5000)]
     public async Task OneCallAtATime(CancellationToken token)
     {
-        DeepSeekModel deepSeek = DeepSeekModel.Completions("deepseek-flash");
-        Agent agent = new(Token, deepSeek, new GenericHarness(Token));
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
 
         await using IAsyncEnumerator<ITurn> first = agent.StreamAsync("Hello!", token).GetAsyncEnumerator(token);
         Assert.That(await first.MoveNextAsync(), Is.True);
@@ -57,14 +58,14 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        DeepSeekModel deepSeek = DeepSeekModel.Default();
-        GenericHarness harness = new(Token);
-        harness.AddMcp(mcp);
-        Agent agent = new(Token, deepSeek, harness);
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+        
+        agent.Harness.AddMcp(mcp);
 
-        harness.AskUser += async (e, _) => e.HasPermission = false;
+        agent.Harness.AskUser += async (e, __) => { ((PermissionRequest)e).HasPermission = false; };
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Florida?", token);
     }
 
     [Test, Category("Manual")]
@@ -76,12 +77,48 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetLocalAgent(Token, "qwen/qwen3-1.7b", new("http://localhost:1234"), "");
+        HttpAgentDefinition def = new ("LM Studio", "")
+        {
+            CurrentModelId = "qwen/qwen3-1.7b",
+            Protocol = ProtocolKind.Default,
+            Host = "http://localhost:1234",
+            ModelsRoute = "/v1/models",
+        };
+        AIInstances.Agents.Add(def);
+        def.Add(LocalModel.Completions(def.CurrentModelId, new Uri(def.Host)));
+        Agent? agent = def.GetAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
         agent.Harness.AddMcp(mcp);
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(60_000)]
+    public async Task CustomLocalModelApi(CancellationToken token)
+    {
+        MemoryMcp mcp = new("Weather MCP");
+
+        WeatherTool tool = new();
+        mcp.RegisterTool(tool);
+
+        ModelDefinition modelDefinition = new("LM Studio", "Qwen 3-1.7b", "qwen/qwen3-1.7b");
+        HttpAgentDefinition definition = new("LM Studio", "LM Studio Community") { Protocol = ProtocolKind.Completions, Host = "http://localhost:1234", ModelsRoute = "/v1/models" };
+        definition.Add(modelDefinition);
+        definition.CurrentModelId = modelDefinition.ModelId;
+
+        Assert.That(AIInstances.Agents.Add(definition));
+
+        Agent? agent = Agent.GetCustomAgent(definition, Token);
+        Assert.That(agent, Is.Not.Null);
+        agent.Harness.AddMcp(mcp);
+
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+
+        AssertUsedWeatherTool(result);
     }
 
     [Test, Category("Manual")]
@@ -93,20 +130,21 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetClaudeDesktopAgent(Token, "opus", "");
+        Agent? agent = Agent.GetClaudeDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
         agent.Harness.AddMcp(mcp);
 
         ClaudeHarness harness = (ClaudeHarness)agent.Harness;
         harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
-            e.HasPermission = true;
+            if (e is PermissionRequest pr) pr.HasPermission = true;
             Assert.That(e.HasPermission);
         };
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [Test, Category("Manual")]
@@ -118,20 +156,21 @@ public class AgentTests
         WeatherTool tool = new();
         mcp.RegisterTool(tool);
 
-        Agent agent = Agent.GetCodexDesktopAgent(Token, "gpt-6-astra", "");
+        Agent? agent = Agent.GetCodexDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
         agent.Harness.AddMcp(mcp);
 
         CodexHarness harness = (CodexHarness)agent.Harness;
         harness.AskUser += async (e, _) =>
         {
             Assert.That(e.HasPermission, Is.False);
-            e.HasPermission = true;
+            if (e is PermissionRequest pr) pr.HasPermission = true;
             Assert.That(e.HasPermission);
         };
 
-        IEnumerable<ITurn> turns = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
+        IAgentResult result = await agent.SendAsync("Hello! What is the weather today in Tampa, Florida?", token);
 
-        AssertUsedWeatherTool(turns.ToList());
+        AssertUsedWeatherTool(result);
     }
 
     [TestCase("--resume;cheese")]
@@ -157,9 +196,23 @@ public class AgentTests
         Assert.That(process.TryPop<MessageTurn>(out MessageTurn turn));
     }
 
+    [Test]
+    [CancelAfter(5000)]
+    public async Task ModelEffort(CancellationToken token)
+    {
+        Agent? agent = Agent.GetDeepSeekAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        agent.Config.ModelEffort = "max";
+
+        IAgentResult result = await agent.SendAsync("What effort level are you using?", token);
+        // TODO : Assert a message contains "max" and not "low" etc.
+    }
+
     private static Process GetClaudeProcess()
     {
-        string exePath = ClaudeDesktopModel.ExePath;
+        ClaudeDesktopModel desktopModel = (ClaudeDesktopModel)AIInstances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetModel("opus")!;
+        string exePath = desktopModel.ExePath;
 
         Process process = new()
         {
@@ -179,20 +232,18 @@ public class AgentTests
         return process;
     }
 
-    private static void AssertUsedWeatherTool(List<ITurn> transcript)
+    private static void AssertUsedWeatherTool(IAgentResult result)
     {
-        Assert.That(transcript, Is.Not.Empty);
-        if (transcript.Last() is TurnEnd end)
-            Assert.That(end.Reason, Is.EqualTo(StopReason.EndTurn));
+        Assert.That(result.Reason, Is.EqualTo(StopReason.EndTurn));
 
-        Assert.That(transcript.OfType<ToolTurn>().Any(t => t.Name.EndsWith("get_weather")), "The model never called the weather tool.");
-        Assert.That(transcript.OfType<ToolResultTurn>().Any(r => r.Return.Result == ToolResult.Success), "The weather tool's result never came back.");
+        ToolCall? weather = result.ToolCalls.FirstOrDefault(c => c.Name.EndsWith("get_weather"));
+        Assert.That(weather, Is.Not.Null, "The model never called the weather tool.");
+        Assert.That(weather?.Success, Is.True, "The weather tool's result never came back.");
 
-        MessageTurn? answer = transcript.OfType<MessageTurn>().LastOrDefault(m => m.Role == RoleType.Assistant);
-        Assert.That(answer, Is.Not.Null, "The model never answered.");
-        Assert.That(answer!.Message, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
+        Assert.That(result.Text, Is.Not.Null, "The model never answered.");
+        Assert.That(result.Text, Does.Contain("stormy").IgnoreCase, "The answer does not use the weather tool's result.");
 
-        Assert.That(transcript, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
+        Assert.That(result, Has.All.Matches<ITurn>(t => t.Success), "A turn in the transcript failed.");
     }
 
     private sealed record WeatherTool() : Tool("get_weather", "Gets the current weather", true, false,

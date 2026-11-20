@@ -16,7 +16,7 @@
 
 //         private Queue<IEnumerable<ITurn>> Replies { get; } = new(replies);
 
-//         public Task<IEnumerable<ITurn>> SendAsync(IHarness harness, IEnumerable<ITurn> turns, CancellationToken token)
+//         public Task<IEnumerable<ITurn>> SendAsync(Harness harness, IEnumerable<ITurn> turns, CancellationToken token)
 //             => Task.FromResult(Replies.Dequeue());
 //     }
 
@@ -25,7 +25,7 @@
 //     [TestCase("[1, 2]")]
 //     public void MalformedTextIsKept(string text)
 //     {
-//         ToolTurn turn = ToolArgs.FromText(new GenericHarness(), "call", "Bloogle", text);
+//         ToolTurn turn = ToolArgs.FromText(new Harness(), "call", "Bloogle", text);
 
 //         Assert.That(turn.Args, Is.Empty);
 //         Assert.That(turn.UnparsedArgs, Is.EqualTo(text));
@@ -37,7 +37,7 @@
 //     [TestCase("{\"Shmargle Arg\": \"x\"}")]
 //     public void WellFormedTextParses(string? text)
 //     {
-//         ToolTurn turn = ToolArgs.FromText(new GenericHarness(), "call", "Bloogle", text);
+//         ToolTurn turn = ToolArgs.FromText(new Harness(), "call", "Bloogle", text);
 
 //         Assert.That(turn.UnparsedArgs, Is.Null);
 //     }
@@ -45,9 +45,9 @@
 //     [Test, CancelAfter(5000)]
 //     public async Task MalformedCallIsAnsweredWithFailure(CancellationToken token)
 //     {
-//         ToolTurn call = ToolArgs.FromText(new GenericHarness(), "call", "Bloogle", "{\"Shmargle Arg");
+//         ToolTurn call = ToolArgs.FromText(new Harness(), "call", "Bloogle", "{\"Shmargle Arg");
 //         ScriptedModel model = new([call], [new MessageTurn("ok", RoleType.Assistant)]);
-//         Agent agent = new(model, new GenericHarness(), "Be helpful.");
+//         Agent agent = new(model, new Harness(), "Be helpful.");
 
 //         IEnumerable<ITurn> turns = await agent.SendAsync("What is the bloogle?", token);
 

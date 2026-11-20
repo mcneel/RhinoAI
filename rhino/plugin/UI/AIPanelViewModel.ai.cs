@@ -227,6 +227,23 @@ internal partial class AIPanelViewModel : IDisposable
         return true;
     }
 
+    // RH-100340: a prompt Rhino sends gets its own conversation, so earlier context does not leak into it.
+    public bool PromptFromHost(string text)
+    {
+        if (IsTurnRunning)
+        {
+            Bridge.Post(new NoticeEvent("warn", LOC.STR("Stop the running turn before starting another.")));
+            return false;
+        }
+
+        if (ActiveConversation is { Turns.Count: > 0 })
+            NewConversation();
+        else
+            ShowLive();
+
+        return Prompt(new PromptRequest(text, []));
+    }
+
     private bool CancelCurrentAgentTurn()
     {
         if (!AgentHost.TryFor(Document, out IAgentRunner running)) return false;

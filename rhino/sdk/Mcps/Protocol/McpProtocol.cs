@@ -9,7 +9,7 @@ namespace Rhino.AI.Mcps;
 internal static class McpProtocol
 {
 
-    public static Task<McpResponse> HandleAsync(McpHttpRequest httpRequest, McpSession session, CancellationToken token)
+    public static Task<McpResponse> HandleAsync(Agent agent, McpHttpRequest httpRequest, McpSession session, CancellationToken token)
     {
         McpParseResult result = McpRequestParser.Parse(httpRequest);
         if (result is McpParseResult.Rejected rejected)
@@ -97,7 +97,7 @@ internal static class McpProtocol
             return McpResponse.Json(JsonRpc.Error(request.Id, JsonRpcErrorCode.InvalidParams, "tools/call requires a tool name in params.name."));
 
         List<IToolArg> args = GetArgs(session.Mcp.Tools.GetValueOrDefault(toolName), request.Params?["arguments"]);
-        ToolReturn @return = await session.Harness.UseToolAsync(session.Mcp.Name, toolName, args, token);
+        ToolReturn @return = await session.Harness.UseToolAsync(session.Agent, session.Mcp.Name, toolName, args, token);
         return McpResponse.Json(JsonRpc.Result(request.Id, McpTools.ToCallResult(@return)));
     }
 

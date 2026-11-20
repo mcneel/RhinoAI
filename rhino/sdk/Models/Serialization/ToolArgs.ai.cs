@@ -49,7 +49,7 @@ internal static class ToolArgs
         }
     }
 
-    public static IReadOnlyList<IToolArg> FromJson(IHarness harness, string toolName, JsonNode? args)
+    public static IReadOnlyList<IToolArg> FromJson(Harness harness, string toolName, JsonNode? args)
     {
         if (args is not JsonObject arguments)
             return [];
@@ -90,10 +90,10 @@ internal static class ToolArgs
         };
     }
 
-    private static ITool? FindTool(IHarness harness, string wireName)
+    private static ITool? FindTool(Harness harness, string wireName)
     {
         if (!ToolSchema.TryParseWireName(wireName, out string mcpName, out string toolName)) return null;
-        if (!harness.Mcps.TryGetValue(mcpName, out IMcp? mcp) || mcp is null) return null;
+        if (!harness.Mcps.TryGetValue(mcpName, out Mcp? mcp) || mcp is null) return null;
 
         return mcp.Tools.GetValueOrDefault(toolName);
     }
