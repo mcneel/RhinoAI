@@ -26,10 +26,6 @@ public class RhinoAIPlugin : PlugIn
             UI.HostPrompt.Register();
         }
 
-#if R9
-        AIInstances.Agents.LoadAgentsFromJson();
-#endif
-
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();
 

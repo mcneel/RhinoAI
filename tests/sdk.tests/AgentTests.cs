@@ -10,12 +10,6 @@ public class AgentTests
 
     private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
-    }
-
     [TestCase(ProtocolKind.Completions)]
     [TestCase(ProtocolKind.Messages)]
     [TestCase(ProtocolKind.Responses)]

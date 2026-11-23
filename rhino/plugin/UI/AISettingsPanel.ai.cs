@@ -53,24 +53,18 @@ internal sealed class AISettingsPanel : Panel
         {
             tabs.Pages.Clear();
 #if R9
-            if (AIInstances.Preferences.UseSdk)
-            {
-                // Human written pages
-                AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-                AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
-                AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
-                AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
-            }
-            else
+            // Human written pages
+            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
+            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
+            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
+            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
 #endif
-            {
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
-                tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
-            }
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
+            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() });
         }
 
         base.OnLoad(e);

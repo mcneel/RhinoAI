@@ -224,7 +224,7 @@ internal sealed class AIUsageViewModel : SimpleViewModel
     {
         Stats.Clear();
         int total = 0;
-        IEnumerable<PlugIns.PlugInToken> tokens = PlugIns.PlugInRegistry.PlugIns.Keys;
+        IEnumerable<PlugIns.PlugInToken> tokens = AIInstances.Registry.PlugIns.Keys;
         foreach (PlugIns.PlugInToken token in tokens)
         {
             PlugInStatistics? stats = PlugInStatistics.Usage(token);

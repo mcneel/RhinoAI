@@ -30,13 +30,6 @@ public class SkillTests
         }
     }
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
-    }
-
-
     [Test, CancelAfter(5000)]
     public async Task SkillsAreListedOnce(CancellationToken token)
     {
