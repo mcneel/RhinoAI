@@ -12,7 +12,8 @@
           "%APPDATA%/Claude/claude-code/**/claude.exe",
           "%USERPROFILE%/.local/bin/claude.exe",
           "%APPDATA%/npm/claude.cmd",
-          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe"
+          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe",
+          "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe"
         ],
         "mac": [
           "%USERPROFILE%/.local/bin/claude",
