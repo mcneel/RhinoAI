@@ -135,14 +135,25 @@ internal static class RhinoAIHost
 
     private static bool TryBindCandidate(int candidate, out int port)
     {
-        port = default;
+        port = candidate;
         try
         {
-            System.Net.Sockets.TcpListener listener = new(System.Net.IPAddress.Loopback, candidate);
-            listener.Start();
-            port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
-            return true;
+            if (candidate == 0)
+            {
+                System.Net.Sockets.TcpListener listener = new(System.Net.IPAddress.Loopback, candidate);
+                listener.Start();
+                port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+                listener.Stop();
+                return true;
+            }
+            else
+            {
+                using System.Net.HttpListener listener = new();
+                listener.Prefixes.Add($"http://localhost:{candidate}/");
+                listener.Start();
+                listener.Stop();
+                return true;
+            }
         }
         catch (Exception ex)
         {
