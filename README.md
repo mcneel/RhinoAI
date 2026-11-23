@@ -7,7 +7,7 @@
 
 # RhinoAI
 
-**An AI integration for Rhino 3D** · [Read the docs →](https://mcneel.github.io/RhinoAI/docs/)
+**Official Open-Source AI integration for Rhino 3D**
 
 </div>
 
@@ -28,12 +28,7 @@ MIT licensed. Contributions welcome.
 
 You don't need to build anything. The fastest path is [Claude Desktop](https://mcneel.github.io/RhinoAI/docs/getting-started/connector/): install the Rhino connector `.mcpb` from the [latest connector release](https://github.com/mcneel/RhinoAI/releases) and it installs the Rhino plug-in for you.
 
-User guides live at [mcneel.github.io/RhinoAI](https://mcneel.github.io/RhinoAI/docs/):
-
-- [Getting Started](https://mcneel.github.io/RhinoAI/docs/getting-started/): install the plug-in and connect an assistant (Claude Desktop, Claude Code, GitHub Copilot, OpenAI Codex, Gemini CLI, or a local model).
-- [Try It Out](https://mcneel.github.io/RhinoAI/docs/try-it-out/): a first prompt, recipes, and examples.
-- [Advanced](https://mcneel.github.io/RhinoAI/docs/advanced/): advanced workflows.
-- [Developers](https://mcneel.github.io/RhinoAI/docs/developers/): use the Rhino MCP in your own development cycle.
+User guides live at [Rhino AI Developer Docs](https://developer.rhino3d.com/guides/ai/).
 
 The rest of this file is for working on RhinoAI itself.
 
