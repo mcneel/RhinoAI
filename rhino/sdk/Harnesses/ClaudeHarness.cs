@@ -241,6 +241,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
         foreach (Mcp mcp in Mcps.Values)
         {
+            if (!mcp.Enabled) continue;
+            
             // TODO : Check Permissions.ProhibitedTools()
             allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
             allowedTools += " ";

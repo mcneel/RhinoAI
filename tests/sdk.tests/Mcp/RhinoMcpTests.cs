@@ -11,7 +11,7 @@ public class RhinoMcpTests
     [CancelAfter(5000)]
     public async Task InitTest(CancellationToken token)
     {
-        using RhinoMcp mcp = new ("Rhino");
+        using RhinoMcp mcp = new ();
         Assert.That(await mcp.InitAsync(token));
 
         Assert.That(mcp.Tools, Is.Not.Empty);
@@ -21,7 +21,7 @@ public class RhinoMcpTests
     [CancelAfter(5000)]
     public async Task ToolTest(CancellationToken token)
     {
-        using RhinoMcp mcp = new ("Rhino");
+        using RhinoMcp mcp = new ();
         Assert.That(await mcp.InitAsync(token));
 
         ToolReturn result = await mcp.RunToolAsync("list_slots", [], token);

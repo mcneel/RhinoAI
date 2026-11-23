@@ -73,7 +73,7 @@ public class StdioMcp(string name, Uri process) : Mcp(name)
             // The spec defaults destructiveHint to true, so absence must not read as safe.
             bool destructive = !readOnly && annotations?["destructiveHint"]?.GetValueKind() != JsonValueKind.False;
 
-            PrivateTools[name] = new StdioTool(
+            PrivateTools[name] = new StdioTool(this,
                 name,
                 tool["description"]?.ToString() ?? "",
                 readOnly,
@@ -87,6 +87,8 @@ public class StdioMcp(string name, Uri process) : Mcp(name)
 
     public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
+        if (!Initialized) await InitAsync(token);
+        
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
             return ToolReturn.UnknownTool(Name, toolName);
 
@@ -337,9 +339,10 @@ public class StdioMcp(string name, Uri process) : Mcp(name)
         PrivateTools.Clear();
     }
 
-    private sealed record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
+    private sealed record StdioTool(StdioMcp Host, string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
     {
-        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused(Name);
+        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+            => await Host.RunToolAsync(Name, args, token);
     }
 
 }
