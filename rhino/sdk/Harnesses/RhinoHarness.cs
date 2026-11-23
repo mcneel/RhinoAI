@@ -116,7 +116,7 @@ public sealed class RhinoHarness : Harness
         }
 
         string toolPrompt = $"---\nMCP TOOL LIST\n" +
-                            string.Join('\n', toolNameList) +
+                            string.Join("\n", toolNameList) +
                             "---";
 
         turns.Add(new MessageTurn(toolPrompt, RoleType.System));
