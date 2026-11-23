@@ -1,11 +1,13 @@
 # Claude Code plugin
 
-A minimal Claude Code plugin that wires the [Rhino MCP server](https://github.com/mcneel/RhinoAI) into Claude Code, plus a couple of slash commands and a modeling agent.
+A [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin, `rhino-mcp`, that connects Claude Code to Rhino and adds Rhino-specific agents, commands, and skills. Distributed through the `McNeel` marketplace in [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json).
 
 ## Prerequisites
 
-1. Rhino is running.
-2. The `MCPStart` command has been run inside Rhino, and the server is listening on the default port `10500`. (If you changed the port, edit `.mcp.json`.)
+- The **Rhino-MCP-Platform** package installed in Rhino (Package Manager, or `/install-mcp` from this plugin).
+- Node on `PATH`.
+
+Rhino doesn't need to be running. `.mcp.json` starts `router-launcher.mjs` over stdio as the `rhino` MCP server; it finds the router inside the installed package, and the router launches Rhino when needed.
 
 ## Install
 
@@ -13,23 +15,33 @@ From a Claude Code session:
 
 ```
 /plugin marketplace add mcneel/RhinoAI
-/plugin install mcneel@rhino-mcp
+/plugin install rhino-mcp@McNeel
 ```
 
-For local development against a clone, point the marketplace at your working tree instead of the GitHub repo:
+For local development, point the marketplace at your clone (the repo root, where `.claude-plugin/` lives):
 
 ```
-/plugin marketplace add /path/to/RhinoMCP/cc-plugin
-/plugin install mcneel@rhino-mcp
+/plugin marketplace add /path/to/RhinoAI
+/plugin install rhino-mcp@McNeel
 ```
 
-## What's in it
+## Contents
 
-- **MCP server** — connects to `http://localhost:10500` as `rhino`.
-- **`/rhino-mcp:snapshot`** — capture the active viewport and describe what's on screen.
-- **`/rhino-mcp:scene`** — summarize the contents of the current Rhino document.
-- **`rhino-modeler` agent** — drives Rhino for create/edit/inspect tasks; auto-delegated when the request involves geometry work.
+| Path | What |
+|---|---|
+| `.mcp.json` | Registers the `rhino` MCP server (stdio, via `router-launcher.mjs`) |
+| `agents/` | Subagents: `rhino-modeler`, `rhino-drafter`, `rhino-inspector`, `rhino-organizer`, `rhino-teacher`, `grasshopper-scripter`, `grasshopper-reviewer`, `grasshopper-teacher`. `rhino-modeler` is picked automatically for create/edit/inspect geometry work. |
+| `commands/` | `/rhino-mcp:snapshot` (capture and describe the active viewport), `/rhino-mcp:scene` (summarize the document), `/rhino-mcp:install-mcp`, `/rhino-mcp:launch-rhino`, `/rhino-mcp:launch-rhinos` |
+| `skills/` | `launch-rhino`, `launch-rhinos` |
+| `router-launcher.mjs` | Committed copy of `../shared/router-launcher.mjs` |
 
 ## Sanity check
 
-Once installed, ask Claude something like *"what's in my Rhino doc?"* — it should call the `rhino-modeler` agent (or the `/rhino-mcp:scene` command) and respond with a summary.
+After installing, ask something like *"what's in my Rhino doc?"* Claude should use the `rhino-modeler` agent or `/rhino-mcp:scene` and reply with a summary.
+
+## Editing
+
+- Agents, commands, and skills are Markdown with YAML frontmatter.
+- An agent's `tools:` list must use tool names the plug-in actually exposes (`mcp__rhino__<tool>`). Check against `rhino/plugin/Tools/` when you add or rename a tool.
+- Don't edit `router-launcher.mjs` here. Edit `shared/router-launcher.mjs` and copy it; `tests/launcher` checks the two are byte-equal.
+- Bump `version` in `.claude-plugin/plugin.json` when you change the plugin.
