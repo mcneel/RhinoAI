@@ -18,7 +18,7 @@ public sealed class RhinoHarness : Harness
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
-        RhinoMcp rhinoMcp = new ("Rhino");
+        RhinoMcp rhinoMcp = new ();
         AddMcp(rhinoMcp);
 
         // InitSkills();
@@ -59,6 +59,8 @@ public sealed class RhinoHarness : Harness
         // Classify the task? Inject some more info
         if (IsFirstTurn(turns))
         {
+            await AddMcps(turns, token);
+
             List<ITurn> firstTurns = ShrinkForClassification(turns);
             string classifyPrompt = "Classify the following task. Return one of the following words to describe it: " +
                                     "Code\n Geometry\n Image\n Other"; // TODO : Add more classifications
@@ -98,6 +100,26 @@ public sealed class RhinoHarness : Harness
         {
             yield return turn;
         }
+    }
+
+    private async Task AddMcps(List<ITurn> turns, CancellationToken token)
+    {
+        List<string> toolNameList = [];
+        foreach(Mcp mcp in Mcps.Values)
+        {
+            if (!mcp.Enabled) continue;
+            await mcp.InitAsync(token);
+            foreach(ITool tool in mcp.Tools.Values)
+            {
+                toolNameList.Add($"{mcp.Name}__{tool.Name}");
+            }
+        }
+
+        string toolPrompt = $"---\nMCP TOOL LIST\n" +
+                            string.Join('\n', toolNameList) +
+                            "---";
+
+        turns.Add(new MessageTurn(toolPrompt, RoleType.System));
     }
 
     private static List<ITurn> ShrinkForClassification(List<ITurn> turns)

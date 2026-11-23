@@ -19,8 +19,10 @@ public abstract class Mcp : IDisposable
     /// <summary>The name of the MCP.</summary>
     public string Name { get; }
 
+    public bool Enabled { get; set; } = true;
+
     /// <summary>DO NOT USE</summary>
-    private Mcp() : this("") {}
+    private Mcp() : this("") { }
 
     internal Mcp(string name)
     {
@@ -100,7 +102,7 @@ public abstract class Mcp : IDisposable
         if (permissability == Permissability.Deny) return ToolReturn.Refused(toolName);
         if (permissability == Permissability.Ask && harness.AskUser is not null)
         {
-            PermissionRequest request = new(this, tool, argsList);
+            PermissionRequest request = new(agent, this, tool, argsList);
             harness.RaiseBeforeAskUserPermission(request);
             await harness.AskUser.Invoke(request, token);
             if (!request.HasPermission) return ToolReturn.Refused(toolName);

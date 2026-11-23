@@ -11,6 +11,7 @@ internal static class ToolSchema
     {
         foreach (Mcp mcp in harness.Mcps.Values)
         {
+            if (!mcp.Enabled) continue;
             foreach (ITool tool in mcp.Tools.Values)
                 yield return (mcp, tool);
         }

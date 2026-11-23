@@ -9,7 +9,7 @@ using System.IO;
 namespace Rhino.AI;
 
 /// <summary>An MCP for Rhino Plugins</summary>
-public sealed class RhinoMcp(string name) : StdioMcp(name, new Uri(ResolvedRouter))
+public sealed class RhinoMcp() : StdioMcp("Rhino", new Uri(ResolvedRouter))
 {
 
     // '/Users/sykes/Library/Application Support/McNeel/Rhinoceros/ai/bin/rhino-mcp-router'
