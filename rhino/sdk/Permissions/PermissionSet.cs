@@ -38,10 +38,10 @@ public sealed class PermissionSet
         Permissability result = DefaultPermission;
         foreach (Permission permission in Permissions)
         {
-            if (!string.Equals(permission.McpName, mcpName) &&
+            if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.McpName, "*")) continue;
 
-            if (!string.Equals(permission.ToolName, toolName) &&
+            if (!string.Equals(permission.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.ToolName, "*")) continue;
 
             // TODO : What if there are multiple entries?

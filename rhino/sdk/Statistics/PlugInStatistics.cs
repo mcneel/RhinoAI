@@ -35,7 +35,7 @@ internal class PlugInStatistics
     // List<Statistic>
 
     // TODO : Move to Instanes?
-    private static Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
+    private Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
 
     public List<PlugInModelStatistic> Statistics
         => PrivateModelUsage.Select(kvp => new PlugInModelStatistic(kvp.Key.Name, kvp.Key.Vendor, kvp.Value)).ToList();
@@ -50,16 +50,16 @@ internal class PlugInStatistics
         if (agent.Model is null) return;
 
         PlugIn tokenKey = new(token);
-        Stats.TryGetValue(tokenKey, out PlugInStatistics? stats);
+        AIInstances.Statistics.Stats.TryGetValue(tokenKey, out PlugInStatistics? stats);
         stats ??= new PlugInStatistics();
         stats.AddTokenUsage(agent.Model, turn.Sum(t => t.TokenCount) ?? 0);
-        Stats[tokenKey] = stats;
+        AIInstances.Statistics.Stats[tokenKey] = stats;
     }
 
     public static PlugInStatistics? Usage(PlugIns.PlugInToken token)
     {
         PlugIn tokenKey = new(token);
-        Stats.TryGetValue(tokenKey, out PlugInStatistics? statistics);
+        AIInstances.Statistics.Stats.TryGetValue(tokenKey, out PlugInStatistics? statistics);
         return statistics;
     }
 
@@ -85,14 +85,14 @@ internal class PlugInStatistics
         }
         if (document is null) return false;
 
-        Stats.Clear();
+        AIInstances.Statistics.Stats.Clear();
         foreach (PlugInUsageEntry entry in document.PlugIns)
         {
             PlugInStatistics stats = new();
             foreach (ModelUsageEntry model in entry.Models)
                 stats.PrivateModelUsage[new ModelKey(model.Name, model.Vendor)] = model.TokenCount;
 
-            Stats[new PlugIn(entry.Name, entry.Id)] = stats;
+            AIInstances.Statistics.Stats[new PlugIn(entry.Name, entry.Id)] = stats;
         }
         return true;
     }
@@ -100,7 +100,7 @@ internal class PlugInStatistics
     internal static string GetJson()
     {
         PlugInStatisticsDocument document = new(
-            Stats.Select(kvp => new PlugInUsageEntry(
+            AIInstances.Statistics.Stats.Select(kvp => new PlugInUsageEntry(
                 kvp.Key.Id,
                 kvp.Key.Name,
                 kvp.Value.PrivateModelUsage

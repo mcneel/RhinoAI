@@ -10,17 +10,17 @@ namespace Rhino.AI.PlugIns;
 /// <summary>
 /// Registry for PlugIn Tokens. Required for permissions.
 /// </summary>
-public static class PlugInRegistry
+public class PlugInRegistry
 {
     // TODO : Instances!
 
     private sealed record PlugInPermission(bool Allowed);
 
-    private static Dictionary<PlugInToken, PlugInPermission> Permissions { get; } = [];
-    private static Dictionary<Assembly, PlugInToken> Tokens { get; } = [];
+    private Dictionary<PlugInToken, PlugInPermission> Permissions { get; } = [];
+    private Dictionary<Assembly, PlugInToken> Tokens { get; } = [];
 
-    private static Dictionary<PlugInToken, AgenticPlugIn> PrivatePlugIns { get; } = [];
-    internal static IReadOnlyDictionary<PlugInToken, AgenticPlugIn> PlugIns => PrivatePlugIns;
+    private Dictionary<PlugInToken, AgenticPlugIn> PrivatePlugIns { get; } = [];
+    internal IReadOnlyDictionary<PlugInToken, AgenticPlugIn> PlugIns => PrivatePlugIns;
 
     /// <summary>
     /// Register a PlugIn in the permissions system. This method will always return the same token instance to the assembly that calls it.
@@ -32,7 +32,7 @@ public static class PlugInRegistry
         try
         {
             Assembly assembly = Assembly.GetCallingAssembly();
-            if (Tokens.TryGetValue(assembly, out PlugInToken? token)) return token;
+            if (AIInstances.Registry.Tokens.TryGetValue(assembly, out PlugInToken? token)) return token;
 
             GuidAttribute guidAttribute = assembly.GetCustomAttribute<GuidAttribute>()
                 ?? throw new InvalidOperationException($"{assembly.FullName} has no [assembly: Guid] attribute");
@@ -43,20 +43,14 @@ public static class PlugInRegistry
             string name = assembly.GetName()?.Name ?? assembly.FullName ?? id.ToString();
             token = new(id, name);
 
-            bool permission = false;
-            // Default to true for RhinoCode as this is users running their own scripts
-            // See Rhino3DProjectServer.TryRegisterAIToken
-            if (id == new Guid("F39F3E8F-9EB3-4C41-A74B-9CE4EF2EC3C7"))
-            {
-                permission = true;
-            }
+            bool permission = SavedPermissions.TryGetValue(id, out bool saved) ? saved : IsTrustedByDefault(id);
 
-            Tokens[assembly] = token;
-            Permissions[token] = new PlugInPermission(permission);
+            AIInstances.Registry.Tokens[assembly] = token;
+            AIInstances.Registry.Permissions[token] = new PlugInPermission(permission);
 
             if (AgenticPlugIn.Get(assembly, id, name) is { } plugin)
             {
-                PrivatePlugIns.Add(token, plugin);
+                AIInstances.Registry.PrivatePlugIns.Add(token, plugin);
             }
 
             return token;
@@ -74,14 +68,34 @@ public static class PlugInRegistry
     public static bool HasPermission(PlugInToken token)
     {
         if (ByPass) return true;
-        if (!Permissions.TryGetValue(token, out PlugInPermission? permission)) return false;
-        if (permission is null) return false;
-        return permission.Allowed;
+        return IsAllowed(token);
     }
+
+    internal static bool IsAllowed(PlugInToken token)
+        => AIInstances.Registry.Permissions.TryGetValue(token, out PlugInPermission? permission) && permission.Allowed;
 
     internal static void GivePermission(PlugInToken token)
     {
-        Permissions[token] = new PlugInPermission(true);
+        AIInstances.Registry.Permissions[token] = new PlugInPermission(true);
+    }
+
+    // RhinoCode is users running their own scripts (see Rhino3DProjectServer.TryRegisterAIToken).
+    private static bool IsTrustedByDefault(Guid id)
+        => id == new Guid("f39f3e8f-9eb3-4c41-a74b-9ce4ef2ec3c7")
+        || id == new Guid("2668d7ed-f507-4a68-8295-8172147a0e39");
+
+    private static Dictionary<Guid, bool> SavedPermissions { get; } = [];
+
+    internal static void ApplySavedPermissions(IReadOnlyDictionary<Guid, bool> saved)
+    {
+        foreach (KeyValuePair<Guid, bool> entry in saved)
+            SavedPermissions[entry.Key] = entry.Value;
+
+        foreach (PlugInToken token in AIInstances.Registry.Tokens.Values)
+        {
+            if (saved.TryGetValue(token.Id, out bool allowed))
+                AIInstances.Registry.Permissions[token] = new PlugInPermission(allowed);
+        }
     }
 
     internal static Dictionary<PlugInToken, List<ISkill>> PrivatePanelSkills { get; } = [];

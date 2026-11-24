@@ -251,7 +251,7 @@ internal sealed class AIPluginPageViewModel : SimpleViewModel
     public void Update()
     {
         PlugIns.Clear();
-        foreach(KeyValuePair<PlugInToken, PlugInRegistry.AgenticPlugIn> kvp in PlugInRegistry.PlugIns)
+        foreach(KeyValuePair<PlugInToken, PlugInRegistry.AgenticPlugIn> kvp in AIInstances.Registry.PlugIns)
         {
             PlugIns.Add(new AgenticPlugInInfo(kvp.Key, kvp.Value.Assembly, kvp.Value.Id, kvp.Value.Name, kvp.Value.IconResource));
         }
