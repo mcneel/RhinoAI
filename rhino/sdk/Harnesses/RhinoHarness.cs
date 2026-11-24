@@ -18,7 +18,7 @@ public sealed class RhinoHarness : Harness
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
-        RhinoMcp rhinoMcp = new ();
+        RhinoMcp rhinoMcp = new();
         AddMcp(rhinoMcp);
 
         // InitSkills();
@@ -52,7 +52,8 @@ public sealed class RhinoHarness : Harness
         {
             yield return new MessageTurn("Desktop models cannot be used with custom harnesses", RoleType.System);
             yield break;
-        };
+        }
+        ;
 
         List<ITurn> turns = start is List<ITurn> s ? s : new(start);
 
@@ -83,16 +84,14 @@ public sealed class RhinoHarness : Harness
                     break;
                 }
             }
+
+            InsertRhinoHarnessPrompt(ref turns);
         }
 
         if (IsOverMaxContext(turns))
         {
             turns = await Compact(agent, turns, token);
         }
-
-        // It seems to me that the Rhino Harness should include a pretty good default prompt
-        // TODO : turns.Insert(0, GetRhinoHarnessPrompt());
-        //        Make the prompt a .md resource
 
         // Should this harness include a custom Loop?
         // It might make sense to refuse certain tool usage
@@ -105,11 +104,11 @@ public sealed class RhinoHarness : Harness
     private async Task AddMcps(List<ITurn> turns, CancellationToken token)
     {
         List<string> toolNameList = [];
-        foreach(Mcp mcp in Mcps.Values)
+        foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
             await mcp.InitAsync(token);
-            foreach(ITool tool in mcp.Tools.Values)
+            foreach (ITool tool in mcp.Tools.Values)
             {
                 toolNameList.Add($"{mcp.Name}__{tool.Name}");
             }
@@ -142,10 +141,10 @@ public sealed class RhinoHarness : Harness
                             contents.Add(new TextContent("This image was removed to save tokens"));
                             continue;
                         }
-                        
+
                         contents.Add(content);
                     }
-                    
+
                     finalTurns.Add(new MessageTurn(contents, message.Role, message.TimeStamp, message.Duration, message.TokenCount));
                     continue;
                 }
@@ -155,6 +154,17 @@ public sealed class RhinoHarness : Harness
         }
 
         return finalTurns;
+    }
+    
+    private static bool InsertRhinoHarnessPrompt(ref List<ITurn> turns)
+    {
+        if (GetPrompt("RhinoHarnessPrompt.md") is string prompt)
+        {
+            turns.Add(new MessageTurn(prompt, RoleType.System));
+            return true;
+        }
+        
+        return false;
     }
 
     // TODO : This needs way more info
