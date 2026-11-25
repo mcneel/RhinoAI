@@ -57,7 +57,7 @@ public class PermissionTests
         Assert.That(preferences.Permissions.HasPermission("rhino", "ask_user", args), Is.EqualTo(Permissability.Always));
     }
 
-    [Test, Ignore("Should work, but doesn't")]
+    [Test]
     public void AnythingRuleCoversAnOmittedArg()
     {
         PermissionSet set = new();
@@ -85,19 +85,19 @@ public class PermissionTests
         Assert.That(set.HasPermission("MCP", "run_python", [new ToolString("script", "print(1)")]), Is.EqualTo(Permissability.Unset));
     }
 
-    // [Test]
-    // public void ReplaceSupersedesEveryRuleForTheTool()
-    // {
-    //     PermissionSet set = new();
-    //     set.AddPermission(new Permission("MCP", "tool", Permissability.Ask, []));
-    //     set.AddPermission(new Permission("MCP", "other", Permissability.Ask, []));
+    [Test]
+    public void ReplaceSupersedesEveryRuleForTheTool()
+    {
+        PermissionSet set = new();
+        set.AddPermission(new Permission("MCP", "tool", Permissability.Ask, []));
+        set.AddPermission(new Permission("MCP", "other", Permissability.Ask, []));
 
-    //     set.Replace(new Permission("MCP", "tool", Permissability.Always, []));
+        set.Replace(new Permission("MCP", "tool", Permissability.Always, []));
 
-    //     Assert.That(set.HasPermission("MCP", "tool", []), Is.EqualTo(Permissability.Always));
-    //     Assert.That(set.HasPermission("MCP", "other", []), Is.EqualTo(Permissability.Ask));
-    //     Assert.That(set.All.Count(p => p.ToolName == "tool"), Is.EqualTo(1));
-    // }
+        Assert.That(set.HasPermission("MCP", "tool", []), Is.EqualTo(Permissability.Always));
+        Assert.That(set.HasPermission("MCP", "other", []), Is.EqualTo(Permissability.Ask));
+        Assert.That(set.All.Count(p => p.ToolName == "tool"), Is.EqualTo(1));
+    }
 
     [TestCase(Permissability.Always)]
     [TestCase(Permissability.Ask)]
