@@ -1,22 +1,48 @@
-# Claude Desktop Connector
+# Claude Desktop connector
+
+An [MCP Bundle](https://github.com/anthropics/mcpb) (`.mcpb`) that installs RhinoAI into Claude Desktop. It contains no server logic: `router-launcher.mjs` finds the router inside the user's installed Rhino-MCP-Platform package and runs it over stdio.
+
+The plug-in must be installed from the Rhino Package Manager first.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `manifest.json` | Bundle manifest: entry point, user config (Rhino version, startup timeout, custom Rhino paths), metadata |
+| `build.mjs` | Packs `connector.mcpb` from a staging copy, injecting `../shared/router-launcher.mjs` |
+| `icon-*.png`, `screenshots/` | Store assets (Git LFS) |
 
 ## Build and install
 
-Run the VS Code task **build and install mcpb** (Terminal → Run Task…). It packs
-`connector.mcpb` and opens it so Claude Desktop installs it.
+In VS Code, run the **install connector** task (Terminal → Run Task…). It packs `connector.mcpb` and opens it so Claude Desktop installs it. Use **pack connector** to build without installing.
 
-- If you have already installed the connector, uninstall it in Claude Desktop first,
-  then run the task again.
-- Use the **pack mcpb** task if you only want to build the bundle without installing.
+- If the connector is already installed, uninstall it in Claude Desktop first, then run the task again.
 
-Both tasks run `node build.mjs`, which packs from a staging copy and writes `router-launcher.mjs` into it straight from `../shared/router-launcher.mjs`. Don't run `mcpb pack` directly: nothing sits at `connector/router-launcher.mjs` in the working tree, so packing the folder as-is produces a bundle with no launcher in it.
+From a shell:
 
-## Reading
+```sh
+npx @anthropic-ai/mcpb validate manifest.json
+node build.mjs                     # writes connector.mcpb
+npx @anthropic-ai/mcpb info connector.mcpb
+```
 
-- https://claude.com/docs/connectors/building/mcpb
+Don't run `mcpb pack` directly. Nothing sits at `connector/router-launcher.mjs` in the working tree, so packing the folder as-is produces a bundle with no launcher. `build.mjs` packs from a staging copy and writes the launcher into it from `shared/`. For the same reason, don't commit a `router-launcher.mjs` here.
 
-## Privacy Policy
+Reference: [Building MCP bundles](https://claude.com/docs/connectors/building/mcpb).
 
-The connector runs entirely on the user's machine and does not collect, log, or transmit data on its own. Tool results are returned to Claude through the MCP channel and handled under Anthropic's privacy policy. Some tools (`run_command`, `run_python`, `run_csharp`, `open_doc`, `save_doc`) can execute code or touch files the user's account has access to.
+## User config → router
 
-Full policy: https://github.com/mcneel/RhinoAI/blob/HEAD/PRIVACY.md
+| Manifest field | Passed to router as |
+|---|---|
+| `rhino_version` | `--default-version` |
+| `startup_timeout` | `--startup-timeout` |
+| `rhino_8_location` | `RHINO_MCP_RHINO_EXE_8` |
+| `rhino_9_location` | `RHINO_MCP_RHINO_EXE_9`, `RHINO_MCP_RHINO_EXE_WIP` |
+
+Bump `version` in `manifest.json` when the bundle changes. Releases are built by `.github/workflows/connector-release.yml`.
+
+## Privacy
+
+The connector runs entirely on the user's machine and does not collect, log, or send data on its own. Tool results go back to Claude through the MCP channel and are handled under Anthropic's privacy policy. Some tools (`run_command`, `run_python`, `run_csharp`, `open_doc`, `save_doc`) can run code or touch any file the user's account can access.
+
+Full policy: [PRIVACY.md](../PRIVACY.md). The manifest's `privacy_policies` field must keep pointing at it.
