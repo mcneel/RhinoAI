@@ -78,6 +78,13 @@ internal static class RhinoAIHost
         if (recycled is int candidate && TryBindCandidate(candidate, out port))
             return true;
 
+        // A router-spawned Rhino: bind the port the router reserved for it, so
+        // MCPSpawn finds its listener already there instead of moving it.
+        if (Servers.Count == 0
+            && int.TryParse(Environment.GetEnvironmentVariable(MCPSpawnCommand.PortEnvVar), out int reserved)
+            && TryBindCandidate(reserved, out port))
+            return true;
+
         return TryGetNextPort(out port);
     }
 
