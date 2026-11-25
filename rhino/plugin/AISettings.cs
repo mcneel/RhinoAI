@@ -79,6 +79,20 @@ internal static class AISettings
     public static string EffectivePrompt(AgentDefinition def) =>
         AgentPrompt(def.Name) is { Length: > 0 } prompt ? prompt : def.DefaultPrompt;
 
+    // Server address and optional bearer token for agents that talk to an OpenAI-compatible server
+    // (llama.cpp, LM Studio, vLLM, Ollama, ...). An empty host means the definition's LocalHost.
+    // The key is kept in the plug-in settings in plain text; local servers usually need none.
+    public static string AgentHost(string name) => Settings.GetString(AgentKey(name, "Host"), string.Empty);
+
+    public static void SetAgentHost(string name, string host) => Settings.SetString(AgentKey(name, "Host"), host);
+
+    public static string AgentApiKey(string name) => Settings.GetString(AgentKey(name, "ApiKey"), string.Empty);
+
+    public static void SetAgentApiKey(string name, string key) => Settings.SetString(AgentKey(name, "ApiKey"), key);
+
+    public static string EffectiveHost(AgentDefinition def) =>
+        AgentHost(def.Name).Trim() is { Length: > 0 } host ? host : def.LocalHost ?? string.Empty;
+
     private static string AgentKey(string name, string field) => $"Agent_{name.ToLowerInvariant()}_{field}";
 
     // Overrides the username-derived name of the plugin manage_plugin_commands writes to.

@@ -54,10 +54,16 @@ internal static class AgentHost
             AgentRegistry.Instance.TryGet(active, out def))
             return def.Enabled;
 
-        string defaultAgentName = AISettings.DefaultAgentName;
+        // The preferred agent if it can run, else the first one that can: the same agent the panel shows
+        // as active (AIPanelViewModel.SendAgents), so a prompt goes where the panel says it goes.
+        if (AgentRegistry.Instance.TryGet(AISettings.DefaultAgentName, out def) && Usable(def))
+            return true;
 
-        return AgentRegistry.Instance.TryGet(defaultAgentName, out def) && def.Enabled;
+        def = AgentRegistry.Instance.AllDefinitions.FirstOrDefault(Usable)!;
+        return def is not null;
     }
+
+    private static bool Usable(AgentDefinition def) => def.Available && AISettings.IsEnabled(def);
 
     public static IAgentRunner For(RhinoDoc doc, Func<IAgentRunner> factory)
     {
@@ -109,6 +115,11 @@ internal static class AgentHost
     {
         Conversation restored = Conversation.Restore(dto);
         Guid resumeId = restored.AgentSessionId;
+
+        // A server agent keeps no session of its own; its runner rebuilds the history from the transcript.
+        if (def.LocalHost is not null)
+            return new LocalServerRunner(def, restored);
+
         switch (def.Name.ToLowerInvariant())
         {
             case "claude":

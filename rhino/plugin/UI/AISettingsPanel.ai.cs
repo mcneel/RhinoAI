@@ -23,6 +23,11 @@ internal sealed class AISettingsPanel : Panel
     private DropDown ModelBox { get; } = new();
     private TextArea SearchPathsBox { get; } = new() { Wrap = false, Height = 70, ReadOnly = true };
     private TextArea SystemPromptBox { get; } = new() { Wrap = true, Height = 90 };
+    private TextBox ServerBox { get; } = new();
+    private PasswordBox ApiKeyBox { get; } = new();
+    private Control ServerRow { get; set; } = null!;
+    private Control ApiKeyRow { get; set; } = null!;
+    private Control FoundAtRow { get; set; } = null!;
 
     private TextArea McpJsonBox { get; } = new() { Wrap = false, Font = Eto.Drawing.Fonts.Monospace(11) };
     private Label McpErrorLabel { get; } = new() { TextColor = Colors.Red, Visible = false };
@@ -126,6 +131,11 @@ internal sealed class AISettingsPanel : Panel
             AISettings.SetAgentEnabled(row.Name, row.Enabled);
             AISettings.SetAgentModel(row.Name, row.Model);
             AISettings.SetAgentPrompt(row.Name, row.SystemPrompt);
+            if (row.IsServer)
+            {
+                AISettings.SetAgentHost(row.Name, row.Host);
+                AISettings.SetAgentApiKey(row.Name, row.ApiKey);
+            }
         }
 
         if (Rows.FirstOrDefault(r => r.IsDefault) is AgentRow defaultRow)
@@ -196,6 +206,10 @@ internal sealed class AISettingsPanel : Panel
         EnabledBox.CheckedChanged += (_, _) => WriteEditor(row => row.Enabled = EnabledBox.Checked == true);
         ModelBox.SelectedValueChanged += (_, _) => WriteEditor(row => row.Model = CurrentModelValue());
         SystemPromptBox.TextChanged += (_, _) => WriteEditor(row => row.SystemPrompt = SystemPromptBox.Text);
+        ServerBox.TextChanged += (_, _) => WriteEditor(row => row.Host = ServerBox.Text);
+        ApiKeyBox.TextChanged += (_, _) => WriteEditor(row => row.ApiKey = ApiKeyBox.Text);
+        ServerRow = LabeledColumn(Localization.LocalizeString("Server URL:", 260), ServerBox);
+        ApiKeyRow = LabeledColumn(Localization.LocalizeString("API key (optional):", 261), ApiKeyBox);
 
         StackLayout left = new()
         {
@@ -216,8 +230,10 @@ internal sealed class AISettingsPanel : Panel
                 new TableRow(NameHeader),
                 new TableRow(AvailableLabel),
                 new TableRow(EnabledBox),
+                new TableRow(ServerRow),
+                new TableRow(ApiKeyRow),
                 new TableRow(LabeledColumn(Localization.LocalizeString("Model:", 23), ModelBox)),
-                new TableRow(LabeledColumn(Localization.LocalizeString("Found at:", 24), SearchPathsBox)),
+                new TableRow(FoundAtRow = LabeledColumn(Localization.LocalizeString("Found at:", 24), SearchPathsBox)),
                 new TableRow(LabeledColumn(Localization.LocalizeString("Prompt:", 25), SystemPromptBox)),
                 new TableRow { ScaleHeight = true },
             },
@@ -284,6 +300,8 @@ internal sealed class AISettingsPanel : Panel
 
         row.Model = string.Empty;
         row.SystemPrompt = string.Empty;
+        row.Host = string.Empty;
+        row.ApiKey = string.Empty;
         row.Enabled = true;
 
         ReloadGrid();
@@ -307,6 +325,11 @@ internal sealed class AISettingsPanel : Panel
                 LoadModelBox(row);
                 SearchPathsBox.Text = row.SearchPathsText;
                 SystemPromptBox.Text = row.SystemPrompt;
+                ServerBox.Text = row.Host;
+                ServerBox.PlaceholderText = row.DefaultHost;
+                ApiKeyBox.Text = row.ApiKey;
+                ServerRow.Visible = ApiKeyRow.Visible = row.IsServer;
+                FoundAtRow.Visible = !row.IsServer;
                 EnableEditor(true);
             }
             else
@@ -317,6 +340,9 @@ internal sealed class AISettingsPanel : Panel
                 ModelBox.Items.Clear();
                 SearchPathsBox.Text = string.Empty;
                 SystemPromptBox.Text = string.Empty;
+                ServerBox.Text = string.Empty;
+                ApiKeyBox.Text = string.Empty;
+                ServerRow.Visible = ApiKeyRow.Visible = false;
                 EnableEditor(false);
             }
         }
@@ -349,6 +375,8 @@ internal sealed class AISettingsPanel : Panel
         EnabledBox.Enabled = enabled;
         ModelBox.Enabled = enabled;
         SystemPromptBox.Enabled = enabled;
+        ServerBox.Enabled = enabled;
+        ApiKeyBox.Enabled = enabled;
     }
 
     private void WriteEditor(Action<AgentRow> apply)
@@ -653,6 +681,10 @@ internal sealed class AISettingsPanel : Panel
         public string SystemPrompt { get; set; }
         public bool Enabled { get; set; }
         public bool IsDefault { get; set; }
+        public string Host { get; set; } = string.Empty;
+        public string ApiKey { get; set; } = string.Empty;
+        public bool IsServer { get; init; }
+        public string DefaultHost { get; init; } = string.Empty;
 
         //public string DefaultGlyph => IsDefault ? "✓" : string.Empty;
 
@@ -686,6 +718,12 @@ internal sealed class AISettingsPanel : Panel
                 AISettings.AgentModel(def.Name),
                 AISettings.AgentPrompt(def.Name),
                 AISettings.IsEnabled(def),
-                isDefault);
+                isDefault)
+            {
+                IsServer = def.LocalHost is not null,
+                DefaultHost = def.LocalHost ?? string.Empty,
+                Host = AISettings.AgentHost(def.Name),
+                ApiKey = AISettings.AgentApiKey(def.Name),
+            };
     }
 }
