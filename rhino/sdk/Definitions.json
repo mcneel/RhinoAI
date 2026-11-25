@@ -177,7 +177,12 @@
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
       "models": [
-        { "display": "Loaded model", "id": "default" }
+        { "display": "Loaded model", "id": "default" },
+        { "display": "GLM 5.3", "id": "glm-5.3" },
+        { "display": "GLM 5.3 Flash", "id": "glm-5.3-flash" },
+        { "display": "DeepSeek V4.1 Flash", "id": "deepseek-v4.1-flash" },
+        { "display": "Qwen 3.8 27B", "id": "qwen3.8-27b" },
+        { "display": "GPT-OSS 120B", "id": "gpt-oss-120b" }
       ]
     },
     {
