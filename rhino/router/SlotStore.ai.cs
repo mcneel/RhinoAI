@@ -337,23 +337,73 @@ public sealed class SlotStore : IDisposable
     // Prune the slot(s) bound to a specific listener (pid+port). Drives the
     // graceful-departure path: the plugin tells us a listener closed cleanly, so
     // we drop its row rather than waiting to probe it dead. Returns removed ids.
-    public IReadOnlyList<string> DeleteByListener(int pid, int port)
+    //
+    // keepOwned leaves a router-spawned (non-adopted) row in place: its Rhino is
+    // still running and about to announce a replacement listener (MCPSpawn
+    // restart, a document swap), which RebindOwned then moves the slot onto.
+    public IReadOnlyList<string> DeleteByListener(int pid, int port, bool keepOwned = false)
     {
+        const string match = "pid=$p AND port=$port AND ($k=0 OR adopted=1)";
         lock (_connLock)
         {
             List<string> ids = [];
             using (SqliteCommand cmd = Connection.CreateCommand())
             {
-                cmd.CommandText = "SELECT slot_id FROM slots WHERE pid=$p AND port=$port;";
+                cmd.CommandText = $"SELECT slot_id FROM slots WHERE {match};";
                 cmd.Parameters.AddWithValue("$p", pid);
                 cmd.Parameters.AddWithValue("$port", port);
+                cmd.Parameters.AddWithValue("$k", keepOwned ? 1 : 0);
                 using SqliteDataReader r = cmd.ExecuteReader();
                 while (r.Read()) ids.Add(r.GetString(0));
             }
             if (ids.Count > 0)
-                Exec("DELETE FROM slots WHERE pid=$p AND port=$port;", ("$p", pid), ("$port", port));
+                Exec($"DELETE FROM slots WHERE {match};", ("$p", pid), ("$port", port), ("$k", keepOwned ? 1 : 0));
             return ids;
         }
+    }
+
+    // A Rhino the routers spawned has replaced its listener: move its owned slot
+    // to the new port, keeping the slot id and ownership, instead of adopting the
+    // announcement as a user-started Rhino. Only a slot whose old port has gone
+    // quiet is moved, so sibling slots sharing the process (Mac) are left alone.
+    // The probe runs with no lock held, as in ReservePort. Returns the slot id.
+    public string? RebindOwned(int pid, int port, Func<int, bool> isPortListening)
+    {
+        List<(string SlotId, int Port)> owned = [];
+        lock (_connLock)
+        {
+            using SqliteCommand cmd = Connection.CreateCommand();
+            cmd.CommandText = @"SELECT slot_id, port FROM slots
+                                WHERE pid=$p AND adopted=0 AND status='ready' AND port IS NOT NULL AND port<>$port
+                                ORDER BY started_at ASC, rowid ASC;";
+            cmd.Parameters.AddWithValue("$p", pid);
+            cmd.Parameters.AddWithValue("$port", port);
+            using SqliteDataReader r = cmd.ExecuteReader();
+            while (r.Read()) owned.Add((r.GetString(0), r.GetInt32(1)));
+        }
+
+        foreach ((string slotId, int oldPort) in owned)
+        {
+            if (isPortListening(oldPort))
+                continue;
+
+            lock (_connLock)
+            {
+                using SqliteTransaction tx = Connection.BeginTransaction(deferred: false);
+                bool taken = ScalarLong(tx,
+                    "SELECT COUNT(*) FROM slots WHERE pid=$p AND port=$port;", ("$p", pid), ("$port", port)) > 0;
+                if (taken)
+                { tx.Commit(); return null; }
+
+                // Guarded on the old port so a peer router that rebound it first wins.
+                int moved = Exec(tx, "UPDATE slots SET port=$port WHERE slot_id=$s AND port=$old;",
+                                 ("$port", port), ("$s", slotId), ("$old", oldPort));
+                tx.Commit();
+                if (moved > 0)
+                    return slotId;
+            }
+        }
+        return null;
     }
 
     // Drop-file adoption. Atomically:
