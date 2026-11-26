@@ -40,10 +40,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         using ImagetoFile images = ImagetoFile.Write(latest.Content.OfType<ImageContent>());
         using AIProcess process = StartCodex(agent, start, images.Paths, token);
 
-        using CancellationTokenRegistration _ = token.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
-        });
+        using CancellationTokenRegistration _ = token.Register(process.Kill);
 
         Task writing = WriteLoopAsync(process, latest.Data);
 
@@ -117,6 +114,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             EnableRaisingEvents = true,
             StartInfo = new()
             {
+                UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -217,10 +215,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("-");
 
         AIProcess turnProcess = new(process);
-
-        if (!process.Start()) { }
-        process.BeginErrorReadLine();
-
+        turnProcess.Start();
         return turnProcess;
     }
 
@@ -566,7 +561,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
-            
+
             string? transport = mcp switch
             {
                 StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",

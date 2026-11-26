@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Diagnostics;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -49,12 +50,30 @@ internal class AIProcess : IDisposable
         return true;
     }
 
-    public void Dispose()
+    public void Start()
     {
-        Process.Dispose();
+        if (!Process.Start())
+            throw new InvalidOperationException($"{Process.StartInfo.FileName} did not start a new process.");
+
+        Process.BeginErrorReadLine();
     }
 
-    internal void Kill(bool entireProcessTree) => Process.Kill(entireProcessTree);
+    public void Kill()
+    {
+        try
+        {
+            if (!Process.HasExited)
+                Process.Kill(entireProcessTree: true);
+        }
+        // Never started, exited between the check and the kill, or the OS refused part of the tree.
+        catch (Exception ex) when (ex is InvalidOperationException or AggregateException or Win32Exception) { }
+    }
+
+    public void Dispose()
+    {
+        Kill();
+        Process.Dispose();
+    }
 
     public async Task WaitForExitAsync(CancellationToken token) => await Process.WaitForExitAsync(token);
 

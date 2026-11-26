@@ -37,16 +37,14 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         List<ITurn> turns = new(start);
 
-        if (TryStartClaude(agent, turns, token, out AIProcess process) is ITurn failTurn)
+        using AIProcess process = CreateClaude(agent, turns, token);
+        if (TryStart(process) is ITurn failTurn)
         {
             yield return failTurn;
             yield break;
         }
 
-        using CancellationTokenRegistration _ = token.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
-        });
+        using CancellationTokenRegistration _ = token.Register(process.Kill);
 
         Task writing = WriteLoopAsync(process, prompt);
 
@@ -214,6 +212,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             EnableRaisingEvents = true,
             StartInfo = new()
             {
+                UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -235,7 +234,20 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return process;
     }
 
-    private ITurn? TryStartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token, out AIProcess aiProcess)
+    private static ITurn? TryStart(AIProcess process)
+    {
+        try
+        {
+            process.Start();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return new MessageTurn(ex.Message, RoleType.System);
+        }
+    }
+
+    private AIProcess CreateClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
     {
         // TODO : Check agent.Model
         Process process = GetClaudeProcess(token, agent.Model!);
@@ -336,22 +348,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         process.StartInfo.AddArgument("--disable-slash-commands");
 
-        aiProcess = new(process);
-        try
-        {
-            if (!process.Start())
-            {
-                return new MessageTurn("Failed to start Claude", RoleType.System);
-            }
-        }
-        catch (Exception ex)
-        {
-            return new MessageTurn(ex.Message, RoleType.System);
-        }
-
-        process.BeginErrorReadLine();
-
-        return null;
+        return new(process);
     }
 
     private static string CoerceMcpName(string mcpName)
