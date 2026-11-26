@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI.Statistics;
 
@@ -42,11 +43,37 @@ internal class PlugInStatistics
 
     private Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
 
+    [JsonInclude]
+    private IReadOnlyList<PlugInHourUsage> HourlyUsage
+    {
+        get => Stats
+            .SelectMany(plugIn => plugIn.Value.PrivateModelUsage
+                .Select(usage => new PlugInHourUsage(plugIn.Key.Id, plugIn.Key.Name, usage.Key.Name, usage.Key.Vendor, usage.Key.Hour, usage.Value)))
+            .ToList();
+        set
+        {
+            Stats.Clear();
+            foreach (PlugInHourUsage usage in value)
+            {
+                PlugIn plugIn = new(usage.Name, usage.Id);
+                if (!Stats.TryGetValue(plugIn, out PlugInStatistics? stats))
+                {
+                    stats = new PlugInStatistics();
+                    Stats[plugIn] = stats;
+                }
+
+                stats.PrivateModelUsage[new ModelUsageKey(usage.Model, usage.Vendor, usage.Hour.UtcDateTime)] = checked((int)usage.TokenCount);
+            }
+        }
+    }
+
+    [JsonIgnore]
     public List<PlugInModelStatistic> Statistics
         => PrivateModelUsage.Select(kvp => new PlugInModelStatistic(kvp.Key.Name, kvp.Key.Vendor, kvp.Value)).ToList();
 
     private Dictionary<ModelUsageKey, int> PrivateModelUsage { get; } = [];
 
+    [JsonIgnore]
     public int TotalTokenUsage => PrivateModelUsage.Sum(pm => pm.Value);
 
     public static void Collect(Agent agent, PlugIns.PlugInToken token, IEnumerable<ITurn> turn)
@@ -68,11 +95,7 @@ internal class PlugInStatistics
         return statistics;
     }
 
-    internal static IReadOnlyList<PlugInHourUsage> Hourly()
-        => AIInstances.Statistics.Stats
-            .SelectMany(plugIn => plugIn.Value.PrivateModelUsage
-                .Select(usage => new PlugInHourUsage(plugIn.Key.Id, plugIn.Key.Name, usage.Key.Name, usage.Key.Vendor, usage.Key.Hour, usage.Value)))
-            .ToList();
+    internal static IReadOnlyList<PlugInHourUsage> Hourly() => AIInstances.Statistics.HourlyUsage;
 
     private void AddTokenUsage(Models.IModel model, int tokenCount)
     {
@@ -81,45 +104,6 @@ internal class PlugInStatistics
         ModelUsageKey key = new(model);
         PrivateModelUsage.TryGetValue(key, out int count);
         PrivateModelUsage[key] = count + tokenCount;
-    }
-
-    internal static bool LoadFromJson(string json)
-    {
-        PlugInStatisticsDocument? document;
-        try
-        {
-            document = System.Text.Json.JsonSerializer.Deserialize<PlugInStatisticsDocument>(json);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return false;
-        }
-        if (document is null) return false;
-
-        AIInstances.Statistics.Stats.Clear();
-        foreach (PlugInUsageEntry entry in document.PlugIns)
-        {
-            PlugInStatistics stats = new();
-            foreach (ModelUsageEntry model in entry.Models)
-                stats.PrivateModelUsage[new ModelUsageKey(model.Name, model.Vendor)] = model.TokenCount;
-
-            AIInstances.Statistics.Stats[new PlugIn(entry.Name, entry.Id)] = stats;
-        }
-        return true;
-    }
-
-    internal static string GetJson()
-    {
-        PlugInStatisticsDocument document = new(
-            AIInstances.Statistics.Stats.Select(kvp => new PlugInUsageEntry(
-                kvp.Key.Id,
-                kvp.Key.Name,
-                kvp.Value.PrivateModelUsage
-                    .Select(m => new ModelUsageEntry(m.Key.Name, m.Key.Vendor, m.Value))
-                    .ToList()))
-            .ToList());
-
-        return System.Text.Json.JsonSerializer.Serialize(document);
     }
 
 }

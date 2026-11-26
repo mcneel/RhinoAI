@@ -4,6 +4,7 @@ using Eto.Forms;
 
 using Rhino.UI;
 
+using Rhino.AI.PlugIns;
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI.UI.Settings;
@@ -151,12 +152,7 @@ internal sealed class PermissionsPageViewModel : SimpleViewModel
 
         List<PlugInPermissionEntry> trust = PlugIns.Where(plugIn => plugIn.IsChanged).Select(plugIn => plugIn.Entry).ToList();
         if (trust.Count > 0)
-        {
-            Dictionary<Guid, PlugInPermissionEntry> merged = [];
-            foreach (PlugInPermissionEntry entry in PlugInPermissionStore.Load().Concat(trust))
-                merged[entry.Id] = entry;
-            PlugInPermissionStore.Save([.. merged.Values]);
-        }
+            PlugInRegistry.ApplySavedPermissions(trust);
 
         if (CustomServersChanged)
         {

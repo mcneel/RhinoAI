@@ -12,31 +12,35 @@ public class UserPreferences
 
     internal static Guid DefaultAgentId { get; } = new("d07df3c4-2c1d-40a1-a90c-7e85f1acae62");
 
+    [JsonInclude]
     public Guid PreferedAgentId { get; internal set; } = DefaultAgentId;
 
+    [JsonInclude]
     public int ZoomLevel { get; internal set; }
+    [JsonInclude]
     public bool AutoLoadMCP { get; internal set; }
+    [JsonInclude]
     public bool AutoLoadScriptPlugIn { get; internal set; } = true;
+    [JsonInclude]
     public string? ScriptPluginName { get; internal set; }
 
     /// <summary>
     /// Global user Permissions
     /// </summary>
+    [JsonInclude]
     public PermissionSet Permissions { get; internal set; } = new();
 
+    [JsonInclude]
     public Permissability DefaultPermission { get; internal set; } = Permissability.Ask;
 
-    internal List<IMcpDefinition> CustomMcps { get; } = [];
+    [JsonInclude]
+    internal List<IMcpDefinition> CustomMcps { get; private set; } = [];
 
     public UserPreferences()
     {
         InitDefaults();
         // Json deserialization will override this, which is correct!
     }
-
-    // TODO : These must ABSOLUTELY load from somewhere
-
-    // NOTE : I think the below is unnecessary
 
     private const string RhinoMcpName = "Rhino";
 

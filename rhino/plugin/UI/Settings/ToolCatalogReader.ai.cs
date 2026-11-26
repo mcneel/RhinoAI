@@ -127,7 +127,7 @@ internal static class ToolCatalogReader
             .ToList();
 
         HashSet<Guid> shown = new(tokens.Select(token => token.Id));
-        List<PlugInInfo> notLoaded = PlugInPermissionStore.Load()
+        List<PlugInInfo> notLoaded = PlugInRegistry.SavedEntries
             .Where(saved => names.IsInstalled(saved.Id) && shown.Add(saved.Id))
             .Select(saved => new PlugInInfo(saved.Id.ToString(), names.Of(saved.Id, saved.Name), saved.Enabled, false, null, [], []))
             .OrderBy(plugin => plugin.Name, StringComparer.CurrentCultureIgnoreCase)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -14,8 +15,10 @@ public sealed class PermissionSet
     /// </summary>
     public Permissability DefaultPermission { get; set; } = Permissability.Unset;
 
-    private HashSet<Permission> Permissions { get; } = new();
+    [JsonInclude]
+    private HashSet<Permission> Permissions { get; set; } = new();
 
+    [JsonIgnore]
     public IReadOnlyCollection<Permission> All => Permissions;
 
     /// <summary>
@@ -181,6 +184,7 @@ public readonly record struct ToolArgPermission
     public string ArgName { get; }
     public string Value { get; }
 
+    [JsonConstructor]
     public ToolArgPermission(string argName, string value)
     {
         ArgName = argName;
@@ -216,6 +220,12 @@ public sealed record Permission
     public IReadOnlyDictionary<string, ToolArgPermission> ArgumentPermissions { get; }
 
     internal Permission(string mcpName, string toolName, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+        : this(mcpName, toolName, permissability, (IReadOnlyDictionary<string, ToolArgPermission>)argumentPermissions)
+    {
+    }
+
+    [JsonConstructor]
+    private Permission(string mcpName, string toolName, Permissability permissability, IReadOnlyDictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcpName;
         ToolName = toolName;

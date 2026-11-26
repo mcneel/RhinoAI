@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 
 using Rhino.AI.PlugIns;
@@ -15,43 +16,46 @@ public static class AIInstances
 
     public static UserPreferences Preferences { get; private set; } = new();
 
-    internal static PlugInRegistry Registry { get; private set; } = new();
+    internal static PlugInRegistry Registry { get; } = new();
 
     internal static PlugInStatistics Statistics { get; private set; } = new();
 
     internal static UserConversations Conversations { get; private set; } = new();
 
-    private static JsonSerializerOptions? Options
-        => new()
-        {
-            AllowTrailingCommas = true,
-            IgnoreReadOnlyFields = false,
-            IgnoreReadOnlyProperties = false,
-        };
-
-    internal static bool LoadFromJson(string json)
+    private static JsonSerializerOptions Options { get; } = new()
     {
+        AllowTrailingCommas = true,
+    };
+
+    internal static bool LoadFromJson(string json, out System.Exception? exOut)
+    {
+        exOut = null;
+
         try
         {
             AIInstanceShell? shell = JsonSerializer.Deserialize<AIInstanceShell>(json, Options);
-            if (shell is null) return false;
+            if (shell?.Agents is null) return false;
+            if (shell?.Prefs is null) return false;
 
             Agents = shell.Agents;
             Preferences = shell.Prefs;
-            Registry = shell.Registry;
-            Statistics = shell.Statistics;
+            Statistics = shell.Statistics ?? Statistics;
+            PlugInRegistry.ApplySavedPermissions(shell.PlugInTrust ?? []);
         }
-        catch { return false; }
+        catch (System.Exception ex)
+        {
+            exOut = ex;
+        }
 
-        return true;
+        return exOut is null;
     }
 
-    internal static string? SerializeToJson()
-        => JsonSerializer.Serialize(new AIInstanceShell(Agents, Preferences, Registry, Statistics));
+    internal static string SerializeToJson()
+        => JsonSerializer.Serialize(new AIInstanceShell(Agents, Preferences, Statistics, PlugInRegistry.SavedEntries), Options);
 
-    private record AIInstanceShell(Agents Agents,
-                                   UserPreferences Prefs,
-                                   PlugInRegistry Registry,
-                                   PlugInStatistics Statistics);
+    private sealed record AIInstanceShell(Agents Agents,
+                                          UserPreferences Prefs,
+                                          PlugInStatistics? Statistics,
+                                          IReadOnlyList<PlugInPermissionEntry>? PlugInTrust);
 
 }

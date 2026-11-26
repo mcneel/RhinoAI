@@ -2,9 +2,6 @@ namespace Rhino.AI.UI.Settings;
 
 internal sealed class SettingsViewModel : SimpleViewModel
 {
-    private const string SettingsKey = "AI";
-    private const string PreferencesKey = "Preferences";
-
     private SettingsViewModel(AgentsPageViewModel agents, PermissionsPageViewModel permissions, ConnectionsPageViewModel connections, UsagePageViewModel usage)
     {
         Agents = agents;
@@ -34,18 +31,8 @@ internal sealed class SettingsViewModel : SimpleViewModel
 
         Permissions.Commit();
         Connections.Commit();
-        SavePreferences();
+        RhinoAIPlugin.SavePreferences();
         Saved?.Invoke(null, EventArgs.Empty);
         return true;
-    }
-
-    private static void SavePreferences()
-    {
-        if (AIInstances.SerializeToJson() is not string json)
-            return;
-
-        PersistentSettings settings = PersistentSettings.RhinoAppSettings.AddChild(SettingsKey);
-        settings.SetString(PreferencesKey, json);
-        settings.HideSettingFromUserInterface(PreferencesKey);
     }
 }

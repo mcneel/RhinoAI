@@ -10,6 +10,7 @@ internal sealed record LegacySettingsSnapshot(
     IReadOnlyList<string> DisabledAgents,
     IReadOnlyDictionary<string, string> ModelsByAgentName,
     IReadOnlyDictionary<string, string> PromptsByAgentName,
-    string? ExtraMcpServersJson);
+    string? ExtraMcpServersJson,
+    IReadOnlyList<PlugInPermissionEntry> PlugInTrust);
 
 internal sealed record MigrationStep(string Key, string LegacyValue, string AppliedTo);

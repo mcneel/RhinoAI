@@ -14,6 +14,23 @@ internal static class LegacyAISettings
 
     private static string[] LegacyAgentNames { get; } = ["claude", "codex", "gemini"];
 
+    private static string[] LegacyAgentFields { get; } = ["Model", "Prompt"];
+
+    private static string[] LegacyKeys { get; } =
+    [
+        "ZoomLevel",
+        "AutoLoadMCP",
+        "AutoLoadScriptPlugIn",
+        "ScriptPluginName",
+        "DefaultAgentName",
+        "DisabledTools",
+        "DisabledAgents",
+        "ExtraMcpServersJson",
+        "PluginPermissions",
+    ];
+
+    private static JsonSerializerOptions TrustOptions { get; } = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     public static LegacySettingsSnapshot Read() => new(
         ZoomLevel: Integer("ZoomLevel"),
         AutoLoadMCP: Bool("AutoLoadMCP"),
@@ -24,9 +41,21 @@ internal static class LegacyAISettings
         DisabledAgents: List("DisabledAgents"),
         ModelsByAgentName: PerAgent("Model"),
         PromptsByAgentName: PerAgent("Prompt"),
-        ExtraMcpServersJson: Text("ExtraMcpServersJson"));
+        ExtraMcpServersJson: Text("ExtraMcpServersJson"),
+        PlugInTrust: PlugInTrust());
 
-    public static string? PluginPermissions => Text(nameof(PluginPermissions));
+    // Conversations stays: ConversationStore still keeps live conversations under it.
+    public static void Delete()
+    {
+        foreach (string key in LegacyKeys)
+            Settings.DeleteItem(key);
+
+        foreach (string name in LegacyAgentNames)
+        {
+            foreach (string field in LegacyAgentFields)
+                Settings.DeleteItem(AgentKey(name, field));
+        }
+    }
 
     public static PersistentSettings Conversations =>
         Settings.TryGetChild(nameof(Conversations), out PersistentSettings child)
@@ -49,11 +78,29 @@ internal static class LegacyAISettings
         Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
         foreach (string name in LegacyAgentNames)
         {
-            if (Text(string.Format("Agent_{0}_{1}", name, field)) is string value)
+            if (Text(AgentKey(name, field)) is string value)
                 values[name] = value;
         }
 
         return values;
+    }
+
+    private static string AgentKey(string name, string field) => string.Format("Agent_{0}_{1}", name, field);
+
+    private static IReadOnlyList<PlugInPermissionEntry> PlugInTrust()
+    {
+        if (Text("PluginPermissions") is not string json)
+            return [];
+
+        try
+        {
+            PlugInPermissionEntry[] entries = JsonSerializer.Deserialize<PlugInPermissionEntry[]>(json, TrustOptions) ?? [];
+            return entries.Where(entry => entry.Id != Guid.Empty && entry.Name is not null).ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
 }

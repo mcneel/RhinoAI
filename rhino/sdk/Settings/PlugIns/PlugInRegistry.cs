@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Rhino.AI.PlugIns;
 
+// TODO : Tokens, Permissions and PlugIns are per-process and not saved; only trust persists (SavedEntries). Decide how the registry should persist.
 /// <summary>
 /// Registry for PlugIn Tokens. Required for permissions.
 /// </summary>
@@ -48,7 +49,7 @@ public class PlugInRegistry
             
             token = new(id, name);
 
-            bool permission = SavedPermissions.TryGetValue(id, out bool saved) ? saved : IsTrustedByDefault(id);
+            bool permission = SavedPermissions.TryGetValue(id, out PlugInPermissionEntry? saved) ? saved.Enabled : IsTrustedByDefault(id);
 
             AIInstances.Registry.Tokens[assembly] = token;
             AIInstances.Registry.Permissions[token] = new PlugInPermission(permission);
@@ -81,17 +82,21 @@ public class PlugInRegistry
         => id == new Guid("f39f3e8f-9eb3-4c41-a74b-9ce4ef2ec3c7")
         || id == new Guid("2668d7ed-f507-4a68-8295-8172147a0e39");
 
-    private static Dictionary<Guid, bool> SavedPermissions { get; } = [];
+    private static Dictionary<Guid, PlugInPermissionEntry> SavedPermissions { get; } = [];
 
-    internal static void ApplySavedPermissions(IReadOnlyDictionary<Guid, bool> saved)
+    internal static IReadOnlyList<PlugInPermissionEntry> SavedEntries => SavedPermissions.Values.ToList();
+
+    internal static void ApplySavedPermissions(IReadOnlyList<PlugInPermissionEntry> saved)
     {
-        foreach (KeyValuePair<Guid, bool> entry in saved)
-            SavedPermissions[entry.Key] = entry.Value;
+        foreach (PlugInPermissionEntry entry in saved)
+        {
+            SavedPermissions[entry.Id] = entry;
+        }
 
         foreach (PlugInToken token in AIInstances.Registry.Tokens.Values)
         {
-            if (saved.TryGetValue(token.Id, out bool allowed))
-                AIInstances.Registry.Permissions[token] = new PlugInPermission(allowed);
+            if (SavedPermissions.TryGetValue(token.Id, out PlugInPermissionEntry? entry))
+                AIInstances.Registry.Permissions[token] = new PlugInPermission(entry.Enabled);
         }
     }
 
@@ -175,6 +180,7 @@ public class PlugInRegistry
         catch { }
     }
 
+    // TODO : Holds a live Assembly, so it is per-process and is not saved. Resolve with the registry TODO above.
     public class AgenticPlugIn
     {
         public Guid Id { get; }

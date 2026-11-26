@@ -2,6 +2,7 @@ using System.Globalization;
 
 using Rhino.Runtime;
 
+using Rhino.AI.PlugIns;
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI;
@@ -17,7 +18,9 @@ internal static class LegacySettingsMigration
     {
         IReadOnlyList<MigrationStep> steps = Apply(LegacyAISettings.Read(), AIInstances.Preferences, AIInstances.Agents);
         foreach (MigrationStep step in steps)
+        {
             HostUtils.LogDebugEvent(string.Format("[rhino-ai] Legacy setting {0} = {1}: {2}\n", step.Key, step.LegacyValue, step.AppliedTo));
+        }
 
         return steps;
     }
@@ -67,6 +70,10 @@ internal static class LegacySettingsMigration
 
         if (legacy.ExtraMcpServersJson is string servers)
             steps.AddRange(AddCustomMcps(servers, preferences));
+
+        PlugInRegistry.ApplySavedPermissions(legacy.PlugInTrust);
+        foreach (PlugInPermissionEntry entry in legacy.PlugInTrust)
+            steps.Add(new MigrationStep("PluginPermissions", string.Format("{0} {1}", entry.Name, Text(entry.Enabled)), "PlugInRegistry trust"));
 
         return steps;
     }

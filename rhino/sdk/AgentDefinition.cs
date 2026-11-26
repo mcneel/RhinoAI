@@ -17,6 +17,8 @@ namespace Rhino.AI;
 /// <summary>
 /// A Definition of an Agent, all the information required to correctly construct it.
 /// </summary>
+[JsonDerivedType(typeof(CliAgentDefinition), "cli")]
+[JsonDerivedType(typeof(HttpAgentDefinition), "http")]
 public interface IAgentDefinition
 {
 
@@ -79,9 +81,13 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
     // TODO : Document WHY this exists, I've forgotten
     public Platform Platforms { get; init; } = Platform.All;
 
-    public PermissionSet Permissions { get; } = new();
+    [JsonInclude]
+    public PermissionSet Permissions { get; private set; } = new();
 
+    [JsonInclude]
+    [JsonPropertyName("Models")]
     protected HashSet<ModelDefinition> PrivateAvailableModels { get; init; } = [];
+    [JsonIgnore]
     public IReadOnlyCollection<ModelDefinition> AvailableModels => PrivateAvailableModels;
 
     public bool Add(ModelDefinition definition) => PrivateAvailableModels.Add(definition);
@@ -94,9 +100,11 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
         return true;
     }
 
+    [JsonIgnore]
     public abstract bool Available { get; }
 
     protected List<WeakReference<Agent>> PrivateRegisteredAgents { get; } = [];
+    [JsonIgnore]
     public IEnumerable<Agent> RegisteredAgents
     {
         get
@@ -115,6 +123,7 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
         PrivateRegisteredAgents.Add(new(agent));
     }
 
+    [JsonIgnore]
     public IModel? CurrentModel => GetModel(CurrentModelId ?? DefaultModelId ?? "");
 
     public abstract IModel? GetModel(string modelName);
@@ -144,6 +153,7 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
         }
     }
 
+    [JsonIgnore]
     public override bool Available => ValidPaths().Any();
 
     public override IModel? GetModel(string modelName)
@@ -204,6 +214,7 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
 internal sealed class HttpAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
+    [JsonIgnore]
     public override bool Available => ModelsRoute is not null || !string.IsNullOrEmpty(ApiKey);
 
     public string? Host { get; init; }
@@ -217,8 +228,8 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
     public string? ApiKeyEnvVar { get; init; }
 
     private string? PrivateApiKey { get; set; }
-    
-    [JsonPropertyName("apiKey")]
+
+    [JsonIgnore]
     public string? ApiKey
     {
         get => PrivateApiKey ??=

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -12,9 +13,13 @@ namespace Rhino.AI;
 public sealed class Agents
 {
 
-    private ConcurrentDictionary<Guid, IAgentDefinition> PrivateDefinitions { get; } = new();
+    [JsonInclude]
+    [JsonPropertyName(nameof(Definitions))]
+    private ConcurrentDictionary<Guid, IAgentDefinition> PrivateDefinitions { get; set; } = new();
+    [JsonIgnore]
     public IReadOnlyCollection<IAgentDefinition> Definitions => PrivateDefinitions.Values.ToList();
 
+    [JsonIgnore]
     public IAgentDefinition? PreferredDefinition
         => PrivateDefinitions.TryGetValue(AIInstances.Preferences.PreferedAgentId, out IAgentDefinition? def) ? def : null;
 
