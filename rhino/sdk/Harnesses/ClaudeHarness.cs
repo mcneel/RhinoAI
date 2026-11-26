@@ -207,7 +207,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     private Process GetClaudeProcess(CancellationToken token, IModel model)
     {
         ClaudeDesktopModel claudeModel = (ClaudeDesktopModel)model;
-        string exePath = claudeModel.ExePath;
+        string exePath = claudeModel.ExePath ?? throw new FileNotFoundException("Claude CLI not found.");
 
         Process process = new()
         {

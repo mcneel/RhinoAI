@@ -232,7 +232,7 @@ public class AgentTests
     private static Process GetClaudeProcess()
     {
         ClaudeDesktopModel desktopModel = (ClaudeDesktopModel)AIInstances.Agents.FromParameters("Anthropic", AgentType.Cli)?.GetModel("opus")!;
-        string exePath = desktopModel.ExePath;
+        string exePath = desktopModel.ExePath ?? throw new FileNotFoundException("Claude CLI not found.");
 
         Process process = new()
         {

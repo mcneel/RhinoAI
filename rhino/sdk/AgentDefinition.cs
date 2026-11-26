@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using Rhino.AI.Models;
+using Rhino.AI.Paths;
 using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
@@ -139,23 +140,12 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
         foreach(SearchPath path in paths)
         {
             if (!path.Enabled) continue;
-            yield return path.Path;
+            foreach (string match in new Glob(path.Path, IncludeDirs: false).TruePaths)
+                yield return match;
         }
     }
 
-    public override bool Available
-    {
-        get
-        {
-            foreach (string path in ValidPaths())
-            {
-                // TODO : Glob
-                if (System.IO.File.Exists(path)) return true;
-            }
-
-            return false;
-        }
-    }
+    public override bool Available => ValidPaths().Any();
 
     public override IModel? GetModel(string modelName)
     {

@@ -1,5 +1,7 @@
-
+using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Rhino.AI.Paths;
 
@@ -15,7 +17,9 @@ internal record struct Glob(string GlobPath, bool IncludeDirs = true)
     {
         if (string.IsNullOrEmpty(GlobPath)) return [];
 
-        string globPath = GlobPath.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // macOS does not set USERPROFILE, which Definitions.json uses on both platforms.
+        string globPath = Environment.ExpandEnvironmentVariables(GlobPath.Replace("~", home).Replace("%USERPROFILE%", home));
         string[] parts = globPath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
 
         List<string> paths = OperatingSystem.IsWindows() ? [""] : [Path.DirectorySeparatorChar.ToString()];

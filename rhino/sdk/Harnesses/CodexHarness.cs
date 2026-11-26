@@ -110,7 +110,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     private Process GetCodexProcess(IModel model, CancellationToken token)
     {
         CodexDesktopModel codexModel = (CodexDesktopModel)model;
-        string exePath = codexModel.ExePath;
+        string exePath = codexModel.ExePath ?? throw new FileNotFoundException("Codex CLI not found.");
 
         Process process = new()
         {
