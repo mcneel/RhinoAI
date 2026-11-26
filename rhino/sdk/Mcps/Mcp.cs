@@ -19,8 +19,10 @@ public abstract class Mcp : IDisposable
     /// <summary>The name of the MCP.</summary>
     public string Name { get; }
 
+    public bool Enabled { get; set; } = true;
+
     /// <summary>DO NOT USE</summary>
-    private Mcp() : this("") {}
+    private Mcp() : this("") { }
 
     internal Mcp(string name)
     {
@@ -37,7 +39,7 @@ public abstract class Mcp : IDisposable
     /// </summary>
     /// <param name="tool">The tool to register</param>
     /// <returns>True on success, false otherwise</returns>
-    public bool RegisterTool(ITool tool)
+    public virtual bool RegisterTool(ITool tool)
     {
         if (!PrivateTools.TryAdd(tool.Name, tool))
             return false;
@@ -76,14 +78,14 @@ public abstract class Mcp : IDisposable
     /// <returns><see cref="ToolReturn"/></returns>
     public async Task<ToolReturn> RunToolAsync(Agent agent, Harness harness, string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!PrivateTools.TryGetValue(toolName, out ITool? tool) || tool is null)
-            return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+        if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
+            return ToolReturn.UnknownTool(Name, toolName);
 
         List<IToolArg> supplied = new(args.Count);
         foreach (IToolArg argument in args)
         {
             if (Declared(tool, argument.Name) is not ToolParameter declared)
-                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
+                return ToolReturn.UnknownArgument(toolName, argument.Name);
 
             supplied.Add(argument);
         }
@@ -91,7 +93,7 @@ public abstract class Mcp : IDisposable
         foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !supplied.Any(s => string.Equals(s.Name, declared.Name)))
-                return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
+                return ToolReturn.MissingArgument(toolName, declared.Name);
         }
 
         List<IToolArg> argsList = args.ToList();
@@ -100,7 +102,7 @@ public abstract class Mcp : IDisposable
         if (permissability == Permissability.Deny) return ToolReturn.Refused(toolName);
         if (permissability == Permissability.Ask && harness.AskUser is not null)
         {
-            PermissionRequest request = new(this, tool, argsList);
+            PermissionRequest request = new(agent, this, tool, argsList);
             harness.RaiseBeforeAskUserPermission(request);
             await harness.AskUser.Invoke(request, token);
             if (!request.HasPermission) return ToolReturn.Refused(toolName);

@@ -9,11 +9,10 @@ internal static class RhinoRouterPaths
         string repoRoot = FindRepoRoot();
         string rid = CurrentRid();
         string exe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "rhino-mcp-router.exe" : "rhino-mcp-router";
-        string rhinoTarget = Environment.GetEnvironmentVariable("RhinoTarget") is { Length: > 0 } target ? target : "R9";
         string pluginOS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" : "osx";
-        string binRoot = Path.Combine(repoRoot, "rhino", "plugin", "bin", $"{rhinoTarget}-{pluginOS}");
+        string binRoot = Path.Combine(repoRoot, "rhino", "plugin", "bin", pluginOS);
 
-        // Mirrors RhinoAI.csproj: bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)/router/$(rid)/.
+        // Mirrors RhinoAI.csproj: bin/$(PluginOS)/$(Configuration)/router/$(rid)/.
         // The test runner doesn't know which configuration the plugin was built in, so probe both.
         string[] configurations = ["Release", "Debug"];
         List<string> probed = [];
@@ -29,7 +28,7 @@ internal static class RhinoRouterPaths
 
         throw new FileNotFoundException(
             $"Router binary not found. Probed:{Environment.NewLine}  {string.Join($"{Environment.NewLine}  ", probed)}{Environment.NewLine}" +
-            $"Build the plugin first: `dotnet build rhino/plugin/RhinoAI.csproj -c Release -p:RhinoTarget={rhinoTarget}`.",
+            $"Build the plugin first: `dotnet build rhino/plugin/RhinoAI.csproj -c Release`.",
             probed[0]);
     }
 

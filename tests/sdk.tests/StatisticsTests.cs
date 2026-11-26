@@ -6,12 +6,6 @@ namespace sdk.tests;
 
 public class StatisticsTests
 {
-    
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
-    }
 
     [Test]
     public void Collect()

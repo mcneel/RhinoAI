@@ -184,9 +184,7 @@ internal sealed class ToolHandler
         object? rawResult;
         try
         {
-            #if R9
             EnsureGh2IsLoaded(Name, args);
-            #endif
 
             rawResult = _method.Invoke(_method.IsStatic ? null : scope.GetService(_method.DeclaringType!), args);
         }
@@ -249,7 +247,6 @@ internal sealed class ToolHandler
 
     private static void EnsureGh2IsLoaded(string toolName, object?[] args)
     {
-#if R9
         if (GH2Loaded) return;
         if (args is null) return;
         if (args.Length < 1) return;
@@ -258,6 +255,5 @@ internal sealed class ToolHandler
         if (!toolName.Contains("G2_", StringComparison.OrdinalIgnoreCase)) return;
 
         GH2Loaded = !GH2_StartTool.Launch(doc).IsFailure;
-#endif
     }
 }

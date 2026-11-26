@@ -27,7 +27,7 @@ public sealed record ReadSkill : Tool
     public override Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
     {
         if (!args.TryGetString(Args[0].Name, out string skillName))
-            return Task.FromResult(ToolReturn.Failure("name parameter is mandatory", "Call read_skill again with name set to the skill name."));
+            return Task.FromResult(ToolReturn.MissingArgument(Name, Args[0].Name, "the skill name"));
 
         ISkill? skill = GetSkillFromKey(skillName);
         if (skill is null)

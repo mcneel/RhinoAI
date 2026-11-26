@@ -5,7 +5,7 @@
       "name": "Rhino (dev build)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build (R9)",
+      "preLaunchTask": "build",
       "program": "",
       "osx": {
         "program": "${input:derivedDataRoot}/Build/Products/Debug/Rhinoceros.app/Contents/MacOS/Rhinoceros",
@@ -23,54 +23,21 @@
       "console": "internalConsole"
     },
     {
-      "name": "Rhino (dev build, sykes mac)",
+      "name": "Rhino 9",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build (R9)",
-      "program": "/Users/sykes/Library/Developer/Xcode/DerivedData/MacRhino-fdeixmshyefnwpaqaczdqqhwkogz/Build/Products/Debug/Rhinoceros.app/Contents/MacOS/Rhinoceros",
-      "args": ["-nosplash"],
-      "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug" },
-      "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
-      "console": "internalConsole"
-    },
-    {
-      "name": "Rhino 9 BETA",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build (R9)",
+      "preLaunchTask": "build",
       "program": "",
       "osx": {
-        "program": "/Applications/RhinoBETA.app/Contents/MacOS/Rhinoceros",
+        "program": "/Applications/Rhino 9.app/Contents/MacOS/Rhinoceros",
         "args": [],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-osx/Debug" }
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/osx/Debug" }
       },
       "windows": {
-        "program": "C:\\Program Files\\Rhino 9 WIP\\System\\Rhino.exe",
+        "program": "C:\\Program Files\\Rhino 9\\System\\Rhino.exe",
         "targetArchitecture": "x86_64",
         "args": ["/netcore", "/nosplash"],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R9-win/Debug" }
-      },
-      "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
-      "console": "internalConsole"
-    },
-    {
-      "name": "Rhino 8",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build (R8)",
-      "program": "",
-      "osx": {
-        "program": "/Applications/Rhino 8.app/Contents/MacOS/Rhinoceros",
-        "args": ["-nosplash"],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-osx/Debug" }
-      },
-      "windows": {
-        "program": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
-        "targetArchitecture": "x86_64",
-        "args": ["/netcore", "/nosplash"],
-        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/R8-win/Debug" }
+        "env": { "RHINO_PACKAGE_DIRS": "${workspaceFolder}/rhino/plugin/bin/win/Debug" }
       },
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,

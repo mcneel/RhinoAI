@@ -566,6 +566,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
         foreach (Mcp mcp in Mcps.Values)
         {
+            if (!mcp.Enabled) continue;
+            
             string? transport = mcp switch
             {
                 StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",

@@ -41,6 +41,30 @@ public class RegistryTests
         Assert.That(PlugInRegistry.HasPermission(token), Is.True);
     }
 
+    [Test]
+    public void SavedPermissionsApplyToRegisteredToken()
+    {
+        PlugInToken? token = PlugInRegistry.Register();
+        Assert.That(token, Is.Not.Null);
+
+        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = true });
+        Assert.That(PlugInRegistry.IsAllowed(token), Is.True);
+
+        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = false });
+        Assert.That(PlugInRegistry.IsAllowed(token), Is.False);
+    }
+
+    [Test]
+    public void SavedPermissionsIgnoreOtherPlugIns()
+    {
+        PlugInToken? token = PlugInRegistry.Register();
+        Assert.That(token, Is.Not.Null);
+
+        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = true });
+        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [Guid.NewGuid()] = false });
+        Assert.That(PlugInRegistry.IsAllowed(token), Is.True);
+    }
+
     private record TestSkill : ISkill
     {
         public string Name { get; } = "Test";

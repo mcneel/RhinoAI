@@ -95,7 +95,9 @@ internal sealed class McpServer : IDisposable
     {
         try
         {
-            if (!string.Equals(NormalizePath(ctx.Request.Url), route, StringComparison.Ordinal))
+            if (!IsAllowedOrigin(ctx.Request.Headers["Origin"]))
+                ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            else if (!string.Equals(NormalizePath(ctx.Request.Url), route, StringComparison.Ordinal))
                 ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
             else if (!string.Equals(ctx.Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
                 ctx.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
@@ -112,6 +114,10 @@ internal sealed class McpServer : IDisposable
             { }
         }
     }
+
+    // Browsers always send Origin on cross-site POSTs; native MCP clients send none. Mirrors McpRequestParser.IsAllowedOrigin in the SDK, which this assembly cannot reference.
+    private static bool IsAllowedOrigin(string? origin)
+        => string.IsNullOrEmpty(origin) || (Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri) && uri.IsLoopback);
 
     private static string NormalizePath(Uri? url)
     {

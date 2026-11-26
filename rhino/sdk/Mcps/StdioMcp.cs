@@ -14,7 +14,7 @@ namespace Rhino.AI;
 /// <summary>
 /// A STandard Input Output MCP that drives an executable
 /// </summary>
-public sealed class StdioMcp(string name, Uri process) : Mcp(name)
+public class StdioMcp(string name, Uri process) : Mcp(name)
 {
 
     private const string ProtocolVersion = "2025-06-18";
@@ -73,7 +73,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
             // The spec defaults destructiveHint to true, so absence must not read as safe.
             bool destructive = !readOnly && annotations?["destructiveHint"]?.GetValueKind() != JsonValueKind.False;
 
-            PrivateTools[name] = new StdioTool(
+            PrivateTools[name] = new StdioTool(this,
                 name,
                 tool["description"]?.ToString() ?? "",
                 readOnly,
@@ -87,8 +87,10 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
 
     public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
+        if (!Initialized) await InitAsync(token);
+        
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
-            return ToolReturn.Failure($"MCP '{Name}' has no tool '{toolName}'.", "Call one of the tools offered in this session.");
+            return ToolReturn.UnknownTool(Name, toolName);
 
         bool started = await InitAsync(token);
 
@@ -96,7 +98,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         foreach (IToolArg argument in args)
         {
             if (Declared(tool, argument.Name) is not ToolParameter declared)
-                return ToolReturn.Failure($"Tool '{toolName}' has no argument '{argument.Name}'.", $"Call '{toolName}' again with only the arguments it declares.");
+                return ToolReturn.UnknownArgument(toolName, argument.Name);
 
             if (ToJson(declared, argument) is not JsonNode value)
                 return ToolReturn.Failure($"Argument '{declared.Name}' wants {declared.Type}, got {Describe(argument)}.", $"Call '{toolName}' again with '{declared.Name}' as {declared.Type}.");
@@ -107,7 +109,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         foreach (ToolParameter declared in tool.Args)
         {
             if (declared.Required && !arguments.ContainsKey(declared.Name))
-                return ToolReturn.Failure($"Tool '{toolName}' requires argument '{declared.Name}'.", $"Call '{toolName}' again with '{declared.Name}' supplied.");
+                return ToolReturn.MissingArgument(toolName, declared.Name);
         }
 
         JsonNode? result = await RequestAsync("tools/call", new JsonObject
@@ -279,6 +281,8 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         await input.FlushAsync(token).ConfigureAwait(false);
     }
 
+    public override bool RegisterTool(ITool tool) => false;
+
     private async Task DrainErrorAsync()
     {
         if (Error is not StreamReader error)
@@ -303,7 +307,7 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
 
     ~StdioMcp()
     {
-        // TODO : Claude = May be a better way
+        // AI : Claude = May be a better way
         Dispose();
     }
 
@@ -335,9 +339,10 @@ public sealed class StdioMcp(string name, Uri process) : Mcp(name)
         PrivateTools.Clear();
     }
 
-    private sealed record StdioTool(string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
+    private sealed record StdioTool(StdioMcp Host, string Name, string Description, bool ReadOnly, bool Destructive, ToolParameter[] Args) : ITool
     {
-        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token) => ToolReturn.Refused(Name);
+        public async Task<ToolReturn> UseAsync(IReadOnlyList<IToolArg> args, CancellationToken token)
+            => await Host.RunToolAsync(Name, args, token);
     }
 
 }

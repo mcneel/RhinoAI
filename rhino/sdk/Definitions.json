@@ -10,7 +10,9 @@
           "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe",
           "%APPDATA%/Claude/claude-code/**/claude.exe",
           "%USERPROFILE%/.local/bin/claude.exe",
-          "%APPDATA%/npm/claude.cmd"
+          "%APPDATA%/npm/claude.cmd",
+          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe",
+          "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe"
         ],
         "mac": [
           "%USERPROFILE%/.local/bin/claude",
@@ -140,6 +142,18 @@
       "EnvVar" : "DEEPSEEK_API_KEY",
       "models": [
         { "display": "DeepSeek Flash", "id": "deepseek-flash" }
+      ]
+    },
+    {
+      "id": "da27b2d3-008f-44da-bba1-9e20bdcf3ba0",
+      "kind": "api",
+      "name": "OpenRouter API",
+      "company": "OpenRouter",
+      "host": "https://openrouter.ai/api",
+      "protocol": "chatCompletions",
+      "EnvVar" : "OPENROUTER_API_KEY",
+      "models": [
+        { "display": "Auto", "id": "openrouter/auto" }
       ]
     },
     {

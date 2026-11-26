@@ -16,6 +16,8 @@ public sealed class PermissionSet
 
     private HashSet<Permission> Permissions { get; } = new();
 
+    public IReadOnlyCollection<Permission> All => Permissions;
+
     /// <summary>
     /// What permission does this mcp/tool with the given args have?
     /// </summary>
@@ -38,10 +40,10 @@ public sealed class PermissionSet
         Permissability result = DefaultPermission;
         foreach (Permission permission in Permissions)
         {
-            if (!string.Equals(permission.McpName, mcpName) &&
+            if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.McpName, "*")) continue;
 
-            if (!string.Equals(permission.ToolName, toolName) &&
+            if (!string.Equals(permission.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.ToolName, "*")) continue;
 
             // TODO : What if there are multiple entries?
@@ -99,29 +101,46 @@ public sealed class PermissionSet
 
     private Permissability ResolvePermissions(Permission permission, IList<IToolArg> args)
     {
-        if (permission.ArgumentPermissions.Count != args.Count)
-            return DefaultPermission;
-
         foreach (IToolArg inputArg in args)
         {
-            if (permission.ArgumentPermissions.TryGetValue(inputArg.Name, out ToolArgPermission argPermission))
-            {
-                // No Permission saved
-                if (!Matches(argPermission, inputArg)) return DefaultPermission;
-            }
-            else
-            {
-                // We don't have a record of this arg
+            if (!permission.ArgumentPermissions.TryGetValue(inputArg.Name, out ToolArgPermission argPermission))
                 return DefaultPermission;
-            }
+            if (!Matches(argPermission, inputArg))
+                return DefaultPermission;
         }
 
-        // All args passed the sniff test
+        foreach (KeyValuePair<string, ToolArgPermission> rule in permission.ArgumentPermissions)
+        {
+            if (!IsSupplied(args, rule.Key) && rule.Value.Value.Trim() != ArgRule.Anything)
+                return DefaultPermission;
+        }
+
         return permission.Permissability;
+    }
+
+    private static bool IsSupplied(IList<IToolArg> args, string name)
+    {
+        foreach (IToolArg arg in args)
+        {
+            if (string.Equals(arg.Name, name))
+                return true;
+        }
+
+        return false;
     }
 
     internal bool AddPermission(Permission permission)
         => Permissions.Add(permission);
+
+    internal void Replace(Permission permission)
+    {
+        Permissions.RemoveWhere(existing =>
+            string.Equals(existing.McpName, permission.McpName) &&
+            string.Equals(existing.ToolName, permission.ToolName));
+        Permissions.Add(permission);
+    }
+
+    internal void Clear() => Permissions.Clear();
 
 
     // All rules can amtch * as ANYTHING

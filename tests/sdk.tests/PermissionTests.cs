@@ -9,12 +9,6 @@ public class PermissionTests
     
     private static Rhino.AI.PlugIns.PlugInToken Token => Rhino.AI.PlugIns.PlugInToken.Invalid;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        Assert.That(AIInstances.Agents.LoadAgentsFromJson(), Is.True);
-    }
-
     [Test, CancelAfter(5000)]
     public async Task PermissionRequested(CancellationToken token)
     {
@@ -52,6 +46,57 @@ public class PermissionTests
 
         IAgentResult result = await agent.SendAsync("Please run the Smoople tool", token);
         Assert.That(result.ToolCalls.Any(c => c.Return?.Result == ToolResult.Failure));
+    }
+
+    [Test]
+    public void AskUserIsAlwaysAllowedByDefault()
+    {
+        UserPreferences preferences = new();
+        List<IToolArg> args = [new ToolString("questions", "[{\"question\":\"Which?\",\"options\":[\"A\",\"B\"]}]")];
+
+        Assert.That(preferences.Permissions.HasPermission("rhino", "ask_user", args), Is.EqualTo(Permissability.Always));
+    }
+
+    [Test]
+    public void AnythingRuleCoversAnOmittedArg()
+    {
+        PermissionSet set = new();
+        Dictionary<string, ToolArgPermission> rules = new()
+        {
+            ["script"] = new ToolArgPermission("script", ArgRule.Anything),
+            ["slot"] = new ToolArgPermission("slot", ArgRule.Anything),
+        };
+        set.AddPermission(new Permission("MCP", "run_python", Permissability.Always, rules));
+
+        Assert.That(set.HasPermission("MCP", "run_python", [new ToolString("script", "print(1)")]), Is.EqualTo(Permissability.Always));
+    }
+
+    [Test]
+    public void SpecificRuleDoesNotCoverAnOmittedArg()
+    {
+        PermissionSet set = new();
+        Dictionary<string, ToolArgPermission> rules = new()
+        {
+            ["script"] = new ToolArgPermission("script", ArgRule.Anything),
+            ["slot"] = new ToolArgPermission("slot", "2"),
+        };
+        set.AddPermission(new Permission("MCP", "run_python", Permissability.Always, rules));
+
+        Assert.That(set.HasPermission("MCP", "run_python", [new ToolString("script", "print(1)")]), Is.EqualTo(Permissability.Unset));
+    }
+
+    [Test]
+    public void ReplaceSupersedesEveryRuleForTheTool()
+    {
+        PermissionSet set = new();
+        set.AddPermission(new Permission("MCP", "tool", Permissability.Ask, []));
+        set.AddPermission(new Permission("MCP", "other", Permissability.Ask, []));
+
+        set.Replace(new Permission("MCP", "tool", Permissability.Always, []));
+
+        Assert.That(set.HasPermission("MCP", "tool", []), Is.EqualTo(Permissability.Always));
+        Assert.That(set.HasPermission("MCP", "other", []), Is.EqualTo(Permissability.Ask));
+        Assert.That(set.All.Count(p => p.ToolName == "tool"), Is.EqualTo(1));
     }
 
     [TestCase(Permissability.Always)]

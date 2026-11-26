@@ -17,7 +17,7 @@ namespace Rhino.AI;
 public class Harness
 {
 
-    private Loop Loop { get; }
+    protected Loop Loop { get; }
 
     private Dictionary<string, Mcp> PrivateMcps { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -82,6 +82,7 @@ public class Harness
     public async Task<ToolReturn> UseToolAsync(Agent agent, string mcpName, string toolName, List<IToolArg> args, CancellationToken token)
     {
         if (!Mcps.TryGetValue(mcpName, out Mcp? mcp) || mcp is null) return ToolReturn.Failure($"Mcp named {mcpName} is not available", "");
+        if (!mcp.Enabled) return ToolReturn.Failure($"Mcp named {mcpName} is not enabled.", "Use a different mcp.");
 
         if (!mcp.Tools.TryGetValue(toolName, out ITool? tool) || tool is null)
         {
@@ -165,8 +166,11 @@ public interface IPermissionRequest
 /// <summary>
 /// A request for permission
 /// </summary>
-internal sealed class PermissionRequest(Mcp mcp, ITool tool, List<IToolArg> args) : EventArgs, IPermissionRequest
+internal sealed class PermissionRequest(Agent agent, Mcp mcp, ITool tool, List<IToolArg> args) : EventArgs, IPermissionRequest
 {
+
+    /// <summary>The agent whose tool call is waiting on the answer</summary>
+    public Agent Agent { get; } = agent;
 
     /// <summary>The name of the MCP</summary>
     public string McpName { get; } = mcp.Name;

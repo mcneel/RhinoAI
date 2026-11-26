@@ -27,27 +27,23 @@ public sealed class Agents
     public bool Exists(IAgentDefinition definition)
         => PrivateDefinitions.ContainsKey(definition.Id);
 
-    internal bool LoadAgentsFromJson(string json)
-    {
-        IReadOnlyList<AgentDefinition>? definitions = AgentDefinitionsJson.Parse(json);
-        if (definitions is null) return false;
-
-        foreach (AgentDefinition definition in definitions)
-        {
-            Add(definition);
-        }
-
-        return true;
-    }
-
-    internal bool LoadAgentsFromJson()
+    private bool LoadAgentsFromJson()
     {
         try
         {
             using Stream? stream = typeof(Agents).Assembly.GetManifestResourceStream("Rhino.AI.Definitions.json");
             using StreamReader reader = new(stream!);
             string json = reader.ReadToEnd();
-            return LoadAgentsFromJson(json);
+            
+            IReadOnlyList<AgentDefinition>? definitions = AgentDefinitionsJson.Parse(json);
+            if (definitions is null) return false;
+
+            foreach (AgentDefinition definition in definitions)
+            {
+                Add(definition);
+            }
+
+            return true;
         }
         catch { }
         return false;
@@ -55,6 +51,11 @@ public sealed class Agents
 
     // NOTE : These are ONLY ones used for the AI Panel
     private Dictionary<uint, List<Agent>> ActiveAgents { get; } = [];
+
+    public Agents()
+    {
+        LoadAgentsFromJson();
+    }
 
     public bool TryRegisterAgent(uint id, Agent agent)
     {
