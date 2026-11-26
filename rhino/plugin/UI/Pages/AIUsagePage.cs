@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.ObjectModel;
 
 using Eto.Forms;
@@ -240,5 +239,3 @@ internal sealed class AIUsageViewModel : SimpleViewModel
 }
 
 internal sealed record PlugInUsage(string Name, int TokenCount, List<PlugInModelStatistic> Models);
-
-#endif

@@ -1,6 +1,3 @@
-#if R9
-#endif
-
 namespace Rhino.AI.Tools;
 
 internal static partial class GetContextTool

@@ -15,8 +15,6 @@ internal static class ScriptProjectStartup
         if (Scheduled) return;
         Scheduled = true;
 
-        if (!ScriptProjectRunner.IsSupportedRhino) return;
-
         RhinoApp.Initialized += Initialized;
     }
 

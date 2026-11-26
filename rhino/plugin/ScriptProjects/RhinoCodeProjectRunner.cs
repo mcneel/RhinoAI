@@ -1,5 +1,3 @@
-#if R9
-
 using System.IO;
 
 using Rhino.Runtime.Code;
@@ -246,5 +244,3 @@ internal class RhinoCodeProjectRunner : IProjectRunner
     public IToolResult Reload() => Build(false);
 
 }
-
-#endif

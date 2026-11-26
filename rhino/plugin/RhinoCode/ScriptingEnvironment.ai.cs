@@ -1,5 +1,3 @@
-#if R9
-
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
@@ -97,5 +95,3 @@ internal static class ScriptingEnvironment
         return null;
     }
 }
-
-#endif

@@ -52,15 +52,6 @@ internal sealed class AISettingsPanel : Panel
         if (Content is TabControl tabs)
         {
             tabs.Pages.Clear();
-#if R9
-            // Human written pages
-            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
-            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
-            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
-#endif
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });

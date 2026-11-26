@@ -1,4 +1,3 @@
-#if R9
 using System.Runtime.CompilerServices;
 using Rhino.AI.Resources;
 using static Rhino.AI.Tools.GetContextTool;
@@ -36,4 +35,3 @@ internal static class Grasshopper2
     }
 
 }
-#endif

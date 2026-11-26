@@ -1,5 +1,3 @@
-#if R9
-
 using System.IO;
 using System.Text;
 
@@ -75,5 +73,3 @@ internal class RhinoCodeRunScript : IRhinoCodeRunner
             stderr.Length > 0 ? "The script wrote to stderr but ran to completion" : null);
     }
 }
-
-#endif
