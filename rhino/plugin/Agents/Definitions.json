@@ -12,7 +12,8 @@
           "%APPDATA%/Claude/claude-code/**/claude.exe",
           "%USERPROFILE%/.local/bin/claude.exe",
           "%APPDATA%/npm/claude.cmd",
-          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe"
+          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe",
+          "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe"
         ],
         "mac": [
           "%USERPROFILE%/.local/bin/claude",
@@ -58,6 +59,7 @@
       "searchPaths": {
         "win": [
           "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe",
+          "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe",
           "%APPDATA%/npm/codex.cmd"
         ],
         "mac": [
@@ -70,6 +72,10 @@
       },
       "models": [
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
+        { "display": "GPT 6.1 Sol", "id": "gpt-6.1-sol" },
+        { "display": "GPT 6.1 Terra", "id": "gpt-6.1-terra" },
+        { "display": "GPT 6 Sol", "id": "gpt-6-sol" },
+        { "display": "GPT 6 Luna", "id": "gpt-6-luna" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
         { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
