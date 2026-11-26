@@ -69,12 +69,12 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         if (system.Length > 0)
             messages.Insert(0, new JsonObject { ["role"] = "system", ["content"] = system.ToString() });
 
-        JsonObject body = new()
-        {
-            ["model"] = settings.Model,
-            ["max_tokens"] = settings.MaxOutputTokens,
-            ["messages"] = messages,
-        };
+        JsonObject body = new();
+        if (!ModelDefinition.IsDefault(settings.Model))
+            body["model"] = settings.Model;
+
+        body["max_tokens"] = settings.MaxOutputTokens;
+        body["messages"] = messages;
 
         JsonArray declarations = Declarations(harness);
         if (declarations.Count > 0)
