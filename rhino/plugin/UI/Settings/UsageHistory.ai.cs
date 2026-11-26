@@ -9,19 +9,19 @@ internal static class UsageHistory
         List<UsageTurn> turns = [];
         foreach (ConversationDto conversation in ConversationStore.List())
         {
-            (string agentId, string agentName) = AgentOf(conversation.AgentName);
+            (string agentId, string agentName, string? vendor) = AgentOf(conversation.AgentName);
             foreach (TurnDto turn in conversation.Turns)
-                turns.Add(new UsageTurn(turn.StartedAt, agentId, agentName, turn.Usage.InputTokens, turn.Usage.OutputTokens, turn.Usage.CostUsd));
+                turns.Add(new UsageTurn(turn.StartedAt, agentId, agentName, vendor, turn.Usage.InputTokens, turn.Usage.OutputTokens));
         }
 
         return turns;
     }
 
-    private static (string Id, string Name) AgentOf(string key)
+    private static (string Id, string Name, string? Vendor) AgentOf(string key)
     {
         if (AgentHost.Find(key) is IAgentDefinition definition)
-            return (definition.Id.ToString(), definition.DisplayName);
+            return (definition.Id.ToString(), definition.DisplayName, definition.Vendor);
 
-        return (key, Guid.TryParse(key, out _) ? LOC.STR("Removed agent") : key);
+        return (key, Guid.TryParse(key, out _) ? LOC.STR("Removed agent") : key, null);
     }
 }

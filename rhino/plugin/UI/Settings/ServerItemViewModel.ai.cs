@@ -57,7 +57,7 @@ internal sealed class ServerItemViewModel : SimpleViewModel, ITreeGridItem<ITree
             string? origin = Origin switch
             {
                 ServerOrigin.BuiltIn => null,
-                ServerOrigin.PlugIn { Owner.IsTrusted: false } plugIn => string.Format(LOC.STR("Trust {0} under Plug-ins to let agents use these tools."), plugIn.Owner.Name),
+                ServerOrigin.PlugIn { Owner.IsTrusted: false } plugIn => string.Format(LOC.STR("Enable {0} under Plug-ins to let agents use these tools."), plugIn.Owner.Name),
                 ServerOrigin.PlugIn => null,
                 ServerOrigin.Custom custom => Launch(custom.Definition),
                 _ => throw new InvalidOperationException("Unknown server origin."),
@@ -74,7 +74,7 @@ internal sealed class ServerItemViewModel : SimpleViewModel, ITreeGridItem<ITree
     private string Detail => Origin switch
     {
         ServerOrigin.BuiltIn => Phrase.Count(Tools.Count, LOC.STR("Built into Rhino, 1 tool"), LOC.STR("Built into Rhino, {0} tools")),
-        ServerOrigin.PlugIn { Owner.IsTrusted: false } plugIn => string.Format(LOC.STR("From {0}. Not trusted, so agents cannot use these tools."), plugIn.Owner.Name),
+        ServerOrigin.PlugIn { Owner.IsTrusted: false } plugIn => string.Format(LOC.STR("From {0}. Not enabled, so agents cannot use these tools."), plugIn.Owner.Name),
         ServerOrigin.PlugIn plugIn => string.Format(Tools.Count == 1 ? LOC.STR("From {0}, 1 tool") : LOC.STR("From {0}, {1} tools"), plugIn.Owner.Name, Tools.Count),
         ServerOrigin.Custom custom => string.Format(LOC.STR("Custom · {0}"), Launch(custom.Definition)),
         _ => throw new InvalidOperationException("Unknown server origin."),

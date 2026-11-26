@@ -265,7 +265,7 @@ internal sealed class PermissionsPage : Panel
         {
             CheckBox box = new()
             {
-                Text = LOC.STR("Trusted"),
+                Text = LOC.STR("Enabled"),
                 ToolTip = LOC.STR("Let agents use this plug-in's tools and skills."),
             };
             box.CheckedBinding

@@ -25,11 +25,6 @@ internal static class UsageFormat
         return scaled.ToString(Decimals(scaled) == 1 ? "0.#" : "0", culture) + Suffixes[unit];
     }
 
-    public static string Cost(decimal dollars, CultureInfo culture)
-        => dollars > 0m && dollars < 0.01m
-            ? "<$" + 0.01m.ToString("N2", culture)
-            : "$" + dollars.ToString("N2", culture);
-
     public static (double Max, double Step) NiceScale(long peak, int ticks)
     {
         if (peak <= 0)

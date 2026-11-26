@@ -10,17 +10,28 @@ namespace Rhino.AI.Statistics;
 internal class PlugInStatistics
 {
 
-    private readonly record struct ModelKey
+    private readonly record struct ModelUsageKey
     {
+        // DateTime.UnixEpoch does not exist on net48.
+        private static DateTime UnixEpoch { get; } = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         public string Name { get; }
         public string Vendor { get; }
+        public int DaysSinceUnixEpoch { get; }
+        public int HourInDay { get; }
 
-        public ModelKey(Models.IModel model) : this(model.Name, model.Vendor) { }
+        public DateTimeOffset Hour => new(UnixEpoch.AddDays(DaysSinceUnixEpoch).AddHours(HourInDay));
 
-        public ModelKey(string name, string vendor)
+        public ModelUsageKey(Models.IModel model) : this(model.Name, model.Vendor) { }
+        
+        public ModelUsageKey(string name, string vendor) : this(name, vendor, DateTime.UtcNow) {}
+
+        public ModelUsageKey(string name, string vendor, DateTime dateTime)
         {
             Name = name.ToLowerInvariant();
             Vendor = vendor.ToLowerInvariant();
+            DaysSinceUnixEpoch = (int)(dateTime - UnixEpoch).TotalDays;
+            HourInDay = dateTime.Hour;
         }
     }
 
@@ -29,18 +40,12 @@ internal class PlugInStatistics
         public PlugIn(PlugIns.PlugInToken token) : this(token.Name, token.Id) { }
     }
 
-    // PlugIn Image (via method?)
-    // PlugIn Name / Id
-    // Token Count
-    // List<Statistic>
-
-    // TODO : Move to Instanes?
     private Dictionary<PlugIn, PlugInStatistics> Stats { get; } = [];
 
     public List<PlugInModelStatistic> Statistics
         => PrivateModelUsage.Select(kvp => new PlugInModelStatistic(kvp.Key.Name, kvp.Key.Vendor, kvp.Value)).ToList();
 
-    private Dictionary<ModelKey, int> PrivateModelUsage { get; } = [];
+    private Dictionary<ModelUsageKey, int> PrivateModelUsage { get; } = [];
 
     public int TotalTokenUsage => PrivateModelUsage.Sum(pm => pm.Value);
 
@@ -63,11 +68,17 @@ internal class PlugInStatistics
         return statistics;
     }
 
+    internal static IReadOnlyList<PlugInHourUsage> Hourly()
+        => AIInstances.Statistics.Stats
+            .SelectMany(plugIn => plugIn.Value.PrivateModelUsage
+                .Select(usage => new PlugInHourUsage(plugIn.Key.Id, plugIn.Key.Name, usage.Key.Name, usage.Key.Vendor, usage.Key.Hour, usage.Value)))
+            .ToList();
+
     private void AddTokenUsage(Models.IModel model, int tokenCount)
     {
         if (tokenCount <= 0) return;
 
-        ModelKey key = new(model);
+        ModelUsageKey key = new(model);
         PrivateModelUsage.TryGetValue(key, out int count);
         PrivateModelUsage[key] = count + tokenCount;
     }
@@ -90,7 +101,7 @@ internal class PlugInStatistics
         {
             PlugInStatistics stats = new();
             foreach (ModelUsageEntry model in entry.Models)
-                stats.PrivateModelUsage[new ModelKey(model.Name, model.Vendor)] = model.TokenCount;
+                stats.PrivateModelUsage[new ModelUsageKey(model.Name, model.Vendor)] = model.TokenCount;
 
             AIInstances.Statistics.Stats[new PlugIn(entry.Name, entry.Id)] = stats;
         }
@@ -114,3 +125,5 @@ internal class PlugInStatistics
 }
 
 internal record PlugInModelStatistic(string ModelName, string Vendor, int TokenCount = 0) { }
+
+internal sealed record PlugInHourUsage(Guid Id, string Name, string Model, string Vendor, DateTimeOffset Hour, long TokenCount);

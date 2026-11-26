@@ -1,13 +1,9 @@
 using System.Collections.ObjectModel;
-using System.IO;
 
-using Eto.Drawing;
 using Eto.Forms;
 
-using Rhino.Runtime;
 using Rhino.UI;
 
-using Rhino.AI.PlugIns;
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI.UI.Settings;
@@ -91,7 +87,7 @@ internal sealed class PermissionsPageViewModel : SimpleViewModel
         foreach (PlugInInfo info in catalog.Plugins)
         {
             Guid id = Guid.Parse(info.Id);
-            PlugInItemViewModel plugIn = new(id, info.Name, info.Trusted, info.Loaded, info.Servers.Sum(server => server.Tools.Count), info.Skills, IconOf(id));
+            PlugInItemViewModel plugIn = new(id, info.Name, info.Trusted, info.Loaded, info.Servers.Sum(server => server.Tools.Count), info.Skills, PlugInIcons.Of(id));
             plugIns.Add(plugIn);
             foreach (Rhino.AI.UI.Settings.ServerInfo server in info.Servers)
                 servers.Add(new ServerItemViewModel(server.Name, server.Title, new ServerOrigin.PlugIn(plugIn), server.Tools, rules, pageDefault));
@@ -216,38 +212,4 @@ internal sealed class PermissionsPageViewModel : SimpleViewModel
 
     // Mcp.RunToolAsync only stops Deny and asks for Ask, so an unset default lets every call through.
     private static Permissability Shown(Permissability saved) => saved == Permissability.Unset ? Permissability.Always : saved;
-
-    private static Image? IconOf(Guid id)
-    {
-        foreach (KeyValuePair<PlugInToken, PlugInRegistry.AgenticPlugIn> pair in AIInstances.Registry.PlugIns)
-        {
-            if (pair.Key.Id == id)
-                return LoadIcon(pair.Value);
-        }
-
-        return null;
-    }
-
-    private static Image? LoadIcon(PlugInRegistry.AgenticPlugIn plugIn)
-    {
-        if (string.IsNullOrEmpty(plugIn.IconResource))
-            return null;
-
-        try
-        {
-            using Stream? stream = plugIn.Assembly.GetManifestResourceStream(plugIn.IconResource);
-            if (stream is null)
-                return null;
-
-            MemoryStream copy = new();
-            stream.CopyTo(copy);
-            copy.Position = 0;
-            return new Icon(copy);
-        }
-        catch (Exception ex)
-        {
-            HostUtils.LogDebugEvent(string.Format("[rhino-ai] AI settings could not read the icon '{0}': {1}\n", plugIn.IconResource, ex.Message));
-            return null;
-        }
-    }
 }

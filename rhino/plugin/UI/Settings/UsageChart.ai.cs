@@ -34,6 +34,7 @@ internal sealed class UsageChart : Drawable
     private string emptyText = string.Empty;
     private int? hovered;
     private RectangleF plot;
+    private RectangleF totalItem;
 
     public UsageChartData? Data
     {
@@ -56,11 +57,16 @@ internal sealed class UsageChart : Drawable
         }
     }
 
+    public string? TotalToolTip { get; set; }
+
     public BindableBinding<UsageChart, UsageChartData?> DataBinding
         => new(this, chart => chart.Data, (chart, value) => chart.Data = value, null, null);
 
     public BindableBinding<UsageChart, string> EmptyTextBinding
         => new(this, chart => chart.EmptyText, (chart, value) => chart.EmptyText = value, null, null);
+
+    public BindableBinding<UsageChart, string?> TotalToolTipBinding
+        => new(this, chart => chart.TotalToolTip, (chart, value) => chart.TotalToolTip = value, null, null);
 
     private static CultureInfo Culture => CultureInfo.CurrentCulture;
 
@@ -68,12 +74,14 @@ internal sealed class UsageChart : Drawable
     {
         base.OnMouseMove(e);
         Hover(BucketAt(e.Location));
+        ShowToolTip(totalItem.Contains(e.Location) ? TotalToolTip : null);
     }
 
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
         Hover(null);
+        ShowToolTip(null);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -128,28 +136,40 @@ internal sealed class UsageChart : Drawable
 
     private float DrawLegend(Graphics graphics, UsageChartData chart, Color text, Color secondary)
     {
+        totalItem = RectangleF.Empty;
+        if (chart.Series.Count == 0)
+            return 0f;
+
         float x = 0f;
         float y = 0f;
         float line = LegendFont.LineHeight;
-        foreach (UsageSeries series in chart.Series)
+
+        RectangleF Item(Color? dot, string name, long value)
         {
-            string name = Name(series);
-            string total = UsageFormat.Compact(series.Total, Culture);
+            string total = UsageFormat.Compact(value, Culture);
+            float marker = dot is null ? 0f : LegendDot + LegendInnerGap;
             float nameWidth = LegendFont.MeasureString(name).Width;
-            float itemWidth = LegendDot + LegendInnerGap + nameWidth + LegendInnerGap + LegendFont.MeasureString(total).Width;
+            float itemWidth = marker + nameWidth + LegendInnerGap + LegendFont.MeasureString(total).Width;
             if (x > 0f && x + itemWidth > Width)
             {
                 x = 0f;
                 y += line + LegendRowGap;
             }
 
-            graphics.FillEllipse(Colour(series), x, y + (line - LegendDot) / 2f, LegendDot, LegendDot);
-            graphics.DrawText(LegendFont, text, x + LegendDot + LegendInnerGap, y, name);
-            graphics.DrawText(LegendFont, secondary, x + LegendDot + LegendInnerGap + nameWidth + LegendInnerGap, y, total);
+            if (dot is Color colour)
+                graphics.FillEllipse(colour, x, y + (line - LegendDot) / 2f, LegendDot, LegendDot);
+            graphics.DrawText(LegendFont, text, x + marker, y, name);
+            graphics.DrawText(LegendFont, secondary, x + marker + nameWidth + LegendInnerGap, y, total);
+            RectangleF bounds = new(x, y, itemWidth, line);
             x += itemWidth + LegendItemGap;
+            return bounds;
         }
 
-        return chart.Series.Count == 0 ? 0f : y + line;
+        totalItem = Item(null, LOC.STR("Total"), chart.Total);
+        foreach (UsageSeries series in chart.Series)
+            Item(Colour(series), Name(chart.Split, series), series.Total);
+
+        return y + line;
     }
 
     private void DrawBar(Graphics graphics, UsageChartData chart, int index, float slot, double max)
@@ -215,7 +235,7 @@ internal sealed class UsageChart : Drawable
         for (int series = 0; series < bucket.Values.Count; series++)
         {
             if (bucket.Values[series] > 0)
-                rows.Add((Colour(chart.Series[series]), Name(chart.Series[series]), UsageFormat.Compact(bucket.Values[series], Culture)));
+                rows.Add((Colour(chart.Series[series]), Name(chart.Split, chart.Series[series]), UsageFormat.Compact(bucket.Values[series], Culture)));
         }
         if (rows.Count > 1)
             rows.Add((null, LOC.STR("Total"), UsageFormat.Compact(bucket.Total, Culture)));
@@ -299,16 +319,21 @@ internal sealed class UsageChart : Drawable
         _ => throw new ArgumentOutOfRangeException(nameof(grain), grain, null),
     };
 
-    private static string Name(UsageSeries series) => series switch
+    private static string Name(UsageSplit split, UsageSeries series) => series switch
     {
-        UsageSeries.Agent agent => agent.Name,
-        UsageSeries.Others others => Phrase.Count(others.Agents, LOC.STR("1 other agent"), LOC.STR("{0} other agents")),
+        UsageSeries.Named named => named.Name,
+        UsageSeries.Others others => split switch
+        {
+            UsageSplit.Agent => Phrase.Count(others.Count, LOC.STR("1 other agent"), LOC.STR("{0} other agents")),
+            UsageSplit.Model => Phrase.Count(others.Count, LOC.STR("1 other model"), LOC.STR("{0} other models")),
+            _ => throw new ArgumentOutOfRangeException(nameof(split), split, null),
+        },
         _ => throw new InvalidOperationException("Unknown usage series."),
     };
 
     private static Color Colour(UsageSeries series) => series switch
     {
-        UsageSeries.Agent agent => Palette.Series(agent.Colour),
+        UsageSeries.Named named => Palette.Series(named.Colour),
         UsageSeries.Others => Palette.SeriesOther,
         _ => throw new InvalidOperationException("Unknown usage series."),
     };
@@ -322,6 +347,12 @@ internal sealed class UsageChart : Drawable
 
         hovered = index;
         Invalidate();
+    }
+
+    private void ShowToolTip(string? text)
+    {
+        if (ToolTip != text)
+            ToolTip = text;
     }
 
     private int? BucketAt(PointF location)

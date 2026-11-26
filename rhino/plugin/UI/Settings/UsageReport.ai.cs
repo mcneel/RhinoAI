@@ -4,15 +4,19 @@ internal enum UsageRange { Today, Week, Month, AllTime }
 
 internal enum UsageGrain { Hour, Day, Week, Month }
 
-internal sealed record UsageEntry(DateTimeOffset At, string AgentId, string AgentName, int InputTokens, int OutputTokens, decimal? CostUsd)
+internal enum UsageSplit { Agent, Model }
+
+internal sealed record UsageEntry(DateTimeOffset At, string AgentId, string AgentName, string? Vendor, int InputTokens, int OutputTokens)
 {
     public long Tokens => (long)InputTokens + OutputTokens;
 }
 
+internal sealed record PlugInUsage(DateTimeOffset Hour, string PlugInId, string PlugInName, string Vendor, string ModelId, string ModelName, long Tokens);
+
 internal abstract record UsageSeries(long Total)
 {
-    public sealed record Agent(string Name, int Colour, long Total) : UsageSeries(Total);
-    public sealed record Others(int Agents, long Total) : UsageSeries(Total);
+    public sealed record Named(string Name, SeriesColour Colour, long Total) : UsageSeries(Total);
+    public sealed record Others(int Count, long Total) : UsageSeries(Total);
 }
 
 internal sealed record UsageBucket(DateTime Start, IReadOnlyList<long> Values)
@@ -20,15 +24,16 @@ internal sealed record UsageBucket(DateTime Start, IReadOnlyList<long> Values)
     public long Total => Values.Sum();
 }
 
-internal sealed record UsageChartData(UsageGrain Grain, IReadOnlyList<UsageSeries> Series, IReadOnlyList<UsageBucket> Buckets)
+internal sealed record UsageChartData(UsageGrain Grain, UsageSplit Split, IReadOnlyList<UsageSeries> Series, IReadOnlyList<UsageBucket> Buckets)
 {
     public long Peak => Buckets.Count == 0 ? 0 : Buckets.Max(bucket => bucket.Total);
+
+    public long Total => Series.Sum(series => series.Total);
 }
 
-internal sealed record UsageSummary(long InputTokens, long OutputTokens, decimal Cost, int Turns, int CostedTurns, UsageChartData Chart)
-{
-    public long Tokens => InputTokens + OutputTokens;
-}
+internal sealed record UsageSummary(long InputTokens, long OutputTokens, int Turns, UsageChartData Chart);
+
+internal sealed record PlugInBadge(string Id, string Name, long Total);
 
 internal static class UsageReport
 {
@@ -38,82 +43,122 @@ internal static class UsageReport
     private const int WeeklyAllTimeLimit = 7 * 26;
     private const int ShortestDailySpan = 7;
 
+    private readonly record struct Sample(DateTime At, string Id, string Name, string? Vendor, long Tokens);
+
+    private readonly record struct RankedSeries(string Id, string Name, string? Vendor);
+
+    private sealed record UsageWindow(UsageGrain Grain, DateTime Start, DateTime Today)
+    {
+        public bool Contains(DateTime at) => at >= Start && at < Today.AddDays(1);
+    }
+
     public static UsageSummary Summarize(IReadOnlyList<UsageEntry> entries, UsageRange range, DateTimeOffset now, TimeZoneInfo zone, DayOfWeek firstDayOfWeek)
+    {
+        List<(UsageEntry Entry, Sample Sample)> local = entries
+            .Select(entry => (Entry: entry, Sample: new Sample(Local(entry.At, zone), entry.AgentId, entry.AgentName, entry.Vendor, entry.Tokens)))
+            .ToList();
+        List<Sample> samples = local.Select(item => item.Sample).ToList();
+        UsageWindow window = WindowFor(range, samples, now, zone, firstDayOfWeek);
+        List<UsageEntry> inRange = local.Where(item => window.Contains(item.Sample.At)).Select(item => item.Entry).ToList();
+
+        return new UsageSummary(
+            inRange.Sum(entry => (long)entry.InputTokens),
+            inRange.Sum(entry => (long)entry.OutputTokens),
+            inRange.Count,
+            Chart(UsageSplit.Agent, window, firstDayOfWeek, samples, samples));
+    }
+
+    public static IReadOnlyList<PlugInBadge> PlugInBadges(IReadOnlyList<PlugInUsage> usage, UsageRange range, DateTimeOffset now, TimeZoneInfo zone, DayOfWeek firstDayOfWeek)
+    {
+        List<Sample> samples = usage.Select(hour => new Sample(Local(hour.Hour, zone), hour.PlugInId, hour.PlugInName, null, hour.Tokens)).ToList();
+        Dictionary<string, long> totals = TotalsIn(WindowFor(range, samples, now, zone, firstDayOfWeek), samples);
+        return Ranked(samples)
+            .Select(plugIn => new PlugInBadge(plugIn.Id, plugIn.Name, totals.TryGetValue(plugIn.Id, out long total) ? total : 0))
+            .Where(badge => badge.Total > 0)
+            .ToList();
+    }
+
+    public static UsageChartData PlugInChart(IReadOnlyList<PlugInUsage> usage, IReadOnlyCollection<string> plugInIds, UsageRange range, DateTimeOffset now, TimeZoneInfo zone, DayOfWeek firstDayOfWeek)
+    {
+        List<Sample> all = usage.Select(hour => ModelSample(hour, zone)).ToList();
+        List<Sample> shown = usage.Where(hour => plugInIds.Contains(hour.PlugInId)).Select(hour => ModelSample(hour, zone)).ToList();
+        return Chart(UsageSplit.Model, WindowFor(range, all, now, zone, firstDayOfWeek), firstDayOfWeek, all, shown);
+    }
+
+    private static Sample ModelSample(PlugInUsage hour, TimeZoneInfo zone) => new(Local(hour.Hour, zone), hour.ModelId, hour.ModelName, hour.Vendor, hour.Tokens);
+
+    private static DateTime Local(DateTimeOffset at, TimeZoneInfo zone) => TimeZoneInfo.ConvertTime(at, zone).DateTime;
+
+    private static UsageWindow WindowFor(UsageRange range, IReadOnlyList<Sample> samples, DateTimeOffset now, TimeZoneInfo zone, DayOfWeek firstDayOfWeek)
     {
         DateTime today = TimeZoneInfo.ConvertTime(now, zone).Date;
         DateTime end = today.AddDays(1);
-        List<(UsageEntry Entry, DateTime At)> local = entries
-            .Select(entry => (Entry: entry, At: TimeZoneInfo.ConvertTime(entry.At, zone).DateTime))
-            .Where(item => item.At < end)
-            .ToList();
-
         (UsageGrain grain, DateTime start) = range switch
         {
             UsageRange.Today => (UsageGrain.Hour, today),
             UsageRange.Week => (UsageGrain.Day, today.AddDays(-6)),
             UsageRange.Month => (UsageGrain.Day, today.AddDays(-29)),
-            UsageRange.AllTime => AllTime(local.Select(item => item.At.Date).DefaultIfEmpty(today).Min(), today, firstDayOfWeek),
+            UsageRange.AllTime => AllTime(samples.Where(sample => sample.At < end).Select(sample => sample.At.Date).DefaultIfEmpty(today).Min(), today, firstDayOfWeek),
             _ => throw new ArgumentOutOfRangeException(nameof(range), range, null),
         };
-
-        List<(UsageEntry Entry, DateTime At)> inRange = local.Where(item => item.At >= start).ToList();
-        (List<UsageSeries> series, Dictionary<string, int> seriesOf) = SeriesFor(entries, inRange.Select(item => item.Entry).ToList());
-
-        List<DateTime> starts = BucketStarts(grain, start, today, firstDayOfWeek);
-        Dictionary<DateTime, long[]> values = starts.ToDictionary(bucket => bucket, _ => new long[series.Count]);
-        foreach ((UsageEntry entry, DateTime at) in inRange)
-        {
-            if (seriesOf.TryGetValue(entry.AgentId, out int index) && values.TryGetValue(Floor(grain, at, firstDayOfWeek), out long[]? bucket))
-                bucket[index] += entry.Tokens;
-        }
-
-        UsageChartData chart = new(grain, series, starts.Select(bucket => new UsageBucket(bucket, values[bucket])).ToList());
-
-        return new UsageSummary(
-            inRange.Sum(item => (long)item.Entry.InputTokens),
-            inRange.Sum(item => (long)item.Entry.OutputTokens),
-            inRange.Select(item => item.Entry.CostUsd).OfType<decimal>().Sum(),
-            inRange.Count,
-            inRange.Count(item => item.Entry.CostUsd is not null),
-            chart);
+        return new UsageWindow(grain, start, today);
     }
 
-    // Colours follow each agent's rank across all saved usage, so an agent keeps its colour when the range changes.
-    private static (List<UsageSeries> Series, Dictionary<string, int> SeriesOf) SeriesFor(IReadOnlyList<UsageEntry> all, IReadOnlyList<UsageEntry> inRange)
+    private static UsageChartData Chart(UsageSplit split, UsageWindow window, DayOfWeek firstDayOfWeek, IReadOnlyList<Sample> all, IReadOnlyList<Sample> shown)
     {
-        List<(string Id, string Name)> ranked = all
-            .GroupBy(entry => entry.AgentId)
-            .Select(group => (Id: group.Key, Name: group.First().AgentName, Total: group.Sum(entry => entry.Tokens)))
-            .OrderByDescending(agent => agent.Total)
-            .ThenBy(agent => agent.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(agent => (agent.Id, agent.Name))
-            .ToList();
+        (List<UsageSeries> series, Dictionary<string, int> seriesOf) = SeriesFor(Ranked(all), TotalsIn(window, shown));
 
-        Dictionary<string, long> totals = inRange
-            .GroupBy(entry => entry.AgentId)
-            .ToDictionary(group => group.Key, group => group.Sum(entry => entry.Tokens));
+        List<DateTime> starts = BucketStarts(window.Grain, window.Start, window.Today, firstDayOfWeek);
+        Dictionary<DateTime, long[]> values = starts.ToDictionary(bucket => bucket, _ => new long[series.Count]);
+        foreach (Sample sample in shown)
+        {
+            if (window.Contains(sample.At) && seriesOf.TryGetValue(sample.Id, out int index) && values.TryGetValue(Floor(window.Grain, sample.At, firstDayOfWeek), out long[]? bucket))
+                bucket[index] += sample.Tokens;
+        }
 
+        return new UsageChartData(window.Grain, split, series, starts.Select(bucket => new UsageBucket(bucket, values[bucket])).ToList());
+    }
+
+    private static Dictionary<string, long> TotalsIn(UsageWindow window, IReadOnlyList<Sample> samples) => samples
+        .Where(sample => window.Contains(sample.At))
+        .GroupBy(sample => sample.Id)
+        .ToDictionary(group => group.Key, group => group.Sum(sample => sample.Tokens));
+
+    private static List<RankedSeries> Ranked(IReadOnlyList<Sample> all) => all
+        .GroupBy(sample => sample.Id)
+        .Select(group => (Series: new RankedSeries(group.Key, group.First().Name, group.First().Vendor), Total: group.Sum(sample => sample.Tokens)))
+        .OrderByDescending(item => item.Total)
+        .ThenBy(item => item.Series.Name, StringComparer.CurrentCultureIgnoreCase)
+        .Select(item => item.Series)
+        .ToList();
+
+    private static (List<UsageSeries> Series, Dictionary<string, int> SeriesOf) SeriesFor(IReadOnlyList<RankedSeries> ranked, IReadOnlyDictionary<string, long> totals)
+    {
         List<UsageSeries> series = [];
         Dictionary<string, int> seriesOf = [];
+        Dictionary<SeriesHue, int> shadesTaken = [];
         for (int rank = 0; rank < Math.Min(NamedSeries, ranked.Count); rank++)
         {
-            (string id, string name) = ranked[rank];
-            if (!totals.TryGetValue(id, out long total) || total == 0)
+            RankedSeries ranking = ranked[rank];
+            SeriesHue hue = SeriesHue.Of(ranking.Vendor, ranking.Id);
+            int shade = shadesTaken.TryGetValue(hue, out int taken) ? taken : 0;
+            shadesTaken[hue] = shade + 1;
+            if (!totals.TryGetValue(ranking.Id, out long total) || total == 0)
                 continue;
 
-            seriesOf[id] = series.Count;
-            series.Add(new UsageSeries.Agent(name, rank, total));
+            seriesOf[ranking.Id] = series.Count;
+            series.Add(new UsageSeries.Named(ranking.Name, new SeriesColour(hue, shade), total));
         }
 
         List<(string Id, long Total)> others = ranked.Skip(NamedSeries)
-            .Select(agent => (agent.Id, Total: totals.TryGetValue(agent.Id, out long total) ? total : 0))
-            .Where(agent => agent.Total > 0)
+            .Select(item => (item.Id, Total: totals.TryGetValue(item.Id, out long total) ? total : 0))
+            .Where(item => item.Total > 0)
             .ToList();
         if (others.Count > 0)
         {
             foreach ((string id, long _) in others)
                 seriesOf[id] = series.Count;
-            series.Add(new UsageSeries.Others(others.Count, others.Sum(agent => agent.Total)));
+            series.Add(new UsageSeries.Others(others.Count, others.Sum(item => item.Total)));
         }
 
         return (series, seriesOf);
