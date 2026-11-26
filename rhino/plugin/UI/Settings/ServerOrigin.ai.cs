@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal abstract record ServerOrigin
@@ -9,4 +8,3 @@ internal abstract record ServerOrigin
     public sealed record PlugIn(PlugInItemViewModel Owner) : ServerOrigin;
     public sealed record Custom(IMcpDefinition Definition) : ServerOrigin;
 }
-#endif

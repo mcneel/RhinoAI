@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 using Rhino.UI;
@@ -43,4 +42,3 @@ internal static class AgentStatuses
         _ => throw new ArgumentOutOfRangeException(nameof(tone), tone, null),
     };
 }
-#endif

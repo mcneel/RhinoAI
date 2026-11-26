@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal sealed record ToolChange(string Server, string Tool, Permissability Permission, IReadOnlyList<string> Args);
@@ -72,4 +71,3 @@ internal static class ToolRules
         return new Permission(change.Server, change.Tool, change.Permission, args);
     }
 }
-#endif

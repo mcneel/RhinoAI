@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.Specialized;
 
 using Eto.Drawing;
@@ -274,4 +273,3 @@ internal sealed class AgentsPage : Panel
 
     private static Label Note(string text, Color colour) => new() { Text = text, TextColor = colour, Wrap = WrapMode.Word };
 }
-#endif

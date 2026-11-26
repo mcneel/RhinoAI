@@ -1,4 +1,3 @@
-#if R9
 using System.Globalization;
 
 using Rhino.UI;
@@ -85,4 +84,3 @@ internal sealed class UsagePageViewModel : SimpleViewModel
     private UsageSummary Summarize()
         => UsageReport.Summarize(Entries, range, Clock(), TimeZoneInfo.Local, Culture.DateTimeFormat.FirstDayOfWeek);
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.Generic;
 using System.Text.Json;
 
@@ -44,4 +43,3 @@ internal static class PlugInPermissionStore
         return map;
     }
 }
-#endif

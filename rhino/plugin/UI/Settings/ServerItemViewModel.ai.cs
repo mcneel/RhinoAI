@@ -1,4 +1,3 @@
-#if R9
 using Eto.Forms;
 
 using Rhino.UI;
@@ -113,4 +112,3 @@ internal sealed class ServerItemViewModel : SimpleViewModel, ITreeGridItem<ITree
         _ => throw new InvalidOperationException("Unknown MCP definition."),
     };
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 using System.IO;
 
 using Rhino.AI.Secrets;
@@ -78,4 +77,3 @@ internal static class AgentSettingsReader
         return list;
     }
 }
-#endif

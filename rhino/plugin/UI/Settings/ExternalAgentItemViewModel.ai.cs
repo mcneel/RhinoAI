@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 using InstallResult = Rhino.AI.McpClientConfigInstaller.McpInstallResult;
@@ -118,4 +117,3 @@ internal sealed class ExternalAgentItemViewModel : SimpleViewModel
             RaisePropertyChanged(property);
     }
 }
-#endif

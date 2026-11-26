@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 using Rhino.AI.UI.Settings;
@@ -17,4 +16,3 @@ internal static class HostCheck
             : new AgentStatus(AgentStatusKind.NeedsUrl, whenBlank);
     }
 }
-#endif

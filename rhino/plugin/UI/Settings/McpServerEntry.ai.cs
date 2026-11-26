@@ -1,4 +1,3 @@
-#if R9
 using System.Text.Json.Nodes;
 
 namespace Rhino.AI.UI.Settings;
@@ -400,4 +399,3 @@ internal static class McpServerEntry
         return new ServerResult<JsonObject>.Ok(pairs);
     }
 }
-#endif

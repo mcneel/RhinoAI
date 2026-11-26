@@ -1,4 +1,3 @@
-#if R9
 using System.Threading;
 
 using Eto.Drawing;
@@ -416,4 +415,3 @@ internal sealed class AgentDetailView : Panel
         Items = { control },
     };
 }
-#endif

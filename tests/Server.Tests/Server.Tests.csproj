@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Agents/Conversation.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Agents/PendingPermission.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />

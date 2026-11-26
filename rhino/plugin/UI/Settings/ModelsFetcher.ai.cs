@@ -1,4 +1,3 @@
-#if R9
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -84,4 +83,3 @@ internal static class ModelsFetcher
 
     private static ModelsFailed Failed(string template, params object[] args) => new(string.Format(template, args));
 }
-#endif

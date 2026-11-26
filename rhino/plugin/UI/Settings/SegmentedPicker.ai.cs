@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -263,4 +262,3 @@ internal sealed class SegmentedPicker<T> : Drawable where T : struct, Enum
         return Math.Max(0, Math.Min(Segments.Count - 1, index));
     }
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 using Rhino.UI;
@@ -23,4 +22,3 @@ internal static class UsageRanges
     private static Segment<UsageRange> Segment(UsageRange range, string label)
         => new(range, label, SegmentIcon.None, new SegmentStyle.Neutral());
 }
-#endif

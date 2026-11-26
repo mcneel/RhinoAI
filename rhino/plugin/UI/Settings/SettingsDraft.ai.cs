@@ -1,4 +1,3 @@
-#if R9
 using Rhino.AI.Models;
 
 namespace Rhino.AI.UI.Settings;
@@ -27,4 +26,3 @@ internal sealed record AgentDraft(
     IReadOnlyList<HostOs> Platforms);
 
 internal sealed record SettingsProblem(string? Target, string? Field, string Message);
-#endif

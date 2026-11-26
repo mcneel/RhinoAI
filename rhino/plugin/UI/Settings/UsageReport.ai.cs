@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal enum UsageRange { Today, Week, Month, AllTime }
@@ -160,4 +159,3 @@ internal static class UsageReport
     private static DateTime WeekStart(DateTime date, DayOfWeek firstDayOfWeek)
         => date.AddDays(-(((int)date.DayOfWeek - (int)firstDayOfWeek + 7) % 7));
 }
-#endif

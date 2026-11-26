@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 using Rhino.UI;
@@ -28,4 +27,3 @@ internal abstract record RowIcon
     public sealed record Picture(Image Image) : RowIcon;
     public sealed record Initial(string Letter) : RowIcon;
 }
-#endif

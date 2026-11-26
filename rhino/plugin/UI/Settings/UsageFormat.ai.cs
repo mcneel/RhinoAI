@@ -1,4 +1,3 @@
-#if R9
 using System.Globalization;
 
 namespace Rhino.AI.UI.Settings;
@@ -44,4 +43,3 @@ internal static class UsageFormat
 
     private static int Decimals(double scaled) => scaled < 99.95d ? 1 : 0;
 }
-#endif

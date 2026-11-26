@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -59,4 +58,3 @@ internal sealed class Disclosure : Drawable
         graphics.DrawLines(pen, chevron);
     }
 }
-#endif

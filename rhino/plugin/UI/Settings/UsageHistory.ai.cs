@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 namespace Rhino.AI.UI.Settings;
@@ -26,4 +25,3 @@ internal static class UsageHistory
         return (key, Guid.TryParse(key, out _) ? LOC.STR("Removed agent") : key);
     }
 }
-#endif

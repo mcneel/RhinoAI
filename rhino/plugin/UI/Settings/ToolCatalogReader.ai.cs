@@ -1,4 +1,3 @@
-#if R9
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -214,4 +213,3 @@ internal static class ToolCatalogReader
         return spaced.Length == 0 ? name : char.ToUpperInvariant(spaced[0]) + spaced.Substring(1);
     }
 }
-#endif

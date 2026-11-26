@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -316,4 +315,3 @@ internal sealed class AgentItemViewModel : SimpleViewModel
 
     private sealed record ModelsNote(string Text, bool IsError);
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal sealed class PlugInNames
@@ -14,4 +13,3 @@ internal sealed class PlugInNames
     public string Of(Guid id, string fallback) =>
         Installed.TryGetValue(id, out string? name) && name.Trim().Length > 0 ? name : fallback;
 }
-#endif

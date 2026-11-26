@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 namespace Rhino.AI.UI.Settings;
@@ -15,4 +14,3 @@ internal abstract record SegmentStyle
 
 internal sealed record Segment<T>(T Value, string Label, SegmentIcon Icon, SegmentStyle Style)
     where T : struct, Enum;
-#endif

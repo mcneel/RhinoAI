@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal static class PermissionRules
@@ -54,4 +53,3 @@ internal static class PermissionRules
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
     };
 }
-#endif

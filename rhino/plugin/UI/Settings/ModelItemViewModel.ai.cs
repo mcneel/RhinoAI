@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal sealed class ModelItemViewModel : SimpleViewModel
@@ -36,4 +35,3 @@ internal sealed class ModelItemViewModel : SimpleViewModel
 
     public string Label => name.Trim().Length > 0 ? name.Trim() : id.Trim();
 }
-#endif

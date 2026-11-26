@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.ObjectModel;
 
 using Rhino.Runtime;
@@ -255,4 +254,3 @@ internal sealed class AgentsPageViewModel : SimpleViewModel
         Selected = first;
     }
 }
-#endif

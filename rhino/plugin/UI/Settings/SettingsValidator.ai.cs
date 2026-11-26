@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 namespace Rhino.AI.UI.Settings;
@@ -85,4 +84,3 @@ internal static class SettingsValidator
         return problems;
     }
 }
-#endif

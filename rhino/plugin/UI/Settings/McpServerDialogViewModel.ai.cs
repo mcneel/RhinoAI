@@ -1,4 +1,3 @@
-#if R9
 using System.Text.Json.Nodes;
 
 using Rhino.UI;
@@ -314,4 +313,3 @@ internal sealed class McpServerDialogViewModel : SimpleViewModel
         _ => throw new InvalidOperationException("Unknown server problem."),
     };
 }
-#endif

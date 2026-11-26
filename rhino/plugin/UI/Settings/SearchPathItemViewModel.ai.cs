@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal sealed class SearchPathItemViewModel : SimpleViewModel
@@ -16,4 +15,3 @@ internal sealed class SearchPathItemViewModel : SimpleViewModel
         set => SetProperty(ref text, value);
     }
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal static class HttpAddress
@@ -16,4 +15,3 @@ internal static class HttpAddress
         return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.Host.Length > 0 ? uri : null;
     }
 }
-#endif

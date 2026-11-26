@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 namespace Rhino.AI.UI.Settings;
@@ -159,4 +158,3 @@ internal sealed class ConnectionsPageViewModel : SimpleViewModel
         RaisePropertyChanged(nameof(Prompt));
     }
 }
-#endif

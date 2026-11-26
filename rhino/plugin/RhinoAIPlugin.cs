@@ -26,7 +26,6 @@ public class RhinoAIPlugin : PlugIn
             UI.HostPrompt.Register();
         }
 
-#if R9
         PlugInPermissionStore.ApplyToRegistry();
         // The AI settings list only registered plug-ins, so register now rather than on first agent use.
         if (PlugInRegistry.Register() is null)
@@ -34,7 +33,6 @@ public class RhinoAIPlugin : PlugIn
             // The plugin failed to register itself!
             return LoadReturnCode.ErrorShowDialog;
         }
-#endif
 
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();

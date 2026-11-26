@@ -1,4 +1,3 @@
-#if R9
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI.UI.Settings;
@@ -13,4 +12,3 @@ internal abstract class AgentConnectionViewModel : SimpleViewModel
 
     public abstract AgentConnection ToSettings();
 }
-#endif

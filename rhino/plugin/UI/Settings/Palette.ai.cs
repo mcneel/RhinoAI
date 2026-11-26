@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 namespace Rhino.AI.UI.Settings;
@@ -28,4 +27,3 @@ internal static class Palette
 
     public static Color Series(int index) => SeriesColours[index % SeriesColours.Length];
 }
-#endif

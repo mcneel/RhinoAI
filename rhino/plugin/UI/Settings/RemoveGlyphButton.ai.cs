@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -63,4 +62,3 @@ internal sealed class RemoveGlyphButton : Drawable
         graphics.DrawLine(pen, x - Arm, y + Arm, x + Arm, y - Arm);
     }
 }
-#endif

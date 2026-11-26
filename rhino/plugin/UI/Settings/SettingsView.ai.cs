@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -51,4 +50,3 @@ internal sealed class SettingsView : Panel
         Content = content,
     };
 }
-#endif

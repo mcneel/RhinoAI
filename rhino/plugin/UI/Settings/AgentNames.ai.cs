@@ -1,4 +1,3 @@
-#if R9
 using System.Globalization;
 using System.Text;
 
@@ -51,4 +50,3 @@ internal static class AgentNames
 
     private static string Fold(string text) => text.Trim().ToLowerInvariant();
 }
-#endif

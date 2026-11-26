@@ -1,4 +1,3 @@
-#if R9
 using Rhino.AI.Models;
 
 namespace Rhino.AI.UI.Settings;
@@ -46,4 +45,3 @@ internal sealed record PlugInInfo(string Id, string Name, bool Trusted, bool Loa
 internal sealed record ToolCatalog(ServerInfo Builtin, ServerInfo DefaultTools, IReadOnlyList<PlugInInfo> Plugins);
 
 internal sealed record UsageTurn(DateTimeOffset At, string AgentId, string AgentName, int InputTokens, int OutputTokens, decimal? CostUsd);
-#endif

@@ -17,10 +17,17 @@ internal class UserConversations
 internal class Conversation
 {
 
+    public Conversation(Guid conversationId, string agentName, List<ITurn> turns)
+    {
+        ConversationId = conversationId;
+        AgentName = agentName;
+        Turns = turns;
+    }
+
     public Guid ConversationId { get; }
 
     public string AgentName { get; }
 
-    List<ITurn> Turns { get; }
+    private List<ITurn> Turns { get; }
 
 }

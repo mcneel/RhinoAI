@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 using Rhino.AI.Models;
@@ -38,4 +37,3 @@ internal sealed class LocalConnectionViewModel : AgentConnectionViewModel
 
     public override AgentConnection ToSettings() => new LocalConnection(host, Protocol, ModelsRoute);
 }
-#endif

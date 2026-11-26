@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal sealed class SettingsViewModel : SimpleViewModel
@@ -50,4 +49,3 @@ internal sealed class SettingsViewModel : SimpleViewModel
         settings.HideSettingFromUserInterface(PreferencesKey);
     }
 }
-#endif

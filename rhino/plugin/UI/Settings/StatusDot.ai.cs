@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -36,4 +35,3 @@ internal sealed class StatusDot : Drawable
         e.Graphics.FillEllipse(IsOn ? Palette.Allow : Palette.SeriesOther, bounds);
     }
 }
-#endif

@@ -1,4 +1,3 @@
-#if R9
 using System.Linq.Expressions;
 
 using Eto.Drawing;
@@ -323,4 +322,3 @@ internal sealed class ConnectionsPage : Panel
         Items = { control },
     };
 }
-#endif

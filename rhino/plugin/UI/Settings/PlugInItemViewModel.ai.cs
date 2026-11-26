@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 
 using Rhino.UI;
@@ -76,4 +75,3 @@ internal sealed class PlugInItemViewModel : SimpleViewModel, IRowItem
         ? char.ToUpperInvariant(first).ToString()
         : "?";
 }
-#endif

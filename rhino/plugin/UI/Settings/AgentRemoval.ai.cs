@@ -1,4 +1,3 @@
-#if R9
 using Eto.Forms;
 
 using Rhino.UI;
@@ -21,4 +20,3 @@ internal static class AgentRemoval
             page.Remove(agent);
     }
 }
-#endif

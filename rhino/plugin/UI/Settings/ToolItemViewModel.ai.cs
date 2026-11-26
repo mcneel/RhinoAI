@@ -1,4 +1,3 @@
-#if R9
 using Eto.Forms;
 
 using Rhino.UI;
@@ -78,4 +77,3 @@ internal sealed class ToolItemViewModel : SimpleViewModel, ITreeGridItem, IRowIt
 
     private string Summary => Info.Description.Length == 0 ? Info.Title : Info.Description;
 }
-#endif

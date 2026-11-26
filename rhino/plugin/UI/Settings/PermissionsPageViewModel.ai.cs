@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.ObjectModel;
 using System.IO;
 
@@ -252,4 +251,3 @@ internal sealed class PermissionsPageViewModel : SimpleViewModel
         }
     }
 }
-#endif

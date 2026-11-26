@@ -1,4 +1,3 @@
-#if R9
 using System.Linq.Expressions;
 
 using Eto.Drawing;
@@ -75,4 +74,3 @@ internal sealed class UsagePage : Panel
         return tile;
     }
 }
-#endif

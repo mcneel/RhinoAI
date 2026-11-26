@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -68,4 +67,3 @@ internal sealed class SectionBox : Panel
         e.Handled = true;
     }
 }
-#endif

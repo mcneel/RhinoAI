@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 using Rhino.AI.Secrets;
@@ -131,4 +130,3 @@ internal static class AgentDefinitionBuilder
 
     private static string? BlankToNull(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 }
-#endif

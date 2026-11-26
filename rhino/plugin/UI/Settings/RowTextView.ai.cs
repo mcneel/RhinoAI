@@ -1,4 +1,3 @@
-#if R9
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -157,4 +156,3 @@ internal sealed class RowTextView : Drawable
         }
     }
 }
-#endif

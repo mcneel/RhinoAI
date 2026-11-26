@@ -1,4 +1,3 @@
-#if R9
 using System.Globalization;
 
 using Eto.Drawing;
@@ -336,4 +335,3 @@ internal sealed class UsageChart : Drawable
         return index >= 0 && index < chart.Buckets.Count && chart.Buckets[index].Total > 0 ? index : null;
     }
 }
-#endif

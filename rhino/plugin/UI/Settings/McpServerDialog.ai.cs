@@ -1,4 +1,3 @@
-#if R9
 using System.Linq.Expressions;
 
 using Eto.Drawing;
@@ -200,4 +199,3 @@ internal sealed class McpServerDialog : Dialog<IReadOnlyList<IMcpDefinition>?>
         Wrap = WrapMode.Word,
     };
 }
-#endif

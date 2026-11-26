@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 using Rhino.AI.Models;
@@ -139,4 +138,3 @@ internal sealed class ApiConnectionViewModel : AgentConnectionViewModel
             RaisePropertyChanged(property);
     }
 }
-#endif

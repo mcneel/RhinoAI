@@ -1,4 +1,3 @@
-#if R9
 using Rhino.UI;
 
 namespace Rhino.AI.UI.Settings;
@@ -51,4 +50,3 @@ internal static class McpServerHost
         return RhinoAIHost.StartOrRestart(doc, port, quiet: true) ? null : new HostProblem.StartFailed(port);
     }
 }
-#endif

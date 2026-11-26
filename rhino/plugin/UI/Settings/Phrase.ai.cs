@@ -1,4 +1,3 @@
-#if R9
 namespace Rhino.AI.UI.Settings;
 
 internal static class Phrase
@@ -7,4 +6,3 @@ internal static class Phrase
 
     public static bool Contains(string text, string query) => text.IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0;
 }
-#endif
