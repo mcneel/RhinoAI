@@ -10,7 +10,9 @@ namespace Rhino.AI;
 public class UserPreferences
 {
 
-    public Guid PreferedAgentId { get; internal set; } = new Guid("d07df3c4-2c1d-40a1-a90c-7e85f1acae62");
+    internal static Guid DefaultAgentId { get; } = new("d07df3c4-2c1d-40a1-a90c-7e85f1acae62");
+
+    public Guid PreferedAgentId { get; internal set; } = DefaultAgentId;
 
     public int ZoomLevel { get; internal set; }
     public bool AutoLoadMCP { get; internal set; }

@@ -23,23 +23,16 @@ internal sealed class AgentsPageViewModel : SimpleViewModel
     private bool isConnectionExpanded;
     private bool isPromptExpanded;
 
-    private AgentsPageViewModel(IReadOnlyList<AgentSettings> agents, string? defaultAgentId, IReadOnlyList<AgentSettings> templates, AgentsContext context)
+    private AgentsPageViewModel(IReadOnlyList<AgentSettings> templates, AgentsContext context)
     {
         Context = context;
         Templates = templates;
-        Agents = new ObservableCollection<AgentItemViewModel>(agents.Select(agent => Watch(new AgentItemViewModel(agent, false, context))));
-        defaultAgent = Agents.FirstOrDefault(agent => agent.Id == defaultAgentId);
-        if (defaultAgent is not null)
-            defaultAgent.IsDefault = true;
-        selected = defaultAgent ?? Agents.FirstOrDefault();
         Agents.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(IsEmpty));
     }
 
     public static AgentsPageViewModel Load()
     {
         IReadOnlyList<AgentDefinition> builtin = AgentSettingsReader.BuiltinDefinitions();
-        IReadOnlyList<AgentSettings> agents = AgentSettingsReader.Current(builtin);
-        string preferred = AIInstances.Preferences.PreferedAgentId.ToString();
         Dictionary<string, KeySource> sources = new(StringComparer.Ordinal);
         KeySource SourceOf(string? keyName)
         {
@@ -51,10 +44,12 @@ internal sealed class AgentsPageViewModel : SimpleViewModel
         }
 
         AgentsContext context = new(HostUtils.RunningOnOSX ? HostOs.Mac : HostOs.Windows, RhinoApp.IsInternetAccessAllowed, SourceOf);
-        return new AgentsPageViewModel(agents, agents.Any(agent => agent.Id == preferred) ? preferred : null, AgentSettingsReader.Templates(builtin), context);
+        AgentsPageViewModel page = new(AgentSettingsReader.Templates(builtin), context);
+        page.Fill(builtin);
+        return page;
     }
 
-    public ObservableCollection<AgentItemViewModel> Agents { get; }
+    public ObservableCollection<AgentItemViewModel> Agents { get; } = [];
 
     public bool IsEmpty => Agents.Count == 0;
 
@@ -144,6 +139,24 @@ internal sealed class AgentsPageViewModel : SimpleViewModel
         isChanged = true;
     }
 
+    // Applies straight to the agent store rather than waiting for OK, so Cancel does not bring the old agents back.
+    public void Reset()
+    {
+        IReadOnlyList<AgentDefinition> builtin = AgentSettingsReader.BuiltinDefinitions();
+        foreach (IAgentDefinition definition in AIInstances.Agents.Definitions)
+            AIInstances.Agents.Remove(definition.Id);
+        foreach (AgentDefinition definition in builtin)
+            AIInstances.Agents.Add(definition);
+        AIInstances.Preferences.PreferedAgentId = UserPreferences.DefaultAgentId;
+
+        Selected = null;
+        defaultAgent = null;
+        Agents.Clear();
+        Fill(builtin);
+        Show([]);
+        isChanged = false;
+    }
+
     public bool TryCommit()
     {
         if (!isChanged)
@@ -214,6 +227,18 @@ internal sealed class AgentsPageViewModel : SimpleViewModel
     private bool RunsHere(AgentSettings template) => template.Platforms.Count == 0 || template.Platforms.Contains(Context.Os);
 
     private IEnumerable<string> TakenNames() => Agents.Select(agent => agent.Name);
+
+    private void Fill(IReadOnlyList<AgentDefinition> builtin)
+    {
+        string preferred = AIInstances.Preferences.PreferedAgentId.ToString();
+        foreach (AgentSettings settings in AgentSettingsReader.Current(builtin))
+            Agents.Add(Watch(new AgentItemViewModel(settings, false, Context)));
+
+        defaultAgent = Agents.FirstOrDefault(agent => agent.Id == preferred);
+        if (defaultAgent is not null)
+            defaultAgent.IsDefault = true;
+        Selected = defaultAgent ?? Agents.FirstOrDefault();
+    }
 
     private void Insert(AgentSettings settings, AgentItemViewModel? after)
     {

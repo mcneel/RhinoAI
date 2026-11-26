@@ -29,6 +29,8 @@ internal sealed class AgentsPage : Panel
 
         Button add = new() { Text = LOC.STR("Add Agent…") };
         add.Click += (_, _) => Adding.Show(add, new PointF(0, add.Height));
+        Button reset = new() { Text = LOC.STR("Reset") };
+        reset.Click += (_, _) => ConfirmReset();
 
         TableLayout left = new()
         {
@@ -37,7 +39,7 @@ internal sealed class AgentsPage : Panel
             Rows =
             {
                 new TableRow(List) { ScaleHeight = true },
-                new TableRow(new TableLayout(new TableRow(add, null))),
+                new TableRow(new TableLayout { Spacing = new Size(6, 0), Rows = { new TableRow(add, reset, null) } }),
             },
         };
 
@@ -117,15 +119,32 @@ internal sealed class AgentsPage : Panel
         }
     }
 
+    private void ConfirmReset()
+    {
+        DialogResult answer = Eto.Forms.MessageBox.Show(
+            this,
+            LOC.STR("This removes every agent, including any you added, and restores the built-in agents with their original settings. Saved API keys are kept. This cannot be undone."),
+            LOC.STR("Reset Agents?"),
+            MessageBoxButtons.YesNo,
+            MessageBoxType.Warning,
+            MessageBoxDefaultButton.No);
+
+        if (answer == DialogResult.Yes)
+            Model.Reset();
+    }
+
     private void Track(NotifyCollectionChangedEventArgs change)
     {
+        if (change.Action == NotifyCollectionChangedAction.Reset)
+            Details.Clear();
+
         if (change.OldItems is not null)
         {
             foreach (AgentItemViewModel gone in change.OldItems.OfType<AgentItemViewModel>())
                 Details.Remove(gone);
         }
 
-        if (change.NewItems?.OfType<AgentItemViewModel>().LastOrDefault() is AgentItemViewModel added)
+        if (change.NewItems?.OfType<AgentItemViewModel>().LastOrDefault() is AgentItemViewModel { IsNew: true } added)
             fresh = added;
     }
 

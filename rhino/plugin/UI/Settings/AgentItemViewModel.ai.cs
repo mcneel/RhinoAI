@@ -59,7 +59,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
 
     public ObservableCollection<ModelItemViewModel> Models { get; }
 
-    private bool IsNew { get; }
+    public bool IsNew { get; }
 
     private IReadOnlyList<HostOs> Platforms { get; }
 
