@@ -466,6 +466,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             "mcp_tool_call" => GetToolResultTurn(item),
             "reasoning" => ParseReasoning(item),
+            "error" => ParseError(item),
 
             _ => []
         };
