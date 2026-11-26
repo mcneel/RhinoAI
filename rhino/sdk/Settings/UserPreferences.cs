@@ -16,7 +16,7 @@ public class UserPreferences
 
     public int ZoomLevel { get; internal set; }
     public bool AutoLoadMCP { get; internal set; }
-    public bool AutoLoadScriptPlugIn { get; internal set; }
+    public bool AutoLoadScriptPlugIn { get; internal set; } = true;
     public string? ScriptPluginName { get; internal set; }
 
     /// <summary>
