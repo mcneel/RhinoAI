@@ -26,7 +26,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
 {
 
     private static readonly string[] DisabledFeatures = ["shell_tool", "unified_exec", "multi_agent", "goals",
-        "image_generation", "view_image", "sleep_tool", "apps", "tool_suggest", "remote_plugin", "browser_use", "computer_use"];
+        "view_image", "sleep_tool", "apps", "tool_suggest", "remote_plugin", "browser_use", "computer_use"];
 
     public CodexRateLimits? RateLimits { get; private set; }
 
@@ -123,8 +123,8 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
 
             if (IsIsolated)
             {
-                Directory.CreateDirectory(model.IsolatedCodexHome);
-                Process.StartInfo.Environment["CODEX_HOME"] = model.IsolatedCodexHome;
+                Directory.CreateDirectory(CodexDesktopModel.IsolatedCodexHome);
+                Process.StartInfo.Environment["CODEX_HOME"] = CodexDesktopModel.IsolatedCodexHome;
 
                 foreach (string feature in DisabledFeatures)
                 {

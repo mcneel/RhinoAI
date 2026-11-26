@@ -7,6 +7,7 @@ using Eto.Forms;
 
 using Rhino.Runtime;
 
+using Rhino.AI.Models;
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI.UI;
@@ -286,7 +287,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         Unsubscribe();
         string agentKey = AgentHost.Find(dto.AgentName)?.Id.ToString() ?? dto.AgentName;
-        Review = new ConversationFeed(Conversation.Restore(dto, agentKey), Bridge.Post);
+        Review = new ConversationFeed(Conversation.Restore(dto, agentKey), Bridge.Post, CodexDesktopModel.GeneratedImageFolders);
         Review.Replay(readOnly: true);
         return true;
     }
@@ -699,7 +700,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         Action handler = () => RhinoApp.InvokeOnUiThread(new Action(PumpIfLive));
         convo.Changed += handler;
-        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post), handler);
+        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post, CodexDesktopModel.GeneratedImageFolders), handler);
     }
 
     private void Unsubscribe()

@@ -55,11 +55,11 @@ internal sealed class ConversationFeed
         public HashSet<string> ImagesSent = new(StringComparer.OrdinalIgnoreCase);
     }
 
-    public ConversationFeed(Conversation source, Action<PanelEvent> emit, string? generatedImagesRoot = null)
+    public ConversationFeed(Conversation source, Action<PanelEvent> emit, Func<Guid, IReadOnlyList<string>> generatedImageFolders)
     {
         Source = source;
         Emit = emit;
-        Produced = new GeneratedImages(generatedImagesRoot);
+        Produced = new GeneratedImages(generatedImageFolders);
     }
 
     // Replay the whole conversation as if it were arriving live. Cheaper than a snapshot type, and
@@ -225,7 +225,7 @@ internal sealed class ConversationFeed
 
     private void EmitProducedImages(TurnCursor cursor, Turn turn)
     {
-        foreach (string path in Produced.Between(turn.StartedAt, turn.CompletedAt ?? DateTimeOffset.UtcNow))
+        foreach (string path in Produced.Between(Source.AgentSessionId, turn.StartedAt, turn.CompletedAt ?? DateTimeOffset.UtcNow))
             EmitImage(cursor, path);
     }
 

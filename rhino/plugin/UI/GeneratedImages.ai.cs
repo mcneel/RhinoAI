@@ -2,85 +2,57 @@ using System.IO;
 
 namespace Rhino.AI.UI;
 
-// Codex's image generator saves a render under the CODEX_HOME the plug-in hands it and the model is free never to say so, which is the whole of RH-98659.
-internal sealed class GeneratedImages
+// Codex's image generator saves a render to disk and the model is free never to say so, which is the whole of RH-98659.
+internal sealed class GeneratedImages(Func<Guid, IReadOnlyList<string>> foldersFor)
 {
     private static TimeSpan ListingLife { get; } = TimeSpan.FromMilliseconds(500);
 
-    private string? Root { get; }
+    private Func<Guid, IReadOnlyList<string>> FoldersFor { get; } = foldersFor;
+    private Guid ListedFor { get; set; }
     private DateTimeOffset ListedAt { get; set; } = DateTimeOffset.MinValue;
-    private Dictionary<string, Folder> Folders { get; } = new(StringComparer.Ordinal);
+    private IReadOnlyList<Produced> Listed { get; set; } = [];
 
-    private record struct Produced(string Path, DateTimeOffset WrittenAt);
+    private readonly record struct Produced(string Path, DateTimeOffset WrittenAt);
 
-    private sealed record Folder(DateTimeOffset TouchedAt, bool IsSettled, IReadOnlyList<Produced> Files);
-
-    public GeneratedImages(string? root) => Root = root;
-
-    public IReadOnlyList<string> Between(DateTimeOffset from, DateTimeOffset to)
+    public IReadOnlyList<string> Between(Guid sessionId, DateTimeOffset from, DateTimeOffset to)
     {
-        Rescan();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (sessionId != ListedFor || now - ListedAt >= ListingLife)
+        {
+            Listed = List(FoldersFor(sessionId));
+            ListedFor = sessionId;
+            ListedAt = now;
+        }
 
         List<string> within = [];
-        foreach (Folder folder in Folders.Values)
-            foreach (Produced file in folder.Files)
-                if (file.WrittenAt >= from && file.WrittenAt <= to)
-                    within.Add(file.Path);
+        foreach (Produced file in Listed)
+            if (file.WrittenAt >= from && file.WrittenAt <= to)
+                within.Add(file.Path);
         return within;
     }
 
-    private void Rescan()
+    private static List<Produced> List(IReadOnlyList<string> folders)
     {
-        if (Root is not { Length: > 0 } root)
-            return;
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (now - ListedAt < ListingLife)
-            return;
-        ListedAt = now;
-
-        try
-        {
-            DirectoryInfo top = new(root);
-            if (!top.Exists)
-                return;
-
-            HashSet<string> live = new(StringComparer.Ordinal);
-            Reread(top, live);
-            foreach (DirectoryInfo child in top.EnumerateDirectories("*", SearchOption.AllDirectories))
-                Reread(child, live);
-
-            foreach (string gone in Folders.Keys.Where(known => !live.Contains(known)).ToArray())
-                Folders.Remove(gone);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-        {
-            Folders.Clear();
-        }
-    }
-
-    private void Reread(DirectoryInfo folder, HashSet<string> live)
-    {
-        live.Add(folder.FullName);
-
-        DateTimeOffset touchedAt = folder.LastWriteTimeUtc;
-        if (Folders.TryGetValue(folder.FullName, out Folder? known) && known.IsSettled && known.TouchedAt == touchedAt)
-            return;
-
         List<Produced> files = [];
-        bool isSettled = true;
-        foreach (FileInfo file in folder.EnumerateFiles())
+        foreach (string folder in folders)
         {
-            if (!ServedImages.IsImage(file.Name))
-                continue;
-            if (file.Length == 0)
+            try
             {
-                isSettled = false;
-                continue;
-            }
-            files.Add(new Produced(file.FullName, file.LastWriteTimeUtc));
-        }
+                DirectoryInfo found = new(folder);
+                if (!found.Exists)
+                    continue;
 
-        Folders[folder.FullName] = new Folder(touchedAt, isSettled, files);
+                foreach (FileInfo file in found.EnumerateFiles())
+                {
+                    bool isStillBeingWritten = file.Length == 0;
+                    if (!isStillBeingWritten && ServedImages.IsImage(file.Name))
+                        files.Add(new Produced(file.FullName, file.LastWriteTimeUtc));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+            }
+        }
+        return files;
     }
 }

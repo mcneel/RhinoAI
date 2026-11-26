@@ -187,7 +187,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             // code_mode_host stays enabled: this model routes every tool call, MCP included, through code mode.
             string[] codexTools = ["shell_tool", "unified_exec", "multi_agent", "goals",
-                                            "image_generation", "view_image", "sleep_tool", "apps", "tool_suggest",
+                                            "view_image", "sleep_tool", "apps", "tool_suggest",
                                             "remote_plugin", "browser_use", "computer_use"];
 
             foreach (string builtInTool in codexTools)
