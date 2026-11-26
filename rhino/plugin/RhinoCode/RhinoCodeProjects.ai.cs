@@ -1,5 +1,3 @@
-#if R9
-
 using System.Text.RegularExpressions;
 
 using Rhino.Runtime.Code.Display;
@@ -99,5 +97,3 @@ internal static class RhinoCodeProjects
     }
 
 }
-
-#endif

@@ -4,7 +4,7 @@ End-to-end tests that drive the rhino MCP router directly over MCP (no LLM in th
 
 ## Pre-requisites
 
-- Build the router binary: `dotnet build rhino/plugin/RhinoAI.csproj -c Release -p:RhinoTarget=R9 -p:IsInRhino=false`
+- Build the router binary: `dotnet build rhino/plugin/RhinoAI.csproj -c Release -p:IsInRhino=false`
 
 ## Running
 

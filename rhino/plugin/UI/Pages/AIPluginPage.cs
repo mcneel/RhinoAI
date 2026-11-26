@@ -1,4 +1,3 @@
-#if R9
 using System.Collections.ObjectModel;
 using System.IO;
 using Eto.Drawing;
@@ -260,4 +259,3 @@ internal sealed class AIPluginPageViewModel : SimpleViewModel
     }
 
 }
-#endif

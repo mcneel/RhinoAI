@@ -47,9 +47,7 @@ internal static partial class GetContextTool
         DocSummary document = Try(() => SummarizeDocument(doc), new DocSummary(0, 0), "document", warnings);
         List<GrasshopperSummary> grasshopper =
         [Try(SummarizeGrasshopper1, new GrasshopperSummary("GH1", false, 0, 0), "grasshopper1", warnings)];
-#if R9
         grasshopper.Add(SummarizeGrasshopper2());
-#endif
 
         ContextSnapshot snapshot = new(
             selection,
@@ -129,8 +127,7 @@ internal static partial class GetContextTool
         return new DocSummary(objectCount, doc.Layers.Count);
     }
 
-    // GH1 only: it is the canvas compiled in every Rhino target (GH2 is R9-only and
-    // excluded from this build). A one-line component/wire count, no per-object detail.
+    // A one-line component/wire count, no per-object detail.
     private static GrasshopperSummary SummarizeGrasshopper1()
     {
         GH_Document? ghDoc = Grasshopper.Instances.ActiveCanvas?.Document;
@@ -156,7 +153,6 @@ internal static partial class GetContextTool
         return new GrasshopperSummary("GH1", true, components, wires);
     }
 
-#if R9
     private static GrasshopperSummary SummarizeGrasshopper2()
     {
         try
@@ -168,7 +164,6 @@ internal static partial class GetContextTool
             return new GrasshopperSummary("GH2", false, 0, 0);
         }
     }
-#endif
 
     public static double[] XYZ(Point3d p) => [p.X, p.Y, p.Z];
 }

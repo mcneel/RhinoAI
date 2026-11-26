@@ -12,9 +12,6 @@ internal static class GH2_StartTool
     [Description("Starts GH2")]
     public static IToolResult Launch(RhinoDoc doc)
     {
-        if (RhinoApp.Version.Major < 9)
-            return Failure(ToolError.GH_NotAvailable, "GH2 needs Rhino 9 or later");
-
         bool result = false;
         try
         {
