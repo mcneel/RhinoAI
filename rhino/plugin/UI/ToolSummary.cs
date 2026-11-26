@@ -8,17 +8,16 @@ namespace Rhino.AI;
 /// </summary>
 internal static class ToolSummary
 {
-    /// <summary>
-    /// Tools are named mcp__thing__tool which is verbose, this cleans up
-    /// </summary>
+    // Claude Code reports mcp__server__tool; Codex and the API harnesses report server__tool (ToolSchema.WireName).
     public static string RemoveUnderscoreUnderscoreNaming(string toolName)
     {
-        const string prefix = "mcp__";
-        if (!toolName.StartsWith(prefix, StringComparison.Ordinal))
-            return toolName;
+        const string separator = "__";
+        const string claudePrefix = "mcp__";
 
-        int separator = toolName.IndexOf("__", prefix.Length, StringComparison.Ordinal);
-        return separator < 0 ? toolName : toolName.Substring(separator + 2);
+        int start = toolName.StartsWith(claudePrefix, StringComparison.Ordinal) ? claudePrefix.Length : 0;
+        int split = toolName.IndexOf(separator, start, StringComparison.Ordinal);
+        bool hasServerAndTool = split > start && split + separator.Length < toolName.Length;
+        return hasServerAndTool ? toolName.Substring(split + separator.Length) : toolName;
     }
 
     // result is empty while the call is still in flight; show the in-progress verb without a verdict.
