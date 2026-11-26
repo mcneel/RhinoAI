@@ -169,10 +169,14 @@ internal static class LegacySettingsMigration
 
     private static AgentDefinition? CliAgentFor(string agentName, Agents agents) => agentName.Trim().ToLowerInvariant() switch
     {
-        "claude" => agents.FromParameters("Anthropic", AgentType.Cli) as AgentDefinition,
-        "codex" => agents.FromParameters("OpenAI", AgentType.Cli) as AgentDefinition,
+        "claude" => CliAgentOf("Anthropic", agents),
+        "codex" => CliAgentOf("OpenAI", agents),
         _ => null,
     };
+
+    // Not Agents.FromParameters: that skips disabled agents, and DisableAgent runs before the model and prompt steps.
+    private static AgentDefinition? CliAgentOf(string vendor, Agents agents)
+        => agents.Definitions.OfType<CliAgentDefinition>().FirstOrDefault(definition => string.Equals(definition.Vendor, vendor, StringComparison.OrdinalIgnoreCase));
 
     private static MigrationStep Skipped(string key, string legacyValue, string reason)
         => new(key, legacyValue, string.Format("skipped, {0}", reason));
