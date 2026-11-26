@@ -667,6 +667,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         string mcpJson = string.Empty;
         foreach (Mcp mcp in Mcps.Values)
         {
+            if (!mcp.Enabled) continue;
+            
             // TODO : MCP's
             if (mcp is StdioMcp stdioMcp)
             {
