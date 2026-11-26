@@ -290,10 +290,10 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument(agent.Model!.Name);
 
         // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
-        process.StartInfo.AddArgument("--fallback-model");
-        process.StartInfo.AddArgument("opus");
+        // process.StartInfo.AddArgument("--fallback-model");
+        // process.StartInfo.AddArgument("opus");
 
-        // --effort <level>                      Effort level for the current session (low, medium, high, xhigh, max)
+        // --effort <level> Effort level for the current session (low, medium, high, xhigh, max)
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
         {
             process.StartInfo.AddArgument("--effort");
