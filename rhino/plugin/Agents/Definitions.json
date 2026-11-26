@@ -59,6 +59,7 @@
       "searchPaths": {
         "win": [
           "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe",
+          "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe",
           "%APPDATA%/npm/codex.cmd"
         ],
         "mac": [
