@@ -18,7 +18,6 @@ public abstract class AgentCommand : Command
             return Result.Cancel;
         }
 
-        // NOTE : On Rhino 8 Mac Get Literal String doesn't work so idk
         GetString get = new();
         get.SetCommandPrompt(EnglishName);
 

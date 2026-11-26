@@ -526,7 +526,7 @@ internal partial class AIPanelViewModel : IDisposable
 
 #region TO THE PANEL
 
-#if R9 && NETCOREAPP
+#if NETCOREAPP
     private const bool PluginCommandsAvailable = true;
 #else
     private const bool PluginCommandsAvailable = false;

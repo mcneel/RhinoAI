@@ -1,4 +1,4 @@
-#if R9 && NETCOREAPP
+#if NETCOREAPP
 using Rhino.AI.ScriptProjects;
 
 namespace Rhino.AI.Tools;
@@ -7,7 +7,7 @@ namespace Rhino.AI.Tools;
 internal static class CreateTool
 {
     [McpServerTool("manage_plugin_commands", "Manage Plugin Commands", false, true)]
-    [Description("Give the user a reusable Rhino command. After every call the new or changed command is usable immediately. Use this when the user wants to create a reusable tool ('create me a command', 'make me a tool for this'). Rhino 9 or later only.")]
+    [Description("Give the user a reusable Rhino command. After every call the new or changed command is usable immediately. Use this when the user wants to create a reusable tool ('create me a command', 'make me a tool for this').")]
     public static IToolResult ManagePluginCommands(
         RhinoDoc doc,
         [Description("add | update | delete")] string action,
@@ -15,9 +15,6 @@ internal static class CreateTool
         [Description("C# source for the command. Required for add and update. Use `__rhino_doc__` as the document handle, as with run_csharp.")] string? script = null,
         [Description("Optional Icon if adding or updating a command (recommended)")] string? svg = null)
     {
-        if (!ScriptProjectRunner.IsSupportedRhino)
-            return Failure(ToolError.Unsupported, $"This needs Rhino 9 or later; this is Rhino {RhinoApp.Version.Major}.");
-
         if (!PluginNaming.TryParseAction(action, out PluginCommandAction parsedAction))
             return Failure(ToolError.BadArgument, $"Unknown action \"{action}\"", "Use add, update or delete.");
 
