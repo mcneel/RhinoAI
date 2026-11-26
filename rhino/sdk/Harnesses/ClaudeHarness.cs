@@ -332,12 +332,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             process.StartInfo.AddArgument("");
         }
 
-        string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
-        if (systemPrompt.Length > 0)
-        {
-            process.StartInfo.AddArgument("--append-system-prompt");
-            process.StartInfo.AddArgument(systemPrompt);
-        }
+        process.StartInfo.AddArgument("--append-system-prompt");
+        process.StartInfo.AddArgument(CliSystemPrompt(start));
 
         process.StartInfo.AddArgument("--disable-slash-commands");
 

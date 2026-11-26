@@ -87,6 +87,9 @@ public class Harness
         return false;
     }
 
+    protected static string CliSystemPrompt(IEnumerable<ITurn> start)
+        => string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt).Prepend(GetPrompt("RhinoHarnessPrompt.md")));
+
     protected static string GetPrompt(string fileName)
     {
         string resourceName = $"Rhino.AI.Prompts.{fileName}";

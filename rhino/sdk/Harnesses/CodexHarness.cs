@@ -172,12 +172,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("-c");
         process.StartInfo.AddArgument("model_reasoning_effort=\"high\"");
 
-        string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
-        if (systemPrompt.Length > 0)
-        {
-            process.StartInfo.AddArgument("-c");
-            process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
-        }
+        process.StartInfo.AddArgument("-c");
+        process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(CliSystemPrompt(start))}");
 
         // Output as JSON
         process.StartInfo.AddArgument("--json");
