@@ -560,14 +560,18 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     }
 
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
-    private IEnumerable<string> GetMcpArgs(Agent agent)
+    // default_tools_approval_mode='approve': codex exec pins the approval policy to "never", which refuses every non-read-only call before it reaches the server.
+    internal IEnumerable<string> GetMcpArgs(Agent agent)
     {
-        string disabledTools = TomlArray(AIInstances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
+
+            string[] prohibited = ProhibitedTools(mcp.Name);
+            bool wholeServerProhibited = prohibited.Contains("*");
+            if (wholeServerProhibited) continue;
 
             string? transport = mcp switch
             {
@@ -579,9 +583,15 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             if (transport is null) continue;
 
             yield return "-c";
-            yield return $"mcp_servers.{mcp.Name}={{{transport}, {timeouts}, disabled_tools={disabledTools}}}";
+            yield return $"mcp_servers.{mcp.Name}={{{transport}, {timeouts}, disabled_tools={TomlArray(prohibited)}, default_tools_approval_mode='approve'}}";
         }
     }
+
+    private static string[] ProhibitedTools(string mcpName)
+        => AIInstances.Preferences.Permissions.ProhibitedTools()
+            .Where(permission => permission.McpName == "*" || string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase))
+            .Select(permission => permission.ToolName)
+            .ToArray();
 
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
 
