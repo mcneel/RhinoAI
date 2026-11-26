@@ -539,13 +539,11 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private static List<ITurn> ParseResult(JsonNode node)
     {
-        string? error = null;
-        List<string> errors = [];
-        if (node["is_error"]?.GetValue<bool>() == true)
-        {
-            error = node["result"]?.GetValue<string>();
-        }
+        string? error = node["is_error"]?.GetValue<bool>() == true ? node["result"]?.GetValue<string>() : null;
+        TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
+        int? tokenCount = GetTokenCount(node);
 
+        List<string> errors = [];
         if (node["errors"] is JsonArray jsonArr)
         {
             foreach (JsonNode? jItem in jsonArr)
@@ -555,42 +553,33 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             }
         }
 
-        if (node["stop_reason"] is JsonNode stopProp)
+        StopReason reason = node["stop_reason"]?.GetValue<string>().ToLowerInvariant() switch
         {
-            string stopReason = stopProp.GetValue<string>();
-            StopReason reason = stopReason.ToLowerInvariant() switch
-            {
-                "end_turn" => StopReason.EndTurn,
-                "tool_use" => StopReason.ToolUse,
-                "max_tokens" => StopReason.MaxTokens,
-                "refusal" => StopReason.Refusal,
-                "error" => StopReason.Error,
+            "end_turn" => StopReason.EndTurn,
+            "tool_use" => StopReason.ToolUse,
+            "max_tokens" => StopReason.MaxTokens,
+            "refusal" => StopReason.Refusal,
+            "error" => StopReason.Error,
+            null when error is null && errors.Count == 0 => StopReason.EndTurn,
+            null => StopReason.Error,
 
-                _ => StopReason.Other
-            };
+            _ => StopReason.Other
+        };
 
-            TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
+        if (!string.IsNullOrEmpty(error) || errors.Count == 0)
+            return [new TurnEnd(reason, error, duration: duration, tokenCount: tokenCount)];
 
-            if (string.IsNullOrEmpty(error))
-            {
-                List<ITurn> results = [];
-                results.AddRange(errors.Select(e => new TurnEnd(reason, e, duration: duration)));
-                return results;
-            }
+        return errors.Select((e, i) => new TurnEnd(reason, e, duration: duration, tokenCount: i == 0 ? tokenCount : null)).ToList<ITurn>();
+    }
 
-            return [new TurnEnd(reason, error, duration: duration)];
-        }
+    private static int? GetTokenCount(JsonNode node)
+    {
+        if (node["usage"] is not JsonNode usage) return null;
 
-        StopReason endReason = error is null ? StopReason.EndTurn : StopReason.Error;
-
-        if (string.IsNullOrEmpty(error))
-        {
-            List<ITurn> results = [];
-            results.AddRange(errors.Select(e => new TurnEnd(StopReason.Error, e)));
-            return results;
-        }
-
-        return [new TurnEnd(endReason, error)];
+        return (usage["input_tokens"]?.GetValue<int>() ?? 0)
+            + (usage["cache_creation_input_tokens"]?.GetValue<int>() ?? 0)
+            + (usage["cache_read_input_tokens"]?.GetValue<int>() ?? 0)
+            + (usage["output_tokens"]?.GetValue<int>() ?? 0);
     }
 
     private List<ITurn> ParseAssisant(JsonNode node)
@@ -599,9 +588,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         JsonNode? content = message?["content"];
         if (content is not JsonArray contents) return [];
 
-        // TODO : Input tokens or output tokens?
-        int? tokenCount = message?["usage"]?["input_tokens"]?.GetValue<int>() ?? null;
-
+        // Tokens come from the result event only: every block repeats its message's usage, captured before output finishes.
         DateTime? timestamp = GetTimestamp(node);
 
         List<ITurn> turns = new(contents.Count);
@@ -609,9 +596,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         {
             ITurn? turn = cont?["type"]?.ToString() switch
             {
-                "tool_use" => GetToolTurn(cont, timestamp, tokenCount),
-                "thinking" => GetThinking(cont, timestamp, tokenCount),
-                "text" => GetText(cont, timestamp, tokenCount),
+                "tool_use" => GetToolTurn(cont, timestamp),
+                "thinking" => GetThinking(cont, timestamp),
+                "text" => GetText(cont, timestamp),
 
                 _ => null,
             };
@@ -626,23 +613,23 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return turns;
     }
 
-    private static MessageTurn? GetText(JsonNode content, DateTime? timestamp, int? tokenCount)
+    private static MessageTurn? GetText(JsonNode content, DateTime? timestamp)
     {
         string? text = content["text"]?.GetValue<string>();
         if (string.IsNullOrEmpty(text)) return null;
-        return new MessageTurn(text, RoleType.Assistant, timestamp, tokenCount: tokenCount);
+        return new MessageTurn(text, RoleType.Assistant, timestamp);
     }
 
-    private static ThinkingTurn? GetThinking(JsonNode content, DateTime? timestamp, int? tokenCount)
+    private static ThinkingTurn? GetThinking(JsonNode content, DateTime? timestamp)
     {
         string? thinking = content["thinking"]?.GetValue<string>();
         if (string.IsNullOrEmpty(thinking)) return null;
-        return new ThinkingTurn(thinking, timestamp: timestamp, tokenCount: tokenCount);
+        return new ThinkingTurn(thinking, timestamp: timestamp);
     }
 
     private System.Collections.Concurrent.ConcurrentDictionary<string, string> ToolIdToTool { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp, int? tokenCount)
+    private ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp)
     {
         string? id = content["id"]?.GetValue<string>();
         if (string.IsNullOrEmpty(id)) return null;
@@ -651,7 +638,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         if (string.IsNullOrEmpty(name)) return null;
 
         List<IToolArg> args = GetArgs(content["input"]);
-        ToolTurn turn = new(id, name, args, timestamp: timestamp, tokenCount: tokenCount);
+        ToolTurn turn = new(id, name, args, timestamp: timestamp);
         ToolIdToTool[id] = name;
         return turn;
     }

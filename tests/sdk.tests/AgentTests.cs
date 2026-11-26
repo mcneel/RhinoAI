@@ -157,6 +157,18 @@ public class AgentTests
 
     [Test, Category("Manual")]
     [CancelAfter(60_000)]
+    public async Task DesktopClaude_CapturesTokenUsage(CancellationToken token)
+    {
+        Agent? agent = Agent.GetClaudeDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        IAgentResult result = await agent.SendAsync("What is a Chicken?", token);
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.TokenCount, Is.GreaterThan(100));
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(60_000)]
     public async Task DesktopCodex(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
