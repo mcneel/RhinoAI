@@ -26,8 +26,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel codexModel) yield break;
-        if (!await EnsureLoggedIn(token, codexModel))
+        if (agent.Model is not CodexDesktopModel) yield break;
+        if (!await EnsureLoggedIn(token, agent))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -99,9 +99,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         return turns;
     }
 
-    private Process GetCodexProcess(IModel model, CancellationToken token)
+    private Process GetCodexProcess(Agent agent, CancellationToken token)
     {
-        CodexDesktopModel codexModel = (CodexDesktopModel)model;
+        CodexDesktopModel codexModel = (CodexDesktopModel)agent.Model!;
         string exePath = codexModel.ExePath ?? throw new FileNotFoundException("Codex CLI not found.");
 
         Process process = new()
@@ -128,12 +128,18 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
+        if (!agent.Config.UseLocalSettings)
+        {
+            Directory.CreateDirectory(CodexDesktopModel.IsolatedCodexHome);
+            process.StartInfo.Environment["CODEX_HOME"] = CodexDesktopModel.IsolatedCodexHome;
+        }
+
         return process;
     }
 
     private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
-        Process process = GetCodexProcess(agent.Model!, token);
+        Process process = GetCodexProcess(agent, token);
 
         process.StartInfo.AddArgument("exec");
 
@@ -309,12 +315,12 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token, CodexDesktopModel codexModel)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, Agent agent)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process codex = GetCodexProcess(codexModel, token);
+            using Process codex = GetCodexProcess(agent, token);
             codex.StartInfo.AddArgument("login");
             codex.StartInfo.AddArgument("status");
 
@@ -333,7 +339,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
                 return LoggedIn;
             }
 
-            LoggedIn = await LogIn(token, codexModel);
+            LoggedIn = await LogIn(token, agent);
             return LoggedIn;
         }
         catch
@@ -342,9 +348,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token, CodexDesktopModel codexModel)
+    private async Task<bool> LogIn(CancellationToken token, Agent agent)
     {
-        using Process codex = GetCodexProcess(codexModel, token);
+        using Process codex = GetCodexProcess(agent, token);
         codex.StartInfo.AddArgument("login");
 
         using CancellationTokenRegistration _ = token.Register(() =>
