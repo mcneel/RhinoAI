@@ -154,9 +154,12 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("--skip-git-repo-check");
 
         // Model
-        //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.AddArgument("--model");
-        process.StartInfo.AddArgument(agent.Model!.Name);
+        //   --model <model>  Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
+        if (!ModelDefinition.IsDefault(agent.Model?.Name) && !string.IsNullOrEmpty(agent.Model?.Name))
+        {
+            process.StartInfo.AddArgument("--model");
+            process.StartInfo.AddArgument(agent.Model.Name);
+        }
 
         // Effort
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))

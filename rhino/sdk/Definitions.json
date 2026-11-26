@@ -24,7 +24,9 @@
         ]
       },
       "efforts": [ "default", "low", "medium", "high", "xhigh", "max" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "Opus (latest)", "id": "opus" },
         { "display": "Sonnet (latest)", "id": "sonnet" },
         { "display": "Haiku (latest)", "id": "haiku" },
@@ -72,7 +74,9 @@
         ]
       },
       "efforts": [ "default", "minimal", "low", "medium", "high", "xhigh", "max", "ultra" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
@@ -167,7 +171,9 @@
       "protocol": "chatCompletions",
       "EnvVar" : "OPENROUTER_API_KEY",
       "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh", "max" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "Auto", "id": "openrouter/auto" }
       ]
     },

@@ -35,7 +35,6 @@ public interface IAgentDefinition
 
     public string DefaultModelId { get; set; }
 
-    // Looks like a dev could currently change this?
     public string? CurrentModelId { get; internal set; }
 
     internal IModel? CurrentModel { get; }
@@ -347,4 +346,12 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 [Flags]
 internal enum Platform { None = 0, Windows = 1, OSX = 2, All = Windows | OSX }
 
-public sealed record ModelDefinition(string Vendor, string DisplayName, string ModelId);
+public sealed record ModelDefinition(string Vendor, string DisplayName, string ModelId)
+{
+
+    // Never sent: the CLI or API falls back to whatever model it is configured to use.
+    public const string DefaultId = "default";
+
+    public static bool IsDefault(string? modelId) => string.Equals(modelId, DefaultId, StringComparison.OrdinalIgnoreCase);
+
+}

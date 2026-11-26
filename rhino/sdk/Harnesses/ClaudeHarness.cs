@@ -286,8 +286,11 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.AddArgument("--model");
-        process.StartInfo.AddArgument(agent.Model!.Name);
+        if (!ModelDefinition.IsDefault(agent.Model?.Name) && !string.IsNullOrEmpty(agent.Model?.Name))
+        {
+            process.StartInfo.AddArgument("--model");
+            process.StartInfo.AddArgument(agent.Model.Name);
+        }
 
         // --fallback-model <model>              Enable automatic fallback to specified model(s) when the default model is overloaded or not available.
         // process.StartInfo.AddArgument("--fallback-model");
