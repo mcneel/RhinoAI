@@ -125,18 +125,29 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
 
 }
 
+internal sealed record SearchPath(string Path, bool Enabled);
+
 internal sealed class CliAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
-    public List<string> WinSearchPaths { get; init; } = [];
-    public List<string> MacSearchPaths { get; init; } = [];
+    public List<SearchPath> WinSearchPaths { get; init; } = [];
+    public List<SearchPath> MacSearchPaths { get; init; } = [];
+
+    public IEnumerable<string> ValidPaths()
+    {
+        List<SearchPath> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
+        foreach(SearchPath path in paths)
+        {
+            if (!path.Enabled) continue;
+            yield return path.Path;
+        }
+    }
 
     public override bool Available
     {
         get
         {
-            IEnumerable<string> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
-            foreach (string path in paths)
+            foreach (string path in ValidPaths())
             {
                 // TODO : Glob
                 if (System.IO.File.Exists(path)) return true;
@@ -151,7 +162,7 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
         ModelDefinition? def = PrivateAvailableModels.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
         if (def is null) return null;
 
-        IEnumerable<string> searchPaths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
+        IEnumerable<string> searchPaths = ValidPaths();
 
         IModel? model = Vendor.ToLowerInvariant() switch
         {

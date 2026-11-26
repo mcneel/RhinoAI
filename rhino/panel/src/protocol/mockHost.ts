@@ -9,6 +9,7 @@ import type {
   ConversationSnapshot,
   HistoryEntry,
   HostEvent,
+  McpInfo,
   PanelCommand,
   ToolCall,
   ToolPatch,
@@ -68,6 +69,13 @@ class Script {
 }
 
 // ---------------------------------------------------------------- fixtures
+
+let mcps: McpInfo[] = [
+  { name: 'DefaultTools', kind: 'memory', tools: 6, enabled: true, canToggle: true },
+  { name: 'Rhino', kind: 'stdio', tools: 42, enabled: true, canToggle: true },
+  { name: 'rhino', kind: 'http', tools: 0, enabled: true, canToggle: false },
+  { name: 'Grasshopper', kind: 'memory', tools: 11, enabled: false, canToggle: true },
+];
 
 const AGENTS: readonly AgentInfo[] = [
   { name: 'claude', label: 'Claude Code', model: 'claude-opus-5', modelLabel: 'Opus 5', availability: 'ready', builtin: true },
@@ -777,6 +785,37 @@ const SCENARIOS: readonly Scenario[] = [
     },
   },
   {
+    match: /delete|erase|permission|allow/i,
+    async run(host, turnId, script) {
+      await host.text(turnId, script, lines('I will clear the construction layer. That tool needs your go-ahead first.', ''));
+
+      const args = { layer: 'Construction', objects: 214, purge: true };
+      const id = nextId('perm');
+      host.emit({ type: 'permission', permission: { id, tool: 'delete_objects', mcp: 'Rhino', args } });
+      let decision: string | undefined;
+      try {
+        [decision] = await script.awaitAnswer();
+      } finally {
+        host.emit({ type: 'permission.clear', id });
+      }
+
+      if (decision === 'allow' || decision === 'always') {
+        host.status('Deleting…');
+        await host.tool(turnId, script, 'delete_objects', 'deleted 214 objects on Construction', args, 480, {
+          mutated: true,
+          result: { deleted: 214, layer: 'Construction' },
+        });
+        host.status(null);
+        await host.text(turnId, script, lines('Done: 214 objects removed and the layer purged.'));
+      } else {
+        await host.text(turnId, script, lines('Understood, I left the construction layer alone.'));
+      }
+
+      host.emit({ type: 'turn.usage', turnId, usage: usage(3_100, 420, 0.02) });
+      host.emit({ type: 'turn.end', turnId, status: 'ok' });
+    },
+  },
+  {
     match: /.*/,
     async run(host, turnId, script, prompt) {
       host.status('Thinking…');
@@ -797,6 +836,7 @@ const SCENARIOS: readonly Scenario[] = [
           '- something with **layers** or **organize**: a table result and a summary',
           '- something with **selected** or **problems**: a failing tool card and an inline question',
           '- something with **capture** or **view**: an image result rendered in place',
+          '- something with **delete** or **permission**: a tool call that waits for Allow or Deny',
           '',
           'Or press `/` for commands and `@` to attach document context.',
         ),
@@ -895,6 +935,10 @@ export class MockHost implements Bridge {
         this.script?.answer([]);
         return;
 
+      case 'permission.answer':
+        this.script?.answer([command.answer]);
+        return;
+
       case 'turn.undo':
         this.notice('info', 'Reverted every document change that turn made (one Rhino undo record).');
         return;
@@ -921,6 +965,15 @@ export class MockHost implements Bridge {
 
       case 'settings.open':
         this.notice('info', 'AI settings would open as a Rhino options page.');
+        return;
+
+      case 'mcps.list':
+        this.emit({ type: 'mcps', mcps: [...mcps] });
+        return;
+
+      case 'mcp.toggle':
+        mcps = mcps.map((mcp) => (mcp.name === command.name && mcp.canToggle ? { ...mcp, enabled: command.enabled } : mcp));
+        this.emit({ type: 'mcps', mcps: [...mcps] });
         return;
 
       case 'agent.login':

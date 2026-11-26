@@ -2,8 +2,8 @@ using System.Collections.Generic;
 
 namespace Rhino.AI;
 
-// Serialized transcript shapes. Dumb, immutable, behavior-free: the persisted mirror of the
-// live Conversation/Turn/TurnEvent graph, flattened for PersistentSettings + JSON.
+// AI : Would it not make more sense to move all of this to ITurn's?
+//      AIInstances.Conversations
 internal sealed record TurnEventDto(
     TurnEventKind Kind,
     string Text,

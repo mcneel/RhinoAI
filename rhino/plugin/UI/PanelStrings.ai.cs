@@ -113,6 +113,16 @@ internal static class PanelStrings
         ["composer.stop"] = Localization.LocalizeString("Stop  (Esc)", 152),
         ["composer.send"] = Localization.LocalizeString("Send  (Enter)", 153),
         ["composer.overAttachmentLimit"] = Localization.LocalizeString("{0} is {1}, over the {2} attachment limit.", 154),
+        ["composer.mcps"] = LOC.STR("MCPs attached to this agent"),
+
+        ["mcp.menuHead"] = LOC.STR("MCPs"),
+        ["mcp.loading"] = LOC.STR("Loading…"),
+        ["mcp.none"] = LOC.STR("No MCPs attached"),
+        ["mcp.kindStdio"] = LOC.STR("Local process"),
+        ["mcp.kindHttp"] = LOC.STR("HTTP"),
+        ["mcp.kindMemory"] = LOC.STR("Built in"),
+        ["mcp.toolCountOne"] = LOC.STR("1 tool"),
+        ["mcp.toolCountMany"] = LOC.STR("{0} tools"),
 
         ["cmd.newHint"] = Localization.LocalizeString("Start a fresh conversation", 155),
         ["cmd.historyHint"] = Localization.LocalizeString("Browse past conversations", 156),
@@ -130,6 +140,12 @@ internal static class PanelStrings
         ["ask.somethingElse"] = Localization.LocalizeString("Something else…", 167),
         ["ask.yourAnswer"] = Localization.LocalizeString("Your answer…", 168),
         ["ask.progress"] = Localization.LocalizeString("Question {0} of {1}", 169),
+
+        ["permission.title"] = LOC.STR("Allow {0}?"),
+        ["permission.from"] = LOC.STR("From {0}"),
+        ["permission.allow"] = LOC.STR("Allow"),
+        ["permission.always"] = LOC.STR("Always allow"),
+        ["permission.deny"] = LOC.STR("Deny"),
 
         ["notice.dismiss"] = Localization.LocalizeString("Dismiss", 170),
 

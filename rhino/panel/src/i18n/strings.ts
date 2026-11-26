@@ -107,6 +107,16 @@ export const EN = {
   'composer.stop': 'Stop  (Esc)',
   'composer.send': 'Send  (Enter)',
   'composer.overAttachmentLimit': '{0} is {1}, over the {2} attachment limit.',
+  'composer.mcps': 'MCPs attached to this agent',
+
+  'mcp.menuHead': 'MCPs',
+  'mcp.loading': 'Loading…',
+  'mcp.none': 'No MCPs attached',
+  'mcp.kindStdio': 'Local process',
+  'mcp.kindHttp': 'HTTP',
+  'mcp.kindMemory': 'Built in',
+  'mcp.toolCountOne': '1 tool',
+  'mcp.toolCountMany': '{0} tools',
 
   'cmd.newHint': 'Start a fresh conversation',
   'cmd.historyHint': 'Browse past conversations',
@@ -124,6 +134,12 @@ export const EN = {
   'ask.somethingElse': 'Something else…',
   'ask.yourAnswer': 'Your answer…',
   'ask.progress': 'Question {0} of {1}',
+
+  'permission.title': 'Allow {0}?',
+  'permission.from': 'From {0}',
+  'permission.allow': 'Allow',
+  'permission.always': 'Always allow',
+  'permission.deny': 'Deny',
 
   'notice.dismiss': 'Dismiss',
 

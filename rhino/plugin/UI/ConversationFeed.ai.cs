@@ -7,7 +7,7 @@ namespace Rhino.AI.UI;
 //
 // Conversation only announces "something changed", so this holds the high-water mark of what it has
 // already reported and emits the difference. It is deliberately the only place that knows that, so
-// when StreamJsonAgent grows real per-block notifications this class is what gets deleted, not
+// when the agent runner grows real per-block notifications this class is what gets deleted, not
 // rewritten in three places.
 //
 // Pump is not thread-safe and must run on the UI thread; the panel marshals Changed before calling.
@@ -32,6 +32,11 @@ internal sealed class ConversationFeed
     private int QuestionSeq { get; set; }
 
     private record struct PosedQuestion(PendingQuestion Question, string Id);
+
+    private List<PosedPermission> Asked { get; } = new();
+    private int PermissionSeq { get; set; }
+
+    private record struct PosedPermission(PendingPermission Permission, string Id);
 
     private record struct ToolOutcome(string Result, bool Done);
 
@@ -65,10 +70,11 @@ internal sealed class ConversationFeed
         Cursors.Clear();
         LifecycleSent = 0;
         Posed.Clear();
+        Asked.Clear();
 
         Emit(new ConversationEvent(new PanelConversation(
             Source.AgentSessionId.ToString(),
-            Source.AgentName,
+            Source.AgentKey,
             Source.DocTitle,
             Source.StartedAt.ToString("O"),
             Array.Empty<PanelTurn>(),
@@ -115,6 +121,7 @@ internal sealed class ConversationFeed
         }
 
         PumpQuestion();
+        PumpPermission();
     }
 
     private static IReadOnlyList<PanelAttachment> Describe(string turnId, IReadOnlyList<AttachmentInfo> attachments)
@@ -259,6 +266,47 @@ internal sealed class ConversationFeed
                 question.Mode == AskUserMode.Multi ? "multi" : "single",
                 AllowOther: true)));
         }
+    }
+
+    private void PumpPermission()
+    {
+        IReadOnlyList<PendingPermission> pending = Source.PendingPermissions;
+
+        for (int i = Asked.Count - 1; i >= 0; i--)
+        {
+            if (pending.Contains(Asked[i].Permission))
+                continue;
+            Emit(new PermissionClearEvent(Asked[i].Id));
+            Asked.RemoveAt(i);
+        }
+
+        foreach (PendingPermission permission in pending)
+        {
+            if (Asked.Any(asked => ReferenceEquals(asked.Permission, permission)))
+                continue;
+
+            string id = $"permission-{++PermissionSeq}";
+            Asked.Add(new PosedPermission(permission, id));
+            Emit(new PermissionEvent(new PanelPermission(
+                id,
+                ToolSummary.RemoveUnderscoreUnderscoreNaming(permission.ToolName),
+                permission.McpName,
+                Payload(permission.ArgsJson))));
+        }
+    }
+
+    public bool TryResolvePermission(string id, out PendingPermission permission)
+    {
+        foreach (PosedPermission asked in Asked)
+        {
+            if (asked.Id != id)
+                continue;
+            permission = asked.Permission;
+            return true;
+        }
+
+        permission = default!;
+        return false;
     }
 
     // Resolve the question instances a panel answer refers to, so a stale card cannot answer a

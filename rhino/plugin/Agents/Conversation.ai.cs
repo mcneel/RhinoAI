@@ -97,10 +97,12 @@ internal sealed class Conversation
     // and a later call adds to the set rather than replacing it.
     private List<PendingQuestion> PendingQuestionList { get; } = new();
 
-    public Conversation(Guid agentSessionId, string agentName, string docTitle)
+    private List<PendingPermission> PendingPermissionList { get; } = new();
+
+    public Conversation(Guid agentSessionId, string agentKey, string docTitle)
     {
         AgentSessionId = agentSessionId;
-        AgentName = agentName;
+        AgentKey = agentKey;
         DocTitle = docTitle;
         StartedAt = DateTimeOffset.UtcNow;
     }
@@ -110,10 +112,10 @@ internal sealed class Conversation
     // kept (not reset to now) so the recents ordering and header stay truthful, and the restored turns
     // are marked complete. A malformed SessionId degrades to a fresh GUID so a corrupt store can never
     // throw here.
-    public static Conversation Restore(ConversationDto dto)
+    public static Conversation Restore(ConversationDto dto, string agentKey)
     {
         Guid sessionId = Guid.TryParse(dto.SessionId, out Guid parsed) ? parsed : Guid.NewGuid();
-        Conversation convo = new(sessionId, dto.AgentName, dto.DocTitle)
+        Conversation convo = new(sessionId, agentKey, dto.DocTitle)
         {
             StartedAt = dto.StartedAt,
         };
@@ -141,7 +143,7 @@ internal sealed class Conversation
     // Mutable because a rejected resume forces the agent to open a fresh session, and the saved id
     // has to follow or the next resume names a session the CLI has never heard of.
     public Guid AgentSessionId { get; private set; }
-    public string AgentName { get; }
+    public string AgentKey { get; }
     public string DocTitle { get; }
     public DateTimeOffset StartedAt { get; private init; }
 
@@ -257,6 +259,22 @@ internal sealed class Conversation
                 for (int i = PendingQuestionList.Count - 1; i >= 0; i--)
                     if (ReferenceEquals(PendingQuestionList[i], question))
                         PendingQuestionList.RemoveAt(i);
+        Changed?.Invoke();
+    }
+
+    public IReadOnlyList<PendingPermission> PendingPermissions { get { lock (Sync) return PendingPermissionList.ToArray(); } }
+
+    public void AddPendingPermission(PendingPermission permission)
+    {
+        lock (Sync)
+            PendingPermissionList.Add(permission);
+        Changed?.Invoke();
+    }
+
+    public void RemovePendingPermission(PendingPermission permission)
+    {
+        lock (Sync)
+            PendingPermissionList.Remove(permission);
         Changed?.Invoke();
     }
 

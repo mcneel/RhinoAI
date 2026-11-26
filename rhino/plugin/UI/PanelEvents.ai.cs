@@ -25,9 +25,12 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(TurnEndEvent), "turn.end")]
 [JsonDerivedType(typeof(QuestionEvent), "question")]
 [JsonDerivedType(typeof(QuestionClearEvent), "question.clear")]
+[JsonDerivedType(typeof(PermissionEvent), "permission")]
+[JsonDerivedType(typeof(PermissionClearEvent), "permission.clear")]
 [JsonDerivedType(typeof(AttachmentsAddEvent), "attachments.add")]
 [JsonDerivedType(typeof(NoticeEvent), "notice")]
 [JsonDerivedType(typeof(StatusEvent), "status")]
+[JsonDerivedType(typeof(McpsEvent), "mcps")]
 [JsonDerivedType(typeof(ZoomEvent), "zoom")]
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
 internal abstract record PanelEvent;
@@ -47,9 +50,15 @@ internal sealed record TurnUsageEvent(string TurnId, PanelUsage Usage) : PanelEv
 internal sealed record TurnEndEvent(string TurnId, string Status, string? Error) : PanelEvent;
 internal sealed record QuestionEvent(PanelQuestion Question) : PanelEvent;
 internal sealed record QuestionClearEvent(string Id) : PanelEvent;
+internal sealed record PermissionEvent(PanelPermission Permission) : PanelEvent;
+internal sealed record PermissionClearEvent(string Id) : PanelEvent;
 internal sealed record AttachmentsAddEvent(IReadOnlyList<PanelAttachment> Attachments) : PanelEvent;
 internal sealed record NoticeEvent(string Level, string Text) : PanelEvent;
 internal sealed record StatusEvent(string? Text) : PanelEvent;
+internal sealed record McpsEvent(IReadOnlyList<PanelMcp> Mcps) : PanelEvent;
+
+// Kind is stdio, http or memory. Tools is 0 until a lazily started MCP has been initialized.
+internal sealed record PanelMcp(string Name, string Kind, int Tools, bool Enabled, bool CanToggle);
 
 // The host owns the menu, the panel owns the zoom ladder, so this carries an intent rather than a
 // level and the ladder is never duplicated on this side. "set" is the exception: the stored level.
@@ -147,6 +156,8 @@ internal sealed record PanelConversation(
     string StartedAt,
     IReadOnlyList<PanelTurn> Turns,
     bool ReadOnly);
+
+internal sealed record PanelPermission(string Id, string Tool, string Mcp, JsonNode? Args);
 
 internal sealed record PanelQuestion(
     string Id,

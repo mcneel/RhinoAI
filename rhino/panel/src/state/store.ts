@@ -14,7 +14,9 @@ import {
   type HistoryEntry,
   type HostEvent,
   type HostInfo,
+  type McpInfo,
   type NoticeLevel,
+  type PendingPermission,
   type PendingQuestion,
   type PlanStep,
   type TokenUsage,
@@ -95,11 +97,14 @@ export class Store {
   readonly scheme = signal<'light' | 'dark'>('dark');
   readonly agents = signal<readonly AgentInfo[]>([]);
   readonly activeAgentName = signal<string | null>(null);
+  /** null until the host answers an `mcps.list`, and again whenever the agent changes under it. */
+  readonly mcps = signal<readonly McpInfo[] | null>(null);
   readonly context = signal<readonly ContextItem[]>([]);
   readonly history = signal<readonly HistoryEntry[]>([]);
   readonly session = signal<SessionView | null>(null);
   readonly turns = signal<readonly TurnView[]>([]);
   readonly questions = signal<readonly PendingQuestion[]>([]);
+  readonly permissions = signal<readonly PendingPermission[]>([]);
   readonly notices = signal<readonly Notice[]>([]);
   readonly status = signal<string | null>(null);
 
@@ -119,8 +124,10 @@ export class Store {
 
   readonly running: ReadSignal<boolean> = computed(() => this.currentTurn()?.status() === 'running');
 
-  /** The agent is not thinking while it is blocked on unanswered questions. */
-  readonly thinking: ReadSignal<boolean> = computed(() => this.running() && this.questions().length === 0);
+  /** The agent is not thinking while it is blocked on unanswered questions or permissions. */
+  readonly thinking: ReadSignal<boolean> = computed(
+    () => this.running() && this.questions().length === 0 && this.permissions().length === 0,
+  );
 
   readonly readOnly: ReadSignal<boolean> = computed(() => this.session()?.readOnly === true);
 
@@ -142,7 +149,12 @@ export class Store {
 
       case 'agents':
         this.agents.set(event.agents);
+        if (this.activeAgentName() !== event.active) this.mcps.set(null);
         this.activeAgentName.set(event.active);
+        return;
+
+      case 'mcps':
+        this.mcps.set(event.mcps);
         return;
 
       case 'context':
@@ -163,6 +175,7 @@ export class Store {
         this.activeAgentName.set(event.snapshot.agent);
         this.turns.set(event.snapshot.turns.map(turnFrom));
         this.questions.set([]);
+        this.permissions.set([]);
         return;
 
       // Idempotent on id. A host that re-announces a turn or a call must not be able to put two
@@ -248,6 +261,16 @@ export class Store {
         this.questions.set((list) => list.filter((q) => q.id !== event.id));
         return;
 
+      case 'permission':
+        this.permissions.set((list) =>
+          list.some((p) => p.id === event.permission.id) ? list : [...list, event.permission],
+        );
+        return;
+
+      case 'permission.clear':
+        this.permissions.set((list) => list.filter((p) => p.id !== event.id));
+        return;
+
       // The same remark twice is still one remark: a repeat bumps the toast already showing.
       case 'notice': {
         const showing = this.notices().find((n) => n.level === event.level && n.text === event.text);
@@ -273,6 +296,13 @@ export class Store {
 
   dismissNotice(id: string): void {
     this.notices.set((list) => list.filter((notice) => notice.id !== id));
+  }
+
+  /** Flips the switch before the host answers; the host's `mcps` reply then replaces the list with what it actually did. */
+  setMcpEnabled(name: string, enabled: boolean): void {
+    this.mcps.set((list) =>
+      list === null ? null : list.map((mcp) => (mcp.name === name && mcp.canToggle ? { ...mcp, enabled } : mcp)),
+    );
   }
 
   private turn(id: string): TurnView | undefined {

@@ -38,3 +38,31 @@ test('the same text shows again once the earlier one is gone', () => {
   assert.equal(store.notices().length, 1);
   assert.notEqual(store.notices()[0]?.id, first.id);
 });
+
+test('the mcp list belongs to one agent and is forgotten when the agent changes', () => {
+  const store = new Store();
+  store.apply({ type: 'agents', agents: [], active: 'claude' });
+  store.apply({ type: 'mcps', mcps: [{ name: 'Rhino', kind: 'stdio', tools: 3, enabled: true, canToggle: true }] });
+
+  store.apply({ type: 'agents', agents: [], active: 'claude' });
+  assert.equal(store.mcps()?.length, 1);
+
+  store.apply({ type: 'agents', agents: [], active: 'codex' });
+  assert.equal(store.mcps(), null);
+});
+
+test('a switch flips at once, but never on an mcp the host has not created yet', () => {
+  const store = new Store();
+  store.apply({
+    type: 'mcps',
+    mcps: [
+      { name: 'Rhino', kind: 'stdio', tools: 3, enabled: true, canToggle: true },
+      { name: 'rhino', kind: 'http', tools: 0, enabled: true, canToggle: false },
+    ],
+  });
+
+  store.setMcpEnabled('Rhino', false);
+  store.setMcpEnabled('rhino', false);
+
+  assert.deepEqual(store.mcps()?.map((mcp) => mcp.enabled), [false, true]);
+});

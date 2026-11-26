@@ -7,6 +7,8 @@ using Eto.Forms;
 
 using Rhino.Runtime;
 
+using Rhino.AI.UI.Settings;
+
 namespace Rhino.AI.UI;
 
 internal partial class AIPanelViewModel : IDisposable
@@ -23,10 +25,10 @@ internal partial class AIPanelViewModel : IDisposable
 
     private ConversationFeed? Review { get; set; }
 
-    private string? PinnedAgentName { get; set; }
+    private Guid? PinnedAgentId { get; set; }
 
     private Conversation? ActiveConversation =>
-        Document is { } doc && AgentHost.TryFor(doc, out IAgentRunner agent) ? agent.Conversation : null;
+        Document is { } doc && AgentHost.TryFor(doc, out AgentRunner agent) ? agent.Conversation : null;
 
     public void Attach()
     {
@@ -34,6 +36,8 @@ internal partial class AIPanelViewModel : IDisposable
         RhinoDoc.SelectObjects += OnSelectionChanged;
         RhinoDoc.DeselectObjects += OnSelectionChanged;
         RhinoDoc.DeselectAllObjects += OnSelectionChanged;
+        SettingsViewModel.Saved += OnSettingsSaved;
+        AgentHost.AttachPanel(DocumentSerialNumber);
 
         ShowCurrent();
     }
@@ -44,7 +48,9 @@ internal partial class AIPanelViewModel : IDisposable
         RhinoDoc.SelectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectObjects -= OnSelectionChanged;
         RhinoDoc.DeselectAllObjects -= OnSelectionChanged;
-        
+        SettingsViewModel.Saved -= OnSettingsSaved;
+        AgentHost.DetachPanel(DocumentSerialNumber);
+
         Unsubscribe();
     }
 
@@ -180,6 +186,7 @@ internal partial class AIPanelViewModel : IDisposable
             LoginCommand => Login(),
             AnswerQuestionCommand answer => Answer(answer.Items),
             DismissQuestionCommand dismiss => Dismiss(dismiss.Ids),
+            AnswerPermissionCommand permission => AnswerPermission(permission.Id, permission.Answer),
             ToolChipCommand chip => RunToolChip(chip),
             PickAttachmentsCommand => PickAttachments(),
             OpenImageCommand open => OpenImage(open.Id),
@@ -189,6 +196,8 @@ internal partial class AIPanelViewModel : IDisposable
             OpenUrlCommand open => OpenUrl(open.Url),
             ClipboardCommand copy => CopyToClipboard(copy.Text),
             OpenMenuCommand menu => ShowMenu(menu),
+            ListMcpsCommand => SendMcps(),
+            ToggleMcpCommand toggle => ToggleMcp(toggle.Name, toggle.Enabled),
 
             _ => false
         };
@@ -216,7 +225,7 @@ internal partial class AIPanelViewModel : IDisposable
         if ((text.Length == 0 && attachments.Count == 0) || Document is not { } doc)
             return false;
 
-        if (!AgentHost.TryFor(doc, out IAgentRunner _))
+        if (!AgentHost.TryFor(doc, out AgentRunner _))
         {
             Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 4)));
             return false;
@@ -246,7 +255,7 @@ internal partial class AIPanelViewModel : IDisposable
 
     private bool CancelCurrentAgentTurn()
     {
-        if (!AgentHost.TryFor(Document, out IAgentRunner running)) return false;
+        if (!AgentHost.TryFor(Document, out AgentRunner running)) return false;
         running.Cancel();
         return true;
     }
@@ -258,7 +267,7 @@ internal partial class AIPanelViewModel : IDisposable
         if (Document is { } doc)
         {
             AgentHost.Stop(doc);
-            if (PinnedAgentName is { } pinned)
+            if (PinnedAgentId is { } pinned)
                 AgentHost.SetActive(doc, pinned);
         }
 
@@ -276,7 +285,8 @@ internal partial class AIPanelViewModel : IDisposable
         }
 
         Unsubscribe();
-        Review = new ConversationFeed(Conversation.Restore(dto), Bridge.Post, CodexHome.GeneratedImages);
+        string agentKey = AgentHost.Find(dto.AgentName)?.Id.ToString() ?? dto.AgentName;
+        Review = new ConversationFeed(Conversation.Restore(dto, agentKey), Bridge.Post);
         Review.Replay(readOnly: true);
         return true;
     }
@@ -300,29 +310,28 @@ internal partial class AIPanelViewModel : IDisposable
 
         Persist();
 
-        if (!AgentHost.TryResume(doc, dto, out IAgentRunner _))
+        if (!AgentHost.TryResume(doc, dto, out AgentRunner resumed))
         {
-            Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Cannot resume: agent '{0}' is no longer available.", 7), dto.AgentName)));
+            Bridge.Post(new NoticeEvent("error", string.Format(Localization.LocalizeString("Cannot resume: agent '{0}' is no longer available.", 7), AgentLabel(dto.AgentName))));
             return false;
         }
 
-        PinnedAgentName = dto.AgentName;
+        PinnedAgentId = resumed.Definition.Id;
         ShowLive();
         SendAgents();
         SendHistory();
         return true;
     }
 
-    private bool SelectAgent(string name)
+    private bool SelectAgent(string key)
     {
         if (Document is not { } doc)
             return false;
-        if (AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Name == name) is not { Available: true } picked
-            || !AISettings.IsEnabled(picked))
+        if (AgentHost.Find(key) is not { } picked || !AgentHost.IsUsable(picked))
             return false;
 
-        PinnedAgentName = name;
-        AgentHost.SetActive(doc, name);
+        PinnedAgentId = picked.Id;
+        AgentHost.SetActive(doc, picked.Id);
         ShowLive();
         SendAgents();
         return true;
@@ -331,25 +340,17 @@ internal partial class AIPanelViewModel : IDisposable
     private bool Login()
     {
         if (!RhinoApp.IsInternetAccessAllowed) return false;
-        
+
         if (Document is not { } doc)
             return false;
-        if (!AgentHost.TryFor(doc, out IAgentRunner agent))
+        if (!AgentHost.TryFor(doc, out AgentRunner agent))
         {
             Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("No AI agent available. Open AI settings to configure one.", 8)));
             return false;
         }
-        if (!AgentDispatch.TryEnsureListener(doc, out int port))
-        {
-            Bridge.Post(new NoticeEvent("error", Localization.LocalizeString("Could not start an MCP server for this document.", 9)));
-            return false;
-        }
 
         ExitReview();
-        string workingDirectory = !string.IsNullOrEmpty(doc.Path)
-            ? Path.GetDirectoryName(doc.Path) ?? Path.GetTempPath()
-            : Path.GetTempPath();
-        _ = agent.LoginAsync($"http://localhost:{port}/agent", workingDirectory);
+        agent.Login();
         return true;
     }
 
@@ -384,6 +385,27 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
 
         ActiveConversation?.ClearPendingQuestions(questions);
+        return true;
+    }
+
+    private bool AnswerPermission(string id, PermissionAnswer answer)
+    {
+        if (Feed is null || !Feed.TryResolvePermission(id, out PendingPermission permission) || permission.IsDecided)
+            return false;
+
+        switch (answer)
+        {
+            case PermissionAnswer.Deny:
+                permission.Decide(false);
+                break;
+            case PermissionAnswer.Allow:
+                permission.Decide(true);
+                break;
+            case PermissionAnswer.Always:
+                PermissionPrompt.AllowAlways(permission);
+                break;
+        }
+
         return true;
     }
 
@@ -448,18 +470,22 @@ internal partial class AIPanelViewModel : IDisposable
 
     private static bool SetZoom(double level)
     {
-        AISettings.ZoomLevel = (int)Math.Round(level * 100);
+        AIInstances.Preferences.ZoomLevel = (int)Math.Round(level * 100);
         return true;
     }
 
-    private bool OpenSettings()
+    private static bool OpenSettings()
     {
-        AISettingsDialog dialog = new();
-        dialog.ShowModal(View);
+        string command = HostUtils.RunningOnWindows ? "_OptionsPage" : "_PreferencesPage";
+        Application.Instance.AsyncInvoke(() => RhinoApp.RunScript(string.Format("! {0} _{1}", command, AIOptionsPage.EnglishTitle), false));
+        return true;
+    }
+
+    private void OnSettingsSaved(object? sender, EventArgs e)
+    {
         SendAgents();
         SendContext();
         SendHistory();
-        return true;
     }
 
     private static bool OpenUrl(string url)
@@ -518,7 +544,7 @@ internal partial class AIPanelViewModel : IDisposable
             PanelStrings.LanguageTag(),
             PanelStrings.Localized()));
 
-        Bridge.Post(new ZoomEvent("set", AISettings.ZoomLevel / 100.0));
+        Bridge.Post(new ZoomEvent("set", AIInstances.Preferences.ZoomLevel / 100.0));
 
         SendAgents();
         SendContext();
@@ -534,29 +560,66 @@ internal partial class AIPanelViewModel : IDisposable
     private void SendAgents()
     {
         List<PanelAgent> agents = new();
-        foreach (AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
+        foreach (IAgentDefinition definition in AgentHost.Definitions)
         {
-            bool enabled = AISettings.IsEnabled(definition);
+            bool enabled = definition.Enabled && RhinoApp.IsInternetAccessAllowed;
             string availability = !enabled ? "disabled" : !definition.Available ? "missing" : "ready";
-            string model = AISettings.EffectiveModel(definition) is { Length: > 0 } chosen ? chosen : "default";
+            string model = definition.CurrentModelId is { Length: > 0 } current ? current
+                : definition.DefaultModelId is { Length: > 0 } fallback ? fallback
+                : "default";
             agents.Add(new PanelAgent(
-                definition.Name,
-                definition.Name,
+                definition.Id.ToString(),
+                definition.DisplayName,
                 model,
-                definition.Models.FirstOrDefault(spec => spec.Id == model)?.Label() ?? model,
+                definition.AvailableModels.FirstOrDefault(m => m.ModelId == model)?.DisplayName ?? model,
                 availability,
                 null));
         }
 
-        string? active = Document is { } doc && AgentHost.TryFor(doc, out IAgentRunner agent)
-            ? agent.Name
-            : AgentRegistry.Instance.AllDefinitions.FirstOrDefault(r => r.Available && AISettings.IsEnabled(r))?.Name;
+        IAgentDefinition? active = Document is { } doc && AgentHost.TryFor(doc, out AgentRunner agent)
+            ? agent.Definition
+            : AgentHost.Definitions.FirstOrDefault(AgentHost.IsUsable);
 
-        if (active is { Length: > 0 })
-            PinnedAgentName = active;
+        if (active is not null)
+            PinnedAgentId = active.Id;
 
-        Bridge.Post(new AgentsEvent(agents, active));
+        Bridge.Post(new AgentsEvent(agents, active?.Id.ToString()));
     }
+
+    private bool SendMcps()
+    {
+        List<PanelMcp> mcps = new();
+        if (Document is { } doc && AgentHost.TryFor(doc, out AgentRunner runner))
+        {
+            foreach (Mcp mcp in runner.Mcps)
+                mcps.Add(new PanelMcp(mcp.Name, McpKind(mcp), mcp.Tools.Count, mcp.Enabled, CanToggle: true));
+
+            // The router is only created by the first prompt, so until then there is no instance to toggle.
+            if (!runner.HasAttachedMcps && !mcps.Any(m => string.Equals(m.Name, RouterMcpConfig.ServerName, StringComparison.OrdinalIgnoreCase)))
+                mcps.Add(new PanelMcp(RouterMcpConfig.ServerName, "http", 0, Enabled: true, CanToggle: false));
+        }
+
+        Bridge.Post(new McpsEvent(mcps));
+        return true;
+    }
+
+    private bool ToggleMcp(string name, bool enabled)
+    {
+        if (Document is not { } doc || !AgentHost.TryFor(doc, out AgentRunner runner))
+            return false;
+
+        if (runner.Mcps.FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)) is { } mcp)
+            mcp.Enabled = enabled;
+
+        return SendMcps();
+    }
+
+    private static string McpKind(Mcp mcp) => mcp switch
+    {
+        StdioMcp => "stdio",
+        HttpMcp => "http",
+        _ => "memory",
+    };
 
     private void SendHistory()
     {
@@ -573,12 +636,12 @@ internal partial class AIPanelViewModel : IDisposable
             entries.Add(new PanelHistoryEntry(
                 convo.SessionId,
                 Title(convo),
-                convo.AgentName,
+                AgentLabel(convo.AgentName),
                 convo.DocTitle,
                 convo.StartedAt.ToString("O"),
                 convo.Turns.Count,
                 new PanelUsage(total.InputTokens, total.OutputTokens, total.CostUsd),
-                Resumable(convo.AgentName)));
+                AgentHost.Find(convo.AgentName) is { } definition && AgentHost.IsUsable(definition)));
         }
         Bridge.Post(new HistoryEvent(entries));
     }
@@ -592,8 +655,8 @@ internal partial class AIPanelViewModel : IDisposable
         return line.Length > 80 ? line.Substring(0, 80).TrimEnd() + "…" : line;
     }
 
-    private static bool Resumable(string agentName) =>
-        AgentRegistry.Instance.AllDefinitions.Any(r => r.Name == agentName && r.Available && AISettings.IsEnabled(r));
+    private static string AgentLabel(string agentKey) =>
+        AgentHost.Find(agentKey)?.DisplayName ?? agentKey;
 
     private static string DocTitle(RhinoDoc doc) =>
         string.IsNullOrEmpty(doc.Path) ? "Untitled" : Path.GetFileName(doc.Path);
@@ -637,7 +700,7 @@ internal partial class AIPanelViewModel : IDisposable
 
         Action handler = () => RhinoApp.InvokeOnUiThread(new Action(PumpIfLive));
         convo.Changed += handler;
-        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post, CodexHome.GeneratedImages), handler);
+        Subscription = new ConversationSubscription(convo, new ConversationFeed(convo, Bridge.Post), handler);
     }
 
     private void Unsubscribe()

@@ -66,9 +66,38 @@ public class Harness
     /// <returns>Each turn of the loop as it arrives</returns>
     public virtual async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
+        List<ITurn> turns = start is List<ITurn> s ? s : new(start);
+        if (IsFirstTurn(turns))
+        {
+            InsertRhinoHarnessPrompt(ref turns);
+        }
+
         await foreach (ITurn turn in Loop.StreamAsync(agent, start, token))
             yield return turn;
     }
+
+    protected static bool InsertRhinoHarnessPrompt(ref List<ITurn> turns)
+    {
+        if (GetPrompt("RhinoHarnessPrompt.md") is string prompt)
+        {
+            turns.Add(new MessageTurn(prompt, RoleType.System));
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static string GetPrompt(string fileName)
+    {
+        string resourceName = $"Rhino.AI.Prompts.{fileName}";
+        using System.IO.Stream stream = typeof(RhinoHarness).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded prompt '{resourceName}' is missing.");
+        using System.IO.StreamReader reader = new(stream);
+        return reader.ReadToEnd();
+    }
+
+    protected static bool IsFirstTurn(IEnumerable<ITurn> start)
+        => !start.Any(t => t is TurnEnd);
 
     /// <summary>
     /// Uses a tool and returns the result.
@@ -137,7 +166,7 @@ public class Harness
 /// </summary>
 public sealed class HarnessConfig
 {
-    
+
     /// <summary>The working directory of the Harness</summary>
     public string CurrentWorkingDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
@@ -160,7 +189,7 @@ public interface IPermissionRequest
 
     /// <summary>The args of the permission</summary>
     public IReadOnlyList<IToolArg> Args { get; }
-    
+
 }
 
 /// <summary>
@@ -178,10 +207,13 @@ internal sealed class PermissionRequest(Agent agent, Mcp mcp, ITool tool, List<I
     /// <summary>The name of the tool</summary>
     public string ToolName { get; } = tool.Name;
 
+    /// <summary>Every argument the tool declares, supplied in this call or not</summary>
+    public IReadOnlyList<string> DeclaredArgs { get; } = Array.ConvertAll(tool.Args, arg => arg.Name);
+
     /// <summary>Current permission status of the request</summary>
     public bool HasPermission { get; set; } = false;
 
     /// <summary>The args of the permission</summary>
     public IReadOnlyList<IToolArg> Args { get; } = args;
-    
+
 }

@@ -15,8 +15,7 @@ internal static class HostPrompt
         HostUtils.RegisterNamedCallback(PromptCallback, (_, e) => e.Set("result", Prompt(e)));
     }
 
-    private static bool IsAvailable() =>
-        AgentRegistry.Instance.AllDefinitions.Any(definition => definition.Available && AISettings.IsEnabled(definition));
+    private static bool IsAvailable() => AgentHost.AnyUsable;
 
     private static bool Prompt(NamedParametersEventArgs e)
     {

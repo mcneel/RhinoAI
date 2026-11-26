@@ -155,17 +155,6 @@ public sealed class RhinoHarness : Harness
 
         return finalTurns;
     }
-    
-    private static bool InsertRhinoHarnessPrompt(ref List<ITurn> turns)
-    {
-        if (GetPrompt("RhinoHarnessPrompt.md") is string prompt)
-        {
-            turns.Add(new MessageTurn(prompt, RoleType.System));
-            return true;
-        }
-        
-        return false;
-    }
 
     // TODO : This needs way more info
     private static MessageTurn ClassificationPrompt(string classification)
@@ -181,18 +170,6 @@ public sealed class RhinoHarness : Harness
 
         return new MessageTurn(message, RoleType.System);
     }
-
-    private static string GetPrompt(string fileName)
-    {
-        string resourceName = $"Rhino.AI.Prompts.{fileName}";
-        using Stream stream = typeof(RhinoHarness).Assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException($"Embedded prompt '{resourceName}' is missing.");
-        using StreamReader reader = new(stream);
-        return reader.ReadToEnd();
-    }
-
-    private static bool IsFirstTurn(IEnumerable<ITurn> start)
-        => !start.Any(t => t is TurnEnd);
 
     private async Task<List<ITurn>> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
     {
@@ -270,5 +247,7 @@ public sealed class RhinoHarness : Harness
 
     //     throw new NotImplementedException("oops");
     // }
+
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
 }

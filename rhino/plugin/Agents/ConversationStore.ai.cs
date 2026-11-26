@@ -3,7 +3,7 @@ using Rhino.PlugIns;
 
 namespace Rhino.AI;
 
-// Persists conversation transcripts under the AISettings Conversations child node, one JSON
+// Persists conversation transcripts under the LegacyAISettings Conversations child node, one JSON
 // string per session keyed by its session id. Rewritten on every CompleteTurn so a crash never
 // loses more than the in-flight turn. PersistentSettings has no transactional bulk write, so a
 // flat key-per-conversation layout keeps each Save a single SetString.
@@ -12,7 +12,7 @@ internal static class ConversationStore
     // Cap to bound the user's chosen PersistentSettings backing store (PLAN risk: bloat).
     private const int MaxConversations = 50;
 
-    private static PersistentSettings Node => AISettings.Conversations;
+    private static PersistentSettings Node => LegacyAISettings.Conversations;
 
     // Serializes the read-modify-write on the shared Conversations node. Save runs off-thread
     // from multiple agents (CliAgent, AgentRunner), one per doc; without this, one Save's SetString
@@ -140,7 +140,7 @@ internal static class ConversationStore
 
         return new ConversationDto(
             conversation.AgentSessionId.ToString(),
-            conversation.AgentName,
+            conversation.AgentKey,
             conversation.DocTitle,
             conversation.StartedAt,
             lifecycle,

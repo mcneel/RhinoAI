@@ -1,6 +1,6 @@
 using System.IO;
 using System.Reflection;
-
+using Rhino.AI.PlugIns;
 using Rhino.PlugIns;
 using Rhino.Runtime;
 using Rhino.UI;
@@ -25,6 +25,16 @@ public class RhinoAIPlugin : PlugIn
             Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
             UI.HostPrompt.Register();
         }
+
+#if R9
+        PlugInPermissionStore.ApplyToRegistry();
+        // The AI settings list only registered plug-ins, so register now rather than on first agent use.
+        if (PlugInRegistry.Register() is null)
+        {
+            // The plugin failed to register itself!
+            return LoadReturnCode.ErrorShowDialog;
+        }
+#endif
 
         // CommandInterceptors = new CommandInterceptorHost();
         RhinoAIHost.RegisterDocumentWatcher();

@@ -9,7 +9,7 @@ internal static class PluginNameResolver
         if (PluginNaming.TrySanitisePluginName(requestedPluginName, out string requested))
             return requested;
 
-        if (PluginNaming.TrySanitisePluginName(AISettings.ScriptPluginName, out string configured))
+        if (PluginNaming.TrySanitisePluginName(AIInstances.Preferences.ScriptPluginName, out string configured))
             return configured;
 
         return PluginNaming.PluginNameFor(LoggedInUserName() ?? Environment.UserName);

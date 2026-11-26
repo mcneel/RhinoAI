@@ -102,41 +102,44 @@ public class McpConfigEditTests
         Assert.That(node["mcpServers"]!["rhino"], Is.Null);
     }
 
-    [Test]
-    public void OpenCode_Add_WritesLocalEntry()
+    [TestCase("")]
+    [TestCase("  \n")]
+    public void StandardJson_EmptyFile_HasNoEntryAndAcceptsAdd(string original)
     {
-        string original = """{ "mcp": {} }""";
+        Assert.That(McpConfigEdit.HasEntry(McpConfigFormat.StandardJson, original, Server), Is.False);
 
-        string result = McpConfigEdit.Add(McpConfigFormat.OpenCodeJson, original, Server, Command, NoEnv)!;
+        string result = McpConfigEdit.Add(McpConfigFormat.StandardJson, original, Server, Command, NoEnv)!;
 
-        JsonNode node = Parse(result);
-        Assert.That(node["mcp"]!["rhino"]!["type"]!.GetValue<string>(), Is.EqualTo("local"));
-        Assert.That(node["mcp"]!["rhino"]!["command"]![0]!.GetValue<string>(), Is.EqualTo(Command));
-        Assert.That(node["mcp"]!["rhino"]!["enabled"]!.GetValue<bool>(), Is.True);
+        Assert.That(Parse(result)["mcpServers"]!["rhino"]!["command"]!.GetValue<string>(), Is.EqualTo(Command));
     }
 
     [Test]
-    public void OpenCode_Add_UsesEnvironmentKeyForEnv()
+    public void Copilot_Add_WritesStdioEntryWithAllTools()
     {
-        string original = """{ "mcp": {} }""";
+        string original = """{ "mcpServers": { "other": { "type": "stdio", "command": "x" } } }""";
 
-        string result = McpConfigEdit.Add(McpConfigFormat.OpenCodeJson, original, Server, Command, Env)!;
+        string result = McpConfigEdit.Add(McpConfigFormat.CopilotJson, original, Server, Command, Env)!;
 
-        JsonNode node = Parse(result);
-        Assert.That(node["mcp"]!["rhino"]!["environment"]!["RHINO_MCP_DEFAULT_VERSION"]!.GetValue<string>(), Is.EqualTo("9"));
+        JsonNode rhino = Parse(result)["mcpServers"]!["rhino"]!;
+        Assert.That(rhino["type"]!.GetValue<string>(), Is.EqualTo("stdio"));
+        Assert.That(rhino["command"]!.GetValue<string>(), Is.EqualTo(Command));
+        Assert.That(rhino["args"]!.AsArray(), Is.Empty);
+        Assert.That(rhino["tools"]![0]!.GetValue<string>(), Is.EqualTo("*"));
+        Assert.That(rhino["env"]!["RHINO_MCP_DEFAULT_VERSION"]!.GetValue<string>(), Is.EqualTo("9"));
+        Assert.That(Parse(result)["mcpServers"]!["other"], Is.Not.Null);
     }
 
     [Test]
-    public void OpenCode_Remove_DropsRhino()
+    public void Copilot_AddThenRemove_LeavesSiblings()
     {
-        string original = """{ "mcp": { "rhino": { "type": "local" }, "other": {} } }""";
+        string original = """{ "mcpServers": { "other": { "command": "x" } } }""";
 
-        string result = McpConfigEdit.Remove(McpConfigFormat.OpenCodeJson, original, Server)!;
+        string added = McpConfigEdit.Add(McpConfigFormat.CopilotJson, original, Server, Command, NoEnv)!;
+        Assert.That(McpConfigEdit.HasEntry(McpConfigFormat.CopilotJson, added, Server), Is.True);
 
-        JsonNode node = Parse(result);
-        Assert.That(node["mcp"]!["rhino"], Is.Null);
-        Assert.That(node["mcp"]!["other"], Is.Not.Null);
-        Assert.That(McpConfigEdit.HasEntry(McpConfigFormat.OpenCodeJson, result, Server), Is.False);
+        string removed = McpConfigEdit.Remove(McpConfigFormat.CopilotJson, added, Server)!;
+        Assert.That(McpConfigEdit.HasEntry(McpConfigFormat.CopilotJson, removed, Server), Is.False);
+        Assert.That(Parse(removed)["mcpServers"]!["other"], Is.Not.Null);
     }
 
     [Test]

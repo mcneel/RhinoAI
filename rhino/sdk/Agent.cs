@@ -117,7 +117,7 @@ public sealed class Agent
     {
         if (!TurnGate.Wait(0, CancellationToken.None))
             throw new InvalidOperationException($"{nameof(StreamAsync)} cannot be run until the previous call has finished on the same agent.");
-        
+
         // NOTE : A Developer cannot check this _before_ running and this is kind of a slap in the face!
 
         if (!AIInstances.Agents.Exists(Definition))
@@ -311,6 +311,10 @@ public sealed class Agent
     {
         return new(definition, token, new Harness(token));
     }
+
+    // Should the conversation get copied over?
+    internal Agent WithHarness(Harness harness)
+        => new(Definition, Token, harness);
 
     /// <summary>
     /// Returns the users prefered agent, harness, and overall config

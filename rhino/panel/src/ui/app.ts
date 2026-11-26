@@ -10,6 +10,7 @@ import { hostMenu } from './hostMenu.js';
 import type { PanelContext } from './context.js';
 import { header } from './header.js';
 import { historyDrawer } from './history.js';
+import { permissionOverlay } from './permission.js';
 import { questionOverlay } from './question.js';
 import { icon } from './icons.js';
 import { transcript } from './transcript.js';
@@ -175,6 +176,7 @@ export function app(ctx: PanelContext): Child {
       () => composer(ctx),
     ),
     questionOverlay(ctx),
+    permissionOverlay(ctx),
     when(
       () => ui.overlay() === 'agents',
       () => [el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }), agentMenu(ctx)],

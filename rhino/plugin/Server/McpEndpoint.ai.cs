@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 
 using Rhino.Runtime;
 
+using Rhino.AI.UI.Settings;
+
 namespace Rhino.AI.Server;
 
 // McpServer gives each listener prefix one dispatcher, handling MCP-flavoured
@@ -138,11 +140,13 @@ internal sealed class McpDispatcher
     private static Task<JsonRpcResponse> HandlePing() =>
         Task.FromResult(new JsonRpcResponse { Result = new { } });
 
+    private static bool IsDenied(string toolName)
+        => AIInstances.Preferences.Permissions.ProhibitedTools().Any(permission =>
+            permission.McpName == ToolCatalogReader.BuiltinServerName
+            && (permission.ToolName == "*" || string.Equals(permission.ToolName, toolName, StringComparison.OrdinalIgnoreCase)));
+
     private Task<JsonRpcResponse> HandleToolsList()
     {
-        HashSet<string> disabled = Filtered
-            ? new HashSet<string>(Rhino.AI.AISettings.DisabledTools, StringComparer.OrdinalIgnoreCase)
-            : [];
         // In-panel-only tools (e.g. ask_user) are hidden from the external `/`
         // endpoint; only the in-panel `/agent` endpoint (Filtered) lists them.
         return Task.FromResult(new JsonRpcResponse
@@ -151,7 +155,7 @@ internal sealed class McpDispatcher
             {
                 Tools = _tools.All
                     .Where(t => Filtered || !t.InPanelOnly)
-                    .Where(t => !disabled.Contains(t.Name))
+                    .Where(t => !Filtered || !IsDenied(t.Name))
                     .Select(t => new ToolDescriptor
                 {
                     Name = t.Name,
@@ -249,7 +253,7 @@ internal sealed class McpDispatcher
                 }
             };
 
-        if (Filtered && Rhino.AI.AISettings.DisabledTools.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+        if (Filtered && IsDenied(p.Name))
             return new JsonRpcResponse
             {
                 Error = new JsonRpcError

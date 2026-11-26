@@ -8,6 +8,7 @@ import type { StringKey } from '../i18n/strings.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
+import { mcpMenu } from './mcpMenu.js';
 
 interface Command {
   key: string;
@@ -264,6 +265,10 @@ export function composer(ctx: PanelContext): Child {
     },
     menu,
     when(
+      () => ui.overlay() === 'mcps',
+      () => mcpMenu(ctx),
+    ),
+    when(
       () => ui.pickedContext().length > 0,
       () =>
         el(
@@ -325,6 +330,22 @@ export function composer(ctx: PanelContext): Child {
       el(
         'div',
         { class: 'composer-actions' },
+        el(
+          'button',
+          {
+            class: () => `icon-btn${ui.overlay() === 'mcps' ? ' on' : ''}`,
+            type: 'button',
+            title: () => t('composer.mcps'),
+            'aria-label': () => t('composer.mcps'),
+            'aria-expanded': () => String(ui.overlay() === 'mcps'),
+            onClick: () => {
+              // Asked fresh every open: the first prompt attaches more, and a lazy MCP only knows its tools once started.
+              if (ui.overlay() !== 'mcps') ctx.send({ type: 'mcps.list' });
+              ui.openOverlay('mcps');
+            },
+          },
+          icon('plus', 15),
+        ),
         el(
           'button',
           { class: 'icon-btn', type: 'button', title: () => t('composer.attachFile'), onClick: () => ctx.send({ type: 'attachments.pick' }) },
