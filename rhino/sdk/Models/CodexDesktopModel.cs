@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -10,5 +12,9 @@ internal sealed class CodexDesktopModel(string name, IEnumerable<string> searchP
     public override bool Available => ExePath is not null;
 
     internal string? ExePath => SearchPaths.FirstOrDefault();
+
+    // app-server has no --ignore-user-config, so a separate CODEX_HOME is the only clean way to keep ~/.codex out of Rhino sessions.
+    internal string IsolatedCodexHome { get; init; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "McNeel", "Rhinoceros", "ai", "codex");
 
 }
