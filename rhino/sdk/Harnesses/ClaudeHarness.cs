@@ -524,7 +524,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return [];
     }
 
-    private static List<ITurn> ParseResult(JsonNode node)
+    internal static List<ITurn> ParseResult(JsonNode node)
     {
         string? error = node["is_error"]?.GetValue<bool>() == true ? node["result"]?.GetValue<string>() : null;
         TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
@@ -540,7 +540,11 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             }
         }
 
-        StopReason reason = node["stop_reason"]?.GetValue<string>().ToLowerInvariant() switch
+        // stop_reason belongs to the model's last reply, so a run the CLI cut short (turn limit, budget) still reads "tool_use".
+        string? subtype = node["subtype"]?.GetValue<string>();
+        bool isAborted = subtype is not null && subtype != "success";
+
+        StopReason reason = isAborted ? StopReason.Error : node["stop_reason"]?.GetValue<string>().ToLowerInvariant() switch
         {
             "end_turn" => StopReason.EndTurn,
             "tool_use" => StopReason.ToolUse,
@@ -555,6 +559,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         string? message = !string.IsNullOrEmpty(error) ? error
             : errors.Count > 0 ? string.Join("\n", errors)
+            : isAborted ? $"Claude stopped early ({subtype})."
             : null;
 
         return [new TurnEnd(reason, message, duration: duration, tokenCount: tokenCount)];
