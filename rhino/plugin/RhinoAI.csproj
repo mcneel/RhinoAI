@@ -3,7 +3,6 @@
   <Import Project="$(RhinoSrc4Dir)RhinoProjectPropertySheets/Rhino.CS.PlugIn.props" Condition="'$(IsInRhino)' == 'true'" />
 
   <PropertyGroup>
-    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
     <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Windows'))">win</PluginOS>
     <PluginOS Condition="'$(PluginOS)' == '' AND $([MSBuild]::IsOSPlatform('Linux'))">linux</PluginOS>
     <PluginOS Condition="'$(PluginOS)' == ''">osx</PluginOS>
@@ -26,11 +25,9 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>disable</ImplicitUsings>
-    <DefineConstants>$(DefineConstants);$(RhinoTarget)</DefineConstants>
     <!-- CS0436: version.cs is also compiled into referenced Rhino assemblies whose internals are visible here. -->
     <NoWarn>$(NoWarn);NU1701;CA1416;MSB3277;CS0436</NoWarn>
-    <PluginOutputDir Condition="'$(PluginOutputDir)' == '' AND '$(RhinoTarget)' == 'R9' AND '$(RhinoPlugInOutputDir)' != ''">$([MSBuild]::NormalizePath('$(RhinoPlugInOutputDir)', 'RhinoAI'))</PluginOutputDir>
-    <PluginOutputDir Condition="'$(PluginOutputDir)' == ''">$(MSBuildProjectDirectory)/bin/$(RhinoTarget)-$(PluginOS)/$(Configuration)</PluginOutputDir>
+    <PluginOutputDir Condition="'$(PluginOutputDir)' == ''">$(MSBuildProjectDirectory)/bin/$(PluginOS)/$(Configuration)</PluginOutputDir>
     <OutputPath>$(PluginOutputDir)/</OutputPath>
     <!-- macOS and Linux: no target-framework subfolder, so the payload is flat in Plug-ins/RhinoAI
          (RhinoAI.rhp + dependencies + router/) exactly like Plug-ins/Grasshopper2. The Mac
@@ -49,7 +46,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../acp/Acp.csproj" />
-    <ProjectReference Include="../sdk/sdk.csproj" Condition="'$(RhinoTarget)' == 'R9'" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
@@ -63,20 +59,9 @@
   </ItemGroup>
 
   <!-- 8.19 is the first Rhino 8 package with .NET Core assets. -->
-  <ItemGroup Condition="'$(RhinoTarget)' == 'R8'">
+  <ItemGroup>
     <PackageReference Include="RhinoCommon" Version="8.19.25132.1001" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="8.19.25132.1001" ExcludeAssets="runtime" />
-    <Compile Remove="Tools/GH2/**/*.cs;Resources/GH2/**/*.cs" />
-    <!-- R8 does not ship the SDK, so the helpers it owns are compiled in directly. -->
-    <Compile Include="../sdk/ProcessArguments.ai.cs" Link="ProcessArguments.ai.cs" />
-    <Compile Include="../sdk/NetFrameworkPolyfills.ai.cs" Link="NetFrameworkPolyfills.ai.cs" Condition="'$(TargetFramework)' == 'net48'" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(RhinoTarget)' == 'R9'">
-    <PackageReference Include="RhinoCommon" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper2" Version="9.0.26132.12305-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="RhinoCode" Version="9.0.26244.12303-beta" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
@@ -127,7 +112,7 @@
     <ItemGroup>
       <_RouterRid Include="$([MSBuild]::Unescape($(RouterRids)))" />
     </ItemGroup>
-    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:RhinoTarget=$(RhinoTarget) -p:IsInRhino=$(IsInRhino) -p:UseSharedCompilation=false -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
+    <Exec Command="dotnet publish Router.csproj -c $(Configuration) -r %(_RouterRid.Identity) -p:IsInRhino=$(IsInRhino) -p:UseSharedCompilation=false -o &quot;$(PluginOutputDir)/router/%(_RouterRid.Identity)&quot; --nologo" WorkingDirectory="$(MSBuildProjectDirectory)/../router" />
     <RemoveDir Directories="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.dsym')" />
     <Delete Files="@(_RouterRid->'$(PluginOutputDir)/router/%(Identity)/rhino-mcp-router.pdb')" />
   </Target>

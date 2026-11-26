@@ -8,9 +8,9 @@
         "RHINO_PACKAGE_DIRS": "$(OutputPath)"
       }
     },
-    "Rhino 9 BETA": {
+    "Rhino 8": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Rhino 9 BETA\\System\\Rhino.exe",
+      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe",
       "commandLineArgs": "/netcore /nosplash",
       "environmentVariables": {
         "RHINO_PACKAGE_DIRS": "$(OutputPath)"

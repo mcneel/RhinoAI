@@ -45,22 +45,11 @@ internal sealed class AISettingsPanel : Panel
     // the editor from a freshly selected row.
     private bool Loading { get; set; }
 
-    private List<(string Name, AIPage Page)> Pages { get; } = [];
-
     protected override void OnLoad(EventArgs e)
     {
         if (Content is TabControl tabs)
         {
             tabs.Pages.Clear();
-#if R9
-            // Human written pages
-            AddPage(tabs, Localization.LocalizeString("AI Agents", 17), new AIAgentDefinitionsPage());
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
-            tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Loading", 20), Content = LoadingTab() }); // TODO : Use UserPreferences
-            AddPage(tabs, LOC.STR("Usage"), new AIUsagePage());
-            AddPage(tabs, LOC.STR("PlugIns"), new AIPluginPage());
-            AddPage(tabs, LOC.STR("Permissions"), new AIPermissionsPage());
-#endif
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("AI Agents", 17), Content = AgentsTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("MCP Servers", 18), Content = McpServersTab() });
             tabs.Pages.Add(new TabPage { Text = Localization.LocalizeString("Tools", 19), Content = ToolsTab() });
@@ -86,12 +75,6 @@ internal sealed class AISettingsPanel : Panel
         Content = tabs;
     }
 
-    private void AddPage(TabControl tabs, string name, AIPage page)
-    {
-        tabs.Pages.Add(new TabPage { Text = name, Content = page });
-        Pages.Add((name, page));
-    }
-
     // Persists every tab back to AISettings. Returns false (and shows the MCP error inline) when the
     // MCP JSON is invalid, so the hosting dialog/page can keep itself open; true once everything is saved.
     public bool TryCommit(out string error)
@@ -106,20 +89,6 @@ internal sealed class AISettingsPanel : Panel
             return false;
         }
         McpErrorLabel.Visible = false;
-
-        foreach ((string name, AIPage page) in Pages)
-        {
-            if (page.Validate()) continue;
-            error = string.Format(Localization.LocalizeString("The {0} settings are not valid.", 255), name);
-            return false;
-        }
-
-        foreach ((string name, AIPage page) in Pages)
-        {
-            if (page.TryApplyChanges()) continue;
-            error = string.Format(Localization.LocalizeString("The {0} settings could not be applied.", 256), name);
-            return false;
-        }
 
         foreach (AgentRow row in Rows)
         {

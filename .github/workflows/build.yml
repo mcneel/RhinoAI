@@ -19,14 +19,13 @@ on:
       - '.github/workflows/docs.yml'
 
 permissions:
-  contents: write   # release job creates tags + releases
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
-    # Both projects are Rhino-target-agnostic, so no R8/R9 dimension.
     strategy:
       fail-fast: false
       matrix:
@@ -56,7 +55,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rhino_target: [R8, R9]
         plugin:
           # net48 is only a target when building on Windows, so the win plugin needs a Windows runner.
           - { os: win, yak: win, runner: windows-latest, cli: yak.exe, cli_file: yak.exe }
@@ -78,110 +76,34 @@ jobs:
       # Restore first so the generated NuGet props exist when the build evaluates.
       - name: Restore plugin
         shell: bash
-        run: dotnet restore rhino/plugin/RhinoAI.csproj '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
+        run: dotnet restore rhino/plugin/RhinoAI.csproj '-p:PluginOS=${{ matrix.plugin.os }}'
 
-      - name: Build plugin (${{ matrix.rhino_target }}, ${{ matrix.plugin.os }})
+      - name: Build plugin (${{ matrix.plugin.os }})
         shell: bash
-        run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:RhinoTarget=${{ matrix.rhino_target }}' '-p:PluginOS=${{ matrix.plugin.os }}'
+        run: dotnet build rhino/plugin/RhinoAI.csproj --configuration Release --no-restore '-p:PluginOS=${{ matrix.plugin.os }}'
 
       - name: Check net48 build
         if: matrix.plugin.os == 'win'
         shell: bash
         run: test -f net48/RhinoAI.rhp && test -f net8.0/RhinoAI.rhp
-        working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release
+        working-directory: rhino/plugin/bin/${{ matrix.plugin.os }}/Release
 
-      # R9 ships inside Rhino, so it is compiled for coverage but never packaged.
       - name: Download yak CLI
-        if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
           curl -fsSL -o ${{ matrix.plugin.cli_file }} https://files.mcneel.com/yak/tools/0.13.0/${{ matrix.plugin.cli }}
           chmod +x ${{ matrix.plugin.cli_file }}
 
       - name: Build yak package
-        if: matrix.rhino_target == 'R8'
         shell: bash
         run: |
           "$GITHUB_WORKSPACE/${{ matrix.plugin.cli_file }}" build --platform ${{ matrix.plugin.yak }}
-        working-directory: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release
+        working-directory: rhino/plugin/bin/${{ matrix.plugin.os }}/Release
 
       - name: Upload yak artifact
-        if: matrix.rhino_target == 'R8'
         uses: actions/upload-artifact@v7
         with:
-          name: rhino-mcp-platform-${{ matrix.rhino_target }}-${{ matrix.plugin.os }}
-          path: rhino/plugin/bin/${{ matrix.rhino_target }}-${{ matrix.plugin.os }}/Release/*.yak
+          name: rhino-mcp-platform-R8-${{ matrix.plugin.os }}
+          path: rhino/plugin/bin/${{ matrix.plugin.os }}/Release/*.yak
           if-no-files-found: error
           retention-days: 7
-
-  release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/rhino-9.x'
-    runs-on: macos-latest
-    needs: package
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Read plugin version
-        id: ver
-        shell: bash
-        run: |
-          VERSION=$(sed -n 's/.*<RhinoAIPackageVersion>\(.*\)<\/RhinoAIPackageVersion>.*/\1/p' rhino/Directory.Build.props)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=plugin-v$VERSION" >> "$GITHUB_OUTPUT"
-          [[ "$VERSION" == *-* ]] && echo "prerelease=true" >> "$GITHUB_OUTPUT" || echo "prerelease=false" >> "$GITHUB_OUTPUT"
-
-      - name: Check whether release already exists
-        id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release ${{ steps.ver.outputs.tag }} exists - nothing to release."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "New version ${{ steps.ver.outputs.version }} - will release."
-          fi
-
-      - name: Download R8 yak artifacts
-        if: steps.check.outputs.exists == 'false'
-        uses: actions/download-artifact@v8
-        with:
-          pattern: rhino-mcp-platform-R8-*
-          path: dist
-
-      - name: Create GitHub Release (creates tag atomically)
-        if: steps.check.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "${{ steps.ver.outputs.tag }}" \
-            $(find dist -name '*.yak') \
-            --title "Plugin ${{ steps.ver.outputs.version }}" \
-            --target "${{ github.sha }}" \
-            --generate-notes \
-            ${{ steps.ver.outputs.prerelease == 'true' && '--prerelease' || '' }}
-
-      - name: Download yak CLI
-        if: steps.check.outputs.exists == 'false'
-        shell: bash
-        run: |
-          curl -fsSL -o yak https://files.mcneel.com/yak/tools/0.13.0/mac/yak
-          chmod +x yak
-
-      - name: Push packages to PackageManager
-        if: steps.check.outputs.exists == 'false'
-        env:
-          YAK_TOKEN: ${{ secrets.YAK_TOKEN }}
-        shell: bash
-        run: |
-          for pkg in $(find dist -name '*.yak'); do
-            echo "Pushing $pkg"
-            ./yak push "$pkg"
-          done

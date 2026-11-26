@@ -16,11 +16,7 @@ internal static class ScriptProjectRunner
 
         try
         {
-#if R9
-            runner = Runner = new RhinoCodeProjectRunner();
-#else
             runner = Runner = new RhinoAppProjectRunner();
-#endif
             return Success();
         }
         catch (Exception ex)
@@ -47,11 +43,7 @@ internal static class ScriptProjectRunner
 
     public static IToolResult RunScript(RhinoDoc doc, Lang lang, string script)
     {
-#if R9
-        RhinoCodeRunScript runner = new ();
-#else
         RhinoAppRunScript runner = new ();
-#endif
         return runner.RunScript(doc, lang, script);
     }
 

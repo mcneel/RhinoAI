@@ -9,7 +9,6 @@
     <Description>Stdio MCP router that proxies tool calls to one or more Rhino MCP plugin instances. Spawns and manages child Rhinos so Claude Code only ever talks to one stable endpoint.</Description>
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifiers>win-x64;win-arm64;osx-arm64</RuntimeIdentifiers>
-    <RhinoTarget Condition="'$(RhinoTarget)' == ''">R9</RhinoTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND $(RuntimeIdentifier.StartsWith('win-'))">
@@ -57,9 +56,7 @@
   <ItemGroup>
     <ProjectReference Include="codegen/Router.Codegen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <!-- Kept out of design-time builds: the IDE would see these files as both plugin code and router text, and C# features break in them. -->
-    <AdditionalFiles Include="../plugin/Tools/**/*.cs" Condition="'$(DesignTimeBuild)' != 'true'" />
-    <AdditionalFiles Remove="../plugin/Tools/GH2/**/*.cs" Condition="'$(RhinoTarget)' == 'R8'" />
-    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
+    <AdditionalFiles Include="../plugin/Tools/**/*.cs" Condition="'$(DesignTimeBuild)' != 'true'" />    <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
       <Link>Properties\version.cs</Link>
     </Compile>
   </ItemGroup>

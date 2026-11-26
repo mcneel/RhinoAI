@@ -151,8 +151,6 @@ internal sealed class ToolHandler
         return tcs.Task;
     }
 
-    private static bool GH2Loaded { get; set; } = false;
-
     private async Task<CallToolResult> InvokeCoreAsync(
         IDictionary<string, JsonElement>? arguments, IServiceProvider scope, CancellationToken ct)
     {
@@ -184,10 +182,6 @@ internal sealed class ToolHandler
         object? rawResult;
         try
         {
-            #if R9
-            EnsureGh2IsLoaded(Name, args);
-            #endif
-
             rawResult = _method.Invoke(_method.IsStatic ? null : scope.GetService(_method.DeclaringType!), args);
         }
         catch (TargetInvocationException tie) when (tie.InnerException is OverflowException overflow)
@@ -245,19 +239,5 @@ internal sealed class ToolHandler
         string subject = ignored.Length == 1 ? "it is not an argument" : "they are not arguments";
 
         return $"Ignored {names} because {subject} '{Name}' accepts. Its arguments are: {string.Join(", ", accepted)}";
-    }
-
-    private static void EnsureGh2IsLoaded(string toolName, object?[] args)
-    {
-#if R9
-        if (GH2Loaded) return;
-        if (args is null) return;
-        if (args.Length < 1) return;
-        if (args[0] is not RhinoDoc doc) return;
-        if (string.IsNullOrEmpty(toolName)) return;
-        if (!toolName.Contains("G2_", StringComparison.OrdinalIgnoreCase)) return;
-
-        GH2Loaded = !GH2_StartTool.Launch(doc).IsFailure;
-#endif
     }
 }
