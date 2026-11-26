@@ -307,10 +307,6 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("--mcp-config");
         process.StartInfo.AddArgument(GetMcpJsons(agent));
 
-        // --effort <level>  Effort level for the current session (low, medium, high, xhigh, max)
-        process.StartInfo.AddArgument("--effort");
-        process.StartInfo.AddArgument("high");
-
         // --prompt-suggestions [value]          Enable prompt suggestions
         process.StartInfo.AddArgument("--prompt-suggestions");
         process.StartInfo.AddArgument("false");
