@@ -547,7 +547,11 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)
     {
-        int? tokenCount = thing?["usage"]?["input_tokens"]?.GetValue<int>();
+        // Unlike Claude, cached_input_tokens is already inside input_tokens.
+        int? tokenCount = thing["usage"] is JsonNode usage
+            ? (usage["input_tokens"]?.GetValue<int>() ?? 0) + (usage["output_tokens"]?.GetValue<int>() ?? 0)
+            : null;
+        ;
         // new ToolResultTurn()
         return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
     }
