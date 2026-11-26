@@ -20,7 +20,8 @@ internal sealed record TurnDto(
     DateTimeOffset? CompletedAt,
     IReadOnlyList<TurnEventDto> Events,
     TokenUsage Usage = default,
-    IReadOnlyList<AttachmentInfo>? Attachments = null);
+    IReadOnlyList<AttachmentInfo>? Attachments = null,
+    string? Error = null);
 
 internal sealed record ConversationDto(
     string SessionId,

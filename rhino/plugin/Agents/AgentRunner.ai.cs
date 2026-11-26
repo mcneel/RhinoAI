@@ -73,7 +73,7 @@ internal sealed class AgentRunner : IDisposable
         }
         catch (Exception ex)
         {
-            Conversation.Record(TurnEventKind.AssistantText, ex.Message);
+            Conversation.FailTurn(ex.Message);
         }
         finally
         {

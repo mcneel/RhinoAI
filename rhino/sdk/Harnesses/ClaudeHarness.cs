@@ -101,12 +101,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             yield return processTurn;
         }
 
-        if (process.ExitCode != 0)
-        {
-            yield return new TurnEnd(StopReason.Error, $"{process.ExitCode}", DateTime.UtcNow, TimeSpan.Zero, 0);
-            ended = true;
-        }
-
+        // No exit code as the reason: the stderr lines already yielded say why, and "1" does not.
         if (!ended)
             yield return new TurnEnd(StopReason.Error);
     }
@@ -558,10 +553,11 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             _ => StopReason.Other
         };
 
-        if (!string.IsNullOrEmpty(error) || errors.Count == 0)
-            return [new TurnEnd(reason, error, duration: duration, tokenCount: tokenCount)];
+        string? message = !string.IsNullOrEmpty(error) ? error
+            : errors.Count > 0 ? string.Join("\n", errors)
+            : null;
 
-        return errors.Select((e, i) => new TurnEnd(reason, e, duration: duration, tokenCount: i == 0 ? tokenCount : null)).ToList<ITurn>();
+        return [new TurnEnd(reason, message, duration: duration, tokenCount: tokenCount)];
     }
 
     private static int? GetTokenCount(JsonNode node)

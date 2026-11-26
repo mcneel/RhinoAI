@@ -53,6 +53,12 @@ internal sealed class Turn
 
     internal void SetUsage(TokenUsage usage) { lock (Sync) UsageValue = usage; }
 
+    public string? Error { get { lock (Sync) return ErrorValue; } }
+    private string? ErrorValue { get; set; }
+
+    // A turn fails once: an agent that reports the same failure through two channels must not show it twice.
+    internal void Fail(string reason) { lock (Sync) ErrorValue ??= reason; }
+
     public IReadOnlyList<TurnEvent> Events { get { lock (Sync) return EventList.ToArray(); } }
 
     internal void Add(TurnEvent ev) { lock (Sync) EventList.Add(ev); }
@@ -131,6 +137,8 @@ internal sealed class Conversation
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
                     ev.Done || !string.IsNullOrWhiteSpace(ev.Result)));
             turn.SetUsage(turnDto.Usage);
+            if (turnDto.Error is { Length: > 0 } error)
+                turn.Fail(error);
             // Stamping now would date every restored turn to the restore, which is what bounds the search for images the agent wrote during it.
             turn.Complete(turnDto.CompletedAt ?? turnDto.StartedAt);
             convo.TurnList.Add(turn);
@@ -186,6 +194,13 @@ internal sealed class Conversation
     // Record the current turn's token/cost accounting (from its terminal event). A no-op once the
     // terminal event already cleared Current (a late, mis-ordered usage drop is dropped, not stored
     // on the wrong turn). Empty usage is ignored so a turn the agent never accounted for stays Empty.
+    public void FailTurn(string reason)
+    {
+        lock (Sync)
+            Current?.Fail(reason);
+        Changed?.Invoke();
+    }
+
     public void RecordUsage(TokenUsage usage)
     {
         if (usage.IsEmpty)

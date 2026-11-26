@@ -191,8 +191,7 @@ internal sealed class ConversationFeed
             Emit(new TurnUsageEvent(cursor.Id, new PanelUsage(usage.InputTokens, usage.OutputTokens, usage.CostUsd)));
         }
 
-        // Conversation records completion but not why, so a cancelled turn reports as finished. The
-        // panel can render "stopped" the moment Turn learns to carry an outcome.
+        // Turn carries a failure but not a cancellation, so a cancelled turn still reports as finished.
         if (!cursor.Ended && turn.Completed)
         {
             cursor.Ended = true;
@@ -200,7 +199,8 @@ internal sealed class ConversationFeed
             for (int i = 0; i < events.Count; i++)
                 if (events[i].Kind == TurnEventKind.ToolUse && !events[i].Done)
                     Emit(new TurnToolPatchEvent(cursor.Id, CallId(cursor, i, events[i]), UnknownPatch));
-            Emit(new TurnEndEvent(cursor.Id, "ok", null));
+            string? error = turn.Error;
+            Emit(new TurnEndEvent(cursor.Id, error is null ? "ok" : "error", error));
         }
     }
 

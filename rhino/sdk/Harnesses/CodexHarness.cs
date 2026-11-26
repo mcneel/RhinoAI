@@ -81,12 +81,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             yield return processTurn;
         }
 
-        if (process.ExitCode != 0)
-        {
-            yield return new TurnEnd(StopReason.Error, $"{process.ExitCode}", DateTime.UtcNow, TimeSpan.Zero, 0);
-            ended = true;
-        }
-
+        // No exit code as the reason: the stderr lines and error events already yielded say why, and "1" does not.
         if (!ended)
             yield return new TurnEnd(StopReason.Error);
     }
@@ -383,8 +378,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     private static List<ITurn> ParseTurnFailed(JsonNode thing)
         => [new TurnEnd(StopReason.Error, ErrorMessage(thing["error"]) ?? "Codex turn failed.")];
 
+    // Not a TurnEnd: turn.failed carries the same message and ends the turn, so ending here too reports it twice.
     private static List<ITurn> ParseError(JsonNode thing)
-        => [new TurnEnd(StopReason.Error, ErrorMessage(thing) ?? "Codex reported an error.")];
+        => [new MessageTurn(ErrorMessage(thing) ?? "Codex reported an error.", RoleType.System)];
 
     private static string? ErrorMessage(JsonNode? node) => node switch
     {

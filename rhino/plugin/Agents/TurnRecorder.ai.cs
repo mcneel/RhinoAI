@@ -40,7 +40,7 @@ internal sealed class TurnRecorder(Conversation conversation)
     public void Finish()
     {
         if (!HasEnded && LastSystemMessage is { Length: > 0 } message)
-            Conversation.Record(TurnEventKind.AssistantText, message);
+            Conversation.FailTurn(message);
     }
 
     private void RecordEnd(TurnEnd end)
@@ -52,6 +52,6 @@ internal sealed class TurnRecorder(Conversation conversation)
 
         string? reason = end.Data is { Length: > 0 } data ? data : LastSystemMessage;
         if (reason is { Length: > 0 })
-            Conversation.Record(TurnEventKind.AssistantText, reason);
+            Conversation.FailTurn(reason);
     }
 }
