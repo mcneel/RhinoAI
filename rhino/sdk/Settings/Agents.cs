@@ -69,16 +69,24 @@ public sealed class Agents
 
     public IAgentDefinition? FromParameters(string vendor, AgentType type)
     {
-        foreach (IAgentDefinition def in Definitions)
-        {
-            if (!string.Equals(def.Vendor, vendor, StringComparison.OrdinalIgnoreCase)) continue;
-            if (type == AgentType.Cli && def is not CliAgentDefinition) continue;
-            if (type == AgentType.Api && def is not HttpAgentDefinition) continue;
-            if (type == AgentType.Local && def is not HttpAgentDefinition) continue;
-            return def;
-        }
+        if (PreferredDefinition is { } preferred && Matches(preferred, vendor, type))
+            return preferred;
 
-        return null;
+        return Definitions.FirstOrDefault(definition => Matches(definition, vendor, type));
+    }
+
+    private static bool Matches(IAgentDefinition definition, string vendor, AgentType type)
+    {
+        if (!definition.Enabled) return false;
+        if (!string.Equals(definition.Vendor, vendor, StringComparison.OrdinalIgnoreCase)) return false;
+
+        return type switch
+        {
+            AgentType.Cli => definition is CliAgentDefinition,
+            AgentType.Api or AgentType.Local => definition is HttpAgentDefinition,
+            AgentType.Unknown => true,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+        };
     }
 
 }
