@@ -476,8 +476,7 @@ internal partial class AIPanelViewModel : IDisposable
 
     private static bool OpenSettings()
     {
-        string command = HostUtils.RunningOnWindows ? "_OptionsPage" : "_PreferencesPage";
-        Application.Instance.AsyncInvoke(() => RhinoApp.RunScript(string.Format("! {0} _{1}", command, AIOptionsPage.EnglishTitle), false));
+        Application.Instance.AsyncInvoke(() => RhinoApp.RunScript(AIOptionsPage.OpenScript, false));
         return true;
     }
 

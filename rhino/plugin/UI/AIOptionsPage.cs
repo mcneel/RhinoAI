@@ -14,8 +14,8 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private const string IconResourceName = "Rhino.AI.Panel_light.svg";
     private const string DarkIconResourceName = "Rhino.AI.Panel_dark.svg";
 
-    // _OptionsPage and _PreferencesPage find the page by this, so it must match the title passed to base.
-    public const string EnglishTitle = "AI";
+    private const string EnglishTitle = "AI";
+    private const string FormatValidDisplayNameStrippedChars = " _-,./()`~!#@$%^&*+=\":;?'\\[]{}|<>";
 
     private Eto.Forms.Panel? Host { get; set; }
     private SettingsView? View { get; set; }
@@ -23,9 +23,17 @@ internal sealed class AIOptionsPage : OptionsDialogPage
     private Image? LightCachedImage { get; set; }
     private Image? DarkCachedImage { get; set; }
 
-    public AIOptionsPage() : base(Localization.LocalizeString("AI", 2))
+    public AIOptionsPage() : base(EnglishTitle)
     {
     }
+
+    public override string LocalPageTitle => LocalTitle;
+
+    private static string LocalTitle => Localization.LocalizeString("AI", 2);
+
+    public static string OpenScript => HostUtils.RunningOnWindows
+        ? string.Format("! _OptionsPage _{0}", EnglishTitle)
+        : string.Format("! _PreferencesPage {0}", new string(LocalTitle.Where(c => FormatValidDisplayNameStrippedChars.IndexOf(c) < 0).ToArray()));
 
     public override object PageControl => Host ??= NewHost();
 
