@@ -29,7 +29,13 @@ internal class AIProcess : IDisposable
     private void ReadErrors(object sender, DataReceivedEventArgs e)
     {
         if (e.Data is null) return;
-        Turns.Enqueue(new MessageTurn(e.Data, RoleType.System, DateTime.UtcNow));
+        if (e.Data.Contains("No conversation found with session ID", StringComparison.OrdinalIgnoreCase))
+        {
+            Turns.Enqueue(new TurnEnd(StopReason.InvalidSession, e.Data) { Success = false });
+            return;
+        }
+
+        Turns.Enqueue(new MessageTurn(e.Data, RoleType.System, DateTime.UtcNow) { Success = false });
     }
 
     public bool TryPop(out ITurn turn) => Turns.TryDequeue(out turn!) && turn is not null;

@@ -35,7 +35,13 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         string prompt = UserLine(start.OfType<MessageTurn>().Last(m => m.Role == RoleType.User));
 
-        using AIProcess process = StartClaude(agent, start, token);
+        List<ITurn> turns = new(start);
+
+        if (TryStartClaude(agent, turns, token, out AIProcess process) is ITurn failTurn)
+        {
+            yield return failTurn;
+            yield break;
+        }
 
         using CancellationTokenRegistration _ = token.Register(() =>
         {
@@ -56,6 +62,22 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             ended |= turn is TurnEnd;
             yield return turn;
         }
+
+        ;
+        // if (failTurn.Data.Contains("No conversation found with session ID"))
+        // {
+        //     turns.Add(new MessageTurn($"Could not resume session {agent.Config.SessionId}, starting a new session."));
+        //     agent.Config.SessionId = Guid.Empty;
+
+        //     if (TryStartClaude(agent, turns, token, out process) is ITurn secondFailTurn)
+        //     {
+        //         // Ah well.. We tried! Bail.
+        //         yield return failTurn;
+        //         yield break;
+        //     }
+
+        //     // Success!
+        // }
 
         Exception? ex = null;
         try
@@ -213,7 +235,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return process;
     }
 
-    private AIProcess StartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private ITurn? TryStartClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token, out AIProcess aiProcess)
     {
         // TODO : Check agent.Model
         Process process = GetClaudeProcess(token, agent.Model!);
@@ -242,7 +264,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
-            
+
             // TODO : Check Permissions.ProhibitedTools()
             allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
             allowedTools += " ";
@@ -319,12 +341,22 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         process.StartInfo.AddArgument("--disable-slash-commands");
 
-        AIProcess turnProcess = new(process);
+        aiProcess = new(process);
+        try
+        {
+            if (!process.Start())
+            {
+                return new MessageTurn("Failed to start Claude", RoleType.System);
+            }
+        }
+        catch (Exception ex)
+        {
+            return new MessageTurn(ex.Message, RoleType.System);
+        }
 
-        if (!process.Start()) { }
         process.BeginErrorReadLine();
 
-        return turnProcess;
+        return null;
     }
 
     private static string CoerceMcpName(string mcpName)
@@ -507,11 +539,20 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private static List<ITurn> ParseResult(JsonNode node)
     {
-
         string? error = null;
+        List<string> errors = [];
         if (node["is_error"]?.GetValue<bool>() == true)
         {
             error = node["result"]?.GetValue<string>();
+        }
+
+        if (node["errors"] is JsonArray jsonArr)
+        {
+            foreach (JsonNode? jItem in jsonArr)
+            {
+                if (jItem?.GetValue<string>() is not string err) continue;
+                errors.Add(err);
+            }
         }
 
         if (node["stop_reason"] is JsonNode stopProp)
@@ -530,10 +571,25 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
             TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
 
+            if (string.IsNullOrEmpty(error))
+            {
+                List<ITurn> results = [];
+                results.AddRange(errors.Select(e => new TurnEnd(reason, e, duration: duration)));
+                return results;
+            }
+
             return [new TurnEnd(reason, error, duration: duration)];
         }
 
         StopReason endReason = error is null ? StopReason.EndTurn : StopReason.Error;
+
+        if (string.IsNullOrEmpty(error))
+        {
+            List<ITurn> results = [];
+            results.AddRange(errors.Select(e => new TurnEnd(StopReason.Error, e)));
+            return results;
+        }
+
         return [new TurnEnd(endReason, error)];
     }
 

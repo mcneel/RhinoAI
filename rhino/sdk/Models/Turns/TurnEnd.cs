@@ -39,4 +39,4 @@ public sealed record TurnEnd : Turn
 /// <summary>
 /// The reason for the turns end
 /// </summary>
-public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled }
+public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled, InvalidSession }

@@ -143,6 +143,20 @@ public class AgentTests
 
     [Test, Category("Manual")]
     [CancelAfter(60_000)]
+    public async Task DesktopClaude_InvalidResume(CancellationToken token)
+    {
+        Agent? agent = Agent.GetClaudeDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+        
+        agent.Config.SessionId = Guid.NewGuid();
+
+        IAgentResult result = await agent.SendAsync("What is a Chicken?", token);
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Turns.Any(t => t is TurnEnd te && te.Reason == StopReason.InvalidSession));
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(60_000)]
     public async Task DesktopCodex(CancellationToken token)
     {
         MemoryMcp mcp = new("Weather MCP");
