@@ -37,9 +37,10 @@ internal static class AgentHost
     public static void SetActive(RhinoDoc doc, Guid id) =>
         ActiveIds[doc.RuntimeSerialNumber] = id;
 
-    private static RhinoHarness Harness { get; } = new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync };
-
-    public static Mcp DefaultTools => Harness.Mcps[DefaultToolsMcp.NAME];
+    private static Agent WithOwnHarness(Agent agent) =>
+        agent.Model is Rhino.AI.Models.DesktopModel
+            ? agent
+            : agent.WithHarness(new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync });
 
     private static HashSet<uint> PanelDocs { get; } = new();
 
@@ -71,10 +72,7 @@ internal static class AgentHost
         if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent)
             return false;
 
-        if (agent.Model is not Rhino.AI.Models.DesktopModel)
-            agent = agent.WithHarness(Harness);
-
-        runner = AgentRunner.Start(definition, agent, DocTitle(doc));
+        runner = AgentRunner.Start(definition, WithOwnHarness(agent), DocTitle(doc));
         Runners[key] = runner;
         return true;
     }
@@ -92,7 +90,7 @@ internal static class AgentHost
         if (Runners.Remove(key, out AgentRunner? prior))
             SafeDispose(prior);
 
-        runner = AgentRunner.Resume(definition, agent, dto);
+        runner = AgentRunner.Resume(definition, WithOwnHarness(agent), dto);
         Runners[key] = runner;
         SetActive(doc, definition.Id);
         return true;

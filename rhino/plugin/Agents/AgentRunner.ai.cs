@@ -17,6 +17,8 @@ internal sealed class AgentRunner : IDisposable
 
     private bool HasAttached { get; set; }
 
+    private bool IsDisposed { get; set; }
+
     public IAgentDefinition Definition { get; }
 
     public Conversation Conversation { get; }
@@ -52,12 +54,18 @@ internal sealed class AgentRunner : IDisposable
 
     public async Task PromptAsync(UserMessage message, Uri mcpUrl, string cwd)
     {
+        CancellationTokenSource cancellation;
+        lock (Gate)
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(AgentRunner));
+
+            cancellation = new();
+            TurnCancellation = cancellation;
+        }
+
         AttachMcps(mcpUrl);
         Agent.Harness.Config.CurrentWorkingDirectory = cwd;
-
-        CancellationTokenSource cancellation = new();
-        lock (Gate)
-            TurnCancellation = cancellation;
 
         Conversation.BeginTurn(message.Text, [.. message.Attachments.Select(static a => a.Info)]);
         TurnRecorder recorder = new(Conversation);
@@ -77,8 +85,12 @@ internal sealed class AgentRunner : IDisposable
         }
         finally
         {
+            bool isDisposed;
             lock (Gate)
+            {
                 TurnCancellation = null;
+                isDisposed = IsDisposed;
+            }
             cancellation.Dispose();
 
             if (Agent.Config.SessionId != Guid.Empty)
@@ -86,6 +98,9 @@ internal sealed class AgentRunner : IDisposable
 
             Conversation.CompleteTurn();
             PersistTurn();
+
+            if (isDisposed)
+                DisposeHarness();
         }
     }
 
@@ -98,7 +113,27 @@ internal sealed class AgentRunner : IDisposable
             TurnCancellation?.Cancel();
     }
 
-    public void Dispose() => Cancel();
+    // A turn in flight may be mid tool call on the harness, so it disposes the harness itself once it unwinds.
+    public void Dispose()
+    {
+        bool isTurnRunning;
+        lock (Gate)
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+            isTurnRunning = TurnCancellation is not null;
+            TurnCancellation?.Cancel();
+        }
+
+        if (!isTurnRunning)
+            DisposeHarness();
+    }
+
+    private void DisposeHarness()
+    {
+        if (Agent.Harness is IDisposable harness)
+            harness.Dispose();
+    }
 
     public bool HasAttachedMcps { get { lock (Gate) return HasAttached; } }
 

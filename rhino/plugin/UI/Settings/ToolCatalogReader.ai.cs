@@ -30,7 +30,7 @@ internal static class ToolCatalogReader
     ];
 
     public static ToolCatalog Current(IReadOnlyList<ToolRule> rules, PlugInNames names)
-        => new(Builtin(rules), ServerOf(AgentHost.DefaultTools, LOC.STR("Default tools")), PlugIns(names));
+        => new(Builtin(rules), ServerOf(new DefaultToolsMcp(null!, PlugInToken.Invalid), LOC.STR("Default tools")), PlugIns(names));
 
     private static ServerInfo Builtin(IReadOnlyList<ToolRule> rules)
     {
