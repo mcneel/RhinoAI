@@ -4,7 +4,7 @@ namespace Rhino.AI;
 // can't drift from the published site.
 internal static class DocsLinks
 {
-    // Installing and authing an AI agent (Claude, Codex, Gemini) for the in-Rhino panel.
+    // Installing and authing an AI agent for the in-Rhino panel.
     public const string GettingStarted = "https://mcneel.github.io/RhinoAI/docs/getting-started/";
     public const string Homepage = "https://mcneel.github.io/RhinoAI";
 }

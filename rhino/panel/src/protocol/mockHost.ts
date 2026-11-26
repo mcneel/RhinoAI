@@ -81,15 +81,6 @@ const AGENTS: readonly AgentInfo[] = [
   { name: 'claude', label: 'Claude Code', model: 'claude-opus-5', modelLabel: 'Opus 5', availability: 'ready', builtin: true },
   { name: 'codex', label: 'Codex', model: 'gpt-5-codex', modelLabel: 'GPT-5 Codex', availability: 'ready', builtin: true },
   {
-    name: 'gemini',
-    label: 'Gemini CLI',
-    model: 'gemini-3-pro',
-    modelLabel: 'Gemini 3 Pro',
-    availability: 'signin',
-    detail: 'run `gemini auth` to sign in',
-    builtin: true,
-  },
-  {
     name: 'local-llama',
     label: 'Local (llama.cpp)',
     model: 'qwen3-coder-30b',
