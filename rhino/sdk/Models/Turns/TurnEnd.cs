@@ -22,7 +22,7 @@ public sealed record TurnEnd : Turn
     {
         Role = RoleType.Assistant;
         Reason = reason;
-        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled or StopReason.InvalidSession);
+        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled or StopReason.InvalidSession or StopReason.UnAuthenticated or StopReason.UsageLimit);
         Data = data ?? string.Empty;
 
         Role = RoleType.Assistant;
@@ -39,4 +39,4 @@ public sealed record TurnEnd : Turn
 /// <summary>
 /// The reason for the turns end
 /// </summary>
-public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled, InvalidSession }
+public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled, InvalidSession, UnAuthenticated, UsageLimit }

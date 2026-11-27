@@ -14,6 +14,8 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
 
     private Dictionary<string, string> ToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    private string? ApiErrorCode { get; set; }
+
     public IReadOnlyList<ITurn> Parse(string line)
     {
         if (line.Length == 0) return [];
@@ -105,11 +107,11 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
         return [];
     }
 
-    private static List<ITurn> ParseResult(JsonNode node)
+    private List<ITurn> ParseResult(JsonNode node)
     {
-        string? error = node["is_error"]?.GetValue<bool>() == true ? node["result"]?.GetValue<string>() : null;
         TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
         int? tokenCount = GetTokenCount(node);
+        string? subtype = node["subtype"]?.GetValue<string>();
 
         List<string> errors = [];
         if (node["errors"] is JsonArray jsonArr)
@@ -122,7 +124,16 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
         }
 
         // stop_reason belongs to the model's last reply, so a run the CLI cut short (turn limit, budget) still reads "tool_use".
-        string? subtype = node["subtype"]?.GetValue<string>();
+        if (node["is_error"]?.GetValue<bool>() == true)
+        {
+            string? result = node["result"]?.GetValue<string>();
+            string failure = !string.IsNullOrEmpty(result) ? result
+                : errors.Count > 0 ? string.Join("\n", errors)
+                : $"Claude stopped early ({subtype}).";
+
+            return [new TurnEnd(FailureReason(node), failure, duration: duration, tokenCount: tokenCount)];
+        }
+
         bool isAborted = subtype is not null && subtype != "success";
 
         StopReason reason = isAborted ? StopReason.Error : node["stop_reason"]?.GetValue<string>().ToLowerInvariant() switch
@@ -132,19 +143,26 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
             "max_tokens" => StopReason.MaxTokens,
             "refusal" => StopReason.Refusal,
             "error" => StopReason.Error,
-            null when error is null && errors.Count == 0 => StopReason.EndTurn,
+            null when errors.Count == 0 => StopReason.EndTurn,
             null => StopReason.Error,
 
             _ => StopReason.Other
         };
 
-        string? message = !string.IsNullOrEmpty(error) ? error
-            : errors.Count > 0 ? string.Join("\n", errors)
+        string? message = errors.Count > 0 ? string.Join("\n", errors)
             : isAborted ? $"Claude stopped early ({subtype})."
             : null;
 
         return [new TurnEnd(reason, message, duration: duration, tokenCount: tokenCount)];
     }
+
+    // The error code rides on the CLI's synthetic assistant message; the result line after it only says is_error.
+    private StopReason FailureReason(JsonNode result) => (ApiErrorCode, result["api_error"]?.GetValue<string>()) switch
+    {
+        (_, "usage_limit_reached") => StopReason.UsageLimit,
+        ("authentication_failed", _) => StopReason.UnAuthenticated,
+        _ => StopReason.Error,
+    };
 
     private static int? GetTokenCount(JsonNode node)
     {
@@ -158,6 +176,10 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
 
     private List<ITurn> ParseAssistant(JsonNode node)
     {
+        bool isApiError = node["is_api_error_message"]?.GetValue<bool>() == true;
+        ApiErrorCode = isApiError ? node["error"]?.GetValue<string>() : null;
+        if (isApiError) return [];
+
         if (node["message"]?["content"] is not JsonArray contents) return [];
 
         DateTime? timestamp = GetTimestamp(node);
@@ -184,14 +206,14 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
     {
         string? text = content["text"]?.GetValue<string>();
         if (string.IsNullOrEmpty(text)) return null;
-        return new MessageTurn(text,RoleType.Assistant, timestamp);
+        return new MessageTurn(text, RoleType.Assistant, timestamp);
     }
 
     private static ThinkingTurn? GetThinking(JsonNode content, DateTime? timestamp)
     {
         string? thinking = content["thinking"]?.GetValue<string>();
         if (string.IsNullOrEmpty(thinking)) return null;
-        return new ThinkingTurn(thinking,timestamp: timestamp);
+        return new ThinkingTurn(thinking, timestamp: timestamp);
     }
 
     private ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp)
