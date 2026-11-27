@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +9,8 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+
+using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
@@ -91,7 +94,7 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
                 tool["description"]?.ToString() ?? "",
                 readOnly,
                 destructive,
-                ToArgs(tool["inputSchema"]));
+                ToolSchema.ParseParameters(tool["inputSchema"]));
         }
 
         Initialized = true;
@@ -216,41 +219,6 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
         }
     }
 
-    private static ToolParameter[] ToArgs(JsonNode? inputSchema)
-    {
-        if (inputSchema?["properties"] is not JsonObject properties)
-            return [];
-
-        HashSet<string> required = [];
-        foreach (JsonNode? name in inputSchema["required"]?.AsArray() ?? [])
-        {
-            if (name?.ToString() is string value)
-                required.Add(value);
-        }
-
-        List<ToolParameter> args = new(properties.Count);
-        foreach (KeyValuePair<string, JsonNode?> property in properties)
-        {
-            args.Add(new(
-                property.Key,
-                property.Value?["description"]?.ToString() ?? "",
-                ToArgType(property.Value?["type"]?.ToString()),
-                required.Contains(property.Key)));
-        }
-
-        return [.. args];
-    }
-
-    private static ToolArgType ToArgType(string? type) => type switch
-    {
-        "number" => ToolArgType.Number,
-        "integer" => ToolArgType.Integer,
-        "boolean" => ToolArgType.Boolean,
-        "array" => ToolArgType.Array,
-        "object" => ToolArgType.Object,
-        _ => ToolArgType.String,
-    };
-
     private async Task<JsonNode?> RequestAsync(string method, JsonObject? parameters, CancellationToken token)
     {
         JsonObject message = new()
@@ -344,7 +312,7 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
                     process.Kill(true);
             }
         }
-        catch (InvalidOperationException)
+        catch (Exception ex) when (ex is InvalidOperationException or AggregateException or Win32Exception)
         {
         }
 

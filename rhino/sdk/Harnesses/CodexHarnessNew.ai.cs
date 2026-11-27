@@ -66,6 +66,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
         private const int WarnPercent = 80;
         private const int ErrorTailLines = 20;
+        // Codex's default "auto" never asks about readOnlyHint tools, so Rhino's Ask and argument rules would not run for them.
+        private const string AskRhinoEveryCall = "prompt";
         private static readonly TimeSpan SignInTimeout = TimeSpan.FromMinutes(10);
 
         private CodexHarness Owner { get; }
@@ -85,6 +87,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         private List<global::Rhino.AI.Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
 
         private CancellationToken RunToken { get; set; }
+        private string? ThreadId { get; set; }
         private int? TokenCount { get; set; }
         private bool HasWarned { get; set; }
         private long LastRequestId;
@@ -158,10 +161,10 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
                 if (!await EnsureSignedInAsync(token).ConfigureAwait(false)) return;
 
-                string? threadId = await OpenThreadAsync(instructions, token).ConfigureAwait(false);
-                if (threadId is null) return;
+                ThreadId = await OpenThreadAsync(instructions, token).ConfigureAwait(false);
+                if (ThreadId is null) return;
 
-                await CallAsync("turn/start", TurnParams(threadId, prompt, imagePaths), token).ConfigureAwait(false);
+                await CallAsync("turn/start", TurnParams(ThreadId, prompt, imagePaths), token).ConfigureAwait(false);
 
                 Write(await WithCancellation(TurnEnded.Task, token).ConfigureAwait(false));
             }
@@ -277,14 +280,13 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
         private JsonObject McpServers()
         {
-            JsonNode?[] prohibited = AIInstances.Preferences.Permissions.ProhibitedTools()
-                .Select(permission => (JsonNode?)JsonValue.Create(permission.ToolName))
-                .ToArray();
-
             JsonObject servers = new();
             foreach (Mcp mcp in Owner.Mcps.Values)
             {
                 if (!mcp.Enabled) continue;
+
+                string[] denied = DeniedTools(mcp.Name);
+                if (denied.Contains("*")) continue;
 
                 JsonObject? server = mcp switch
                 {
@@ -293,11 +295,13 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
                         ["command"] = stdio.Command,
                         ["args"] = new JsonArray([.. stdio.Args.Select(arg => (JsonNode?)JsonValue.Create(arg))]),
                         ["env"] = new JsonObject(stdio.Env.Select(variable => new KeyValuePair<string, JsonNode?>(variable.Key, JsonValue.Create(variable.Value)))),
+                        ["default_tools_approval_mode"] = AskRhinoEveryCall,
                     },
                     HttpMcp http => new JsonObject
                     {
                         ["url"] = http.Url.AbsoluteUri,
                         ["http_headers"] = new JsonObject(http.Headers.Select(header => new KeyValuePair<string, JsonNode?>(header.Key, JsonValue.Create(header.Value)))),
+                        ["default_tools_approval_mode"] = AskRhinoEveryCall,
                     },
                     MemoryMcp memory => Lease(memory),
                     _ => null,
@@ -306,7 +310,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
                 server["startup_timeout_sec"] = (long)McpTimeouts.Startup.TotalSeconds;
                 server["tool_timeout_sec"] = (long)McpTimeouts.ToolCall.TotalSeconds;
-                server["disabled_tools"] = new JsonArray(prohibited.Select(name => name?.DeepClone()).ToArray());
+                server["disabled_tools"] = new JsonArray([.. denied.Select(tool => (JsonNode?)JsonValue.Create(tool))]);
 
                 string name = ServerName(mcp.Name);
                 Servers[name] = mcp;
@@ -315,6 +319,11 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             return servers;
         }
+
+        private string[] DeniedTools(string mcpName)
+            => [.. AIInstances.Preferences.Permissions.ToolsDeniedForAnyArguments(mcpName)
+                .Concat(Agent.Definition?.Permissions.ToolsDeniedForAnyArguments(mcpName) ?? [])
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
 
         // A leased in-memory MCP already runs Rhino's permission chain per call, so letting Codex ask too would prompt twice.
         private JsonObject Lease(MemoryMcp mcp)
@@ -481,13 +490,34 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             if (permission == Permissability.Deny) return false;
             if (permission != Permissability.Ask || Owner.AskUser is null) return true;
 
-            if (!await mcp.InitAsync(RunToken).ConfigureAwait(false)) return false;
-            if (!mcp.Tools.TryGetValue(toolName, out ITool? tool) || tool is null) return false;
-
-            PermissionRequest request = new(Agent, mcp, tool, args);
+            ToolParameter[] declared = await DeclaredParametersAsync(serverName, toolName).ConfigureAwait(false) ?? [];
+            PermissionRequest request = new(Agent, mcp.Name, toolName, Array.ConvertAll(declared, arg => arg.Name), ToolArgs.FromJson(declared, toolParams));
             Owner.RaiseBeforeAskUserPermission(request);
             await Owner.AskUser.Invoke(request, RunToken).ConfigureAwait(false);
             return request.HasPermission;
+        }
+
+        // Codex already runs the server, so its tool list saves Rhino starting a second copy just to read the schema.
+        private async Task<ToolParameter[]?> DeclaredParametersAsync(string serverName, string toolName)
+        {
+            JsonNode? cursor = null;
+            do
+            {
+                JsonObject parameters = new() { ["threadId"] = ThreadId };
+                if (cursor is not null) parameters["cursor"] = cursor.DeepClone();
+
+                JsonNode? page = await CallAsync("mcpServerStatus/list", parameters, RunToken).ConfigureAwait(false);
+                foreach (JsonNode? server in page?["data"] as JsonArray ?? [])
+                {
+                    if (server?["name"]?.GetValue<string>() == serverName)
+                        return ToolSchema.ParseParameters(server["tools"]?[toolName]?["inputSchema"]);
+                }
+
+                cursor = page?["nextCursor"];
+            }
+            while (cursor is not null);
+
+            return null;
         }
 
         private void OnRateLimits(JsonNode? node)

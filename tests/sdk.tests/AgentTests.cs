@@ -193,6 +193,64 @@ public class AgentTests
         AssertUsedWeatherTool(result);
     }
 
+    private static string StdioServer { get; } = Path.Combine(
+        AppContext.BaseDirectory,
+        OperatingSystem.IsWindows() ? "StdioTestServer.exe" : "StdioTestServer");
+
+    [Test, Category("Manual")]
+    [CancelAfter(120_000)]
+    public async Task DesktopCodex_AsksBeforeStdioTool(CancellationToken token)
+    {
+        using StdioMcp mcp = new("CodexAsk", StdioServer);
+
+        Agent? agent = Agent.GetCodexDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+        agent.Harness.AddMcp(mcp);
+
+        PermissionRequest? asked = null;
+        agent.Harness.AskUser = (e, _) =>
+        {
+            asked = (PermissionRequest)e;
+            asked.HasPermission = true;
+            return Task.CompletedTask;
+        };
+
+        IAgentResult result = await agent.SendAsync("Call the repeat tool with text 'ab' and count 3, then reply with exactly what it returned.", token);
+
+        Assert.That(asked, Is.Not.Null, "Codex never asked Rhino before calling the tool.");
+        Assert.That(asked!.DeclaredArgs, Is.EquivalentTo(new[] { "text", "count", "separator" }));
+        Assert.That(asked.Args.OfType<ToolInt>().Single().Value, Is.EqualTo(3));
+        Assert.That(mcp.Tools, Is.Empty, "Rhino started its own copy of the server.");
+
+        ToolCall? repeat = result.ToolCalls.FirstOrDefault(c => c.Name.EndsWith("repeat"));
+        Assert.That(repeat?.Success, Is.True, "The repeat tool never ran.");
+        Assert.That(result.Text, Does.Contain("ab ab ab"));
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(120_000)]
+    public async Task DesktopCodex_HidesDeniedStdioTool(CancellationToken token)
+    {
+        using StdioMcp mcp = new("CodexDeny", StdioServer);
+        AIInstances.Preferences.Permissions.AddPermission(new Permission(mcp.Name, "repeat", Permissability.Deny, []));
+
+        Agent? agent = Agent.GetCodexDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+        agent.Harness.AddMcp(mcp);
+
+        bool asked = false;
+        agent.Harness.AskUser = (e, _) =>
+        {
+            asked = true;
+            return Task.CompletedTask;
+        };
+
+        IAgentResult result = await agent.SendAsync("If you have a repeat tool, call it with text 'ab' and count 3. Otherwise reply with the word missing.", token);
+
+        Assert.That(asked, Is.False);
+        Assert.That(result.ToolCalls.Any(c => c.Name.EndsWith("repeat")), Is.False, "Codex could still see the denied tool.");
+    }
+
     [TestCase("--resume;cheese")]
     [TestCase("--resume;3059787b-db32-48ba-a85a-9ad9a41c212b")]
     [TestCase("--cheese")]

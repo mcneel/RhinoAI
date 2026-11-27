@@ -37,10 +37,14 @@ internal static class AgentHost
     public static void SetActive(RhinoDoc doc, Guid id) =>
         ActiveIds[doc.RuntimeSerialNumber] = id;
 
-    private static Agent? WithOwnHarness(Agent agent) =>
-        agent.Model is Rhino.AI.Models.DesktopModel
-            ? agent
-            : agent.WithHarness(new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync });
+    private static Agent? WithOwnHarness(Agent agent)
+    {
+        if (agent.Model is not Rhino.AI.Models.DesktopModel)
+            return agent.WithHarness(new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync });
+
+        agent.Harness.AskUser = PermissionPrompt.AskAsync;
+        return agent;
+    }
 
     private static HashSet<uint> PanelDocs { get; } = new();
 

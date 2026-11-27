@@ -104,6 +104,33 @@ public sealed class PermissionSet
         }
     }
 
+    internal IReadOnlyList<string> ToolsDeniedForAnyArguments(string mcpName)
+    {
+        List<string> denied = [];
+        foreach (Permission permission in ProhibitedTools())
+        {
+            if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(permission.McpName, "*")) continue;
+
+            if (!AcceptsAnyArguments(permission)) continue;
+
+            denied.Add(permission.ToolName);
+        }
+
+        return denied;
+    }
+
+    private static bool AcceptsAnyArguments(Permission permission)
+    {
+        foreach (ToolArgPermission arg in permission.ArgumentPermissions.Values)
+        {
+            if (arg.Value.Trim() != ArgRule.Anything)
+                return false;
+        }
+
+        return true;
+    }
+
     private Permissability ResolvePermissions(Permission permission, IList<IToolArg> args)
     {
         foreach (IToolArg inputArg in args)

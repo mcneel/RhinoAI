@@ -62,4 +62,39 @@ internal static class ToolSchema
         };
     }
 
+    public static ToolParameter[] ParseParameters(JsonNode? inputSchema)
+    {
+        if (inputSchema?["properties"] is not JsonObject properties)
+            return [];
+
+        HashSet<string> required = [];
+        foreach (JsonNode? name in inputSchema["required"]?.AsArray() ?? [])
+        {
+            if (name?.ToString() is string value)
+                required.Add(value);
+        }
+
+        List<ToolParameter> args = new(properties.Count);
+        foreach (KeyValuePair<string, JsonNode?> property in properties)
+        {
+            args.Add(new(
+                property.Key,
+                property.Value?["description"]?.ToString() ?? "",
+                ParseType(property.Value?["type"]?.ToString()),
+                required.Contains(property.Key)));
+        }
+
+        return [.. args];
+    }
+
+    private static ToolArgType ParseType(string? type) => type switch
+    {
+        "number" => ToolArgType.Number,
+        "integer" => ToolArgType.Integer,
+        "boolean" => ToolArgType.Boolean,
+        "array" => ToolArgType.Array,
+        "object" => ToolArgType.Object,
+        _ => ToolArgType.String,
+    };
+
 }
