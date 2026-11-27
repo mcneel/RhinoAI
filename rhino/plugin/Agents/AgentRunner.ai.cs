@@ -19,6 +19,8 @@ internal sealed class AgentRunner : IDisposable
 
     private Dictionary<IMcpDefinition, Mcp> CustomMcpsByDefinition { get; } = [];
 
+    private HttpMcp? DocumentMcp { get; set; }
+
     private bool IsDisposed { get; set; }
 
     public Guid DefinitionId { get; }
@@ -140,10 +142,14 @@ internal sealed class AgentRunner : IDisposable
         if (Agent.Harness is IDisposable harness)
             harness.Dispose();
 
-        Mcp[] customMcps;
+        List<Mcp> ownedMcps;
         lock (Gate)
-            customMcps = [.. CustomMcpsByDefinition.Values];
-        foreach (Mcp mcp in customMcps)
+        {
+            ownedMcps = [.. CustomMcpsByDefinition.Values];
+            if (DocumentMcp is not null)
+                ownedMcps.Add(DocumentMcp);
+        }
+        foreach (Mcp mcp in ownedMcps)
             mcp.Dispose();
     }
 
@@ -180,7 +186,8 @@ internal sealed class AgentRunner : IDisposable
 
         // Replaces RhinoHarness's router default so the agent drives this document's server, not whichever Rhino the router picks.
         bool disabledBeforeFirstPrompt = Agent.Harness.Mcps.TryGetValue(RouterMcpConfig.ServerName, out Mcp? existing) && existing is { Enabled: false };
-        Agent.Harness.ReplaceMcp(new HttpMcp(RouterMcpConfig.ServerName, mcpUrl) { Enabled = !disabledBeforeFirstPrompt });
+        DocumentMcp = new HttpMcp(RouterMcpConfig.ServerName, mcpUrl) { Enabled = !disabledBeforeFirstPrompt };
+        Agent.Harness.ReplaceMcp(DocumentMcp);
 
         foreach (Mcp mcp in PlugInRegistry.PanelMcps)
             Agent.Harness.AddMcp(mcp);

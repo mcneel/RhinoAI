@@ -270,6 +270,12 @@ namespace Rhino.AI
             return content.ReadAsStringAsync();
         }
 
+        public static Task<Stream> ReadAsStreamAsync(this System.Net.Http.HttpContent content, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return content.ReadAsStreamAsync();
+        }
+
     }
 
 }

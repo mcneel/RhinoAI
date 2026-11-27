@@ -3,14 +3,10 @@ using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
-
-using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
@@ -20,7 +16,6 @@ namespace Rhino.AI;
 public class StdioMcp(string name, string command, IEnumerable<string> args, IDictionary<string, string> env) : Mcp(name)
 {
 
-    private const string ProtocolVersion = "2025-06-18";
     private const int RememberedErrorLines = 20;
     private const int GracefulExitMilliseconds = 2000;
 
@@ -68,34 +63,8 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
 
         ErrorDrain = DrainErrorAsync();
 
-        await RequestAsync("initialize", new JsonObject
-        {
-            ["protocolVersion"] = ProtocolVersion,
-            ["capabilities"] = new JsonObject(),
-            ["clientInfo"] = new JsonObject { ["name"] = "Rhino.AI", ["version"] = "0.1.0" },
-        }, token).ConfigureAwait(false);
-
-        await NotifyAsync("notifications/initialized", token).ConfigureAwait(false);
-
-        JsonNode? listed = await RequestAsync("tools/list", null, token).ConfigureAwait(false);
-        foreach (JsonNode? tool in listed?["tools"]?.AsArray() ?? [])
-        {
-            if (tool?["name"]?.ToString() is not string name)
-                continue;
-
-            JsonNode? annotations = tool["annotations"];
-            bool readOnly = annotations?["readOnlyHint"]?.GetValueKind() == JsonValueKind.True;
-
-            // The spec defaults destructiveHint to true, so absence must not read as safe.
-            bool destructive = !readOnly && annotations?["destructiveHint"]?.GetValueKind() != JsonValueKind.False;
-
-            PrivateTools[name] = new StdioTool(this,
-                name,
-                tool["description"]?.ToString() ?? "",
-                readOnly,
-                destructive,
-                ToolSchema.ParseParameters(tool["inputSchema"]));
-        }
+        foreach (McpClient.ListedTool tool in await McpClient.ConnectAsync(RequestAsync, NotifyAsync, token).ConfigureAwait(false))
+            PrivateTools[tool.Name] = new StdioTool(this, tool.Name, tool.Description, tool.ReadOnly, tool.Destructive, tool.Args);
 
         Initialized = true;
         return true;
@@ -103,120 +72,12 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
 
     public async Task<ToolReturn> RunToolAsync(string toolName, IReadOnlyList<IToolArg> args, CancellationToken token)
     {
-        if (!Initialized) await InitAsync(token);
-        
+        if (!Initialized) await InitAsync(token).ConfigureAwait(false);
+
         if (!PrivateTools.TryGetValue(toolName, out ITool? tool))
             return ToolReturn.UnknownTool(Name, toolName);
 
-        bool started = await InitAsync(token);
-
-        JsonObject arguments = [];
-        foreach (IToolArg argument in args)
-        {
-            if (Declared(tool, argument.Name) is not ToolParameter declared)
-                return ToolReturn.UnknownArgument(toolName, argument.Name);
-
-            if (ToJson(declared, argument) is not JsonNode value)
-                return ToolReturn.Failure($"Argument '{declared.Name}' wants {declared.Type}, got {Describe(argument)}.", $"Call '{toolName}' again with '{declared.Name}' as {declared.Type}.");
-
-            arguments[declared.Name] = value;
-        }
-
-        foreach (ToolParameter declared in tool.Args)
-        {
-            if (declared.Required && !arguments.ContainsKey(declared.Name))
-                return ToolReturn.MissingArgument(toolName, declared.Name);
-        }
-
-        JsonNode? result = await RequestAsync("tools/call", new JsonObject
-        {
-            ["name"] = toolName,
-            ["arguments"] = arguments,
-        }, token).ConfigureAwait(false);
-
-        StringBuilder text = new();
-        foreach (JsonNode? block in result?["content"]?.AsArray() ?? [])
-        {
-            if (block?["text"]?.ToString() is string value)
-                text.AppendLine(value);
-        }
-
-        string message = text.ToString().TrimEnd();
-
-        // The spec reports a tool's own failure inside the result, not as a JSON-RPC error.
-        return result?["isError"]?.GetValueKind() == JsonValueKind.True
-            ? ToolReturn.Failure(message, $"'{toolName}' refused that call. Read the message before calling it again.")
-            : ToolReturn.Success(message);
-    }
-
-    private static ToolParameter? Declared(ITool tool, string name)
-    {
-        foreach (ToolParameter arg in tool.Args)
-        {
-            if (arg.Name == name)
-                return arg;
-        }
-
-        return null;
-    }
-
-    private static JsonNode? ToJson(ToolParameter arg, IToolArg value) => arg.Type switch
-    {
-        ToolArgType.String or ToolArgType.URL or ToolArgType.FilePath => Text(value) is string text
-            ? JsonValue.Create(text)
-            : null,
-        ToolArgType.Number => value switch
-        {
-            ToolNumber number => JsonValue.Create(number.Value),
-            ToolInt integer => JsonValue.Create((double)integer.Value),
-            _ => double.TryParse(Text(value), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? JsonValue.Create(parsed) : null,
-        },
-        ToolArgType.Integer => value switch
-        {
-            ToolInt integer => JsonValue.Create(integer.Value),
-            _ => long.TryParse(Text(value), NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed) ? JsonValue.Create(parsed) : null,
-        },
-        ToolArgType.Boolean => value switch
-        {
-            ToolBoolean boolean => JsonValue.Create(boolean.Value),
-            _ => bool.TryParse(Text(value), out bool parsed) ? JsonValue.Create(parsed) : null,
-        },
-
-        // Some models send an array or object as its JSON text, so both carriers are parsed from text.
-        ToolArgType.Array or ToolArgType.Object => Text(value) is string json ? ParseJson(json) : null,
-
-        _ => throw new ArgumentOutOfRangeException(nameof(arg), arg.Type, "Unknown argument type."),
-    };
-
-    private static string? Text(IToolArg arg) => arg switch
-    {
-        ToolString text => text.Value,
-        ToolPath path => path.Value,
-        ToolUrl url => url.Value,
-        ToolSecret secret => secret.Value,
-        ToolJson json => json.Value.GetRawText(),
-        _ => null,
-    };
-
-    private static string Describe(IToolArg arg) => arg switch
-    {
-        ToolSecret => "a secret",
-        ToolBoolean boolean => boolean.Value ? "true" : "false",
-        ToolInt integer => integer.Value.ToString(CultureInfo.InvariantCulture),
-        ToolNumber number => number.Value.ToString(CultureInfo.InvariantCulture),
-        _ => Text(arg) is string text ? $"\"{text}\"" : arg.GetType().Name,
-    };
-
-    private static JsonNode? ParseJson(string value)
-    {
-        try
-        {
-            return JsonNode.Parse(value);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return await McpClient.CallToolAsync(RequestAsync, tool, args, token).ConfigureAwait(false);
     }
 
     private async Task<JsonNode?> RequestAsync(string method, JsonObject? parameters, CancellationToken token)
