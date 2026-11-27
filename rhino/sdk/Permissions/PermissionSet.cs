@@ -56,11 +56,13 @@ public sealed class PermissionSet
         return result;
     }
 
-    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, Mcp mcp, ITool tool, IList<IToolArg> args)
+    internal static Permissability ResolvePermissionChain(IAgentDefinition? definition, Mcp mcp, ITool tool, IList<IToolArg> args)
         => ResolvePermissionChain(definition, mcp.Name, tool.Name, args);
 
-    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, string mcpName, string toolName, IList<IToolArg> args)
+    internal static Permissability ResolvePermissionChain(IAgentDefinition? definition, string mcpName, string toolName, IList<IToolArg> args)
     {
+        if (definition is null) return Permissability.Deny;
+
         Permissability globalPermissions = AIInstances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
         if (globalPermissions == Permissability.Deny) return Permissability.Deny;
 

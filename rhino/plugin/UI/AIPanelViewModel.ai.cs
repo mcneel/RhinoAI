@@ -317,7 +317,7 @@ internal partial class AIPanelViewModel : IDisposable
             return false;
         }
 
-        PinnedAgentId = resumed.Definition.Id;
+        PinnedAgentId = resumed.DefinitionId;
         ShowLive();
         SendAgents();
         SendHistory();
@@ -576,9 +576,7 @@ internal partial class AIPanelViewModel : IDisposable
                 null));
         }
 
-        IAgentDefinition? active = Document is { } doc && AgentHost.TryFor(doc, out AgentRunner agent)
-            ? agent.Definition
-            : AgentHost.Definitions.FirstOrDefault(AgentHost.IsUsable);
+        IAgentDefinition? active = AgentHost.ActiveDefinition(Document);
 
         if (active is not null)
             PinnedAgentId = active.Id;

@@ -29,8 +29,8 @@ public sealed class Agents
     internal bool Remove(Guid id)
         => PrivateDefinitions.TryRemove(id, out _);
 
-    public bool Exists(IAgentDefinition definition)
-        => PrivateDefinitions.ContainsKey(definition.Id);
+    public bool Exists(IAgentDefinition? definition)
+        => definition is not null && PrivateDefinitions.ContainsKey(definition.Id);
 
     private bool LoadAgentsFromJson()
     {
@@ -92,6 +92,12 @@ public sealed class Agents
             AgentType.Unknown => true,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
         };
+    }
+
+    internal IAgentDefinition? FromId(Guid id)
+    {
+        PrivateDefinitions.TryGetValue(id, out IAgentDefinition? def);
+        return def;
     }
 
 }

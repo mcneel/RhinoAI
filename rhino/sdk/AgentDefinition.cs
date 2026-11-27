@@ -124,7 +124,14 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
     }
 
     [JsonIgnore]
-    public IModel? CurrentModel => GetModel(CurrentModelId ?? DefaultModelId ?? "");
+    protected IModel? CachedModel { get; set; }
+
+    [JsonIgnore]
+    public IModel? CurrentModel => CachedModel switch
+    {
+        { } cached when string.Equals(cached.Name, CurrentModelId ?? DefaultModelId ?? "", StringComparison.OrdinalIgnoreCase) => cached,
+        _ => CachedModel = GetModel(CurrentModelId ?? DefaultModelId ?? ""),
+    };
 
     public abstract IModel? GetModel(string modelName);
 
@@ -142,15 +149,28 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
     public List<SearchPath> WinSearchPaths { get; init; } = [];
     public List<SearchPath> MacSearchPaths { get; init; } = [];
 
-    public IEnumerable<string> ValidPaths()
+    private List<string>? CachedPaths { get; set; }
+
+    public IReadOnlyList<string> ValidPaths()
     {
-        List<SearchPath> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
-        foreach(SearchPath path in paths)
+        if (CachedPaths is null)
         {
-            if (!path.Enabled) continue;
-            foreach (string match in new Glob(path.Path, IncludeDirs: false).TruePaths)
-                yield return match;
+            List<string> tempPaths = [];
+
+            List<SearchPath> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
+            foreach (SearchPath path in paths)
+            {
+                if (!path.Enabled) continue;
+                foreach (string match in new Glob(path.Path, IncludeDirs: false).TruePaths)
+                {
+                    tempPaths.Add(match);
+                }
+            }
+
+            CachedPaths = tempPaths;
         }
+
+        return CachedPaths;
     }
 
     [JsonIgnore]
@@ -247,6 +267,9 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             {
                 Secrets.Stasher.TrySetSecret(ApiKeyEnvVar, value);
             }
+
+            PrivateApiKey = null;
+            CachedModel = null;
         }
     }
 
@@ -290,7 +313,7 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
         IModel model = modelFactory.Invoke(def.ModelId);
 
         // Ensure the API Key is injected
-        if (model is ApiModel apiModel)
+        if (model is ApiModel apiModel && ApiKey is not null)
         {
             apiModel.ApiKey = ApiKey;
         }

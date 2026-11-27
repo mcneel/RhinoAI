@@ -19,19 +19,20 @@ internal sealed class AgentRunner : IDisposable
 
     private bool IsDisposed { get; set; }
 
-    public IAgentDefinition Definition { get; }
+    public Guid DefinitionId { get; }
+    public IAgentDefinition? Definition => AIInstances.Agents.FromId(DefinitionId);
 
     public Conversation Conversation { get; }
 
-    public string Key => Definition.Id.ToString();
+    public string Key => DefinitionId.ToString();
 
-    public string Name => Definition.DisplayName;
+    public string Name => Definition?.DisplayName ?? Key;
 
     public bool Runs(Agent agent) => ReferenceEquals(Agent, agent);
 
     private AgentRunner(IAgentDefinition definition, Agent agent, Conversation conversation)
     {
-        Definition = definition;
+        DefinitionId = definition.Id;
         Agent = agent;
         Conversation = conversation;
     }

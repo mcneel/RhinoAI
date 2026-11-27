@@ -37,7 +37,7 @@ internal static class AgentHost
     public static void SetActive(RhinoDoc doc, Guid id) =>
         ActiveIds[doc.RuntimeSerialNumber] = id;
 
-    private static Agent WithOwnHarness(Agent agent) =>
+    private static Agent? WithOwnHarness(Agent agent) =>
         agent.Model is Rhino.AI.Models.DesktopModel
             ? agent
             : agent.WithHarness(new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync });
@@ -69,10 +69,10 @@ internal static class AgentHost
             return true;
         }
 
-        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent)
+        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent || WithOwnHarness(agent) is not { } harnessed)
             return false;
 
-        runner = AgentRunner.Start(definition, WithOwnHarness(agent), DocTitle(doc));
+        runner = AgentRunner.Start(definition, harnessed, DocTitle(doc));
         Runners[key] = runner;
         return true;
     }
@@ -83,14 +83,14 @@ internal static class AgentHost
         if (Find(dto.AgentName) is not { } definition || !IsUsable(definition))
             return false;
 
-        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent)
+        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent || WithOwnHarness(agent) is not { } harnessed)
             return false;
 
         (uint, Guid) key = (doc.RuntimeSerialNumber, definition.Id);
         if (Runners.Remove(key, out AgentRunner? prior))
             SafeDispose(prior);
 
-        runner = AgentRunner.Resume(definition, WithOwnHarness(agent), dto);
+        runner = AgentRunner.Resume(definition, harnessed, dto);
         Runners[key] = runner;
         SetActive(doc, definition.Id);
         return true;
@@ -116,16 +116,26 @@ internal static class AgentHost
         ActiveIds.Clear();
     }
 
+    public static IAgentDefinition? ActiveDefinition(RhinoDoc? doc) =>
+        doc is null ? FallbackDefinition() : ResolveActive(doc);
+
     private static IAgentDefinition? ResolveActive(RhinoDoc doc)
     {
         if (ActiveIds.TryGetValue(doc.RuntimeSerialNumber, out Guid active))
-            return Definitions.FirstOrDefault(d => d.Id == active && IsUsable(d));
+        {
+            if (AIInstances.Agents.FromId(active) is { } pinned && IsUsable(pinned))
+                return pinned;
 
-        if (AIInstances.Agents.PreferredDefinition is { } preferred && IsUsable(preferred))
-            return preferred;
+            ActiveIds.Remove(doc.RuntimeSerialNumber);
+        }
 
-        return Definitions.FirstOrDefault(IsUsable);
+        return FallbackDefinition();
     }
+
+    private static IAgentDefinition? FallbackDefinition() =>
+        AIInstances.Agents.PreferredDefinition is { } preferred && IsUsable(preferred)
+            ? preferred
+            : Definitions.FirstOrDefault(IsUsable);
 
     private static string DocTitle(RhinoDoc doc) =>
         string.IsNullOrEmpty(doc.Name) ? "Untitled" : doc.Name;
