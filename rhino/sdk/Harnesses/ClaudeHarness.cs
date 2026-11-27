@@ -27,9 +27,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
-        if (!await EnsureLoggedIn(token, claudeModel))
+        if (await EnsureLoggedIn(token, claudeModel) is string loginFailureMessage)
         {
-            yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
+            yield return new MessageTurn(loginFailureMessage, RoleType.System) { Success = false };
             yield break;
         }
 
@@ -107,9 +107,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     }
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token, ClaudeDesktopModel claudeModel)
+    private async Task<string?> EnsureLoggedIn(CancellationToken token, ClaudeDesktopModel claudeModel)
     {
-        if (LoggedIn) return true;
+        if (LoggedIn) return null;
         try
         {
             using Process claude = GetClaudeProcess(token, claudeModel);
@@ -121,7 +121,10 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
                 try { claude.Kill(entireProcessTree: true); } catch (Exception) { }
             });
 
-            if (!claude.Start()) return LoggedIn;
+            if (!claude.Start())
+            {
+                return "Could not start Claude to Log In";
+            }
 
             List<string> lines = [];
             while (true)
@@ -138,18 +141,17 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             if (node?["loggedIn"]?.GetValue<bool>() == true)
             {
                 LoggedIn = true;
-                return LoggedIn;
+                return null;
             }
-            LoggedIn = await LogIn(token, claudeModel);
-            return LoggedIn;
+            return await LogIn(claudeModel, token);
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return ex.Message;
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token, ClaudeDesktopModel model)
+    private async Task<string?> LogIn(ClaudeDesktopModel model, CancellationToken token)
     {
         using Process claude = GetClaudeProcess(token, model);
         claude.StartInfo.AddArgument("auth");
@@ -161,7 +163,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             try { claude.Kill(entireProcessTree: true); } catch (Exception) { }
         });
 
-        if (!claude.Start()) return false;
+        if (!claude.Start()) return "Could not start Claude to Log In";
 
         List<string> lines = [];
         while (true)
@@ -175,13 +177,12 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         await claude.WaitForExitAsync(token);
 
-        if (claude.ExitCode == 0) return true;
+        if (claude.ExitCode == 0) return null;
 
-        // TODO : Handle Failure
         string data = string.Join("\n", lines);
         // JsonNode? node = JsonObject.Parse(data);
 
-        return false;
+        return data;
     }
 
     public override async Task<IEnumerable<ITurn>> LoopAsync(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
@@ -673,7 +674,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
-            
+
             // TODO : MCP's
             if (mcp is StdioMcp stdioMcp)
             {
@@ -729,7 +730,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private static IEnumerable<KeyValuePair<string, JsonNode?>> ToNode(IReadOnlyDictionary<string, string> dict)
     {
-        foreach(KeyValuePair<string, string> kvp in dict)
+        foreach (KeyValuePair<string, string> kvp in dict)
         {
             if (JsonValue.Create(kvp.Value) is not JsonNode node) continue;
             yield return new KeyValuePair<string, JsonNode?>(kvp.Key, node);
