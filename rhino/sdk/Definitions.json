@@ -11,7 +11,6 @@
           { "path" : "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe", "enabled" : true },
           { "path" : "%APPDATA%/Claude/claude-code/**/claude.exe", "enabled" : true },
           { "path" : "%USERPROFILE%/.local/bin/claude.exe", "enabled" : true },
-          { "path" : "%APPDATA%/npm/claude.cmd", "enabled" : true },
           { "path" : "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe", "enabled" : true },
           { "path" : "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe", "enabled" : true }
         ],
@@ -62,8 +61,7 @@
       "searchpaths": {
         "win": [
           { "path" : "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe", "enabled" : true },
-          { "path" : "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe", "enabled" : true },
-          { "path" : "%APPDATA%/npm/codex.cmd", "enabled" : true }
+          { "path" : "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe", "enabled" : true }
         ],
         "mac": [
           { "path" : "/Applications/ChatGPT.app/Contents/Resources/codex", "enabled" : true },
