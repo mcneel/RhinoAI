@@ -9,7 +9,7 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId, Action<Guid> onSessionStarted)
+internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId, Action<Guid> onSessionStarted, Action<ClaudePermissionAsk>? onPermissionAsked = null)
 {
 
     private Dictionary<string, string> ToolNames { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -29,6 +29,7 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
                 "system" => ParseSystem(node),
                 "result" => ParseResult(node),
                 "assistant" => ParseAssistant(node),
+                "control_request" => ParseControlRequest(node),
 
                 _ => [],
             };
@@ -103,6 +104,21 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
     {
         if (string.Equals(node["subtype"]?.GetValue<string>(), "init", StringComparison.OrdinalIgnoreCase))
             onSessionStarted(Guid.TryParse(node["session_id"]?.GetValue<string>(), out Guid reported) ? reported : launchedSessionId);
+
+        return [];
+    }
+
+    private List<ITurn> ParseControlRequest(JsonNode node)
+    {
+        JsonNode? request = node["request"];
+        if (request?["subtype"]?.GetValue<string>() == "can_use_tool" && node["request_id"]?.GetValue<string>() is string requestId)
+        {
+            onPermissionAsked?.Invoke(new ClaudePermissionAsk(
+                requestId,
+                request["mcp_server"]?["name"]?.GetValue<string>(),
+                request["tool_name"]?.GetValue<string>(),
+                request["input"]));
+        }
 
         return [];
     }

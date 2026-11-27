@@ -17,12 +17,6 @@ namespace Rhino.AI;
 internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 {
 
-    [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
-              "--permission-prompt-tool would resolve this")]
-#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
-    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
-#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
-
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
         if (agent.Model is not ClaudeDesktopModel claudeModel) yield break;
@@ -46,10 +40,11 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         using CancellationTokenRegistration _ = token.Register(process.Kill);
 
-        Task writing = WriteLoopAsync(process, prompt);
+        ClaudeControlChannel channel = new(this, agent, process.StandardInput, token);
+        Task writing = channel.SendAsync(prompt);
 
         bool ended = false;
-        await foreach (ITurn turn in StreamLoopAsync(process, agent, sessionId, token))
+        await foreach (ITurn turn in StreamLoopAsync(process, agent, sessionId, channel, token))
         {
             while (process.TryPop(out ITurn processTurn))
             {
@@ -239,32 +234,14 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument(agent.Config.SessionId == Guid.Empty ? "--session-id" : "--resume");
         process.StartInfo.AddArgument(sessionId.ToString());
 
-        // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
-        string allowedTools = string.Empty;
+        process.StartInfo.AddArgument("--permission-prompt-tool");
+        process.StartInfo.AddArgument("stdio");
 
-        // ALLOW ALL TOOLS DO PERMISSIONS OURSELVES
-        foreach (Mcp mcp in Mcps.Values)
-        {
-            if (!mcp.Enabled) continue;
-
-            // TODO : Check Permissions.ProhibitedTools()
-            allowedTools += $"mcp__{CoerceMcpName(mcp.Name)}__*";
-            allowedTools += " ";
-        }
         process.StartInfo.AddArgument("--allowedTools");
-        process.StartInfo.AddArgument(allowedTools);
+        process.StartInfo.AddArgument(string.Join(" ", AllowedTools(agent)));
 
-
-        // --disallowedTools, --disallowed-tools <tools...> Comma or space-separated list of tool names to deny (e.g. "Bash(git *) Edit")
-        string disallowedTools = string.Empty;
-        foreach (Permission permission in AIInstances.Preferences.Permissions.ProhibitedTools())
-        {
-            disallowedTools += $"mcp__{CoerceMcpName(permission.McpName)}__{permission.ToolName}";
-            // permission.ArgumentPermissions // TODO : Use these for smarter permissions
-            disallowedTools += " ";
-        }
         process.StartInfo.AddArgument("--disallowedTools");
-        process.StartInfo.AddArgument(disallowedTools);
+        process.StartInfo.AddArgument(string.Join(" ", DisallowedTools(agent)));
 
         // Model
         //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
@@ -321,8 +298,39 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return new(process);
     }
 
-    private static string CoerceMcpName(string mcpName)
-        => mcpName.Replace(' ', '_');
+    // A leased in-memory MCP already runs Rhino's permission chain per call, so letting the CLI ask too would prompt twice.
+    private IEnumerable<string> AllowedTools(Agent agent)
+    {
+        foreach (Mcp mcp in Mcps.Values)
+        {
+            if (!mcp.Enabled) continue;
+
+            if (mcp is MemoryMcp)
+            {
+                yield return $"{WirePrefix(mcp.Name)}*";
+                continue;
+            }
+
+            foreach (string tool in PermissionSet.ToolsAllowedForAnyArguments(agent.Definition, mcp.Name))
+                yield return WirePrefix(mcp.Name) + tool;
+        }
+    }
+
+    private IEnumerable<string> DisallowedTools(Agent agent)
+    {
+        foreach (Mcp mcp in Mcps.Values)
+        {
+            if (!mcp.Enabled) continue;
+
+            IEnumerable<string> denied = AIInstances.Preferences.Permissions.ToolsDeniedForAnyArguments(mcp.Name)
+                .Concat(agent.Definition?.Permissions.ToolsDeniedForAnyArguments(mcp.Name) ?? []);
+            foreach (string tool in denied.Distinct(StringComparer.OrdinalIgnoreCase))
+                yield return WirePrefix(mcp.Name) + tool;
+        }
+    }
+
+    internal static string WirePrefix(string mcpName)
+        => $"mcp__{mcpName.Replace(' ', '_')}__";
 
     private static string UserLine(MessageTurn message) => new JsonObject
     {
@@ -350,23 +358,21 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         _ => throw new NotSupportedException($"The Claude harness cannot send {content.GetType().Name}."),
     };
 
-    private async Task WriteLoopAsync(AIProcess process, string prompt)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, Agent agent, Guid launchedSessionId, ClaudeControlChannel channel, [EnumeratorCancellation] CancellationToken token)
     {
-        await process.StandardInput.WriteLineAsync(prompt).ConfigureAwait(false);
-        await process.StandardInput.FlushAsync().ConfigureAwait(false);
-        process.StandardInput.Close();
-    }
-
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, Agent agent, Guid launchedSessionId, [EnumeratorCancellation] CancellationToken token)
-    {
-        ClaudeStreamParser parser = new(this, launchedSessionId, reported => agent.Config.SessionId = reported);
+        ClaudeStreamParser parser = new(this, launchedSessionId, reported => agent.Config.SessionId = reported, channel.Answer);
         try
         {
             string? line;
             while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 foreach (ITurn turn in parser.Parse(line))
+                {
+                    if (turn is TurnEnd)
+                        await channel.CloseAsync().ConfigureAwait(false);
+
                     yield return turn;
+                }
             }
         }
         finally

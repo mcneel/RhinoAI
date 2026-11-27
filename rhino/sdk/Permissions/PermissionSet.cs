@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -41,6 +42,17 @@ public sealed class PermissionSet
     public Permissability HasPermission(string mcpName, string toolName, IList<IToolArg> args)
     {
         Permissability result = DefaultPermission;
+        foreach (Permission permission in Naming(mcpName, toolName))
+        {
+            // TODO : What if there are multiple entries?
+            result = ResolvePermissions(permission, args);
+        }
+
+        return result;
+    }
+
+    private IEnumerable<Permission> Naming(string mcpName, string toolName)
+    {
         foreach (Permission permission in Permissions)
         {
             if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
@@ -49,11 +61,8 @@ public sealed class PermissionSet
             if (!string.Equals(permission.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.ToolName, "*")) continue;
 
-            // TODO : What if there are multiple entries?
-            result = ResolvePermissions(permission, args);
+            yield return permission;
         }
-
-        return result;
     }
 
     internal static Permissability ResolvePermissionChain(IAgentDefinition? definition, Mcp mcp, ITool tool, IList<IToolArg> args)
@@ -118,6 +127,37 @@ public sealed class PermissionSet
         }
 
         return denied;
+    }
+
+    // Only a tool whose every rule is an unconditional Always qualifies, so no argument can change the chain's answer.
+    internal static IReadOnlyList<string> ToolsAllowedForAnyArguments(IAgentDefinition? definition, string mcpName)
+    {
+        if (definition is null) return [];
+
+        PermissionSet global = AIInstances.Preferences.Permissions;
+        HashSet<string> allowed = new(StringComparer.OrdinalIgnoreCase);
+        foreach (Permission candidate in global.Permissions.Concat(definition.Permissions.Permissions))
+        {
+            if (candidate.Permissability != Permissability.Always || candidate.ToolName == "*") continue;
+            if (!string.Equals(candidate.McpName, mcpName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!global.IsAlwaysForAnyArguments(mcpName, candidate.ToolName) || !definition.Permissions.IsAlwaysForAnyArguments(mcpName, candidate.ToolName)) continue;
+            if (ResolvePermissionChain(definition, mcpName, candidate.ToolName, []) != Permissability.Always) continue;
+
+            allowed.Add(candidate.ToolName);
+        }
+
+        return [.. allowed];
+    }
+
+    private bool IsAlwaysForAnyArguments(string mcpName, string toolName)
+    {
+        foreach (Permission permission in Naming(mcpName, toolName))
+        {
+            if (permission.Permissability != Permissability.Always || !AcceptsAnyArguments(permission))
+                return false;
+        }
+
+        return true;
     }
 
     private static bool AcceptsAnyArguments(Permission permission)
