@@ -52,6 +52,8 @@
     <Compile Include="../../rhino/plugin/UI/ImageMentions.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/GeneratedImages.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ConversationFeed.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelTheme.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelStrings.ai.cs" LinkBase="PanelSources" />
   </ItemGroup>
 
   <ItemGroup>

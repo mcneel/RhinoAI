@@ -70,7 +70,7 @@ internal static class ToolSummary
 
             null => Localization.LocalizeString("unknown tool", 200),
 
-            _ => toolName.Replace("_", ""),
+            _ => toolName,
 
         };
     }

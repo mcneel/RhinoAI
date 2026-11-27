@@ -681,13 +681,13 @@ try {
     (await page.evaluate(() => document.querySelectorAll('.ctx-menu').length)) === 0);
 
   // ------------------------------------------------- the C# contract, replayed
-  // host-events.json is written by PanelContractTests in the plug-in's test suite, using the real
+  // host-events.json is written by PanelContractTests in tests/Server.Tests, using the real
   // serialiser. Replaying it here is the only place the two languages are checked against each
   // other, so a protocol change on either side fails before it reaches Rhino.
   const contractPath = resolve(root, 'tests/host-events.json');
   const hostPage = resolve(root, 'dist/panel.host.html');
   if (!existsSync(contractPath) || !existsSync(hostPage)) {
-    check('the C# contract sample is available', false, 'run `dotnet test tests/StreamJson.Tests` and `npm run build`');
+    check('the C# contract sample is available', false, 'run `dotnet test tests/Server.Tests` and `npm run build`');
   } else {
     const events = JSON.parse(readFileSync(contractPath, 'utf8'));
     const host = await browser.newPage();
@@ -749,7 +749,7 @@ try {
     }));
 
     check('C#-serialised events render a turn', rendered.turns === 1 && rendered.prompt?.includes('Facade'), JSON.stringify(rendered));
-    check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
+    check('the agent list arrives', rendered.agent === 'Claude' && rendered.model === 'Opus (latest)', JSON.stringify(rendered));
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
       rendered.tools === 4 && rendered.toolOk === 1, JSON.stringify(rendered));
@@ -759,7 +759,7 @@ try {
     check('a result the agent flagged as an error renders as a failed card',
       rendered.toolFailed === 1 && rendered.titles.includes('python failed'), JSON.stringify(rendered));
     check('a C#-serialised image lands as a block pointing at the host route',
-      rendered.images === 1 && rendered.imageSrc === '/image/a3f1c09e42b7', JSON.stringify(rendered));
+      rendered.images === 1 && rendered.imageSrc === '/image/a3f1c09e42b7d5e8f6019c3b', JSON.stringify(rendered));
     check('an image the host cannot serve drops the picture and keeps its caption',
       rendered.imageFrames === 0 && rendered.imageName.length > 0, JSON.stringify(rendered));
     check('a uuid filename is labelled rather than shown',
