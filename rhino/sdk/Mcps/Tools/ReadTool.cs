@@ -14,7 +14,7 @@ public sealed record ReadTool() : Tool("read",
                                 true,
                                 false,
                                 [
-                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                    new ("path", "The absolute file path", ToolArgType.FilePath, true),
                                 ])
 {
 
