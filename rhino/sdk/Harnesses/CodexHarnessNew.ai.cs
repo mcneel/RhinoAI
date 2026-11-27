@@ -22,7 +22,7 @@ internal sealed record CodexRateLimitWindow(int UsedPercent, long? WindowMinutes
 
 internal sealed record CodexRateLimits(CodexRateLimitWindow? Primary, CodexRateLimitWindow? Secondary, string? PlanType, string? LimitReached);
 
-internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
+internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 {
 
     private static readonly string[] DisabledFeatures = ["shell_tool", "unified_exec", "multi_agent", "goals",
@@ -68,7 +68,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
         private const int ErrorTailLines = 20;
         private static readonly TimeSpan SignInTimeout = TimeSpan.FromMinutes(10);
 
-        private CodexHarness2 Owner { get; }
+        private CodexHarness Owner { get; }
         private Agent Agent { get; }
         private CodexDesktopModel Model { get; }
         private Process Process { get; }
@@ -91,7 +91,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
 
         private bool IsIsolated => !Agent.Config.UseLocalSettings;
 
-        public Session(CodexHarness2 owner, Agent agent, CodexDesktopModel model)
+        public Session(CodexHarness owner, Agent agent, CodexDesktopModel model)
         {
             Owner = owner;
             Agent = agent;
@@ -151,7 +151,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
                     {
                         ["name"] = "rhino",
                         ["title"] = "Rhino",
-                        ["version"] = typeof(CodexHarness2).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+                        ["version"] = typeof(CodexHarness).Assembly.GetName().Version?.ToString() ?? "0.0.0",
                     },
                 }, token).ConfigureAwait(false);
                 await SendAsync(new JsonObject { ["method"] = "initialized" }).ConfigureAwait(false);

@@ -15,7 +15,7 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
+internal sealed class CodexHarnessLegacy(PlugIns.PlugInToken token) : Harness(token)
 {
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
