@@ -12,10 +12,16 @@ namespace Rhino.AI;
 /// <summary>
 /// A HTTP MCP that drives a server
 /// </summary>
-public sealed class HttpMcp(string name, Uri url) : Mcp(name)
+public sealed class HttpMcp(string name, Uri url, IDictionary<string, string> headers) : Mcp(name)
 {
 
+    public HttpMcp(string name, Uri url) : this(name, url, new Dictionary<string, string>())
+    {
+    }
+
     public Uri Url { get; } = url;
+
+    public IReadOnlyDictionary<string, string> Headers { get; } = new Dictionary<string, string>(headers);
 
     private HttpListener Listener { get; } = new();
 

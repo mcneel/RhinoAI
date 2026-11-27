@@ -30,6 +30,7 @@ internal abstract record ServerProblem
 
     public sealed record NameMissing : ServerProblem;
     public sealed record NameTaken(string Name) : ServerProblem;
+    public sealed record NameInvalid(string Name) : ServerProblem;
     public sealed record CommandMissing(string Name) : ServerProblem;
     public sealed record UrlInvalid(string Name) : ServerProblem;
     public sealed record ValueInvalid(string Name, string Key) : ServerProblem;
@@ -240,6 +241,8 @@ internal static class McpServerEntry
 
     public static ServerResult<IMcpDefinition> ToDefinition(NamedServer server, bool enabled)
     {
+        if (!Tool.IsCanonicalName(server.Name))
+            return new ServerResult<IMcpDefinition>.Failed(new ServerProblem.NameInvalid(server.Name));
         if (!TryText(server.Entry, TypeKey, out string? type))
             return new ServerResult<IMcpDefinition>.Failed(new ServerProblem.ValueInvalid(server.Name, TypeKey));
         if (type is not (null or StdioType or HttpType))

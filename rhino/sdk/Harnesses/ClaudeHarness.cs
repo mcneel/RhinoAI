@@ -664,7 +664,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
     }
 
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
-    private string GetMcpJsons(Agent agent)
+    internal string GetMcpJsons(Agent agent)
     {
         JsonObject array = new();
 
@@ -680,9 +680,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
                 array[mcp.Name] = new JsonObject()
                 {
                     ["type"] = "stdio",
-                    ["command"] = stdioMcp.ProcessPath.LocalPath
-                    // ["args"] = ""
-                    // ["env"] = ""
+                    ["command"] = stdioMcp.Command,
+                    ["args"] = new JsonArray([.. stdioMcp.Args.Select(arg => JsonValue.Create(arg))]),
+                    ["env"] = new JsonObject(ToNode(stdioMcp.Env))
                 };
             }
             else if (mcp is HttpMcp httpMcp)
@@ -690,11 +690,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
                 array[mcp.Name] = new JsonObject()
                 {
                     ["type"] = "http",
-                    ["url"] = httpMcp.Url.AbsoluteUri
-                    // "headers": {
-                    //     "Authorization": "Bearer ${MCP_TOKEN}",
-                    //     "X-Tenant": "mcneel"
-                    // }
+                    ["url"] = httpMcp.Url.AbsoluteUri,
+                    ["headers"] = new JsonObject(ToNode(httpMcp.Headers))
                 };
             }
             else if (mcp is MemoryMcp memoryMcp)
@@ -728,6 +725,15 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         // TODO : Options
         string json = servers.ToJsonString();
         return json;
+    }
+
+    private static IEnumerable<KeyValuePair<string, JsonNode?>> ToNode(IReadOnlyDictionary<string, string> dict)
+    {
+        foreach(KeyValuePair<string, string> kvp in dict)
+        {
+            if (JsonValue.Create(kvp.Value) is not JsonNode node) continue;
+            yield return new KeyValuePair<string, JsonNode?>(kvp.Key, node);
+        }
     }
 
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];

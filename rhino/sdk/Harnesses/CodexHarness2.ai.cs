@@ -288,8 +288,17 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
 
                 JsonObject? server = mcp switch
                 {
-                    StdioMcp stdio => new JsonObject { ["command"] = stdio.ProcessPath.LocalPath },
-                    HttpMcp http => new JsonObject { ["url"] = http.Url.AbsoluteUri },
+                    StdioMcp stdio => new JsonObject
+                    {
+                        ["command"] = stdio.Command,
+                        ["args"] = new JsonArray([.. stdio.Args.Select(arg => (JsonNode?)JsonValue.Create(arg))]),
+                        ["env"] = new JsonObject(stdio.Env.Select(variable => new KeyValuePair<string, JsonNode?>(variable.Key, JsonValue.Create(variable.Value)))),
+                    },
+                    HttpMcp http => new JsonObject
+                    {
+                        ["url"] = http.Url.AbsoluteUri,
+                        ["http_headers"] = new JsonObject(http.Headers.Select(header => new KeyValuePair<string, JsonNode?>(header.Key, JsonValue.Create(header.Value)))),
+                    },
                     MemoryMcp memory => Lease(memory),
                     _ => null,
                 };

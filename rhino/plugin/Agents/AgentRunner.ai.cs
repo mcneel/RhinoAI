@@ -17,6 +17,8 @@ internal sealed class AgentRunner : IDisposable
 
     private bool HasAttached { get; set; }
 
+    private Dictionary<IMcpDefinition, Mcp> CustomMcpsByDefinition { get; } = [];
+
     private bool IsDisposed { get; set; }
 
     public Guid DefinitionId { get; }
@@ -134,11 +136,17 @@ internal sealed class AgentRunner : IDisposable
     {
         if (Agent.Harness is IDisposable harness)
             harness.Dispose();
+
+        Mcp[] customMcps;
+        lock (Gate)
+            customMcps = [.. CustomMcpsByDefinition.Values];
+        foreach (Mcp mcp in customMcps)
+            mcp.Dispose();
     }
 
     public bool HasAttachedMcps { get { lock (Gate) return HasAttached; } }
 
-    // Before the first prompt this includes the plug-in MCPs that prompt will attach, so they can be listed and toggled early.
+    // Before the first prompt this includes the plug-in and custom MCPs that prompt will attach, so they can be listed and toggled early.
     public IReadOnlyList<Mcp> Mcps
     {
         get
@@ -148,7 +156,7 @@ internal sealed class AgentRunner : IDisposable
                 List<Mcp> mcps = [.. Agent.Harness.Mcps.Values];
                 if (HasAttached) return mcps;
 
-                foreach (Mcp pending in PlugInRegistry.PanelMcps)
+                foreach (Mcp pending in PlugInRegistry.PanelMcps.Concat(CustomMcpsLocked()))
                     if (!mcps.Any(mcp => string.Equals(mcp.Name, pending.Name, StringComparison.OrdinalIgnoreCase)))
                         mcps.Add(pending);
                 return mcps;
@@ -172,11 +180,39 @@ internal sealed class AgentRunner : IDisposable
         foreach (Mcp mcp in PlugInRegistry.PanelMcps)
             Agent.Harness.AddMcp(mcp);
 
+        foreach (Mcp mcp in CustomMcpsLocked())
+            Agent.Harness.AddMcp(mcp);
+
         foreach (ISkill skill in PlugInRegistry.PanelSkills)
             Agent.Harness.AddSkill(skill);
 
         HasAttached = true;
     }
+
+    // Read from preferences each time so a server added in Settings before the first prompt still attaches, while reused instances keep earlier panel toggles.
+    private List<Mcp> CustomMcpsLocked()
+    {
+        List<Mcp> mcps = [];
+        foreach (IMcpDefinition definition in AIInstances.Preferences.CustomMcps)
+        {
+            if (!Tool.IsCanonicalName(definition.Name)) continue;
+
+            if (!CustomMcpsByDefinition.TryGetValue(definition, out Mcp? mcp))
+            {
+                mcp = ToMcp(definition);
+                CustomMcpsByDefinition[definition] = mcp;
+            }
+            mcps.Add(mcp);
+        }
+        return mcps;
+    }
+
+    private static Mcp ToMcp(IMcpDefinition definition) => definition switch
+    {
+        StdioMcpDefinition stdio => new StdioMcp(stdio.Name, stdio.Command, stdio.Args, stdio.Env.ToDictionary(pair => pair.Key, pair => pair.Value)) { Enabled = stdio.Enabled },
+        HttpMcpDefinition http => new HttpMcp(http.Name, http.Url, http.Headers.ToDictionary(pair => pair.Key, pair => pair.Value)) { Enabled = http.Enabled },
+        _ => throw new ArgumentOutOfRangeException(nameof(definition), definition, "Unknown MCP definition."),
+    };
 
     private static List<IMessageContent> Contents(UserMessage message)
     {

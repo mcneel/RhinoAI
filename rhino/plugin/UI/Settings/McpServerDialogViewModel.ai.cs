@@ -296,6 +296,7 @@ internal sealed class McpServerDialogViewModel : SimpleViewModel
     {
         ServerProblem.NameMissing => LOC.STR("Enter a name for the server."),
         ServerProblem.NameTaken taken => string.Format(LOC.STR("There is already a server named \"{0}\"."), taken.Name),
+        ServerProblem.NameInvalid invalid => string.Format(LOC.STR("\"{0}\" can only use letters, digits, - and _, and cannot contain __."), invalid.Name),
         ServerProblem.CommandMissing { Name.Length: 0 } => LOC.STR("Enter the command that starts the server."),
         ServerProblem.CommandMissing missing => string.Format(LOC.STR("\"{0}\" needs a command."), missing.Name),
         ServerProblem.UrlInvalid { Name.Length: 0 } => LOC.STR("Enter a URL that starts with http or https."),

@@ -14,14 +14,22 @@ namespace Rhino.AI;
 /// <summary>
 /// A STandard Input Output MCP that drives an executable
 /// </summary>
-public class StdioMcp(string name, Uri process) : Mcp(name)
+public class StdioMcp(string name, string command, IEnumerable<string> args, IDictionary<string, string> env) : Mcp(name)
 {
 
     private const string ProtocolVersion = "2025-06-18";
     private const int RememberedErrorLines = 20;
     private const int GracefulExitMilliseconds = 2000;
 
-    public Uri ProcessPath { get; } = process;
+    public StdioMcp(string name, string command) : this(name, command, [], new Dictionary<string, string>())
+    {
+    }
+
+    public string Command { get; } = command;
+
+    public IReadOnlyList<string> Args { get; } = new List<string>(args);
+
+    public IReadOnlyDictionary<string, string> Env { get; } = new Dictionary<string, string>(env);
 
     private Process? Process { get; set; }
     private bool Disposed { get; set; }
@@ -40,7 +48,7 @@ public class StdioMcp(string name, Uri process) : Mcp(name)
         if (Initialized) return true;
         Process = new()
         {
-            StartInfo = new(ProcessPath.LocalPath)
+            StartInfo = new(Command)
             {
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -48,6 +56,11 @@ public class StdioMcp(string name, Uri process) : Mcp(name)
                 UseShellExecute = false,
             },
         };
+        foreach (string arg in Args)
+            Process.StartInfo.AddArgument(arg);
+        foreach (KeyValuePair<string, string> variable in Env)
+            Process.StartInfo.Environment[variable.Key] = variable.Value;
+
         if (!Process.Start()) return false;
 
         ErrorDrain = DrainErrorAsync();

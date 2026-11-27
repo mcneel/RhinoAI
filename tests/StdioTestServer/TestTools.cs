@@ -13,4 +13,8 @@ public sealed class TestTools
     public static string Repeat(string text, int count, string separator = " ")
         => string.Join(separator, Enumerable.Repeat(text, count));
 
+    [McpServerTool(Name = "launch")]
+    public static string Launch()
+        => $"{string.Join("|", Environment.GetCommandLineArgs().Skip(1))};{Environment.GetEnvironmentVariable("STDIO_TEST_VALUE")}";
+
 }

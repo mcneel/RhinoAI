@@ -575,8 +575,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             string? transport = mcp switch
             {
-                StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",
-                HttpMcp httpMcp => $"url='{httpMcp.Url.AbsoluteUri}'",
+                StdioMcp stdioMcp => $"command={TomlString(stdioMcp.Command)}, args={TomlArray(stdioMcp.Args)}, env={TomlTable(stdioMcp.Env)}",
+                HttpMcp httpMcp => $"url={TomlString(httpMcp.Url.AbsoluteUri)}, http_headers={TomlTable(httpMcp.Headers)}",
                 MemoryMcp memMcp => HandleMemoryMcp(agent, memMcp),
                 _ => null,
             };
@@ -599,7 +599,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     {
         Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, mcp);
         Leases.Add(lease);
-        return $"url='{lease.Uri.AbsoluteUri}'";
+        return $"url={TomlString(lease.Uri.AbsoluteUri)}";
     }
 
     private void DisposeLeases()
@@ -612,6 +612,25 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     }
 
     private static string TomlArray(IEnumerable<string> values)
-        => $"[{string.Join(", ", values.Select(value => $"'{value}'"))}]";
+        => $"[{string.Join(", ", values.Select(TomlString))}]";
+
+    private static string TomlTable(IReadOnlyDictionary<string, string> pairs)
+        => $"{{{string.Join(", ", pairs.Select(pair => $"{TomlString(pair.Key)}={TomlString(pair.Value)}"))}}}";
+
+    private static string TomlString(string value)
+    {
+        StringBuilder toml = new(value.Length + 2);
+        toml.Append('"');
+        foreach (char c in value)
+        {
+            if (c is '"' or '\\')
+                toml.Append('\\').Append(c);
+            else if (char.IsControl(c))
+                toml.Append("\\u").Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
+            else
+                toml.Append(c);
+        }
+        return toml.Append('"').ToString();
+    }
 
 }

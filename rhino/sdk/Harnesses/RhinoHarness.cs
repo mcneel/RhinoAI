@@ -13,16 +13,19 @@ namespace Rhino.AI;
 /// <summary>
 /// A Rhino specific harness, including all Rhino tooling
 /// </summary>
-public sealed class RhinoHarness : Harness
+public sealed class RhinoHarness : Harness, IDisposable
 {
+
+    private RhinoMcp Router { get; } = new();
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
-        RhinoMcp rhinoMcp = new();
-        AddMcp(rhinoMcp);
+        AddMcp(Router);
 
         // InitSkills();
     }
+
+    public void Dispose() => Router.Dispose();
 
     private string? CachedResolvedRouter { get; set; }
     private string ResolveRouter
