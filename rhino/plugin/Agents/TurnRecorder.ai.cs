@@ -35,6 +35,10 @@ internal sealed class TurnRecorder(Conversation conversation, string agentName)
                 Conversation.CompleteToolCall(result.Id, result.Data, failed: !result.Success);
                 break;
 
+            case UsageTurn usage:
+                Conversation.RecordUsage(new TokenUsage(usage.InputTokens, usage.OutputTokens));
+                break;
+
             case TurnEnd end:
                 RecordEnd(end);
                 break;
@@ -50,7 +54,6 @@ internal sealed class TurnRecorder(Conversation conversation, string agentName)
     private void RecordEnd(TurnEnd end)
     {
         HasEnded = true;
-        Conversation.RecordUsage(new TokenUsage(end.TokenCount ?? 0, 0));
 
         if (end.Reason == StopReason.InvalidSession)
         {

@@ -29,17 +29,22 @@ public class ClaudeStreamParserTests
         List<ITurn> turns = replay.Run("claude-reply.jsonl");
 
         Assert.That(replay.SessionId, Is.EqualTo(Guid.Parse("83faae92-ea66-4ce7-ae41-3f32a794f749")));
-        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(MessageTurn), typeof(TurnEnd) }));
+        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(MessageTurn), typeof(UsageTurn), typeof(TurnEnd) }));
 
         MessageTurn reply = (MessageTurn)turns[0];
         Assert.That(reply.Role, Is.EqualTo(RoleType.Assistant));
         Assert.That(reply.Message, Is.EqualTo("hello from Rhino"));
         Assert.That(reply.TimeStamp, Is.EqualTo(new DateTime(2026, 11, 27, 18, 7, 49, 134, DateTimeKind.Utc)));
 
-        TurnEnd end = (TurnEnd)turns[1];
+        UsageTurn usage = (UsageTurn)turns[1];
+        Assert.That(usage.InputTokens, Is.EqualTo(2 + 4459), "Cache writes count as input.");
+        Assert.That(usage.OutputTokens, Is.EqualTo(9));
+        Assert.That(usage.TokenCount, Is.EqualTo(4470));
+
+        TurnEnd end = (TurnEnd)turns[2];
         Assert.That(end.Reason, Is.EqualTo(StopReason.EndTurn));
         Assert.That(end.Success, Is.True);
-        Assert.That(end.TokenCount, Is.EqualTo(4470));
+        Assert.That(end.TokenCount, Is.Null);
         Assert.That(end.Duration, Is.EqualTo(TimeSpan.FromMilliseconds(446)));
     }
 
@@ -52,7 +57,7 @@ public class ClaudeStreamParserTests
         {
             typeof(ToolTurn), typeof(ToolResultTurn),
             typeof(ToolTurn), typeof(ToolResultTurn),
-            typeof(MessageTurn), typeof(TurnEnd),
+            typeof(MessageTurn), typeof(UsageTurn), typeof(TurnEnd),
         }), "The thinking block arrives with empty text, so it should produce no turn.");
 
         ToolTurn ping = (ToolTurn)turns[0];
@@ -75,7 +80,7 @@ public class ClaudeStreamParserTests
         Assert.That(repeated.Return.Message, Is.EqualTo("ab ab ab"));
 
         Assert.That(((MessageTurn)turns[4]).Message, Is.EqualTo("ab ab ab"));
-        Assert.That(((TurnEnd)turns[5]).Reason, Is.EqualTo(StopReason.EndTurn));
+        Assert.That(((TurnEnd)turns[6]).Reason, Is.EqualTo(StopReason.EndTurn));
     }
 
     [Test]
@@ -83,8 +88,11 @@ public class ClaudeStreamParserTests
     {
         List<ITurn> turns = new Replay().Run("claude-tools.jsonl");
 
-        Assert.That(turns.OfType<TurnEnd>().Single().TokenCount, Is.EqualTo(13946));
-        Assert.That(turns.Where(t => t is not TurnEnd).Select(t => t.TokenCount), Is.All.Null);
+        UsageTurn usage = turns.OfType<UsageTurn>().Single();
+        Assert.That(usage.InputTokens, Is.EqualTo(6 + 3588 + 10163));
+        Assert.That(usage.OutputTokens, Is.EqualTo(189));
+        Assert.That(usage.TokenCount, Is.EqualTo(13946));
+        Assert.That(turns.Where(t => t is not UsageTurn).Select(t => t.TokenCount), Is.All.Null);
     }
 
     [Test]
@@ -92,13 +100,14 @@ public class ClaudeStreamParserTests
     {
         List<ITurn> turns = new Replay().Run("claude-max-turns.jsonl");
 
-        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(ToolTurn), typeof(ToolResultTurn), typeof(TurnEnd) }));
+        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(ToolTurn), typeof(ToolResultTurn), typeof(UsageTurn), typeof(TurnEnd) }));
 
-        TurnEnd end = (TurnEnd)turns[2];
+        Assert.That(turns[2].TokenCount, Is.EqualTo(4514), "A failed run was still billed.");
+
+        TurnEnd end = (TurnEnd)turns[3];
         Assert.That(end.Reason, Is.EqualTo(StopReason.Error));
         Assert.That(end.Success, Is.False);
         Assert.That(end.Data, Is.EqualTo("Claude stopped early (error_max_turns)."));
-        Assert.That(end.TokenCount, Is.EqualTo(4514));
     }
 
     [Test]

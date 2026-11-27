@@ -34,7 +34,7 @@ public sealed class Loop(Harness harness)
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
         StopReason reason = StopReason.EndTurn;
-        int? tokenCount = null;
+        string? message = null;
 
         if (agent.Model is null)
             throw new Exception("Agent does not have a valid model");
@@ -51,8 +51,13 @@ public sealed class Loop(Harness harness)
                 if (turn is TurnEnd end)
                 {
                     reason = end.Reason;
-                    if (end.TokenCount is int count)
-                        tokenCount = (tokenCount ?? 0) + count;
+                    message = end.Data;
+                    continue;
+                }
+
+                if (turn is UsageTurn)
+                {
+                    yield return turn;
                     continue;
                 }
 
@@ -70,7 +75,7 @@ public sealed class Loop(Harness harness)
         }
         while (results.Count > 0);
 
-        yield return new TurnEnd(reason, tokenCount: tokenCount);
+        yield return new TurnEnd(reason, message);
     }
 
     private async Task<ToolReturn> UseAsync(Agent agent, ToolTurn tool, CancellationToken token)

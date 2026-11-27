@@ -90,7 +90,7 @@ internal sealed record PanelAgent(
     string? Detail,
     bool Builtin = true);
 
-internal sealed record PanelUsage(int InputTokens, int OutputTokens, decimal? CostUsd);
+internal sealed record PanelUsage(int InputTokens, int OutputTokens);
 
 // Src is a route on the panel's own listener, never a file path: the page has no filesystem to read one with.
 internal sealed record PanelImage(string Id, string Name, string Src, long Bytes);

@@ -77,7 +77,14 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)candidate["finishReason"]), tokenCount: (int?)payload["usageMetadata"]?["totalTokenCount"]));
+        if (payload["usageMetadata"] is JsonObject usage)
+        {
+            int input = (int?)usage["promptTokenCount"] ?? 0;
+            // Output is everything beyond the prompt, so thinking counts whether or not candidatesTokenCount includes it.
+            turns.Add(new UsageTurn(input, ((int?)usage["totalTokenCount"] ?? input) - input));
+        }
+
+        turns.Add(new TurnEnd(Stop((string?)candidate["finishReason"])));
 
         return turns;
     }

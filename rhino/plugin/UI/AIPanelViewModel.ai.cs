@@ -644,7 +644,7 @@ internal partial class AIPanelViewModel : IDisposable
                 convo.DocTitle,
                 convo.StartedAt.ToString("O"),
                 convo.Turns.Count,
-                new PanelUsage(total.InputTokens, total.OutputTokens, total.CostUsd),
+                new PanelUsage(total.InputTokens, total.OutputTokens),
                 !convo.SessionLost && AgentHost.Find(convo.AgentName) is { } definition && AgentHost.IsUsable(definition)));
         }
         Bridge.Post(new HistoryEvent(entries));

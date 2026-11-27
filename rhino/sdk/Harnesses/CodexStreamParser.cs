@@ -13,7 +13,6 @@ internal sealed class CodexStreamParser(Harness harness, IReadOnlyDictionary<str
 
     private const int WarnPercent = 80;
 
-    private int? TokenCount { get; set; }
     private bool HasWarned { get; set; }
 
     public ITurn? Parse(string method, JsonObject parameters)
@@ -30,9 +29,7 @@ internal sealed class CodexStreamParser(Harness harness, IReadOnlyDictionary<str
                 return parameters["item"] is JsonObject completed ? CompletedTurn(completed) : null;
 
             case "thread/tokenUsage/updated":
-                JsonNode? last = parameters["tokenUsage"]?["last"];
-                TokenCount = (int)((Long(last?["inputTokens"]) ?? 0) + (Long(last?["outputTokens"]) ?? 0));
-                return null;
+                return UsageOf(parameters["tokenUsage"]?["last"]);
 
             case "account/rateLimits/updated":
                 return RateLimitWarning(parameters["rateLimits"]);
@@ -115,11 +112,15 @@ internal sealed class CodexStreamParser(Harness harness, IReadOnlyDictionary<str
         return parts.Count == 0 ? null : new ThinkingTurn(string.Join("\n", parts));
     }
 
-    private TurnEnd TurnEndOf(JsonNode? turn) => turn?["status"]?.GetValue<string>() switch
+    // Codex reports once per model request, and "last" is that request alone; "total" spans the whole thread.
+    private static UsageTurn? UsageOf(JsonNode? last) => last is null ? null
+        : new UsageTurn((int)(Long(last["inputTokens"]) ?? 0), (int)(Long(last["outputTokens"]) ?? 0));
+
+    private static TurnEnd TurnEndOf(JsonNode? turn) => turn?["status"]?.GetValue<string>() switch
     {
-        "completed" => new TurnEnd(StopReason.EndTurn, tokenCount: TokenCount),
-        "interrupted" => new TurnEnd(StopReason.Cancelled, tokenCount: TokenCount),
-        _ => new TurnEnd(StopReason.Error, turn?["error"]?["message"]?.GetValue<string>() ?? "Codex turn failed.", tokenCount: TokenCount),
+        "completed" => new TurnEnd(StopReason.EndTurn),
+        "interrupted" => new TurnEnd(StopReason.Cancelled),
+        _ => new TurnEnd(StopReason.Error, turn?["error"]?["message"]?.GetValue<string>() ?? "Codex turn failed."),
     };
 
     private MessageTurn? RateLimitWarning(JsonNode? node)

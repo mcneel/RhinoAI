@@ -46,12 +46,11 @@ internal sealed class Turn
     public DateTimeOffset? CompletedAt { get; private set; }
     public bool Completed { get { lock (Sync) return CompletedAt.HasValue; } }
 
-    // Token/cost accounting from the turn's terminal event; TokenUsage.Empty until the agent
-    // reports it (and stays Empty for agents that never do).
+    // Summed over every request the turn made; Empty for agents that never report usage.
     public TokenUsage Usage { get { lock (Sync) return UsageValue; } }
     private TokenUsage UsageValue { get; set; } = TokenUsage.Empty;
 
-    internal void SetUsage(TokenUsage usage) { lock (Sync) UsageValue = usage; }
+    internal void AddUsage(TokenUsage usage) { lock (Sync) UsageValue += usage; }
 
     public string? Error { get { lock (Sync) return ErrorValue; } }
     private string? ErrorValue { get; set; }
@@ -137,7 +136,7 @@ internal sealed class Conversation
                 // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
                     ev.Done || !string.IsNullOrWhiteSpace(ev.Result)));
-            turn.SetUsage(turnDto.Usage);
+            turn.AddUsage(turnDto.Usage);
             if (turnDto.Error is { Length: > 0 } error)
                 turn.Fail(error);
             // Stamping now would date every restored turn to the restore, which is what bounds the search for images the agent wrote during it.
@@ -195,9 +194,6 @@ internal sealed class Conversation
         Changed?.Invoke();
     }
 
-    // Record the current turn's token/cost accounting (from its terminal event). A no-op once the
-    // terminal event already cleared Current (a late, mis-ordered usage drop is dropped, not stored
-    // on the wrong turn). Empty usage is ignored so a turn the agent never accounted for stays Empty.
     public void FailTurn(string reason)
     {
         lock (Sync)
@@ -205,17 +201,16 @@ internal sealed class Conversation
         Changed?.Invoke();
     }
 
+    // Agents report once per request, so this adds. Usage arriving after CompleteTurn is dropped rather than landing on the next turn.
     public void RecordUsage(TokenUsage usage)
     {
         if (usage.IsEmpty)
             return;
         lock (Sync)
-            Current?.SetUsage(usage);
+            Current?.AddUsage(usage);
         Changed?.Invoke();
     }
 
-    // Sum of every turn's usage: the session total shown in the header. Costs add only when reported
-    // (see TokenUsage.operator+), so a tokens-only session yields a null session cost.
     public TokenUsage SessionUsage
     {
         get

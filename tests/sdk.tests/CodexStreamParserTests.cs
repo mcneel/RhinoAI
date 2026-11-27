@@ -55,15 +55,19 @@ public class CodexStreamParserTests
         Replay replay = new();
         List<ITurn> turns = replay.Run("codex-reply.jsonl");
 
-        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(TurnStart), typeof(MessageTurn), typeof(TurnEnd) }));
+        Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[] { typeof(TurnStart), typeof(MessageTurn), typeof(UsageTurn), typeof(TurnEnd) }));
 
         MessageTurn reply = (MessageTurn)turns[1];
         Assert.That(reply.Role, Is.EqualTo(RoleType.Assistant));
         Assert.That(reply.Message, Is.EqualTo("hello from Rhino"));
 
-        TurnEnd end = (TurnEnd)turns[2];
+        UsageTurn usage = (UsageTurn)turns[2];
+        Assert.That(usage.InputTokens, Is.EqualTo(8211));
+        Assert.That(usage.OutputTokens, Is.EqualTo(7));
+
+        TurnEnd end = (TurnEnd)turns[3];
         Assert.That(end.Reason, Is.EqualTo(StopReason.EndTurn));
-        Assert.That(end.TokenCount, Is.EqualTo(8211 + 7));
+        Assert.That(end.TokenCount, Is.Null);
 
         CodexRateLimits limits = replay.RateLimits.Single();
         Assert.That(limits.Primary, Is.EqualTo(new CodexRateLimitWindow(9, 300, DateTimeOffset.FromUnixTimeSeconds(1795813573))));
@@ -75,7 +79,7 @@ public class CodexStreamParserTests
     [Test]
     public void FailedAndSucceededToolCalls()
     {
-        List<ITurn> turns = new Replay().Run("codex-tools.jsonl");
+        List<ITurn> turns = new Replay().Run("codex-tools.jsonl").Where(t => t is not UsageTurn).ToList();
 
         Assert.That(turns.Select(t => t.GetType()), Is.EqualTo(new[]
         {
@@ -107,6 +111,16 @@ public class CodexStreamParserTests
 
         Assert.That(((MessageTurn)turns[8]).Message, Is.EqualTo("ab ab ab"));
         Assert.That(((TurnEnd)turns[9]).Reason, Is.EqualTo(StopReason.EndTurn));
+    }
+
+    [Test]
+    public void EveryRequestInATurnIsCounted()
+    {
+        List<UsageTurn> usages = new Replay().Run("codex-tools.jsonl").OfType<UsageTurn>().ToList();
+
+        Assert.That(usages.Select(u => u.InputTokens), Is.EqualTo(new[] { 8244, 10088, 10244 }));
+        Assert.That(usages.Select(u => u.OutputTokens), Is.EqualTo(new[] { 70, 130, 32 }));
+        Assert.That(usages.Sum(u => u.TokenCount), Is.EqualTo(28808), "The thread total Codex reports with the last request.");
     }
 
     [Test]

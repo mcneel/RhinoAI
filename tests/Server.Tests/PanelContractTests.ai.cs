@@ -87,7 +87,7 @@ public sealed class PanelContractTests
         feed.Pump();
 
         convo.Record(TurnEventKind.AssistantText, "**312 objects**, mostly planar breps.\n\n```python\nprint(312)\n```");
-        convo.RecordUsage(new TokenUsage(12480, 1120, 0.09m));
+        convo.RecordUsage(new TokenUsage(12480, 1120));
         convo.CompleteTurn();
         feed.Pump();
 

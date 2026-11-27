@@ -20,7 +20,15 @@ internal static class TokenEstimate
         _ => FromText(turn.Data),
     };
 
-    public static int FromTurnsPreferringReported(IEnumerable<ITurn> turns) => turns.Sum(t => t.TokenCount ?? FromTurn(t));
+    // Each request resends the whole transcript, so the latest report already covers every turn before it.
+    public static int FromTurnsPreferringReported(IEnumerable<ITurn> turns)
+    {
+        int total = 0;
+        foreach (ITurn turn in turns)
+            total = turn is UsageTurn usage ? usage.InputTokens + usage.OutputTokens : total + FromTurn(turn);
+
+        return total;
+    }
 
     private static int FromImages(IReadOnlyList<IMessageContent> content)
         => content.Count(c => c is ImageContent) * TokensPerImage;

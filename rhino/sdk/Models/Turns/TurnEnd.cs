@@ -12,12 +12,13 @@ public sealed record TurnEnd : Turn
     public StopReason Reason { get; init; }
 
     [JsonConstructor]
-    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
-        : this(reason, data, (DateTime?)timeStamp, duration, tokenCount)
+    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration)
+        : this(reason, data, (DateTime?)timeStamp, duration)
     {
     }
 
-    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    // No token count: usage travels on UsageTurn, the moment each request returns.
+    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null)
         : base("end")
     {
         Role = RoleType.Assistant;
@@ -28,7 +29,6 @@ public sealed record TurnEnd : Turn
         Role = RoleType.Assistant;
         Duration = duration;
         TimeStamp = timestamp ?? DateTime.UtcNow;
-        TokenCount = tokenCount;
     }
 
     // TODO : Improve

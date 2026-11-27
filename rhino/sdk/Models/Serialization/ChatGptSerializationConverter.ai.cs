@@ -69,7 +69,10 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         }
 
         StopReason reason = Stop((string?)payload["status"], (string?)payload["incomplete_details"]?["reason"], calling);
-        turns.Add(new TurnEnd(reason, tokenCount: (int?)payload["usage"]?["total_tokens"]));
+        if (payload["usage"] is JsonObject usage)
+            turns.Add(new UsageTurn((int?)usage["input_tokens"] ?? 0, (int?)usage["output_tokens"] ?? 0));
+
+        turns.Add(new TurnEnd(reason));
 
         return turns;
     }

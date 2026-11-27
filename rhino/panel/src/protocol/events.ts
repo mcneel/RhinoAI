@@ -12,11 +12,9 @@ import type { IconName } from '../ui/icons.js';
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
-  /** null means the agent reports tokens but not money. Not zero. */
-  costUsd: number | null;
 }
 
-export const NO_USAGE: TokenUsage = { inputTokens: 0, outputTokens: 0, costUsd: null };
+export const NO_USAGE: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
 export type AgentAvailability = 'ready' | 'disabled' | 'missing' | 'signin';
 

@@ -512,13 +512,11 @@ internal sealed class CodexHarnessLegacy(PlugIns.PlugInToken token) : Harness(to
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)
     {
+        TurnEnd end = new(StopReason.EndTurn);
+        if (thing["usage"] is not JsonNode usage) return [end];
+
         // Unlike Claude, cached_input_tokens is already inside input_tokens.
-        int? tokenCount = thing["usage"] is JsonNode usage
-            ? (usage["input_tokens"]?.GetValue<int>() ?? 0) + (usage["output_tokens"]?.GetValue<int>() ?? 0)
-            : null;
-        ;
-        // new ToolResultTurn()
-        return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
+        return [new UsageTurn(usage["input_tokens"]?.GetValue<int>() ?? 0, usage["output_tokens"]?.GetValue<int>() ?? 0), end];
     }
 
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)

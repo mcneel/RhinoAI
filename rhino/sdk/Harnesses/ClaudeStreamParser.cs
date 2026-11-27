@@ -126,7 +126,7 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
     private List<ITurn> ParseResult(JsonNode node)
     {
         TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
-        int? tokenCount = GetTokenCount(node);
+        UsageTurn? usage = GetUsage(node);
         string? subtype = node["subtype"]?.GetValue<string>();
 
         List<string> errors = [];
@@ -147,7 +147,7 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
                 : errors.Count > 0 ? string.Join("\n", errors)
                 : $"Claude stopped early ({subtype}).";
 
-            return [new TurnEnd(FailureReason(node), failure, duration: duration, tokenCount: tokenCount)];
+            return Ending(usage, new TurnEnd(FailureReason(node), failure, duration: duration));
         }
 
         bool isAborted = subtype is not null && subtype != "success";
@@ -169,8 +169,10 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
             : isAborted ? $"Claude stopped early ({subtype})."
             : null;
 
-        return [new TurnEnd(reason, message, duration: duration, tokenCount: tokenCount)];
+        return Ending(usage, new TurnEnd(reason, message, duration: duration));
     }
+
+    private static List<ITurn> Ending(UsageTurn? usage, TurnEnd end) => usage is null ? [end] : [usage, end];
 
     // The error code rides on the CLI's synthetic assistant message; the result line after it only says is_error.
     private StopReason FailureReason(JsonNode result) => (ApiErrorCode, result["api_error"]?.GetValue<string>()) switch
@@ -180,14 +182,15 @@ internal sealed class ClaudeStreamParser(Harness harness, Guid launchedSessionId
         _ => StopReason.Error,
     };
 
-    private static int? GetTokenCount(JsonNode node)
+    private static UsageTurn? GetUsage(JsonNode node)
     {
         if (node["usage"] is not JsonNode usage) return null;
 
-        return (usage["input_tokens"]?.GetValue<int>() ?? 0)
+        int input = (usage["input_tokens"]?.GetValue<int>() ?? 0)
             + (usage["cache_creation_input_tokens"]?.GetValue<int>() ?? 0)
-            + (usage["cache_read_input_tokens"]?.GetValue<int>() ?? 0)
-            + (usage["output_tokens"]?.GetValue<int>() ?? 0);
+            + (usage["cache_read_input_tokens"]?.GetValue<int>() ?? 0);
+
+        return new UsageTurn(input, usage["output_tokens"]?.GetValue<int>() ?? 0);
     }
 
     private List<ITurn> ParseAssistant(JsonNode node)

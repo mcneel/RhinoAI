@@ -108,7 +108,7 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'tower-study.3dm',
     startedAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     turns: 7,
-    usage: { inputTokens: 41_200, outputTokens: 8_940, costUsd: 0.62 },
+    usage: { inputTokens: 41_200, outputTokens: 8_940 },
     resumable: true,
   },
   {
@@ -118,7 +118,7 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'tower-study.3dm',
     startedAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
     turns: 3,
-    usage: { inputTokens: 9_100, outputTokens: 2_300, costUsd: 0.11 },
+    usage: { inputTokens: 9_100, outputTokens: 2_300 },
     resumable: true,
   },
   {
@@ -128,15 +128,14 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'bracket.3dm',
     startedAt: new Date(Date.now() - 4 * 86_400_000).toISOString(),
     turns: 11,
-    usage: { inputTokens: 88_400, outputTokens: 14_200, costUsd: 1.34 },
+    usage: { inputTokens: 88_400, outputTokens: 14_200 },
     resumable: false,
   },
 ];
 
-const usage = (input: number, output: number, cost: number): TokenUsage => ({
+const usage = (input: number, output: number): TokenUsage => ({
   inputTokens: input,
   outputTokens: output,
-  costUsd: cost,
 });
 
 function seeded(): ConversationSnapshot {
@@ -156,7 +155,7 @@ function seeded(): ConversationSnapshot {
         context: [CONTEXT[3] as ContextItem],
         startedAt: new Date(start).toISOString(),
         status: 'ok',
-        usage: usage(12_480, 1_120, 0.09),
+        usage: usage(12_480, 1_120),
         undoable: false,
         plan: [],
         blocks: [
@@ -206,7 +205,7 @@ function seeded(): ConversationSnapshot {
         context: [],
         startedAt: new Date(start + 120_000).toISOString(),
         status: 'ok',
-        usage: usage(14_900, 2_040, 0.14),
+        usage: usage(14_900, 2_040),
         undoable: true,
         plan: [
           { id: 'p1', text: 'Measure planarity deviation per panel', state: 'done' },
@@ -456,7 +455,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(14_120, 2_180, 0.13) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(14_120, 2_180) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -544,7 +543,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(11_300, 1_640, 0.1) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(11_300, 1_640) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -619,7 +618,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(9_800, 1_920, 0.09) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(9_800, 1_920) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -700,7 +699,7 @@ const SCENARIOS: readonly Scenario[] = [
       const answers = await script.awaitAnswer();
       for (const id of questionIds) host.emit({ type: 'question.clear', id });
       if (answers.length === 0) {
-        host.emit({ type: 'turn.usage', turnId, usage: usage(11_200, 1_460, 0.1) });
+        host.emit({ type: 'turn.usage', turnId, usage: usage(11_200, 1_460) });
         host.emit({ type: 'turn.end', turnId, status: 'ok' });
         return;
       }
@@ -723,7 +722,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(15_800, 2_240, 0.16) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(15_800, 2_240) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -773,7 +772,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(7_400, 980, 0.06) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(7_400, 980) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -804,7 +803,7 @@ const SCENARIOS: readonly Scenario[] = [
         await host.text(turnId, script, lines('Understood, I left the construction layer alone.'));
       }
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(3_100, 420, 0.02) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(3_100, 420) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -834,7 +833,7 @@ const SCENARIOS: readonly Scenario[] = [
           'Or press `/` for commands and `@` to attach document context.',
         ),
       );
-      host.emit({ type: 'turn.usage', turnId, usage: usage(4_200, 640, 0.03) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(4_200, 640) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },

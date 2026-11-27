@@ -17,6 +17,7 @@ internal sealed class TurnJsonConverter : JsonConverter<ITurn>
             "think" => root.Deserialize<ThinkingTurn>(options),
             "tool" => root.Deserialize<ToolTurn>(options),
             "end" => root.Deserialize<TurnEnd>(options),
+            "usage" => root.Deserialize<UsageTurn>(options),
             "start" => root.Deserialize<TurnStart>(options),
             "result" => root.Deserialize<ToolResultTurn>(options),
             "system" => root.Deserialize<SystemTurn>(options),

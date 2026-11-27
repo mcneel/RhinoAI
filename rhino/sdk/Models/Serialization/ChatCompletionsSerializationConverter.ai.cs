@@ -108,7 +108,10 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
                 turns.Add(ToolCall(harness, call));
         }
 
-        turns.Add(new TurnEnd(Stop((string?)choice["finish_reason"]), tokenCount: (int?)payload["usage"]?["total_tokens"]));
+        if (payload["usage"] is JsonObject usage)
+            turns.Add(new UsageTurn((int?)usage["prompt_tokens"] ?? 0, (int?)usage["completion_tokens"] ?? 0));
+
+        turns.Add(new TurnEnd(Stop((string?)choice["finish_reason"])));
 
         return turns;
     }

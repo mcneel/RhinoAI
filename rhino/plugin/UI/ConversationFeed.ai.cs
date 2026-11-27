@@ -52,7 +52,7 @@ internal sealed class ConversationFeed
         public string? OpenTextBlock;
         public int TextBlocks;
         public Dictionary<string, ToolOutcome> ToolOutcomes = new();
-        public bool UsageSent;
+        public TokenUsage SentUsage = TokenUsage.Empty;
         public bool Ended;
         public StringBuilder Text = new();
         public int TextScanned;
@@ -198,11 +198,11 @@ internal sealed class ConversationFeed
 
         EmitProducedImages(cursor, turn);
 
-        if (!cursor.UsageSent && !turn.Usage.IsEmpty)
+        TokenUsage usage = turn.Usage;
+        if (usage != cursor.SentUsage)
         {
-            cursor.UsageSent = true;
-            TokenUsage usage = turn.Usage;
-            Emit(new TurnUsageEvent(cursor.Id, new PanelUsage(usage.InputTokens, usage.OutputTokens, usage.CostUsd)));
+            cursor.SentUsage = usage;
+            Emit(new TurnUsageEvent(cursor.Id, new PanelUsage(usage.InputTokens, usage.OutputTokens)));
         }
 
         // Turn carries a failure but not a cancellation, so a cancelled turn still reports as finished.
