@@ -475,7 +475,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
             if (serverName is null || toolName is null) return false;
             if (!Servers.TryGetValue(serverName, out Mcp? mcp)) return false;
 
-            List<IToolArg> args = ToolArgs(toolParams);
+            List<IToolArg> args = [.. ToolArgs.FromJson(mcp.Tools.GetValueOrDefault(toolName), toolParams)];
             Permissability permission = PermissionSet.ResolvePermissionChain(Agent.Definition, mcp.Name, toolName, args);
 
             if (permission == Permissability.Deny) return false;
@@ -555,7 +555,7 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
             if (item["tool"]?.GetValue<string>() is not string tool) return null;
 
             string name = ToolSchema.WireName(McpNameOf(item["server"]?.GetValue<string>()), tool);
-            return new ToolTurn(id, name, ToolArgs(item["arguments"]));
+            return new ToolTurn(id, name, ToolArgs.FromJson(Owner, name, item["arguments"]));
         }
 
         private ITurn? CompletedTurn(JsonObject item) => item["type"]?.GetValue<string>() switch
@@ -621,29 +621,6 @@ internal sealed class CodexHarness2(PlugIns.PlugInToken token) : Harness(token)
             "interrupted" => new TurnEnd(StopReason.Cancelled, tokenCount: TokenCount),
             _ => new TurnEnd(StopReason.Error, turn?["error"]?["message"]?.GetValue<string>() ?? "Codex turn failed.", tokenCount: TokenCount),
         };
-
-        private static List<IToolArg> ToolArgs(JsonNode? node)
-        {
-            List<IToolArg> args = [];
-            if (node is not JsonObject values) return args;
-
-            foreach (KeyValuePair<string, JsonNode?> pair in values)
-            {
-                if (pair.Value is not JsonValue value) continue;
-
-                IToolArg? arg = value.GetValueKind() switch
-                {
-                    JsonValueKind.String => new ToolString(pair.Key, value.GetValue<string>()),
-                    JsonValueKind.Number => new ToolNumber(pair.Key, value.GetValue<double>()),
-                    JsonValueKind.True => new ToolBoolean(pair.Key, true),
-                    JsonValueKind.False => new ToolBoolean(pair.Key, false),
-                    _ => null,
-                };
-                if (arg is not null) args.Add(arg);
-            }
-
-            return args;
-        }
 
         private static long? Long(JsonNode? node)
             => node is JsonValue value && value.TryGetValue(out double number) ? (long)number : null;

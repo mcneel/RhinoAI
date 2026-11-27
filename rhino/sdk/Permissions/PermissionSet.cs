@@ -166,6 +166,7 @@ public sealed class PermissionSet
         ToolUrl url => rule.MatchesUrl(url.Value),
         ToolString text => rule.MatchesText(text.Value),
         ToolSecret secret => rule.MatchesText(secret.Value),
+        ToolJson json => rule.MatchesText(json.Value.GetRawText()),
 
         _ => false
     };

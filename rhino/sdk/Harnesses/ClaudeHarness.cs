@@ -631,37 +631,9 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         string? name = content["name"]?.GetValue<string>();
         if (string.IsNullOrEmpty(name)) return null;
 
-        List<IToolArg> args = GetArgs(content["input"]);
-        ToolTurn turn = new(id, name, args, timestamp: timestamp);
+        ToolTurn turn = new(id, name, ToolArgs.FromJson(this, name, content["input"]), timestamp: timestamp);
         ToolIdToTool[id] = name;
         return turn;
-    }
-
-    private static List<IToolArg> GetArgs(JsonNode? node)
-    {
-        List<IToolArg> args = [];
-        if (node is not JsonObject obj) return args;
-
-        foreach (KeyValuePair<string, JsonNode?> kvp in obj)
-        {
-            string propName = kvp.Key;
-            IToolArg? arg = kvp.Value?.GetValueKind() switch
-            {
-                JsonValueKind.String => new ToolString(propName, kvp.Value.GetValue<string>()),
-                JsonValueKind.Number => new ToolNumber(propName, kvp.Value.GetValue<double>()),
-                JsonValueKind.True => new ToolBoolean(propName, true),
-                JsonValueKind.False => new ToolBoolean(propName, false),
-
-                // Null, Undefined, Object, Array (for now)
-
-                _ => null
-            };
-
-            if (arg is null) continue;
-            args.Add(arg);
-        }
-
-        return args;
     }
 
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back

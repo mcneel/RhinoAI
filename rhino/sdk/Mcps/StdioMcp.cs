@@ -179,7 +179,7 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
             _ => bool.TryParse(Text(value), out bool parsed) ? JsonValue.Create(parsed) : null,
         },
 
-        // Arrays and objects have no carrier of their own, so they arrive as their JSON text.
+        // Some models send an array or object as its JSON text, so both carriers are parsed from text.
         ToolArgType.Array or ToolArgType.Object => Text(value) is string json ? ParseJson(json) : null,
 
         _ => throw new ArgumentOutOfRangeException(nameof(arg), arg.Type, "Unknown argument type."),
@@ -191,6 +191,7 @@ public class StdioMcp(string name, string command, IEnumerable<string> args, IDi
         ToolPath path => path.Value,
         ToolUrl url => url.Value,
         ToolSecret secret => secret.Value,
+        ToolJson json => json.Value.GetRawText(),
         _ => null,
     };
 

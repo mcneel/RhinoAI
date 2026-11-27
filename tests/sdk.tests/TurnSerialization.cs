@@ -25,7 +25,8 @@ public class TurnSerialization
                 new ToolUrl("url", "http://localhost:1234"),
                 new ToolString("string", "Stringy"),
                 new ToolSecret("secret", "I snap my spaghetti in half to cook it"),
-            }, new ThoughtSignature("Them", "Eye", "Value", true)),
+                new ToolJson("json", JsonSerializer.SerializeToElement(new[] { 1, 2 })),
+            },new ThoughtSignature("Them", "Eye", "Value", true)),
             new TurnStart(DateTime.UtcNow, TimeSpan.FromTicks(2), 15),
         };
 

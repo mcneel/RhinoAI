@@ -78,6 +78,7 @@ internal static class PermissionPrompt
                 ToolBoolean flag => JsonValue.Create(flag.Value),
                 ToolNumber number => JsonValue.Create(number.Value),
                 ToolInt integer => JsonValue.Create(integer.Value),
+                ToolJson json => JsonNode.Parse(json.Value.GetRawText()),
                 _ => null,
             };
         return described.ToJsonString();

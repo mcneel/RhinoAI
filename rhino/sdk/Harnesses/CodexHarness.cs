@@ -417,45 +417,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         if (item?["type"]?.GetValue<string>() != "mcp_tool_call") return [];
         if (!TryGetToolCallName(item, out string id, out string name)) return [];
 
-        List<IToolArg> args = GetArgs(item["arguments"]);
-
-        return [new ToolTurn(id, name, args)];
-    }
-
-    private List<IToolArg> GetArgs(JsonNode? node)
-    {
-        if (node is not JsonObject jArgs) return [];
-        List<IToolArg> args = [];
-
-        foreach (KeyValuePair<string, JsonNode?> jArg in jArgs)
-        {
-            if (jArg.Value is null) continue;
-
-            IToolArg? toolArg = ParseArg(jArg!);
-            if (toolArg is null) continue;
-
-            args.Add(toolArg);
-        }
-
-        return args;
-    }
-
-    private IToolArg? ParseArg(KeyValuePair<string, JsonNode> jArg)
-    {
-        JsonValueKind kind = jArg.Value.GetValueKind();
-        string propName = jArg.Key;
-
-        return kind switch
-        {
-            JsonValueKind.String => new ToolString(propName, jArg.Value.GetValue<string>()),
-            JsonValueKind.Number => new ToolNumber(propName, jArg.Value.GetValue<double>()),
-            JsonValueKind.True => new ToolBoolean(propName, true),
-            JsonValueKind.False => new ToolBoolean(propName, false),
-
-            // Null, Undefined, Object, Array (for now)
-
-            _ => null
-        };
+        return [new ToolTurn(id, name, ToolArgs.FromJson(this, name, item["arguments"]))];
     }
 
     private static List<ITurn> ParseItemCompleted(JsonNode thing)

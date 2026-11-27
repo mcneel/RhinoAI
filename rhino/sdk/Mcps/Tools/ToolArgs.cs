@@ -93,6 +93,8 @@ public sealed record ToolString(string Name, string Value) : ToolArg(Name) { }
 /// <param name="Value">The tool argument's value</param>
 public sealed record ToolSecret(string Name, string Value) : ToolArg(Name) { }
 
+public sealed record ToolJson(string Name, JsonElement Value) : ToolArg(Name) { }
+
 internal sealed class ToolJsonConverter : JsonConverter<IToolArg>
 {
     public override IToolArg? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
@@ -110,7 +112,8 @@ internal sealed class ToolJsonConverter : JsonConverter<IToolArg>
             "toolurl" => root.Deserialize<ToolUrl>(options),
             "toolstring" => root.Deserialize<ToolString>(options),
             "toolsecret" => root.Deserialize<ToolSecret>(options),
-            
+            "tooljson" => root.Deserialize<ToolJson>(options),
+
             _ => throw new JsonException($"Unknown ITurn type: {disc}"),
         };
     }
