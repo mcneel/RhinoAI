@@ -39,9 +39,11 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         if (latest.Content.FirstOrDefault(c => c is not TextContent and not ImageContent) is IMessageContent unsupported)
             throw new NotSupportedException($"The Codex harness cannot send {unsupported.GetType().Name}.");
 
+        string prompt = string.Join("\n\n", latest.Content.OfType<TextContent>().Select(t => t.Text));
+
         using ImagetoFile images = ImagetoFile.Write(latest.Content.OfType<ImageContent>());
         using Session session = new(this, agent, model);
-        Task running = session.RunAsync(latest.Data, images.Paths, CliSystemPrompt(start), token);
+        Task running = session.RunAsync(prompt, images.Paths, CliSystemPrompt(start), token);
 
         while (await session.Turns.WaitToReadAsync(token).ConfigureAwait(false))
         {
