@@ -15,7 +15,7 @@ public sealed class DefaultToolsMcp : MemoryMcp
     /// <param name="token">The permissions token</param>
     public DefaultToolsMcp(Harness harness, PlugIns.PlugInToken token) : base(NAME)
     {
-        RegisterTool(new Tools.DelegateTool(token));
+        // RegisterTool(new Tools.DelegateTool(token)); // TODO : Resolve. Leave for now.
         // RegisterTool(new Tools.Compact()); // TODO : Compaction
         RegisterTool(new Tools.ReadTool());
         RegisterTool(new Tools.WriteTool());
@@ -23,7 +23,7 @@ public sealed class DefaultToolsMcp : MemoryMcp
         RegisterTool(new Tools.ReadSkill((n) => (harness.Skills.TryGetValue(n, out ISkill? skill) && skill is not null) ? skill : skill));
         RegisterTool(new Tools.ListResources(harness));
         RegisterTool(new Tools.ReadResources(harness));
-        RegisterTool(new Tools.ReadURL(harness));
+        // RegisterTool(new Tools.ReadURL(harness)); // TODO : Prompt Injection
     }
 
 }
