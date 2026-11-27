@@ -204,20 +204,23 @@ public interface IPermissionRequest
 /// <summary>
 /// A request for permission
 /// </summary>
-internal sealed class PermissionRequest(Agent agent, Mcp mcp, ITool tool, List<IToolArg> args) : EventArgs, IPermissionRequest
+internal sealed class PermissionRequest(Agent agent, string mcpName, string toolName, IReadOnlyList<string> declaredArgs, IReadOnlyList<IToolArg> args) : EventArgs, IPermissionRequest
 {
+
+    public PermissionRequest(Agent agent, Mcp mcp, ITool tool, IReadOnlyList<IToolArg> args)
+        : this(agent, mcp.Name, tool.Name, Array.ConvertAll(tool.Args, arg => arg.Name), args) { }
 
     /// <summary>The agent whose tool call is waiting on the answer</summary>
     public Agent Agent { get; } = agent;
 
     /// <summary>The name of the MCP</summary>
-    public string McpName { get; } = mcp.Name;
+    public string McpName { get; } = mcpName;
 
     /// <summary>The name of the tool</summary>
-    public string ToolName { get; } = tool.Name;
+    public string ToolName { get; } = toolName;
 
     /// <summary>Every argument the tool declares, supplied in this call or not</summary>
-    public IReadOnlyList<string> DeclaredArgs { get; } = Array.ConvertAll(tool.Args, arg => arg.Name);
+    public IReadOnlyList<string> DeclaredArgs { get; } = declaredArgs;
 
     /// <summary>Current permission status of the request</summary>
     public bool HasPermission { get; set; } = false;
