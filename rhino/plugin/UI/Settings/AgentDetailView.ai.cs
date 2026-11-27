@@ -252,10 +252,6 @@ internal sealed class AgentDetailView : Panel
                 cli.Add(dialog.FileName);
         };
 
-        Label literal = Note(LOC.STR("Rhino skips paths with ~, % or * for now. Use Browse to add the full path."));
-        literal.TextColor = Palette.Warning;
-        literal.BindDataContext(control => control.Visible, (CliConnectionViewModel m) => m.HasUnexpandedPaths, DualBindingMode.OneWay);
-
         return new TableLayout
         {
             Spacing = new Size(0, 6),
@@ -264,7 +260,6 @@ internal sealed class AgentDetailView : Panel
                 new TableRow(Note(LOC.STR("Rhino uses the first path that exists."))),
                 new TableRow(rows),
                 new TableRow(new StackLayout { Orientation = Orientation.Horizontal, Spacing = 6, Items = { add, browse } }),
-                new TableRow(literal),
             },
         };
     }

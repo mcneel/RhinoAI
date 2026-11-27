@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 
 using Rhino.UI;
 
@@ -26,9 +25,7 @@ internal sealed class CliConnectionViewModel : AgentConnectionViewModel
 
     private IReadOnlyList<SearchPath> SavedPaths { get; }
 
-    public string? ResolvedPath => Paths.Select(path => path.Text.Trim()).FirstOrDefault(path => path.Length > 0 && File.Exists(path));
-
-    public bool HasUnexpandedPaths => ResolvedPath is null && Paths.Any(path => NeedsExpansion(path.Text));
+    private string? ResolvedPath => Paths.Select(path => path.Match).FirstOrDefault(match => match is not null);
 
     public override AgentStatus Check => ResolvedPath is string path
         ? new AgentStatus(AgentStatusKind.Ready, string.Format(LOC.STR("Found at {0}"), path))
@@ -77,21 +74,11 @@ internal sealed class CliConnectionViewModel : AgentConnectionViewModel
     private static bool IsSamePath(string first, string second)
         => string.Equals(first.Trim().Replace('\\', '/'), second.Trim().Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
-    private static bool NeedsExpansion(string path)
-    {
-        string trimmed = path.Trim();
-        return trimmed.StartsWith("~", StringComparison.Ordinal) || trimmed.IndexOfAny(['%', '*']) >= 0;
-    }
-
     private SearchPathItemViewModel Watch(SearchPathItemViewModel path)
     {
         path.PropertyChanged += (_, _) => RaiseCheck();
         return path;
     }
 
-    private void RaiseCheck()
-    {
-        RaisePropertyChanged(nameof(Check));
-        RaisePropertyChanged(nameof(HasUnexpandedPaths));
-    }
+    private void RaiseCheck() => RaisePropertyChanged(nameof(Check));
 }
