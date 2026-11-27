@@ -44,8 +44,9 @@ public class UserPreferences
 
     private const string RhinoMcpName = "Rhino";
 
-    private static (string Tool, string[] Args)[] RhinoTools { get; } =
+    private static (string Tool, string[] Args)[] DefaultAllow { get; } =
     [
+        // Rhino MCP
         ("ask_user", ["questions"]),
 
         ("close_doc", ["path", "slot"]),
@@ -91,11 +92,16 @@ public class UserPreferences
         ("g2_search_components", ["query", "category", "subcategory", "limit", "includeDeprecated", "slot"]),
         ("g2_solve_canvas", ["slot"]),
         ("g2_start", ["slot"]),
+
+        // Default Tools Mcp
+        ("list_resources", ["mcp_name", "keywords"]),
+        ("read_resources", ["mcp_name","resource_name"]),
+        ("read_skill", ["name"]),
     ];
 
     public void InitDefaults()
     {
-        foreach ((string tool, string[] args) in RhinoTools)
+        foreach ((string tool, string[] args) in DefaultAllow)
         {
             Dictionary<string, ToolArgPermission> argPermissions = new(args.Length);
             foreach (string arg in args)
@@ -112,7 +118,7 @@ public class UserPreferences
 internal interface IMcpDefinition
 {
     public string Name { get; }
-    public bool Enabled { get; }   
+    public bool Enabled { get; }
 }
 
 internal sealed record HttpMcpDefinition(string Name, bool Enabled, Uri Url, IReadOnlyDictionary<string, string> Headers) : IMcpDefinition;
