@@ -147,6 +147,12 @@ public class Harness
     /// <returns><see langword="true"/> on success</returns>
     public bool AddMcp(Mcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
 
+    public void ReplaceMcp(Mcp mcp)
+    {
+        PrivateMcps.Remove(mcp.Name);
+        PrivateMcps.Add(mcp.Name, mcp);
+    }
+
     /// <summary>
     /// Adds an <see cref="ISkill"/> to the <see cref="Harness"/>
     /// </summary>

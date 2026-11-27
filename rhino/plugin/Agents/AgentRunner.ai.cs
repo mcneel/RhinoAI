@@ -175,7 +175,9 @@ internal sealed class AgentRunner : IDisposable
     {
         if (HasAttached) return;
 
-        Agent.Harness.AddMcp(new HttpMcp(RouterMcpConfig.ServerName, mcpUrl));
+        // Replaces RhinoHarness's router default so the agent drives this document's server, not whichever Rhino the router picks.
+        bool disabledBeforeFirstPrompt = Agent.Harness.Mcps.TryGetValue(RouterMcpConfig.ServerName, out Mcp? existing) && existing is { Enabled: false };
+        Agent.Harness.ReplaceMcp(new HttpMcp(RouterMcpConfig.ServerName, mcpUrl) { Enabled = !disabledBeforeFirstPrompt });
 
         foreach (Mcp mcp in PlugInRegistry.PanelMcps)
             Agent.Harness.AddMcp(mcp);
