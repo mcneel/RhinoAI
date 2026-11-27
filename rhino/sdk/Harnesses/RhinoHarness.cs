@@ -47,7 +47,7 @@ public sealed class RhinoHarness : Harness, IDisposable
         }
     }
 
-    public static List<string> Classifications { get; } = ["Code", "Geometry", "Image", "Other"];
+    public static List<string> Classifications { get; } = ["Code", "Geometry", "Image", "Grasshopper", "Other"];
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
@@ -177,6 +177,7 @@ public sealed class RhinoHarness : Harness, IDisposable
             "code" => GetPrompt("RhinoHarnessCodePrompt.md"),
             "geometry" => GetPrompt("RhinoHarnessGeometryPrompt.md"),
             "image" => GetPrompt("RhinoHarnessImagePrompt.md"),
+            "grasshopper" => GetPrompt("RhinoHarnessGrasshopperPrompt.md"),
 
             _ => string.Empty
         };

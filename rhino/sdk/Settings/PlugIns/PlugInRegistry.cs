@@ -121,6 +121,20 @@ public class PlugInRegistry
         return true;
     }
 
+    public static bool IsEnabled(Mcp toTest, bool defaultValue = true)
+    {
+        foreach(KeyValuePair<PlugInToken, List<Mcp>> privateMcp in PrivatePanelMcps)
+        {
+            foreach(Mcp mcp in privateMcp.Value)
+            {
+                if (!ReferenceEquals(mcp, toTest)) continue;
+                return IsAllowed(privateMcp.Key);
+            }
+        }
+
+        return defaultValue;
+    }
+
     private static bool IsEqual(ISkill a, ISkill b)
     {
         if (ReferenceEquals(a, b)) return true;
