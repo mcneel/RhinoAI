@@ -5,6 +5,7 @@ using Eto.Forms;
 
 using Rhino.UI;
 
+using Rhino.AI.Models;
 using Rhino.AI.UI.Settings;
 
 namespace Rhino.AI.UI.Settings;
@@ -287,6 +288,9 @@ internal sealed class AgentDetailView : Panel
         TextBox host = new() { PlaceholderText = "https://api.example.com", Font = Mono() };
         host.TextBinding.BindDataContext((ApiConnectionViewModel m) => m.Host);
 
+        EnumDropDown<ProtocolKind> protocol = ProtocolDropDown();
+        protocol.SelectedValueBinding.BindDataContext((ApiConnectionViewModel m) => m.Protocol);
+
         PasswordBox key = KeyBox(api);
 
         Button keyButton = new();
@@ -305,6 +309,8 @@ internal sealed class AgentDetailView : Panel
             {
                 new TableRow(Heading(LOC.STR("Endpoint"))),
                 new TableRow(host),
+                new TableRow(new Panel { Padding = new Padding(0, 6, 0, 0), Content = Heading(LOC.STR("Protocol")) }),
+                new TableRow(Centred(protocol)),
                 new TableRow(new Panel { Padding = new Padding(0, 6, 0, 0), Content = Heading(LOC.STR("API key")) }),
                 new TableRow(new TableLayout { Spacing = new Size(6, 0), Rows = { new TableRow(new TableCell(key, true), new TableCell(Centred(keyButton))) } }),
                 new TableRow(keyStatus),
@@ -317,6 +323,9 @@ internal sealed class AgentDetailView : Panel
         TextBox host = new() { PlaceholderText = "http://localhost:1234", Font = Mono() };
         host.TextBinding.BindDataContext((LocalConnectionViewModel m) => m.Host);
 
+        EnumDropDown<ProtocolKind> protocol = ProtocolDropDown();
+        protocol.SelectedValueBinding.BindDataContext((LocalConnectionViewModel m) => m.Protocol);
+
         return new TableLayout
         {
             Spacing = new Size(0, 6),
@@ -324,9 +333,26 @@ internal sealed class AgentDetailView : Panel
             {
                 new TableRow(Heading(LOC.STR("Server URL"))),
                 new TableRow(host),
+                new TableRow(new Panel { Padding = new Padding(0, 6, 0, 0), Content = Heading(LOC.STR("Protocol")) }),
+                new TableRow(Centred(protocol)),
             },
         };
     }
+
+    private static EnumDropDown<ProtocolKind> ProtocolDropDown() => new()
+    {
+        GetText = ProtocolLabel,
+        ToolTip = LOC.STR("The request format the server expects. Default uses the vendor's own format."),
+    };
+
+    private static string ProtocolLabel(ProtocolKind protocol) => protocol switch
+    {
+        ProtocolKind.Default => LOC.STR("Default"),
+        ProtocolKind.Messages => "Anthropic Messages",
+        ProtocolKind.Completions => "OpenAI Chat Completions",
+        ProtocolKind.Responses => "OpenAI Responses",
+        _ => throw new ArgumentOutOfRangeException(nameof(protocol), protocol, null),
+    };
 
     // A saved key is never read back, so the box shows a stand-in until someone types a new one.
     private static PasswordBox KeyBox(ApiConnectionViewModel api)

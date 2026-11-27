@@ -305,7 +305,7 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             // "Ollama" => Protocols(null),
             "apple" => Protocols(LocalModel.Default, null, LocalModel.Completions, null),
 
-            _ => Protocols(null, UnknownModel.Anthropic, UnknownModel.Completions, UnknownModel.Completions),
+            _ => Protocols(null, UnknownModel.Anthropic, UnknownModel.Completions, UnknownModel.Responses),
         };
 
         if (modelFactory is null) return null;

@@ -8,11 +8,12 @@ namespace Rhino.AI.UI.Settings;
 internal sealed class LocalConnectionViewModel : AgentConnectionViewModel
 {
     private string host;
+    private ProtocolKind protocol;
 
     public LocalConnectionViewModel(string host, ProtocolKind protocol, string modelsRoute)
     {
         this.host = host;
-        Protocol = protocol;
+        this.protocol = protocol;
         ModelsRoute = modelsRoute;
     }
 
@@ -26,9 +27,13 @@ internal sealed class LocalConnectionViewModel : AgentConnectionViewModel
         }
     }
 
-    public string ModelsRoute { get; }
+    public ProtocolKind Protocol
+    {
+        get => protocol;
+        set => SetProperty(ref protocol, value);
+    }
 
-    private ProtocolKind Protocol { get; }
+    public string ModelsRoute { get; }
 
     public override AgentStatus Check => HostCheck.Of(host, LOC.STR("Enter the server URL so Rhino knows where to connect."))
         ?? new AgentStatus(AgentStatusKind.Ready, string.Format(LOC.STR("Rhino sends requests to {0}. Make sure the server is running when you chat."), host.Trim()));

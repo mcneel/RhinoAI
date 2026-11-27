@@ -8,6 +8,7 @@ namespace Rhino.AI.UI.Settings;
 internal sealed class ApiConnectionViewModel : AgentConnectionViewModel
 {
     private string host;
+    private ProtocolKind protocol;
     private string? keyName;
     private KeySource savedSource;
     private string keyText = string.Empty;
@@ -18,7 +19,7 @@ internal sealed class ApiConnectionViewModel : AgentConnectionViewModel
         this.host = host;
         this.keyName = keyName;
         this.savedSource = savedSource;
-        Protocol = protocol;
+        this.protocol = protocol;
         Context = context;
         AgentName = agentName;
     }
@@ -31,6 +32,12 @@ internal sealed class ApiConnectionViewModel : AgentConnectionViewModel
             if (SetProperty(ref host, value))
                 RaisePropertyChanged(nameof(Check));
         }
+    }
+
+    public ProtocolKind Protocol
+    {
+        get => protocol;
+        set => SetProperty(ref protocol, value);
     }
 
     public string KeyText
@@ -80,8 +87,6 @@ internal sealed class ApiConnectionViewModel : AgentConnectionViewModel
 
     public override AgentStatus Check => HostCheck.Of(host, LOC.STR("Enter the endpoint URL so Rhino knows where to send requests."))
         ?? (KeyWhy is string why ? new AgentStatus(AgentStatusKind.Ready, why) : new AgentStatus(AgentStatusKind.NeedsKey, LOC.STR("Set an API key so Rhino can connect.")));
-
-    private ProtocolKind Protocol { get; }
 
     private AgentsContext Context { get; }
 
