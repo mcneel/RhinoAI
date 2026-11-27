@@ -176,6 +176,18 @@
       ]
     },
     {
+      "id": "567cf57d-3a5a-49e0-bf73-036ff2ed711f",
+      "kind": "local",
+      "name": "Local",
+      "company": "Local",
+      "host": "http://localhost:1234",
+      "protocol": "chatCompletions",
+      "modelsRoute": "/v1/models",
+      "models": [
+        { "display": "Loaded model", "id": "default" }
+      ]
+    },
+    {
       "id": "55e8aa26-90ce-4c6b-8546-240478ffc1ca",
       "kind": "local",
       "name": "Ollama",

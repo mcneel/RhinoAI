@@ -198,7 +198,7 @@ internal sealed class ModelBar : Drawable
         "openai" => Color.FromArgb(0x10, 0xA3, 0x7F),
         "google" => Color.FromArgb(0x42, 0x85, 0xF4),
         "deepseek" => Color.FromArgb(0x4D, 0x6B, 0xFE),
-        "lm studio" => Color.FromArgb(0x7C, 0x4D, 0xFF),
+        "lm studio" or "local" => Color.FromArgb(0x7C, 0x4D, 0xFF),
         "apple" => Color.FromArgb(0x55, 0x55, 0x55),
         
         _ => Colors.SlateGray,

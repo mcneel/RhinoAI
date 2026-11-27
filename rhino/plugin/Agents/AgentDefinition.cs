@@ -15,21 +15,25 @@ internal sealed record AgentDefinition
     public string DefaultModel { get; init; }
     public string DefaultPrompt { get; init; }
 
-    public bool Available => SearchPaths.GetPaths().Any();
+    // Set for an agent that is an OpenAI-compatible server (e.g. http://localhost:1234) rather than an
+    // installed CLI. The user can point it elsewhere in the AI settings; see AISettings.EffectiveHost.
+    public string? LocalHost { get; init; }
+
+    public bool Available => LocalHost is not null || SearchPaths.GetPaths().Any();
 
     public bool? LoggedIn { get; private set; } = null;
 
     private bool PrivateEnabled { get; set; }
     public bool Enabled
     {
-        get => PrivateEnabled && RhinoApp.IsInternetAccessAllowed;
+        get => PrivateEnabled && (LocalHost is not null || RhinoApp.IsInternetAccessAllowed);
         set => PrivateEnabled = value;
     }
 
-    public AgentDefinition(string name, SearchPaths searchPaths, IReadOnlyList<ModelSpec> models, string defaultModel = "default", string defaultPrompt = "", bool enabled = true)
+    public AgentDefinition(string name, SearchPaths? searchPaths, IReadOnlyList<ModelSpec> models, string defaultModel = "default", string defaultPrompt = "", bool enabled = true)
     {
         Name = name;
-        SearchPaths = searchPaths;
+        SearchPaths = searchPaths ?? new SearchPaths(); // server agents list none in Definitions.json
         Models = models;
         DefaultModel = defaultModel;
         DefaultPrompt = defaultPrompt;
@@ -44,7 +48,7 @@ internal sealed record AgentDefinition
         LoggedIn = true;
     }
 
-    public IAgentRunner GetRunner(string docTitle) => Name.ToLowerInvariant() switch
+    public IAgentRunner GetRunner(string docTitle) => LocalHost is not null ? new LocalServerRunner(this, docTitle) : Name.ToLowerInvariant() switch
     {
         "claude" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new ClaudeStreamJsonParser(this))),
         "codex" => new AgentRunner(this, docTitle, (client, convo, cwd) => new StreamJsonAgent(this, client, convo, cwd, new CodexStreamJsonParser(this, CodexHome.Prepare()))),
