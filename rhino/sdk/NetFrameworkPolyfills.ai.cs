@@ -216,12 +216,10 @@ namespace Rhino.AI
 
         public static void Kill(this Process proc, bool entireProcessTree)
         {
-            
-#if NET48
-                    proc.Kill();
-#else
-                    proc.Kill(entireProcessTree);
-#endif
+            if (entireProcessTree)
+                ProcessTree.Kill(proc.Id);
+            else
+                proc.Kill();
         }
 
         public static TValue? GetValueOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary, TKey key)
