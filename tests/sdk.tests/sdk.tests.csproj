@@ -31,6 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Recordings/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AssemblyAttribute Include="NUnit.Framework.ParallelizableAttribute">
       <_Parameter1>NUnit.Framework.ParallelScope.Fixtures</_Parameter1>
       <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>

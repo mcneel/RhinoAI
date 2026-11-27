@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Diagnostics;
 using System.Globalization;
@@ -360,245 +359,20 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, Agent agent, Guid launchedSessionId, [EnumeratorCancellation] CancellationToken token)
     {
-        string? line;
+        ClaudeStreamParser parser = new(this, launchedSessionId, reported => agent.Config.SessionId = reported);
         try
         {
+            string? line;
             while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
-                if (line.Length == 0)
-                    continue;
-
-                List<ITurn> newturns = [];
-                try
-                {
-                    JsonNode? thing = JsonObject.Parse(line);
-                    newturns = thing?["type"]?.GetValue<string>() switch
-                    {
-                        "user" => ParseUser(thing),
-                        "system" => ParseSystem(thing, agent, launchedSessionId),
-                        "result" => ParseResult(thing),
-                        "assistant" => ParseAssisant(thing),
-                        "rate_limit_event" => ParseRateLimit(thing),
-
-                        _ => []
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                }
-
-
-                foreach (ITurn turn in newturns)
-                {
+                foreach (ITurn turn in parser.Parse(line))
                     yield return turn;
-                }
             }
         }
         finally
         {
             DisposeLeases();
         }
-    }
-
-    private List<ITurn> ParseRateLimit(JsonNode thing)
-    {
-        return [];
-    }
-
-    private static DateTime? GetTimestamp(JsonNode node)
-    {
-        string? timestamp = node["timestamp"]?.GetValue<string>();
-        if (!DateTime.TryParse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime parsed)) return null;
-        return parsed;
-    }
-
-    private List<ITurn> ParseUser(JsonNode node)
-    {
-        JsonNode? message = node["message"];
-        JsonNode? content = message?["content"];
-        if (content is not JsonArray contents) return [];
-
-        DateTime? timestamp = GetTimestamp(node);
-
-        List<ITurn> turns = new(contents.Count);
-        foreach (JsonNode? cont in contents)
-        {
-            ITurn? turn = cont?["type"]?.ToString() switch
-            {
-                "tool_result" => GetToolResultTurn(cont, timestamp),
-
-                _ => null,
-            };
-
-            if (turn is null) continue;
-
-            turns.Add(turn);
-        }
-
-        return turns;
-    }
-
-    private ITurn? GetToolResultTurn(JsonNode content, DateTime? timestamp)
-    {
-        string? id = content["tool_use_id"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(id)) return null;
-
-        JsonNode? contentContent = content["content"];
-
-        JsonValueKind? kind = contentContent?.GetValueKind();
-        if (kind == JsonValueKind.Array)
-        {
-            ToolIdToTool.TryRemove(id, out string? toolName);
-
-            List<string> texts = [];
-            foreach (JsonNode? block in contentContent!.AsArray())
-            {
-                if (block?["type"]?.GetValue<string>() != "text") continue;
-                if (block["text"]?.GetValue<string>() is string text) texts.Add(text);
-            }
-
-            string message = string.Join("\n", texts);
-            ToolReturn toolReturn = content["is_error"]?.GetValue<bool>() == true
-                ? new ToolReturn(message, ToolResult.Failure, null)
-                : ToolReturn.Success(message);
-
-            return new ToolResultTurn(id, toolName ?? "err", toolReturn, timestamp);
-        }
-        else if (kind == JsonValueKind.String)
-        {
-            ToolIdToTool.TryRemove(id, out string? toolName);
-            string? message = contentContent?.GetValue<string>() ?? "no message found";
-
-            ToolReturn toolReturn = content["is_error"]?.GetValue<bool>() == true
-                ? new ToolReturn(message, ToolResult.Failure, null)
-                : ToolReturn.Success(message);
-
-            return new ToolResultTurn(id, toolName ?? "err", toolReturn, timestamp);
-        }
-
-        return null;
-    }
-
-    // The id is kept only once the CLI reports init, so a launch that fails before it never leaves an id naming no session.
-    private static List<ITurn> ParseSystem(JsonNode node, Agent agent, Guid launchedSessionId)
-    {
-        string? subType = node["subtype"]?.GetValue<string>();
-        if (string.Equals(subType, "init", StringComparison.OrdinalIgnoreCase))
-            agent.Config.SessionId = Guid.TryParse(node["session_id"]?.GetValue<string>(), out Guid reported) ? reported : launchedSessionId;
-
-        return [];
-    }
-
-    internal static List<ITurn> ParseResult(JsonNode node)
-    {
-        string? error = node["is_error"]?.GetValue<bool>() == true ? node["result"]?.GetValue<string>() : null;
-        TimeSpan? duration = node["duration_ms"]?.GetValue<double>() is double ms ? TimeSpan.FromMilliseconds(ms) : null;
-        int? tokenCount = GetTokenCount(node);
-
-        List<string> errors = [];
-        if (node["errors"] is JsonArray jsonArr)
-        {
-            foreach (JsonNode? jItem in jsonArr)
-            {
-                if (jItem?.GetValue<string>() is not string err) continue;
-                errors.Add(err);
-            }
-        }
-
-        // stop_reason belongs to the model's last reply, so a run the CLI cut short (turn limit, budget) still reads "tool_use".
-        string? subtype = node["subtype"]?.GetValue<string>();
-        bool isAborted = subtype is not null && subtype != "success";
-
-        StopReason reason = isAborted ? StopReason.Error : node["stop_reason"]?.GetValue<string>().ToLowerInvariant() switch
-        {
-            "end_turn" => StopReason.EndTurn,
-            "tool_use" => StopReason.ToolUse,
-            "max_tokens" => StopReason.MaxTokens,
-            "refusal" => StopReason.Refusal,
-            "error" => StopReason.Error,
-            null when error is null && errors.Count == 0 => StopReason.EndTurn,
-            null => StopReason.Error,
-
-            _ => StopReason.Other
-        };
-
-        string? message = !string.IsNullOrEmpty(error) ? error
-            : errors.Count > 0 ? string.Join("\n", errors)
-            : isAborted ? $"Claude stopped early ({subtype})."
-            : null;
-
-        return [new TurnEnd(reason, message, duration: duration, tokenCount: tokenCount)];
-    }
-
-    private static int? GetTokenCount(JsonNode node)
-    {
-        if (node["usage"] is not JsonNode usage) return null;
-
-        return (usage["input_tokens"]?.GetValue<int>() ?? 0)
-            + (usage["cache_creation_input_tokens"]?.GetValue<int>() ?? 0)
-            + (usage["cache_read_input_tokens"]?.GetValue<int>() ?? 0)
-            + (usage["output_tokens"]?.GetValue<int>() ?? 0);
-    }
-
-    private List<ITurn> ParseAssisant(JsonNode node)
-    {
-        JsonNode? message = node["message"];
-        JsonNode? content = message?["content"];
-        if (content is not JsonArray contents) return [];
-
-        // Tokens come from the result event only: every block repeats its message's usage, captured before output finishes.
-        DateTime? timestamp = GetTimestamp(node);
-
-        List<ITurn> turns = new(contents.Count);
-        foreach (JsonNode? cont in contents)
-        {
-            ITurn? turn = cont?["type"]?.ToString() switch
-            {
-                "tool_use" => GetToolTurn(cont, timestamp),
-                "thinking" => GetThinking(cont, timestamp),
-                "text" => GetText(cont, timestamp),
-
-                _ => null,
-            };
-
-            if (turn is null) continue;
-
-            // NOTE : Can't ask for permission here, it's already happened
-
-            turns.Add(turn);
-        }
-
-        return turns;
-    }
-
-    private static MessageTurn? GetText(JsonNode content, DateTime? timestamp)
-    {
-        string? text = content["text"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(text)) return null;
-        return new MessageTurn(text, RoleType.Assistant, timestamp);
-    }
-
-    private static ThinkingTurn? GetThinking(JsonNode content, DateTime? timestamp)
-    {
-        string? thinking = content["thinking"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(thinking)) return null;
-        return new ThinkingTurn(thinking, timestamp: timestamp);
-    }
-
-    private System.Collections.Concurrent.ConcurrentDictionary<string, string> ToolIdToTool { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    private ToolTurn? GetToolTurn(JsonNode content, DateTime? timestamp)
-    {
-        string? id = content["id"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(id)) return null;
-
-        string? name = content["name"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(name)) return null;
-
-        ToolTurn turn = new(id, name, ToolArgs.FromJson(this, name, content["input"]), timestamp: timestamp);
-        ToolIdToTool[id] = name;
-        return turn;
     }
 
     // TODO : Pin the MCP protocol era via env var (MCP_PROTOCOL_NEGOTIATION=legacy, undocumented) instead of relying on the discover probe falling back
