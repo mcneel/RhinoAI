@@ -47,7 +47,7 @@ function overlay(ctx: PanelContext, permission: PendingPermission): Child {
     el(
       'div',
       { class: 'ask-row' },
-      el('button', { class: 'btn ghost', type: 'button', onClick: () => reply('always') }, t('permission.always')),
+      el('button', { class: 'btn', type: 'button', onClick: () => reply('always') }, t('permission.always')),
       el('span', { class: 'spacer' }),
       deny,
       el('button', { class: 'btn primary', type: 'button', onClick: () => reply('allow') }, t('permission.allow')),
