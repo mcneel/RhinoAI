@@ -22,6 +22,7 @@
           "/usr/local/bin/claude"
         ]
       },
+      "efforts": [ "default", "low", "medium", "high", "xhigh", "max" ],
       "models": [
         { "display": "Opus (latest)", "id": "opus" },
         { "display": "Sonnet (latest)", "id": "sonnet" },
@@ -67,6 +68,7 @@
           "/usr/local/bin/codex"
         ]
       },
+      "efforts": [ "default", "minimal", "low", "medium", "high", "xhigh", "max", "ultra" ],
       "models": [
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
@@ -83,6 +85,7 @@
       "host": "https://api.anthropic.com",
       "protocol": "messages",
       "EnvVar" : "ANTHROPIC_API_KEY",
+      "efforts": [ "default", "low", "medium", "high", "xhigh", "max" ],
       "models": [
         { "display": "Fable 5.1", "id": "claude-fable-5-1" },
         { "display": "Fable 5", "id": "claude-fable-5" },
@@ -110,6 +113,7 @@
       "host": "https://api.openai.com",
       "protocol": "responses",
       "EnvVar" : "OPENAI_API_KEY",
+      "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh", "max" ],
       "models": [
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
@@ -126,6 +130,7 @@
       "host": "https://generativelanguage.googleapis.com",
       "protocol": "generateContent",
       "EnvVar" : "GEMINI_API_KEY",
+      "efforts": [ "default" ],
       "models": [
         { "display": "Gemini 2.5 Pro", "id": "gemini-2.5-pro" },
         { "display": "Gemini 2.5 Flash", "id": "gemini-2.5-flash" },
@@ -140,6 +145,7 @@
       "host": "https://api.deepseek.com",
       "protocol": "chatCompletions",
       "EnvVar" : "DEEPSEEK_API_KEY",
+      "efforts": [ "default", "none", "low", "high", "max" ],
       "models": [
         { "display": "DeepSeek Flash", "id": "deepseek-flash" }
       ]
@@ -164,6 +170,7 @@
       "host": "http://localhost:1234",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
+      "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh" ],
       "models": [
         { "display": "Qwen", "id": "qwen/qwen3-1.7b" }
       ]
@@ -176,6 +183,7 @@
       "host": "http://localhost:11434",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
+      "efforts": [ "default", "none", "low", "medium", "high" ],
       "models": []
     },
     {
@@ -187,6 +195,7 @@
       "host": "http://127.0.0.1:1976",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
+      "efforts": [ "default", "light", "moderate", "deep" ],
       "models": [
         { "display": "Apple On-Device", "id": "system" },
         { "display": "Apple Private Cloud Compute", "id": "pcc" }
