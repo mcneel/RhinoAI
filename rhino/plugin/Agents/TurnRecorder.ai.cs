@@ -1,10 +1,14 @@
+using Rhino.UI;
+
 using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class TurnRecorder(Conversation conversation)
+internal sealed class TurnRecorder(Conversation conversation, string agentName)
 {
     private Conversation Conversation { get; } = conversation;
+
+    private string AgentName { get; } = agentName;
 
     // CLI harnesses report stderr and sign-in failures as system messages, and only the last one explains a turn that died.
     private string? LastSystemMessage { get; set; }
@@ -47,6 +51,12 @@ internal sealed class TurnRecorder(Conversation conversation)
     {
         HasEnded = true;
         Conversation.RecordUsage(new TokenUsage(end.TokenCount ?? 0, 0));
+
+        if (end.Reason == StopReason.InvalidSession)
+        {
+            Conversation.MarkSessionLost(string.Format(LOC.STR("{0} no longer has this conversation, so it can't be continued. Start a new conversation to keep working."), AgentName));
+            return;
+        }
 
         if (end.Success) return;
 

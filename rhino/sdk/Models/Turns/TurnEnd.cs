@@ -22,7 +22,7 @@ public sealed record TurnEnd : Turn
     {
         Role = RoleType.Assistant;
         Reason = reason;
-        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled or StopReason.InvalidSession);
         Data = data ?? string.Empty;
 
         Role = RoleType.Assistant;

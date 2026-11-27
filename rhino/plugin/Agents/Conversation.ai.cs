@@ -124,6 +124,7 @@ internal sealed class Conversation
         Conversation convo = new(sessionId, agentKey, dto.DocTitle)
         {
             StartedAt = dto.StartedAt,
+            SessionLost = dto.SessionLost,
         };
 
         foreach (TurnEventDto ev in dto.Lifecycle)
@@ -148,9 +149,12 @@ internal sealed class Conversation
 
     // This is the CLI's own session id, not a plugin-internal handle: it is passed as --session-id
     // on the first spawn and as --resume afterwards, and persisted as ConversationDto.SessionId.
-    // Mutable because a rejected resume forces the agent to open a fresh session, and the saved id
-    // has to follow or the next resume names a session the CLI has never heard of.
+    // Mutable because a new conversation only learns the agent's id during its first turn.
     public Guid AgentSessionId { get; private set; }
+
+    // Never cleared: carrying on would silently start a fresh session under a transcript the agent no longer has.
+    public bool IsSessionLost { get { lock (Sync) return SessionLost; } }
+    private bool SessionLost { get; set; }
     public string AgentKey { get; }
     public string DocTitle { get; }
     public DateTimeOffset StartedAt { get; private init; }
@@ -224,11 +228,20 @@ internal sealed class Conversation
         }
     }
 
-    // Called when the agent had to open a session under a different id than the one it was given.
     internal void AdoptSessionId(Guid sessionId)
     {
         lock (Sync)
             AgentSessionId = sessionId;
+    }
+
+    public void MarkSessionLost(string reason)
+    {
+        lock (Sync)
+        {
+            SessionLost = true;
+            Current?.Fail(reason);
+        }
+        Changed?.Invoke();
     }
 
     public void NoteSessionStarted()
@@ -239,7 +252,7 @@ internal sealed class Conversation
     }
 
     // A free-form lifecycle line, rendered like a session marker. Used to surface a fail-soft note
-    // (e.g. a stale --resume target the CLI rejected, so the session restarted fresh).
+    // (e.g. an agent that cannot resume prior context).
     public void NoteSystem(string text)
     {
         lock (Sync)

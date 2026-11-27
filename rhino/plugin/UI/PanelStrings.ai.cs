@@ -85,6 +85,8 @@ internal static class PanelStrings
         ["review.backToLive"] = Localization.LocalizeString("Back to live", 127),
         ["review.resumeTitle"] = Localization.LocalizeString("Continue this conversation with its agent", 128),
         ["review.resume"] = Localization.LocalizeString("Resume", 129),
+        ["ended.text"] = LOC.STR("This conversation can't be continued"),
+        ["ended.newConversation"] = LOC.STR("New conversation"),
 
         ["history.title"] = Localization.LocalizeString("Conversations", 130),
         ["history.close"] = Localization.LocalizeString("Close", 131),

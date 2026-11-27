@@ -16,6 +16,7 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(ContextEvent), "context")]
 [JsonDerivedType(typeof(HistoryEvent), "history")]
 [JsonDerivedType(typeof(ConversationEvent), "conversation")]
+[JsonDerivedType(typeof(ConversationModeEvent), "conversation.mode")]
 [JsonDerivedType(typeof(TurnBeginEvent), "turn.begin")]
 [JsonDerivedType(typeof(TurnTextEvent), "turn.text")]
 [JsonDerivedType(typeof(TurnToolEvent), "turn.tool")]
@@ -41,6 +42,7 @@ internal sealed record AgentsEvent(IReadOnlyList<PanelAgent> Agents, string? Act
 internal sealed record ContextEvent(IReadOnlyList<PanelContextItem> Items) : PanelEvent;
 internal sealed record HistoryEvent(IReadOnlyList<PanelHistoryEntry> Entries) : PanelEvent;
 internal sealed record ConversationEvent(PanelConversation Snapshot) : PanelEvent;
+internal sealed record ConversationModeEvent(string Mode, bool Resumable) : PanelEvent;
 internal sealed record TurnBeginEvent(PanelTurn Turn) : PanelEvent;
 internal sealed record TurnTextEvent(string TurnId, string BlockId, string Delta) : PanelEvent;
 internal sealed record TurnToolEvent(string TurnId, PanelToolCall Call) : PanelEvent;
@@ -138,7 +140,7 @@ internal sealed record PanelTurn(
     string? Error);
 
 // A row in the history drawer. Resumable is false when the conversation's agent is no longer
-// installed or enabled, so the panel offers review only rather than a Resume that would fault.
+// installed or enabled, or has lost the session, so the panel offers review only.
 internal sealed record PanelHistoryEntry(
     string SessionId,
     string Title,
@@ -149,13 +151,15 @@ internal sealed record PanelHistoryEntry(
     PanelUsage Usage,
     bool Resumable);
 
+// Mode is live, review (a saved conversation) or ended (the live conversation's agent session is gone).
 internal sealed record PanelConversation(
     string SessionId,
     string Agent,
     string DocTitle,
     string StartedAt,
     IReadOnlyList<PanelTurn> Turns,
-    bool ReadOnly);
+    string Mode,
+    bool Resumable);
 
 internal sealed record PanelPermission(string Id, string Tool, string Mcp, JsonNode? Args);
 

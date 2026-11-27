@@ -303,6 +303,12 @@ internal partial class AIPanelViewModel : IDisposable
         if (Document is not { } doc || !ConversationStore.TryLoad(sessionId, out ConversationDto dto))
             return false;
 
+        if (dto.SessionLost)
+        {
+            Bridge.Post(new NoticeEvent("warn", string.Format(LOC.STR("{0} no longer has this conversation, so it can't be resumed."), AgentLabel(dto.AgentName))));
+            return false;
+        }
+
         if (IsTurnRunning)
         {
             Bridge.Post(new NoticeEvent("warn", Localization.LocalizeString("Stop the running turn before resuming another conversation.", 6)));
@@ -639,7 +645,7 @@ internal partial class AIPanelViewModel : IDisposable
                 convo.StartedAt.ToString("O"),
                 convo.Turns.Count,
                 new PanelUsage(total.InputTokens, total.OutputTokens, total.CostUsd),
-                AgentHost.Find(convo.AgentName) is { } definition && AgentHost.IsUsable(definition)));
+                !convo.SessionLost && AgentHost.Find(convo.AgentName) is { } definition && AgentHost.IsUsable(definition)));
         }
         Bridge.Post(new HistoryEvent(entries));
     }

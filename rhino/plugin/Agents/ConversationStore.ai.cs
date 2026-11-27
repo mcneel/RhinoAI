@@ -40,9 +40,7 @@ internal static class ConversationStore
 
     // Drop one transcript.
     //
-    // Used when a rejected resume forces a fresh session id: the entry under the dead id is the same
-    // conversation, and left in place it sits in the history as a duplicate row whose Resume can only
-    // fail. Marshalled and gated exactly like Save, because the caller is the agent's reader thread.
+    // Marshalled and gated exactly like Save, because a caller may be the agent's reader thread.
     //
     // Only an existing key is deleted: DeleteItem's behaviour on an absent one is undocumented, and
     // at fifty entries the scan costs nothing.
@@ -144,7 +142,8 @@ internal static class ConversationStore
             conversation.DocTitle,
             conversation.StartedAt,
             lifecycle,
-            turns);
+            turns,
+            conversation.IsSessionLost);
     }
 
     private static TurnEventDto ToDto(TurnEvent ev) =>

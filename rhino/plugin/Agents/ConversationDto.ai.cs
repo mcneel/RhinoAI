@@ -29,4 +29,5 @@ internal sealed record ConversationDto(
     string DocTitle,
     DateTimeOffset StartedAt,
     IReadOnlyList<TurnEventDto> Lifecycle,
-    IReadOnlyList<TurnDto> Turns);
+    IReadOnlyList<TurnDto> Turns,
+    bool SessionLost = false);

@@ -153,6 +153,22 @@ public class AgentTests
         IAgentResult result = await agent.SendAsync("What is a Chicken?", token);
         Assert.That(result.Success, Is.False);
         Assert.That(result.Turns.Any(t => t is TurnEnd te && te.Reason == StopReason.InvalidSession));
+        Assert.That(agent.Config.SessionId, Is.EqualTo(Guid.Empty));
+    }
+
+    [Test, Category("Manual")]
+    [CancelAfter(60_000)]
+    public async Task DesktopCodex_InvalidResume(CancellationToken token)
+    {
+        Agent? agent = Agent.GetCodexDesktopAgent(Token);
+        Assert.That(agent, Is.Not.Null);
+
+        agent.Config.SessionId = Guid.NewGuid();
+
+        IAgentResult result = await agent.SendAsync("What is a Chicken?", token);
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Turns.Any(t => t is TurnEnd te && te.Reason == StopReason.InvalidSession));
+        Assert.That(agent.Config.SessionId, Is.EqualTo(Guid.Empty));
     }
 
     [Test, Category("Manual")]

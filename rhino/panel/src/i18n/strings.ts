@@ -79,6 +79,8 @@ export const EN = {
   'review.backToLive': 'Back to live',
   'review.resumeTitle': 'Continue this conversation with its agent',
   'review.resume': 'Resume',
+  'ended.text': "This conversation can't be continued",
+  'ended.newConversation': 'New conversation',
 
   'history.title': 'Conversations',
   'history.close': 'Close',

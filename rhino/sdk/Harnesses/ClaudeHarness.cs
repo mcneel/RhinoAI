@@ -37,7 +37,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         List<ITurn> turns = new(start);
 
-        using AIProcess process = CreateClaude(agent, turns, token);
+        Guid sessionId = agent.Config.SessionId == Guid.Empty ? Guid.NewGuid() : agent.Config.SessionId;
+        using AIProcess process = CreateClaude(agent, sessionId, turns, token);
         if (TryStart(process) is ITurn failTurn)
         {
             yield return failTurn;
@@ -49,7 +50,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         Task writing = WriteLoopAsync(process, prompt);
 
         bool ended = false;
-        await foreach (ITurn turn in StreamLoopAsync(process, token))
+        await foreach (ITurn turn in StreamLoopAsync(process, agent, sessionId, token))
         {
             while (process.TryPop(out ITurn processTurn))
             {
@@ -60,22 +61,6 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
             ended |= turn is TurnEnd;
             yield return turn;
         }
-
-        ;
-        // if (failTurn.Data.Contains("No conversation found with session ID"))
-        // {
-        //     turns.Add(new MessageTurn($"Could not resume session {agent.Config.SessionId}, starting a new session."));
-        //     agent.Config.SessionId = Guid.Empty;
-
-        //     if (TryStartClaude(agent, turns, token, out process) is ITurn secondFailTurn)
-        //     {
-        //         // Ah well.. We tried! Bail.
-        //         yield return failTurn;
-        //         yield break;
-        //     }
-
-        //     // Success!
-        // }
 
         Exception? ex = null;
         try
@@ -243,7 +228,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         }
     }
 
-    private AIProcess CreateClaude(Agent agent, IEnumerable<ITurn> start, CancellationToken token)
+    private AIProcess CreateClaude(Agent agent, Guid sessionId, IEnumerable<ITurn> start, CancellationToken token)
     {
         // TODO : Check agent.Model
         Process process = GetClaudeProcess(token, agent.Model!);
@@ -252,18 +237,8 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
 
         process.StartInfo.AddArgument("-p");
 
-        if (agent.Config.SessionId != Guid.Empty)
-        {
-            process.StartInfo.AddArgument("--resume");
-        }
-        else
-        {
-            // TODO : If Call fails, this must be un-set
-            agent.Config.SessionId = Guid.NewGuid();
-            process.StartInfo.AddArgument("--session-id");
-        }
-
-        process.StartInfo.AddArgument(agent.Config.SessionId.ToString()!);
+        process.StartInfo.AddArgument(agent.Config.SessionId == Guid.Empty ? "--session-id" : "--resume");
+        process.StartInfo.AddArgument(sessionId.ToString());
 
         // --allowedTools, --allowed-tools <tools...> Comma or space-separated list of tool names to allow (e.g. "Bash(git *) Edit")
         string allowedTools = string.Empty;
@@ -383,7 +358,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StandardInput.Close();
     }
 
-    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, [EnumeratorCancellation] CancellationToken token)
+    private async IAsyncEnumerable<ITurn> StreamLoopAsync(AIProcess process, Agent agent, Guid launchedSessionId, [EnumeratorCancellation] CancellationToken token)
     {
         string? line;
         try
@@ -400,7 +375,7 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
                     newturns = thing?["type"]?.GetValue<string>() switch
                     {
                         "user" => ParseUser(thing),
-                        "system" => ParseSystem(thing),
+                        "system" => ParseSystem(thing, agent, launchedSessionId),
                         "result" => ParseResult(thing),
                         "assistant" => ParseAssisant(thing),
                         "rate_limit_event" => ParseRateLimit(thing),
@@ -505,22 +480,12 @@ internal sealed class ClaudeHarness(PlugIns.PlugInToken token) : Harness(token)
         return null;
     }
 
-    private static List<ITurn> ParseSystem(JsonNode node)
+    // The id is kept only once the CLI reports init, so a launch that fails before it never leaves an id naming no session.
+    private static List<ITurn> ParseSystem(JsonNode node, Agent agent, Guid launchedSessionId)
     {
-        JsonNode? subTypeNode = node["subtype"];
-        if (subTypeNode is not null)
-        {
-            string? subType = subTypeNode.GetValue<string>();
-
-            // Ignore Hooks for now
-            if (subType is not null && subType.StartsWith("hook_", StringComparison.OrdinalIgnoreCase)) return [];
-
-            // Ignore Init for now - I don't know what to do with it?
-            if (subType is not null && subType.Equals("init", StringComparison.OrdinalIgnoreCase))
-            {
-                return [];
-            }
-        }
+        string? subType = node["subtype"]?.GetValue<string>();
+        if (string.Equals(subType, "init", StringComparison.OrdinalIgnoreCase))
+            agent.Config.SessionId = Guid.TryParse(node["session_id"]?.GetValue<string>(), out Guid reported) ? reported : launchedSessionId;
 
         return [];
     }

@@ -25,6 +25,10 @@ internal sealed class ConversationFeed
     private List<TurnCursor> Cursors { get; } = new();
     private int LifecycleSent { get; set; }
 
+    private bool IsReview { get; set; }
+    private string AnnouncedMode { get; set; } = "live";
+    private string Mode => IsReview ? "review" : Source.IsSessionLost ? "ended" : "live";
+
     // Questions have no identity of their own, so the feed mints one per question and keeps the
     // instance so an answer reaches the object the conversation still holds. Ordered, and plural:
     // one ask_user call can pose several, and a later call appends to the set.
@@ -71,6 +75,8 @@ internal sealed class ConversationFeed
         LifecycleSent = 0;
         Posed.Clear();
         Asked.Clear();
+        IsReview = readOnly;
+        AnnouncedMode = Mode;
 
         Emit(new ConversationEvent(new PanelConversation(
             Source.AgentSessionId.ToString(),
@@ -78,7 +84,8 @@ internal sealed class ConversationFeed
             Source.DocTitle,
             Source.StartedAt.ToString("O"),
             Array.Empty<PanelTurn>(),
-            readOnly)));
+            AnnouncedMode,
+            Resumable: !Source.IsSessionLost)));
 
         Pump();
     }
@@ -122,6 +129,13 @@ internal sealed class ConversationFeed
 
         PumpQuestion();
         PumpPermission();
+
+        string mode = Mode;
+        if (mode != AnnouncedMode)
+        {
+            AnnouncedMode = mode;
+            Emit(new ConversationModeEvent(mode, Resumable: !Source.IsSessionLost));
+        }
     }
 
     private static IReadOnlyList<PanelAttachment> Describe(string turnId, IReadOnlyList<AttachmentInfo> attachments)

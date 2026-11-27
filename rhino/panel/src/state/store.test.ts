@@ -97,3 +97,22 @@ test('a switch flips at once, but never on an mcp the host has not created yet',
 
   assert.deepEqual(store.mcps()?.map((mcp) => mcp.enabled), [false, true]);
 });
+
+test('a lost session ends the live conversation without dropping its transcript', () => {
+  const store = new Store();
+  store.apply({
+    type: 'conversation',
+    snapshot: { sessionId: 's', agent: 'claude', docTitle: 'd', startedAt: '', turns: [], mode: 'live', resumable: true },
+  });
+  store.apply({
+    type: 'turn.begin',
+    turn: { id: 't', prompt: 'p', attachments: [], context: [], startedAt: '', status: 'running', usage: null, blocks: [], plan: [], undoable: false },
+  });
+
+  store.apply({ type: 'conversation.mode', mode: 'ended', resumable: false });
+
+  assert.equal(store.readOnly(), true);
+  assert.equal(store.session()?.mode, 'ended');
+  assert.equal(store.session()?.resumable, false);
+  assert.equal(store.turns().length, 1);
+});

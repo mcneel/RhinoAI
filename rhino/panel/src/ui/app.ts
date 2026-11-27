@@ -85,18 +85,37 @@ function reviewBar(ctx: PanelContext): Child {
       { class: 'btn', type: 'button', onClick: () => ctx.send({ type: 'conversation.exitReview' }) },
       () => t('review.backToLive'),
     ),
+    when(
+      () => session()?.resumable === true,
+      () =>
+        el(
+          'button',
+          {
+            class: 'btn primary',
+            type: 'button',
+            title: () => t('review.resumeTitle'),
+            onClick: () => {
+              const id = session()?.sessionId;
+              if (id) ctx.send({ type: 'conversation.resume', sessionId: id });
+            },
+          },
+          () => t('review.resume'),
+        ),
+    ),
+  );
+}
+
+function endedBar(ctx: PanelContext): Child {
+  return el(
+    'div',
+    { class: 'review-bar ended-bar' },
+    icon('alert', 14),
+    el('span', { text: () => t('ended.text') }),
+    el('span', { class: 'spacer' }),
     el(
       'button',
-      {
-        class: 'btn primary',
-        type: 'button',
-        title: () => t('review.resumeTitle'),
-        onClick: () => {
-          const id = session()?.sessionId;
-          if (id) ctx.send({ type: 'conversation.resume', sessionId: id });
-        },
-      },
-      () => t('review.resume'),
+      { class: 'btn primary', type: 'button', onClick: () => ctx.send({ type: 'conversation.new' }) },
+      () => t('ended.newConversation'),
     ),
   );
 }
@@ -175,9 +194,14 @@ export function app(ctx: PanelContext): Child {
     // output is landing and next to the Stop button, not up by the agent picker.
     statusStrip(ctx),
     when(
-      () => store.readOnly(),
-      () => reviewBar(ctx),
-      () => composer(ctx),
+      () => store.session()?.mode === 'ended',
+      () => endedBar(ctx),
+      () =>
+        when(
+          () => store.readOnly(),
+          () => reviewBar(ctx),
+          () => composer(ctx),
+        ),
     ),
     questionOverlay(ctx),
     permissionOverlay(ctx),

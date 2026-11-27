@@ -190,6 +190,11 @@ public sealed class Agent
             {
                 Statistics.PlugInStatistics.Collect(this, Token, [turn]);
                 PrivateTurns.Add(turn);
+
+                // The session is gone for good, so keeping its id would fail every later call the same way.
+                if (turn is TurnEnd { Reason: StopReason.InvalidSession })
+                    Config.SessionId = Guid.Empty;
+
                 yield return turn;
             }
         }

@@ -996,6 +996,17 @@ try {
     check('a sent prompt clears the composer of its attachments',
       (await host.evaluate(() => document.querySelectorAll('.composer .attach').length)) === 0);
 
+    await host.evaluate(() => window.rhinoAI.receive({ type: 'conversation.mode', mode: 'ended', resumable: false }));
+    await wait(200);
+    const lost = await host.evaluate(() => ({
+      bar: document.querySelectorAll('.ended-bar').length,
+      composer: document.querySelectorAll('.composer').length,
+    }));
+    check('a lost session swaps the composer for the ended bar', lost.bar === 1 && lost.composer === 0, JSON.stringify(lost));
+    await host.evaluate(() => document.querySelector('.ended-bar .btn.primary').click());
+    check('the ended bar starts a new conversation',
+      await host.evaluate(() => window.__sent.some((m) => m.type === 'conversation.new')));
+
     // ------------------------------------------------- resume, the way Rhino replays it
     // ConversationFeed.Replay posts an empty snapshot and then the turns one event at a time, each
     // its own ExecuteScriptAsync, and every agent message renders its markdown a frame later. So
@@ -1003,7 +1014,7 @@ try {
     // stops halfway up. Fed here the same way, with the panel left scrolled up beforehand.
     const line = 'The facade layer holds 148 surfaces, most of them planar panels on the south elevation. ';
     const replay = (session, count) => {
-      const out = [{ type: 'conversation', snapshot: { sessionId: session, agent: 'claude', docTitle: 'tower-study.3dm', startedAt: '2026-01-01T09:00:00.0000000+00:00', turns: [], readOnly: false } }];
+      const out = [{ type: 'conversation', snapshot: { sessionId: session, agent: 'claude', docTitle: 'tower-study.3dm', startedAt: '2026-01-01T09:00:00.0000000+00:00', turns: [], mode: 'live', resumable: true } }];
       for (let i = 0; i < count; i++) {
         const id = `${session}-turn-${i}`;
         out.push({ type: 'turn.begin', turn: { id, prompt: `Question ${i}`, attachments: [], context: [], startedAt: '2026-01-01T09:00:00.0000000+00:00', status: 'running', blocks: [], plan: [], undoable: true } });

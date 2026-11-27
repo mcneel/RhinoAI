@@ -146,7 +146,8 @@ function seeded(): ConversationSnapshot {
     agent: 'claude',
     docTitle: 'tower-study.3dm',
     startedAt: new Date(start).toISOString(),
-    readOnly: false,
+    mode: 'live',
+    resumable: true,
     turns: [
       {
         id: 'turn-seed-1',
@@ -306,7 +307,8 @@ function reviewSnapshot(entry: HistoryEntry): ConversationSnapshot {
     agent: 'claude',
     docTitle: entry.docTitle,
     startedAt: entry.startedAt,
-    readOnly: true,
+    mode: 'review',
+    resumable: entry.resumable,
     turns: [
       {
         id: `${entry.sessionId}-t1`,
@@ -889,7 +891,8 @@ export class MockHost implements Bridge {
             agent: AGENTS[0]?.name ?? 'claude',
             docTitle: 'tower-study.3dm',
             startedAt: new Date().toISOString(),
-            readOnly: false,
+            mode: 'live',
+            resumable: true,
             turns: [],
           },
         });

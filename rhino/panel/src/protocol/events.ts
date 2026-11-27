@@ -177,14 +177,17 @@ export interface TurnSnapshot {
   error?: string;
 }
 
+/** `ended` is the live conversation after its agent lost the session, so only a new conversation can carry on. */
+export type ConversationMode = 'live' | 'review' | 'ended';
+
 export interface ConversationSnapshot {
   sessionId: string;
   agent: string;
   docTitle: string;
   startedAt: string;
   turns: TurnSnapshot[];
-  /** A reviewed past conversation: the composer is replaced by Resume. */
-  readOnly: boolean;
+  mode: ConversationMode;
+  resumable: boolean;
 }
 
 export interface HostInfo {
@@ -210,6 +213,7 @@ export type HostEvent =
   | { type: 'context'; items: ContextItem[] }
   | { type: 'history'; entries: HistoryEntry[] }
   | { type: 'conversation'; snapshot: ConversationSnapshot }
+  | { type: 'conversation.mode'; mode: ConversationMode; resumable: boolean }
   | { type: 'turn.begin'; turn: TurnSnapshot }
   | { type: 'turn.text'; turnId: string; blockId: string; delta: string }
   | { type: 'turn.tool'; turnId: string; call: ToolCall }

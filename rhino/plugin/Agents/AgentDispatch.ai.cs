@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Rhino.UI;
+
 namespace Rhino.AI;
 
 // The single funnel every surface (command, command-line interceptor, panel) routes through,
@@ -137,6 +139,12 @@ internal static class AgentDispatch
         if (!AgentHost.TryFor(doc, out AgentRunner agent))
         {
             RhinoApp.WriteLine("No agent available. Open AI Settings to configure one.");
+            return false;
+        }
+
+        if (agent.Conversation.IsSessionLost)
+        {
+            RhinoApp.WriteLine(string.Format(LOC.STR("[{0}] this conversation can't be continued. Start a new conversation to keep working."), agent.Name));
             return false;
         }
 

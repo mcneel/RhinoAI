@@ -233,7 +233,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             RpcReply resumed = await RequestAsync("thread/resume", parameters, token).ConfigureAwait(false);
             if (resumed.Error is string error)
             {
-                Write(new TurnEnd(StopReason.InvalidSession, error) { Success = false });
+                Write(new TurnEnd(StopReason.InvalidSession, error));
                 return null;
             }
 

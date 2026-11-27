@@ -63,6 +63,9 @@ internal sealed class AgentRunner : IDisposable
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(AgentRunner));
 
+            if (Conversation.IsSessionLost)
+                throw new InvalidOperationException("The agent no longer has this conversation's session.");
+
             cancellation = new();
             TurnCancellation = cancellation;
         }
@@ -71,7 +74,7 @@ internal sealed class AgentRunner : IDisposable
         Agent.Harness.Config.CurrentWorkingDirectory = cwd;
 
         Conversation.BeginTurn(message.Text, [.. message.Attachments.Select(static a => a.Info)]);
-        TurnRecorder recorder = new(Conversation);
+        TurnRecorder recorder = new(Conversation, Name);
         try
         {
             await foreach (ITurn turn in Agent.StreamAsync(Contents(message), cancellation.Token).ConfigureAwait(false))

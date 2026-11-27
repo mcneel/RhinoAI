@@ -12,6 +12,7 @@ import {
   type Attachment,
   type BlockSnapshot,
   type ContextItem,
+  type ConversationMode,
   type HistoryEntry,
   type HostEvent,
   type HostInfo,
@@ -51,7 +52,8 @@ export interface SessionView {
   sessionId: string;
   docTitle: string;
   startedAt: string;
-  readOnly: boolean;
+  mode: ConversationMode;
+  resumable: boolean;
 }
 
 export interface Notice {
@@ -143,7 +145,7 @@ export class Store {
     () => this.running() && this.questions().length === 0 && this.permissions().length === 0,
   );
 
-  readonly readOnly: ReadSignal<boolean> = computed(() => this.session()?.readOnly === true);
+  readonly readOnly: ReadSignal<boolean> = computed(() => (this.session()?.mode ?? 'live') !== 'live');
 
   apply(event: HostEvent): void {
     switch (event.type) {
@@ -184,12 +186,17 @@ export class Store {
           sessionId: event.snapshot.sessionId,
           docTitle: event.snapshot.docTitle,
           startedAt: event.snapshot.startedAt,
-          readOnly: event.snapshot.readOnly,
+          mode: event.snapshot.mode,
+          resumable: event.snapshot.resumable,
         });
         this.activeAgentName.set(event.snapshot.agent);
         this.turns.set(event.snapshot.turns.map(turnFrom));
         this.questions.set([]);
         this.permissions.set([]);
+        return;
+
+      case 'conversation.mode':
+        this.session.set((session) => session && { ...session, mode: event.mode, resumable: event.resumable });
         return;
 
       // Idempotent on id. A host that re-announces a turn or a call must not be able to put two
