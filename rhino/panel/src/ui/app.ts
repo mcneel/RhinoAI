@@ -154,9 +154,13 @@ export function app(ctx: PanelContext): Child {
   hostMenu(ctx);
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('wheel', onWheel, { passive: false });
+  // Clicks outside the webview never reach the page; viewports and the command line take focus, so blur is the signal.
+  const onFocusLeavesPanel = (): void => ui.dismissMenus();
+  window.addEventListener('blur', onFocusLeavesPanel);
   onCleanup(() => {
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('wheel', onWheel);
+    window.removeEventListener('blur', onFocusLeavesPanel);
   });
 
   return el(

@@ -63,7 +63,7 @@ export function agentMenu(ctx: PanelContext): Child {
     { class: 'popover', role: 'menu' },
     el('div', { class: 'menu-head', text: () => t('agent.menuHead') }),
     each(
-      () => store.agents(),
+      () => store.agentsByAvailability(),
       (agent) => agent.name,
       row,
     ),

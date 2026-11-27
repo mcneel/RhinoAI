@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { AgentAvailability, AgentInfo } from '../protocol/events.ts';
 import { Store } from './store.ts';
 
 test('an identical notice bumps the toast already showing instead of stacking', () => {
@@ -37,6 +38,36 @@ test('the same text shows again once the earlier one is gone', () => {
 
   assert.equal(store.notices().length, 1);
   assert.notEqual(store.notices()[0]?.id, first.id);
+});
+
+test('ready agents come first, disabled ones last, host order kept within each group', () => {
+  const store = new Store();
+  const agent = (name: string, availability: AgentAvailability): AgentInfo => ({
+    name,
+    label: name,
+    model: '',
+    modelLabel: '',
+    availability,
+    builtin: true,
+  });
+
+  store.apply({
+    type: 'agents',
+    agents: [
+      agent('a', 'disabled'),
+      agent('b', 'missing'),
+      agent('c', 'ready'),
+      agent('d', 'signin'),
+      agent('e', 'disabled'),
+      agent('f', 'ready'),
+    ],
+    active: 'c',
+  });
+
+  assert.deepEqual(
+    store.agentsByAvailability().map((a) => a.name),
+    ['c', 'f', 'd', 'b', 'a', 'e'],
+  );
 });
 
 test('the mcp list belongs to one agent and is forgotten when the agent changes', () => {

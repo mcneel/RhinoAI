@@ -68,7 +68,7 @@ export function composer(ctx: PanelContext): Child {
 
   const commandMatches = computed<readonly Command[]>(() => {
     const query = slashQuery();
-    if (query === null) return [];
+    if (query === null || ui.commandMenuDismissed()) return [];
     return COMMANDS.filter((command) => command.key.startsWith(query));
   });
 
@@ -97,7 +97,8 @@ export function composer(ctx: PanelContext): Child {
     highlighted.set(0);
   });
 
-  const syncMention = (): void => {
+  const syncMenus = (): void => {
+    ui.commandMenuDismissed.set(false);
     const caret = input.selectionStart ?? 0;
     const before = ui.draft().slice(0, caret);
     const match = /(?:^|\s)@([\w -]*)$/.exec(before);
@@ -315,12 +316,12 @@ export function composer(ctx: PanelContext): Child {
         value: () => ui.draft(),
         onInput: (event: Event) => {
           ui.draft.set((event.target as HTMLTextAreaElement).value);
-          syncMention();
+          syncMenus();
           grow();
         },
         onKeyDown,
         onPaste,
-        onClick: syncMention,
+        onClick: syncMenus,
         // Never focus() on mount: the panel mounts at startup and on reload, and it would take the keyboard off the command line.
         ref: (node: HTMLTextAreaElement) => {
           input = node;

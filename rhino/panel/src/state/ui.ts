@@ -5,6 +5,15 @@ import type { Attachment, ContextItem } from '../protocol/events.js';
 
 export type Overlay = 'none' | 'history' | 'agents' | 'context' | 'mcps';
 
+// History fills the panel, so it is a page being read rather than a menu to dismiss.
+const IS_MENU: Record<Overlay, boolean> = {
+  none: false,
+  history: false,
+  agents: true,
+  context: true,
+  mcps: true,
+};
+
 export class UiState {
   readonly draft = signal('');
   readonly attachments = signal<readonly Attachment[]>([]);
@@ -17,6 +26,8 @@ export class UiState {
   /** Output landed while the user was scrolled away from the tail. */
   readonly hasNew = signal(false);
   readonly mentionQuery = signal<string | null>(null);
+  /** Hides the /command menu until the composer is next typed in or clicked. */
+  readonly commandMenuDismissed = signal(false);
 
   readonly hasDraft: ReadSignal<boolean> = computed(
     () => this.draft().trim().length > 0 || this.attachments().length > 0,
@@ -40,6 +51,12 @@ export class UiState {
 
   closeOverlay(): void {
     this.overlay.set('none');
+  }
+
+  dismissMenus(): void {
+    if (IS_MENU[this.overlay()]) this.overlay.set('none');
+    this.mentionQuery.set(null);
+    this.commandMenuDismissed.set(true);
   }
 
   addAttachment(attachment: Attachment): void {

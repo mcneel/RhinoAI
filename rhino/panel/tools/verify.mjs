@@ -281,6 +281,63 @@ try {
   check('picking context adds a chip and clears the token', chip.chips === 1 && !chip.draft.includes('@'), JSON.stringify(chip));
   await shot('04-context');
 
+  // ------------------------------------------------- focus leaving the panel
+  const blurPanel = async () => {
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await wait(150);
+  };
+  const open = () => page.evaluate(() => ({
+    composerMenu: document.querySelectorAll('.mention-menu:not(.mcp-menu)').length,
+    agents: document.querySelectorAll('.popover').length,
+    mcps: document.querySelectorAll('.mcp-menu').length,
+    history: document.querySelectorAll('.drawer').length,
+    draft: document.querySelector('.composer textarea').value,
+  }));
+
+  await type('/');
+  await wait(250);
+  await blurPanel();
+  const slashBlurred = await open();
+  check('the command menu closes when focus leaves the panel, keeping the draft',
+    slashBlurred.composerMenu === 0 && slashBlurred.draft === '/', JSON.stringify(slashBlurred));
+  await page.click('.composer textarea');
+  await wait(150);
+  check('clicking back into the composer reopens the command menu', (await open()).composerMenu === 1);
+  await page.keyboard.press('Escape');
+  await wait(150);
+
+  await type('@');
+  await wait(250);
+  const mentionOpen = (await open()).composerMenu;
+  await blurPanel();
+  check('the context menu closes when focus leaves the panel',
+    mentionOpen === 1 && (await open()).composerMenu === 0, `open ${mentionOpen}`);
+  await page.$eval('.composer textarea', (input) => {
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await page.click('.agent-chip');
+  await wait(250);
+  const agentsOpen = (await open()).agents;
+  await blurPanel();
+  check('the agent menu closes when focus leaves the panel',
+    agentsOpen === 1 && (await open()).agents === 0, `open ${agentsOpen}`);
+
+  await page.click('.composer-actions .icon-btn');
+  await wait(250);
+  const mcpsOpen = (await open()).mcps;
+  await blurPanel();
+  check('the MCP menu closes when focus leaves the panel',
+    mcpsOpen === 1 && (await open()).mcps === 0, `open ${mcpsOpen}`);
+
+  await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][0].click());
+  await wait(300);
+  await blurPanel();
+  check('history stays open when focus leaves the panel', (await open()).history === 1);
+  await page.keyboard.press('Escape');
+  await wait(150);
+
   // ------------------------------------------------------------------- layout
   for (const [label, preset] of [['narrow', 'Narrow'], ['docked', 'Docked'], ['wide', 'Wide'], ['full', 'Full']]) {
     await page.evaluate((p) => {

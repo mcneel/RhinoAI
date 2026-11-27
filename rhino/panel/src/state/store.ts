@@ -7,6 +7,7 @@
 import { computed, signal, type ReadSignal, type Signal } from '../core/signal.js';
 import { applyStrings } from '../i18n/t.js';
 import {
+  type AgentAvailability,
   type AgentInfo,
   type Attachment,
   type BlockSnapshot,
@@ -92,6 +93,13 @@ function turnFrom(snapshot: TurnSnapshot): TurnView {
 
 let noticeSeq = 0;
 
+const AVAILABILITY_RANK: Record<AgentAvailability, number> = {
+  ready: 0,
+  signin: 1,
+  missing: 2,
+  disabled: 3,
+};
+
 export class Store {
   readonly host = signal<HostInfo | null>(null);
   readonly scheme = signal<'light' | 'dark'>('dark');
@@ -112,6 +120,12 @@ export class Store {
     const name = this.activeAgentName();
     return this.agents().find((agent) => agent.name === name) ?? null;
   });
+
+  readonly agentsByAvailability: ReadSignal<readonly AgentInfo[]> = computed(() =>
+    [...this.agents()].sort(
+      (a, b) => AVAILABILITY_RANK[a.availability] - AVAILABILITY_RANK[b.availability],
+    ),
+  );
 
   readonly hasReadyAgent: ReadSignal<boolean> = computed(() =>
     this.agents().some((agent) => agent.availability === 'ready'),
