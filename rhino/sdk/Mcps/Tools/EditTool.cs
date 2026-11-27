@@ -14,7 +14,7 @@ public sealed record EditTool() : Tool("edit",
                                 false,
                                 true,
                                 [
-                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                    new ("path", "The absolute file path", ToolArgType.FilePath, true),
                                     new ("old", "The exact text to replace", ToolArgType.String, true),
                                     new ("new", "The text to replace it with", ToolArgType.String, true),
                                 ])
