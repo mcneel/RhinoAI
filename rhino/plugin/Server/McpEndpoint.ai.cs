@@ -322,7 +322,11 @@ internal sealed class McpDispatcher
         await JsonSerializer.SerializeAsync(buffer, response, McpSerializer.Options, ct).ConfigureAwait(false);
 
         ctx.Response.ContentType = "application/json";
-        ctx.Response.ContentLength64 = buffer.Length;
+        // Claude Code 2.1.329 and 2.1.330 on Windows reject Content-Length framed replies after initialize with InvalidHTTPResponse, so the agent gets no tools. HTTP/1.0 has no chunked encoding.
+        if (ctx.Request.ProtocolVersion >= HttpVersion.Version11)
+            ctx.Response.SendChunked = true;
+        else
+            ctx.Response.ContentLength64 = buffer.Length;
         buffer.Position = 0;
         #if NET48
         await buffer.CopyToAsync(ctx.Response.OutputStream).ConfigureAwait(false);

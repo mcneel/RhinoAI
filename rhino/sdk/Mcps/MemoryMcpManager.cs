@@ -127,7 +127,11 @@ internal static class MemoryMcpManager
                 {
                     byte[] bytes = Encoding.UTF8.GetBytes(response.Body.ToJsonString());
                     context.Response.ContentType = "application/json";
-                    context.Response.ContentLength64 = bytes.Length;
+                    // Claude Code 2.1.329 and 2.1.330 on Windows reject Content-Length framed replies after initialize with InvalidHTTPResponse. HTTP/1.0 has no chunked encoding.
+                    if (context.Request.ProtocolVersion >= HttpVersion.Version11)
+                        context.Response.SendChunked = true;
+                    else
+                        context.Response.ContentLength64 = bytes.Length;
                     await context.Response.OutputStream.WriteAsync(bytes, token);
                 }
             }
