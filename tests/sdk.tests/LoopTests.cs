@@ -79,6 +79,26 @@ public class LoopTests
         Assert.That(received.OfType<TurnEnd>(), Is.Empty);
     }
 
+    [Test, CancelAfter(5000)]
+    public async Task RhinoHarnessReportsTheClassificationRequest(CancellationToken token)
+    {
+        TestDefinition definition = new();
+        definition.Add(new ScriptedModel(
+            () => [new MessageTurn("Geometry", RoleType.Assistant), new UsageTurn(50, 1), new TurnEnd(StopReason.EndTurn)],
+            () => [new MessageTurn("done", RoleType.Assistant), new UsageTurn(300, 20), new TurnEnd(StopReason.EndTurn)]));
+        AIInstances.Agents.Add(definition);
+
+        using RhinoHarness harness = new(PlugInToken.Invalid);
+        harness.Mcps["Rhino"].Enabled = false;
+        Agent agent = new(definition, PlugInToken.Invalid, harness);
+
+        IAgentResult result = await agent.SendAsync("make a box", token);
+
+        Assert.That(result.Turns.OfType<UsageTurn>().Select(u => u.TokenCount), Is.EqualTo(new[] { 51, 320 }));
+        Assert.That(result.TokenCount, Is.EqualTo(371));
+        Assert.That(result.Turns.OfType<TurnEnd>().Single().TokenCount, Is.Null);
+    }
+
     [Test]
     public void ContextEstimateStartsFromTheLatestReport()
     {

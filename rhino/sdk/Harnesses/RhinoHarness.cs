@@ -73,9 +73,15 @@ public sealed class RhinoHarness : Harness, IDisposable
             bool done = false;
             await foreach (ITurn turn in agent.Model!.StreamAsync(this, firstTurns, token))
             {
-                if (done) break;
-                if (turn is TurnStart) continue;
+                if (turn is UsageTurn)
+                {
+                    yield return turn;
+                    continue;
+                }
+
                 if (turn is TurnEnd) continue;
+                if (done) continue;
+                if (turn is TurnStart) continue;
                 if (turn is ToolTurn) continue;
 
                 foreach (string classification in Classifications)
@@ -91,10 +97,12 @@ public sealed class RhinoHarness : Harness, IDisposable
             InsertRhinoHarnessPrompt(ref turns);
         }
 
-        if (IsOverMaxContext(turns))
-        {
-            turns = await Compact(agent, turns, token);
-        }
+        // TODO : Resolve
+        // if (IsOverMaxContext(turns))
+        // {
+        //     (turns, int? compactionTokens) = await Compact(agent, turns, token);
+        //     harnessTokens = AddTokens(harnessTokens, compactionTokens);
+        // }
 
         // Should this harness include a custom Loop?
         // It might make sense to refuse certain tool usage
@@ -103,6 +111,8 @@ public sealed class RhinoHarness : Harness, IDisposable
             yield return turn;
         }
     }
+
+    private static int? AddTokens(int? total, int? count) => total is null ? count : total + (count ?? 0);
 
     private async Task AddMcps(List<ITurn> turns, CancellationToken token)
     {
@@ -174,11 +184,11 @@ public sealed class RhinoHarness : Harness, IDisposable
         return new MessageTurn(message, RoleType.System);
     }
 
-    private async Task<List<ITurn>> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
+    private async Task<(List<ITurn> Turns, int? TokenCount)> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
     {
         if (agent.Model is null)
         {
-            return [new TurnEnd(StopReason.Error, "Model on agent is null")];
+            return ([new TurnEnd(StopReason.Error, "Model on agent is null")], null);
         }
 
         List<ITurn> turnsAsList = turns.ToList();
@@ -193,15 +203,16 @@ public sealed class RhinoHarness : Harness, IDisposable
         }
 
         // TODO : Maybe inform the user this starting context is too high?
-        if (index < 0) return turns;
+        if (index < 0) return (turns, null);
 
         List<ITurn> compactableTurns = turnsAsList.GetRange(0, index);
         List<ITurn> keepTurns = turnsAsList.GetRange(index, turnsAsList.Count - index);
 
         // TODO : Maybe inform the user that nothing could be compacted?
-        if (compactableTurns.Count <= 0) return turns;
+        if (compactableTurns.Count <= 0) return (turns, null);
 
         List<ITurn> compactedTurns = [];
+        int? tokenCount = null;
 
         // TODO : Wrap this in a while loop? It might require a few compactions depending on the mnodel?
         {
@@ -212,6 +223,7 @@ public sealed class RhinoHarness : Harness, IDisposable
 
             await foreach (ITurn turn in agent.Model!.StreamAsync(this, compactableTurns, token))
             {
+                if (turn is TurnEnd end) tokenCount = AddTokens(tokenCount, end.TokenCount);
                 compactedTurns.Add(turn);
             }
         }
@@ -232,7 +244,7 @@ public sealed class RhinoHarness : Harness, IDisposable
 
         keepTurns.Insert(0, new MessageTurn(summary, RoleType.System));
 
-        return keepTurns;
+        return (keepTurns, tokenCount);
     }
 
     private static bool IsOverMaxContext(IEnumerable<ITurn> start)
