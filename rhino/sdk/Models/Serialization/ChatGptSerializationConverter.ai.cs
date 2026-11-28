@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -75,6 +76,24 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         turns.Add(new TurnEnd(reason));
 
         return turns;
+    }
+
+    // The closing event carries the whole response, so the deltas before it only matter for display.
+    public JsonNode Merge(IEnumerable<JsonNode> events)
+    {
+        foreach (JsonNode streamed in events)
+        {
+            switch ((string?)streamed["type"])
+            {
+                case "response.completed" or "response.incomplete" or "response.failed" when streamed["response"] is JsonObject response:
+                    return response.DeepClone();
+
+                case "error":
+                    throw new HttpRequestException($"{Vendor} failed mid-reply: {(string?)streamed["message"] ?? streamed.ToJsonString()}");
+            }
+        }
+
+        throw new HttpRequestException($"{Vendor} ended the stream before the reply finished.");
     }
 
     private JsonObject? ToItem(ITurn turn) => turn switch

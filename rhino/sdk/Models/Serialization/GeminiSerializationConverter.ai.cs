@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -88,6 +89,77 @@ internal sealed class GeminiSerializationConverter(string vendor = "Google") : I
 
         return turns;
     }
+
+    public JsonNode Merge(IEnumerable<JsonNode> events)
+    {
+        JsonArray parts = [];
+        string? finish = null;
+        string? blocked = null;
+        JsonNode? usage = null;
+
+        foreach (JsonNode chunk in events)
+        {
+            if (chunk["error"] is JsonNode error)
+                throw new HttpRequestException($"{Vendor} failed mid-reply: {error.ToJsonString()}");
+
+            if (chunk["usageMetadata"] is JsonObject reported)
+                usage = reported;
+
+            blocked = (string?)chunk["promptFeedback"]?["blockReason"] ?? blocked;
+
+            if (chunk["candidates"] is not JsonArray { Count: > 0 } candidates || candidates[0] is not JsonObject candidate)
+                continue;
+
+            finish = (string?)candidate["finishReason"] ?? finish;
+
+            foreach (JsonNode? node in candidate["content"]?["parts"] as JsonArray ?? [])
+            {
+                if (node is JsonObject part)
+                    AddPart(parts, part);
+            }
+        }
+
+        if (finish is null)
+        {
+            throw new HttpRequestException(blocked is null
+                ? $"{Vendor} ended the stream before the reply finished."
+                : $"{Vendor} blocked the prompt ({blocked}).");
+        }
+
+        return new JsonObject
+        {
+            ["candidates"] = new JsonArray(new JsonObject
+            {
+                ["content"] = new JsonObject { ["role"] = "model", ["parts"] = parts },
+                ["finishReason"] = finish,
+            }),
+            ["usageMetadata"] = usage?.DeepClone(),
+        };
+    }
+
+    // Assumes a signature ends the text it arrives with: Google's docs don't say how streaming splits a signed part.
+    private static void AddPart(JsonArray parts, JsonObject part)
+    {
+        if (parts.Count > 0 && parts[parts.Count - 1] is JsonObject last && Continues(last, part))
+        {
+            last["text"] = (string?)last["text"] + (string?)part["text"];
+            if (part["thoughtSignature"] is JsonNode signature)
+                last["thoughtSignature"] = signature.DeepClone();
+            return;
+        }
+
+        if ((string?)part["text"] == string.Empty && part["thoughtSignature"] is null)
+            return;
+
+        parts.Add(part.DeepClone());
+    }
+
+    private static bool Continues(JsonObject last, JsonObject part)
+        => last["text"] is not null && part["text"] is not null
+        && last["thoughtSignature"] is null
+        && IsThought(last) == IsThought(part);
+
+    private static bool IsThought(JsonObject part) => (bool?)part["thought"] == true;
 
     private JsonObject? ToPart(ITurn turn) => turn switch
     {

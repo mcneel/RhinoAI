@@ -30,9 +30,9 @@ public interface ITurn
     // NOTE : Only Claude seems to report cost. And if agents did, would they ALL report in USD?
     //        Then users would want it in local currency, so I have to call a currency converter API?
     //        Not useful imo.
-    /// <summary>
-    /// Total cost of the turn in USD
-    /// </summary>
+    // /// <summary>
+    // /// Total cost of the turn in USD
+    // /// </summary>
     // public int? TurnCost { get; }
 
     /// <summary>
