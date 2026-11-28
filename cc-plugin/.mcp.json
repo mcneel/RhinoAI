@@ -3,7 +3,18 @@
     "rhino": {
       "type": "stdio",
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/router-launcher.mjs"]
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/router-launcher.mjs",
+        "--default-version",
+        "${user_config.rhino_version}",
+        "--startup-timeout",
+        "${user_config.startup_timeout}"
+      ],
+      "env": {
+        "RHINO_MCP_RHINO_EXE_8": "${user_config.rhino_8_location}",
+        "RHINO_MCP_RHINO_EXE_9": "${user_config.rhino_9_location}",
+        "RHINO_MCP_RHINO_EXE_WIP": "${user_config.rhino_9_location}"
+      }
     }
   }
 }
