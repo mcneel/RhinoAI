@@ -77,6 +77,12 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         body["max_tokens"] = settings.MaxOutputTokens;
         body["messages"] = messages;
 
+        if (settings.IsStreaming)
+        {
+            body["stream"] = true;
+            body["stream_options"] = new JsonObject { ["include_usage"] = true };
+        }
+
         JsonArray declarations = Declarations(harness);
         if (declarations.Count > 0)
             body["tools"] = declarations;

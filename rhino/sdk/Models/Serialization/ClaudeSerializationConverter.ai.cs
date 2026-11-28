@@ -50,6 +50,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
             ["max_tokens"] = settings.MaxOutputTokens,
             ["thinking"] = new JsonObject { ["type"] = "adaptive", ["display"] = "summarized" },
             ["messages"] = messages,
+            ["stream"] = settings.IsStreaming,
         };
 
         if (system.Length > 0)

@@ -41,6 +41,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
             // The transcript lives here, not on OpenAI's servers, so reasoning has to come back encrypted to be replayable.
             ["store"] = false,
             ["include"] = new JsonArray("reasoning.encrypted_content"),
+            ["stream"] = settings.IsStreaming,
         };
 
         if (instructions.Length > 0)

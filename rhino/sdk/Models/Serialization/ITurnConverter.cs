@@ -23,4 +23,4 @@ internal interface ITurnConverter
 
 }
 
-public readonly record struct RequestSettings(string Model, int MaxOutputTokens);
+public readonly record struct RequestSettings(string Model, int MaxOutputTokens, bool IsStreaming);
