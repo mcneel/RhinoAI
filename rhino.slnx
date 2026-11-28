@@ -16,5 +16,6 @@
     <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
     <Project Path="tests/sdk.tests/sdk.tests.csproj" />
     <Project Path="tests/Server.Tests/Server.Tests.csproj" />
+    <Project Path="tests/StdioTestServer/StdioTestServer.csproj" />
   </Folder>
 </Solution>
