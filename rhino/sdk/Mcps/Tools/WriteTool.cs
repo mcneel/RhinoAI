@@ -14,7 +14,7 @@ public sealed record WriteTool() : Tool("write",
                                 false,
                                 true,
                                 [
-                                    new ("file", "The absolute file path", ToolArgType.FilePath, true),
+                                    new ("path", "The absolute file path", ToolArgType.FilePath, true),
                                     new ("data", "The data to write", ToolArgType.String, true),
                                 ])
 {

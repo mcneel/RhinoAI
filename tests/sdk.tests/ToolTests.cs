@@ -18,7 +18,7 @@ public class ToolTests
             WriteTool write = new();
 
             IToolArg[] args = [
-                new ToolPath("file", filePath),
+                new ToolPath("path", filePath),
                 new ToolString("data", "shmoople")
             ];
 
@@ -36,7 +36,7 @@ public class ToolTests
             ReadTool read = new();
 
             IToolArg[] args = [
-                new ToolPath("file", filePath),
+                new ToolPath("path", filePath),
                 new ToolString("data", "shmoople")
             ];
 
