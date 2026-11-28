@@ -64,36 +64,7 @@ public sealed class RhinoHarness : Harness, IDisposable
         if (IsFirstTurn(turns))
         {
             await AddMcps(turns, token);
-
-            List<ITurn> firstTurns = ShrinkForClassification(turns);
-            string classifyPrompt = "Classify the following task. Return one of the following words to describe it: " +
-                                    "Code\n Geometry\n Image\n Other"; // TODO : Add more classifications
-            firstTurns.Insert(0, new MessageTurn(classifyPrompt, RoleType.System));
-
-            bool done = false;
-            await foreach (ITurn turn in agent.Model!.StreamAsync(this, firstTurns, token))
-            {
-                if (turn is UsageTurn)
-                {
-                    yield return turn;
-                    continue;
-                }
-
-                if (turn is TurnEnd) continue;
-                if (done) continue;
-                if (turn is TurnStart) continue;
-                if (turn is ToolTurn) continue;
-
-                foreach (string classification in Classifications)
-                {
-                    if (!turn.Data.Contains(classification, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (string.Equals(classification, Classifications.Last(), StringComparison.OrdinalIgnoreCase)) continue;
-                    turns.Insert(0, ClassificationPrompt(classification));
-                    done = true;
-                    break;
-                }
-            }
-
+            turns.AddRange(await ClassifyRequest(agent, turns, token));
             InsertRhinoHarnessPrompt(ref turns);
         }
 
@@ -110,6 +81,39 @@ public sealed class RhinoHarness : Harness, IDisposable
         {
             yield return turn;
         }
+    }
+
+    internal async Task<IEnumerable<ITurn>> ClassifyRequest(Agent agent, List<ITurn> inputTurns, CancellationToken token)
+    {
+        List<ITurn> turns = [];
+        bool done = false;
+
+        List<ITurn> classifyTurns = ShrinkForClassification(inputTurns);
+        string classifyPrompt = $"Classify the following task yourself. Do not use any skills/resources/tools. Return one of the following words to describe it: {string.Join("\n", Classifications)}";
+        classifyTurns.Insert(0, new MessageTurn(classifyPrompt, RoleType.System));
+
+        await foreach (ITurn turn in agent.Model!.StreamAsync(this, classifyTurns, token))
+        {
+            if (turn is UsageTurn)
+            {
+                turns.Add(turn);
+                continue;
+            }
+
+            if (done || turn is TurnEnd or TurnStart or ToolTurn or ThinkingTurn) continue;
+
+            foreach (string classification in Classifications)
+            {
+                if (!turn.Data.Contains(classification, StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(classification, Classifications.Last(), StringComparison.OrdinalIgnoreCase)) continue;
+                
+                turns.Add(ClassificationPrompt(classification));
+                done = true;
+                break;
+            }
+        }
+
+        return turns;
     }
 
     private static int? AddTokens(int? total, int? count) => total is null ? count : total + (count ?? 0);
