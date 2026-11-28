@@ -14,7 +14,7 @@ internal enum ToolEffect { Read, Edit, Destructive }
 
 internal enum McpTransport { Http, Stdio, InProcess }
 
-internal sealed record ModelEntry(string Id, string Name);
+internal sealed record ModelEntry(string Id, string Name, string MaxOutputTokens);
 
 internal abstract record AgentConnection;
 

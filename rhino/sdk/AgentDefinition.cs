@@ -312,10 +312,14 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 
         IModel model = modelFactory.Invoke(def.ModelId);
 
-        // Ensure the API Key is injected
-        if (model is ApiModel apiModel && ApiKey is not null)
+        if (model is ApiModel apiModel)
         {
-            apiModel.ApiKey = ApiKey;
+            // Ensure the API Key is injected
+            if (ApiKey is not null)
+                apiModel.ApiKey = ApiKey;
+
+            if (def.MaxOutputTokens is int maxOutputTokens)
+                apiModel.MaxOutputTokens = maxOutputTokens;
         }
 
         return model;
@@ -385,6 +389,17 @@ public sealed record ModelDefinition(string Vendor, string DisplayName, string M
 
     // Never sent: the CLI or API falls back to whatever model it is configured to use.
     public const string DefaultId = "default";
+
+    private int? PrivateMaxOutputTokens { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxOutputTokens
+    {
+        get => PrivateMaxOutputTokens;
+        init => PrivateMaxOutputTokens = value is null or > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaxOutputTokens), value, "The output token limit must be above zero.");
+    }
 
     public static bool IsDefault(string? modelId) => string.Equals(modelId, DefaultId, StringComparison.OrdinalIgnoreCase);
 

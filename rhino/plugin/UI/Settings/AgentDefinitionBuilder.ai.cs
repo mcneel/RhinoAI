@@ -104,8 +104,13 @@ internal static class AgentDefinitionBuilder
         {
             string modelId = entry.Id.Trim();
             string displayName = entry.Name.Trim();
-            if (modelId.Length > 0)
-                models.Add(new ModelDefinition(vendor, displayName.Length > 0 ? displayName : modelId, modelId));
+            if (modelId.Length == 0)
+                continue;
+
+            if (!OutputTokenLimit.TryParse(entry.MaxOutputTokens, out int? maxOutputTokens))
+                throw new ArgumentException(string.Format("The max output tokens of {0} were not validated before building.", modelId), nameof(entries));
+
+            models.Add(new ModelDefinition(vendor, displayName.Length > 0 ? displayName : modelId, modelId) { MaxOutputTokens = maxOutputTokens });
         }
         return models;
     }

@@ -77,6 +77,9 @@ internal static class SettingsValidator
         if (modelIds.FirstOrDefault(modelId => modelId.Length > 0 && !seen.Add(modelId)) is string repeated)
             Add("models", string.Format(LOC.STR("Each model ID can only be listed once. {0} appears more than once."), repeated));
 
+        if (agent.Models.FirstOrDefault(model => model.Id.Trim().Length > 0 && !OutputTokenLimit.TryParse(model.MaxOutputTokens, out _)) is ModelEntry badLimit)
+            Add("models", string.Format(LOC.STR("Max output tokens for {0} must be a whole number above zero, or blank."), badLimit.Id.Trim()));
+
         string defaultModel = agent.DefaultModelId?.Trim() ?? string.Empty;
         if (defaultModel.Length > 0 && !modelIds.Any(modelId => string.Equals(modelId, defaultModel, StringComparison.OrdinalIgnoreCase)))
             Add("defaultModelId", LOC.STR("The default model must be one of this agent's models."));

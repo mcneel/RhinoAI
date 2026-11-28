@@ -62,7 +62,7 @@ internal static class ModelsFetcher
         {
             if (TextOf(item, "id") is not string id || !seen.Add(id))
                 continue;
-            models.Add(new ModelEntry(id, TextOf(item, "display_name") ?? TextOf(item, "name") ?? id));
+            models.Add(new ModelEntry(id, TextOf(item, "display_name") ?? TextOf(item, "name") ?? id, string.Empty));
         }
 
         return models.Count == 0

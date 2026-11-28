@@ -55,10 +55,19 @@ internal sealed class TurnRecorder(Conversation conversation, string agentName)
     {
         HasEnded = true;
 
-        if (end.Reason == StopReason.InvalidSession)
+        switch (end.Reason)
         {
-            Conversation.MarkSessionLost(string.Format(LOC.STR("{0} no longer has this conversation, so it can't be continued. Start a new conversation to keep working."), AgentName));
-            return;
+            case StopReason.InvalidSession:
+                Conversation.MarkSessionLost(string.Format(LOC.STR("{0} no longer has this conversation, so it can't be continued. Start a new conversation to keep working."), AgentName));
+                return;
+
+            case StopReason.RanOutOfTokens:
+                Conversation.FailTurn(LOC.STR("Ran out of output tokens while thinking. Raise this model's max output tokens in AI settings."));
+                return;
+
+            case StopReason.MaxTokens:
+                Conversation.FailTurn(LOC.STR("Reply was cut off at the max output token limit."));
+                return;
         }
 
         if (end.Success) return;

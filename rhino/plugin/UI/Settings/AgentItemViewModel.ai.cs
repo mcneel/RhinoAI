@@ -29,7 +29,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
         name = settings.Name;
         enabled = settings.Enabled;
         prompt = settings.Prompt;
-        Models = new ObservableCollection<ModelItemViewModel>(settings.Models.Select(model => Watch(new ModelItemViewModel(model.Id, model.Name))));
+        Models = new ObservableCollection<ModelItemViewModel>(settings.Models.Select(model => Watch(new ModelItemViewModel(model.Id, model.Name, model.MaxOutputTokens))));
         defaultModel = settings.DefaultModelId is string wanted ? Models.FirstOrDefault(model => AgentNames.IsSame(model.Id, wanted)) : null;
         Connection = settings.Connection switch
         {
@@ -162,6 +162,8 @@ internal sealed class AgentItemViewModel : SimpleViewModel
 
     public bool IsLocal => Connection is LocalConnectionViewModel;
 
+    public bool CanLimitOutput => Connection is ApiConnectionViewModel or LocalConnectionViewModel;
+
     public string ModelsNoteText => modelsNote?.Text ?? string.Empty;
 
     public bool HasModelsNote => modelsNote is not null;
@@ -212,7 +214,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
 
     public ModelItemViewModel AddModel()
     {
-        ModelItemViewModel model = Watch(new ModelItemViewModel(string.Empty, string.Empty));
+        ModelItemViewModel model = Watch(new ModelItemViewModel(string.Empty, string.Empty, string.Empty));
         Models.Add(model);
         return model;
     }
@@ -254,7 +256,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
         Vendor,
         enabled,
         EffectiveModel?.Id.Trim(),
-        Models.Select(model => new ModelEntry(model.Id, model.Name)).ToList(),
+        Models.Select(model => new ModelEntry(model.Id, model.Name, model.MaxOutputTokens)).ToList(),
         prompt,
         Connection.ToDraft(),
         Platforms);
@@ -265,7 +267,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
         Vendor,
         enabled,
         EffectiveModel?.Id.Trim(),
-        Models.Select(model => new ModelEntry(model.Id, model.Name)).ToList(),
+        Models.Select(model => new ModelEntry(model.Id, model.Name, model.MaxOutputTokens)).ToList(),
         prompt,
         Connection.ToSettings(),
         false,
@@ -281,7 +283,7 @@ internal sealed class AgentItemViewModel : SimpleViewModel
             if (id.Length == 0 || !known.Add(id))
                 continue;
 
-            Models.Add(Watch(new ModelItemViewModel(id, entry.Name.Trim().Length > 0 ? entry.Name.Trim() : id)));
+            Models.Add(Watch(new ModelItemViewModel(id, entry.Name.Trim().Length > 0 ? entry.Name.Trim() : id, entry.MaxOutputTokens)));
             added++;
         }
 

@@ -45,13 +45,14 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 
     public virtual async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation] CancellationToken token)
     {
-        JsonObject body = Converter.ToRequest(new RequestSettings(Name, MaxOutputTokens), harness, turns);
-        // AI : Move to RequestSettings
-        body["stream"] = true;
-        body["stream_options"] = new JsonObject { ["include_usage"] = true };
+        RequestSettings settings = new(Name, MaxOutputTokens, IsStreaming: true);
+        JsonObject body = Converter.ToRequest(settings, harness, turns);
 
-        using HttpRequestMessage request = GetRequest(body);
+        using HttpRequestMessage request = GetRequest(settings, body);
         using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"{Vendor} rejected the request ({(int)response.StatusCode})");
 
         using Stream stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
 
@@ -72,18 +73,15 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
             events.Add(cast);
         }
 
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"{Vendor} rejected the request ({(int)response.StatusCode})");
-
         JsonNode converted = Converter.Merge(events);
 
         foreach (ITurn turn in Converter.FromResponse(harness, converted))
             yield return turn;
     }
 
-    private HttpRequestMessage GetRequest(JsonObject body)
+    private HttpRequestMessage GetRequest(RequestSettings settings, JsonObject body)
     {
-        HttpRequestMessage request = new(HttpMethod.Post, new Uri(Host, Protocol.Route(Name))) { Content = Payload(body) };
+        HttpRequestMessage request = new(HttpMethod.Post, new Uri(Host, Protocol.Route(settings))) { Content = Payload(body) };
         if (ApiKey is string key)
             Protocol.Authorize(request.Headers, key);
         return request;

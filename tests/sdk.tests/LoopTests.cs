@@ -80,23 +80,67 @@ public class LoopTests
     }
 
     [Test, CancelAfter(5000)]
-    public async Task RhinoHarnessReportsTheClassificationRequest(CancellationToken token)
+    public async Task RunningOutOfTokensWhileThinkingIsAFailure(CancellationToken token)
     {
-        TestDefinition definition = new();
-        definition.Add(new ScriptedModel(
-            () => [new MessageTurn("Geometry", RoleType.Assistant), new UsageTurn(50, 1), new TurnEnd(StopReason.EndTurn)],
-            () => [new MessageTurn("done", RoleType.Assistant), new UsageTurn(300, 20), new TurnEnd(StopReason.EndTurn)]));
-        AIInstances.Agents.Add(definition);
+        Agent agent = AgentWith(new ScriptedModel(
+            () => [new ThinkingTurn("still working it out"), new UsageTurn(100, 8192), new TurnEnd(StopReason.MaxTokens)]));
 
-        using RhinoHarness harness = new(PlugInToken.Invalid);
-        harness.Mcps["Rhino"].Enabled = false;
-        Agent agent = new(definition, PlugInToken.Invalid, harness);
+        IAgentResult result = await agent.SendAsync("go", token);
 
-        IAgentResult result = await agent.SendAsync("make a box", token);
+        Assert.That(result.Reason, Is.EqualTo(StopReason.RanOutOfTokens));
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Text, Is.Null);
+    }
 
-        Assert.That(result.Turns.OfType<UsageTurn>().Select(u => u.TokenCount), Is.EqualTo(new[] { 51, 320 }));
-        Assert.That(result.TokenCount, Is.EqualTo(371));
-        Assert.That(result.Turns.OfType<TurnEnd>().Single().TokenCount, Is.Null);
+    [Test, CancelAfter(5000)]
+    public async Task AReplyCutOffByTheTokenCapKeepsItsTextButIsAFailure(CancellationToken token)
+    {
+        Agent agent = AgentWith(new ScriptedModel(
+            () => [new ThinkingTurn("planning"), new MessageTurn("Here is the first half", RoleType.Assistant), new UsageTurn(100, 8192), new TurnEnd(StopReason.MaxTokens)]));
+
+        IAgentResult result = await agent.SendAsync("go", token);
+
+        Assert.That(result.Reason, Is.EqualTo(StopReason.MaxTokens));
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Text, Is.EqualTo("Here is the first half"));
+    }
+
+    [Test, CancelAfter(5000)]
+    public async Task OnlyTheLastResponseDecidesWhetherTheTokenCapCutOffAReply(CancellationToken token)
+    {
+        Agent agent = AgentWith(new ScriptedModel(
+            () => [new MessageTurn("Let me look", RoleType.Assistant), .. CallsATool()],
+            () => [new ThinkingTurn("still working it out"), new UsageTurn(150, 8192), new TurnEnd(StopReason.MaxTokens)]));
+
+        IAgentResult result = await agent.SendAsync("go", token);
+
+        Assert.That(result.Reason, Is.EqualTo(StopReason.RanOutOfTokens));
+        Assert.That(result.Success, Is.False);
+    }
+
+    [Test, CancelAfter(5000)]
+    public async Task WhitespaceBeforeTheTokenCapIsNotAReply(CancellationToken token)
+    {
+        Agent agent = AgentWith(new ScriptedModel(
+            () => [new MessageTurn("\n\n", RoleType.Assistant), new ThinkingTurn("still working it out"), new UsageTurn(100, 8192), new TurnEnd(StopReason.MaxTokens)]));
+
+        IAgentResult result = await agent.SendAsync("go", token);
+
+        Assert.That(result.Reason, Is.EqualTo(StopReason.RanOutOfTokens));
+    }
+
+    [Test, CancelAfter(5000)]
+    public async Task ANormalEndIsStillASuccess(CancellationToken token)
+    {
+        Agent agent = AgentWith(new ScriptedModel(
+            () => [new ThinkingTurn("planning"), new MessageTurn("done", RoleType.Assistant), new UsageTurn(100, 5), new TurnEnd(StopReason.EndTurn)]));
+
+        IAgentResult result = await agent.SendAsync("go", token);
+
+        Assert.That(result.Reason, Is.EqualTo(StopReason.EndTurn));
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.Error, Is.Null);
+        Assert.That(result.Text, Is.EqualTo("done"));
     }
 
     [Test]

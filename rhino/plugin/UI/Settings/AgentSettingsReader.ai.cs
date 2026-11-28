@@ -61,7 +61,7 @@ internal static class AgentSettingsReader
         Vendor: definition.Vendor,
         Enabled: definition.Enabled,
         DefaultModelId: string.IsNullOrWhiteSpace(definition.DefaultModelId) ? null : definition.DefaultModelId,
-        Models: definition.AvailableModels.Select(m => new ModelEntry(m.ModelId, m.DisplayName)).ToList(),
+        Models: definition.AvailableModels.Select(m => new ModelEntry(m.ModelId, m.DisplayName, OutputTokenLimit.Format(m.MaxOutputTokens))).ToList(),
         Prompt: definition.DefaultPrompt,
         Connection: connection,
         Builtin: isBuiltin,

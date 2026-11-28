@@ -69,7 +69,8 @@ internal static class AgentDefinitionsJson
         foreach (ModelDto model in dto.Models ?? [])
         {
             if (string.IsNullOrWhiteSpace(model.Id)) continue;
-            definition.Add(new ModelDefinition(dto.Company, model.Display ?? model.Id, model.Id));
+            if (model.MaxOutputTokens is <= 0) continue;
+            definition.Add(new ModelDefinition(dto.Company, model.Display ?? model.Id, model.Id) { MaxOutputTokens = model.MaxOutputTokens });
             firstModelId ??= model.Id;
         }
 
@@ -161,6 +162,6 @@ internal static class AgentDefinitionsJson
 
     private sealed record SearchPathDto(string? Path, bool? Enabled);
 
-    private sealed record ModelDto(string? Display, string? Id);
+    private sealed record ModelDto(string? Display, string? Id, int? MaxOutputTokens);
 
 }

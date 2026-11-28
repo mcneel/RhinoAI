@@ -122,11 +122,11 @@
       "EnvVar" : "OPENAI_API_KEY",
       "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh", "max" ],
       "models": [
-        { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
-        { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
-        { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
-        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
-        { "display": "GPT 5.5", "id": "gpt-5.5" }
+        { "display": "GPT 6 Astra", "id": "gpt-6-astra", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.5", "id": "gpt-5.5", "maxOutputTokens": 25000 }
       ]
     },
     {

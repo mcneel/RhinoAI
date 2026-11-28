@@ -16,6 +16,7 @@ internal sealed class AgentDetailView : Panel
     private const int FocusRingRoom = 4;
     private const string SavedKeyMask = "000000000000";
     private const int DropDownWidth = 160;
+    private const int OutputLimitWidth = 80;
     private const int PromptHeight = 110;
     private const float NameGrowth = 3f;
 
@@ -122,7 +123,8 @@ internal sealed class AgentDetailView : Panel
     private Control ModelsEditor()
     {
         Panel rows = new();
-        void Rebuild() => rows.Content = ModelRows();
+        TextBox? lastId = null;
+        void Rebuild() => rows.Content = ModelRows(out lastId);
         Rebuild();
         Agent.Models.CollectionChanged += (_, _) => Rebuild();
 
@@ -130,7 +132,7 @@ internal sealed class AgentDetailView : Panel
         add.Click += (_, _) =>
         {
             Agent.AddModel();
-            Application.Instance.AsyncInvoke(() => LastTextBox(rows)?.Focus());
+            Application.Instance.AsyncInvoke(() => lastId?.Focus());
         };
 
         StackLayout buttons = new() { Orientation = Orientation.Horizontal, Spacing = 6, Items = { add } };
@@ -155,13 +157,18 @@ internal sealed class AgentDetailView : Panel
         };
     }
 
-    private Control ModelRows()
+    private Control ModelRows(out TextBox? lastId)
     {
+        lastId = null;
         if (Agent.Models.Count == 0)
             return Note(Agent.NoModelsHelp);
 
         TableLayout table = new() { Spacing = new Size(6, 6) };
-        table.Rows.Add(new TableRow(new TableCell(Heading(LOC.STR("Name")), true), new TableCell(Heading(LOC.STR("ID")), true), new TableCell(null, false)));
+        TableRow header = new(new TableCell(Heading(LOC.STR("Name")), true), new TableCell(Heading(LOC.STR("ID")), true));
+        if (Agent.CanLimitOutput)
+            header.Cells.Add(new TableCell(Heading(LOC.STR("Max output"))));
+        header.Cells.Add(new TableCell(null, false));
+        table.Rows.Add(header);
         foreach (ModelItemViewModel model in Agent.Models)
         {
             TextBox name = new() { DataContext = model, PlaceholderText = LOC.STR("Model name") };
@@ -170,10 +177,29 @@ internal sealed class AgentDetailView : Panel
             id.TextBinding.BindDataContext((ModelItemViewModel m) => m.Id);
             RemoveGlyphButton remove = new() { ToolTip = LOC.STR("Remove model") };
             remove.Click += (_, _) => Agent.RemoveModel(model);
-            table.Rows.Add(new TableRow(new TableCell(name, true), new TableCell(id, true), new TableCell(Centred(remove))));
+
+            TableRow row = new(new TableCell(name, true), new TableCell(id, true));
+            if (Agent.CanLimitOutput)
+                row.Cells.Add(new TableCell(OutputLimitBox(model)));
+            row.Cells.Add(new TableCell(Centred(remove)));
+            table.Rows.Add(row);
+            lastId = id;
         }
 
         return table;
+    }
+
+    private static TextBox OutputLimitBox(ModelItemViewModel model)
+    {
+        TextBox limit = new()
+        {
+            DataContext = model,
+            Width = OutputLimitWidth,
+            PlaceholderText = LOC.STR("Default"),
+            ToolTip = LOC.STR("The most tokens the model can write in one reply. Leave blank for the default."),
+        };
+        limit.TextBinding.BindDataContext((ModelItemViewModel m) => m.MaxOutputTokens);
+        return limit;
     }
 
     private Button LoadModelsButton()
