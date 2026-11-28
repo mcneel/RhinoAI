@@ -34,7 +34,8 @@ public sealed class Loop(Harness harness)
         List<ITurn> conversation = new(start);
         List<ITurn> results = [];
         StopReason reason = StopReason.EndTurn;
-        int? tokenCount = null;
+        string? message = null;
+        bool hasReplied = false;
 
         if (agent.Model is null)
             throw new Exception("Agent does not have a valid model");
@@ -44,6 +45,7 @@ public sealed class Loop(Harness harness)
             // Endpoints validate the transcript as a whole, so results have to be sent behind the calls they answer, never on their own.
             conversation.AddRange(results);
             results.Clear();
+            hasReplied = false;
 
             await foreach (ITurn turn in agent.Model.StreamAsync(Harness, conversation, token))
             {
@@ -51,10 +53,18 @@ public sealed class Loop(Harness harness)
                 if (turn is TurnEnd end)
                 {
                     reason = end.Reason;
-                    if (end.TokenCount is int count)
-                        tokenCount = (tokenCount ?? 0) + count;
+                    message = end.Data;
                     continue;
                 }
+
+                if (turn is UsageTurn)
+                {
+                    yield return turn;
+                    continue;
+                }
+
+                if (turn is MessageTurn { Role: RoleType.Assistant } reply && !string.IsNullOrWhiteSpace(reply.Data))
+                    hasReplied = true;
 
                 conversation.Add(turn);
                 yield return turn;
@@ -70,7 +80,10 @@ public sealed class Loop(Harness harness)
         }
         while (results.Count > 0);
 
-        yield return new TurnEnd(reason, tokenCount: tokenCount);
+        if (reason == StopReason.MaxTokens && !hasReplied)
+            reason = StopReason.RanOutOfTokens;
+
+        yield return new TurnEnd(reason, message);
     }
 
     private async Task<ToolReturn> UseAsync(Agent agent, ToolTurn tool, CancellationToken token)

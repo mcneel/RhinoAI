@@ -248,4 +248,28 @@ public class PermissionTests
         Assert.That(set.ProhibitedTools(), Is.Empty);
     }
 
+    [Test]
+    public void ToolsDeniedForAnyArguments()
+    {
+        PermissionSet set = new();
+        set.AddPermission(new Permission("MCP", "plain", Permissability.Deny, []));
+        set.AddPermission(new Permission("MCP", "wildcard", Permissability.Deny, new() { ["path"] = new ToolArgPermission("path", ArgRule.Anything) }));
+        set.AddPermission(new Permission("MCP", "conditional", Permissability.Deny, new() { ["path"] = new ToolArgPermission("path", "*.3dm") }));
+        set.AddPermission(new Permission("MCP", "allowed", Permissability.Always, []));
+        set.AddPermission(new Permission("Other", "elsewhere", Permissability.Deny, []));
+        set.AddPermission(new Permission("*", "everywhere", Permissability.Deny, []));
+
+        Assert.That(set.ToolsDeniedForAnyArguments("mcp"), Is.EquivalentTo(new[] { "plain", "wildcard", "everywhere" }));
+    }
+
+    [Test]
+    public void WholeMcpDenied()
+    {
+        PermissionSet set = new();
+        set.AddPermission(new Permission("MCP", "*", Permissability.Deny, []));
+
+        Assert.That(set.ToolsDeniedForAnyArguments("MCP"), Does.Contain("*"));
+        Assert.That(set.ToolsDeniedForAnyArguments("Other"), Is.Empty);
+    }
+
 }

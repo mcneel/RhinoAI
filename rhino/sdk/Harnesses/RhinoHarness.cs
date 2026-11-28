@@ -13,16 +13,19 @@ namespace Rhino.AI;
 /// <summary>
 /// A Rhino specific harness, including all Rhino tooling
 /// </summary>
-public sealed class RhinoHarness : Harness
+public sealed class RhinoHarness : Harness, IDisposable
 {
+
+    private RhinoMcp Router { get; } = new();
 
     public RhinoHarness(PlugIns.PlugInToken token) : base(token)
     {
-        RhinoMcp rhinoMcp = new();
-        AddMcp(rhinoMcp);
+        AddMcp(Router);
 
         // InitSkills();
     }
+
+    public void Dispose() => Router.Dispose();
 
     private string? CachedResolvedRouter { get; set; }
     private string ResolveRouter
@@ -44,7 +47,7 @@ public sealed class RhinoHarness : Harness
         }
     }
 
-    public static List<string> Classifications { get; } = ["Code", "Geometry", "Image", "Other"];
+    public static List<string> Classifications { get; } = ["Code", "Geometry", "Image", "Grasshopper", "Other"];
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
@@ -61,37 +64,16 @@ public sealed class RhinoHarness : Harness
         if (IsFirstTurn(turns))
         {
             await AddMcps(turns, token);
-
-            List<ITurn> firstTurns = ShrinkForClassification(turns);
-            string classifyPrompt = "Classify the following task. Return one of the following words to describe it: " +
-                                    "Code\n Geometry\n Image\n Other"; // TODO : Add more classifications
-            firstTurns.Insert(0, new MessageTurn(classifyPrompt, RoleType.System));
-
-            bool done = false;
-            await foreach (ITurn turn in agent.Model!.StreamAsync(this, firstTurns, token))
-            {
-                if (done) break;
-                if (turn is TurnStart) continue;
-                if (turn is TurnEnd) continue;
-                if (turn is ToolTurn) continue;
-
-                foreach (string classification in Classifications)
-                {
-                    if (!turn.Data.Contains(classification, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (string.Equals(classification, Classifications.Last(), StringComparison.OrdinalIgnoreCase)) continue;
-                    turns.Insert(0, ClassificationPrompt(classification));
-                    done = true;
-                    break;
-                }
-            }
-
+            turns.AddRange(await ClassifyRequest(agent, turns, token));
             InsertRhinoHarnessPrompt(ref turns);
         }
 
-        if (IsOverMaxContext(turns))
-        {
-            turns = await Compact(agent, turns, token);
-        }
+        // TODO : Resolve
+        // if (IsOverMaxContext(turns))
+        // {
+        //     (turns, int? compactionTokens) = await Compact(agent, turns, token);
+        //     harnessTokens = AddTokens(harnessTokens, compactionTokens);
+        // }
 
         // Should this harness include a custom Loop?
         // It might make sense to refuse certain tool usage
@@ -100,6 +82,41 @@ public sealed class RhinoHarness : Harness
             yield return turn;
         }
     }
+
+    internal async Task<IEnumerable<ITurn>> ClassifyRequest(Agent agent, List<ITurn> inputTurns, CancellationToken token)
+    {
+        List<ITurn> turns = [];
+        bool done = false;
+
+        List<ITurn> classifyTurns = ShrinkForClassification(inputTurns);
+        string classifyPrompt = $"Classify the following task yourself. Do not use any skills/resources/tools. Return one of the following words to describe it: {string.Join("\n", Classifications)}";
+        classifyTurns.Insert(0, new MessageTurn(classifyPrompt, RoleType.System));
+
+        await foreach (ITurn turn in agent.Model!.StreamAsync(this, classifyTurns, token))
+        {
+            if (turn is UsageTurn)
+            {
+                turns.Add(turn);
+                continue;
+            }
+
+            if (done || turn is TurnEnd or TurnStart or ToolTurn or ThinkingTurn) continue;
+
+            foreach (string classification in Classifications)
+            {
+                if (!turn.Data.Contains(classification, StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(classification, Classifications.Last(), StringComparison.OrdinalIgnoreCase)) continue;
+                
+                turns.Add(ClassificationPrompt(classification));
+                done = true;
+                break;
+            }
+        }
+
+        return turns;
+    }
+
+    private static int? AddTokens(int? total, int? count) => total is null ? count : total + (count ?? 0);
 
     private async Task AddMcps(List<ITurn> turns, CancellationToken token)
     {
@@ -155,17 +172,6 @@ public sealed class RhinoHarness : Harness
 
         return finalTurns;
     }
-    
-    private static bool InsertRhinoHarnessPrompt(ref List<ITurn> turns)
-    {
-        if (GetPrompt("RhinoHarnessPrompt.md") is string prompt)
-        {
-            turns.Add(new MessageTurn(prompt, RoleType.System));
-            return true;
-        }
-        
-        return false;
-    }
 
     // TODO : This needs way more info
     private static MessageTurn ClassificationPrompt(string classification)
@@ -175,6 +181,7 @@ public sealed class RhinoHarness : Harness
             "code" => GetPrompt("RhinoHarnessCodePrompt.md"),
             "geometry" => GetPrompt("RhinoHarnessGeometryPrompt.md"),
             "image" => GetPrompt("RhinoHarnessImagePrompt.md"),
+            "grasshopper" => GetPrompt("RhinoHarnessGrasshopperPrompt.md"),
 
             _ => string.Empty
         };
@@ -182,23 +189,11 @@ public sealed class RhinoHarness : Harness
         return new MessageTurn(message, RoleType.System);
     }
 
-    private static string GetPrompt(string fileName)
-    {
-        string resourceName = $"Rhino.AI.Prompts.{fileName}";
-        using Stream stream = typeof(RhinoHarness).Assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException($"Embedded prompt '{resourceName}' is missing.");
-        using StreamReader reader = new(stream);
-        return reader.ReadToEnd();
-    }
-
-    private static bool IsFirstTurn(IEnumerable<ITurn> start)
-        => !start.Any(t => t is TurnEnd);
-
-    private async Task<List<ITurn>> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
+    private async Task<(List<ITurn> Turns, int? TokenCount)> Compact(Agent agent, List<ITurn> turns, CancellationToken token)
     {
         if (agent.Model is null)
         {
-            return [new TurnEnd(StopReason.Error, "Model on agent is null")];
+            return ([new TurnEnd(StopReason.Error, "Model on agent is null")], null);
         }
 
         List<ITurn> turnsAsList = turns.ToList();
@@ -213,15 +208,16 @@ public sealed class RhinoHarness : Harness
         }
 
         // TODO : Maybe inform the user this starting context is too high?
-        if (index < 0) return turns;
+        if (index < 0) return (turns, null);
 
         List<ITurn> compactableTurns = turnsAsList.GetRange(0, index);
         List<ITurn> keepTurns = turnsAsList.GetRange(index, turnsAsList.Count - index);
 
         // TODO : Maybe inform the user that nothing could be compacted?
-        if (compactableTurns.Count <= 0) return turns;
+        if (compactableTurns.Count <= 0) return (turns, null);
 
         List<ITurn> compactedTurns = [];
+        int? tokenCount = null;
 
         // TODO : Wrap this in a while loop? It might require a few compactions depending on the mnodel?
         {
@@ -232,6 +228,7 @@ public sealed class RhinoHarness : Harness
 
             await foreach (ITurn turn in agent.Model!.StreamAsync(this, compactableTurns, token))
             {
+                if (turn is TurnEnd end) tokenCount = AddTokens(tokenCount, end.TokenCount);
                 compactedTurns.Add(turn);
             }
         }
@@ -252,7 +249,7 @@ public sealed class RhinoHarness : Harness
 
         keepTurns.Insert(0, new MessageTurn(summary, RoleType.System));
 
-        return keepTurns;
+        return (keepTurns, tokenCount);
     }
 
     private static bool IsOverMaxContext(IEnumerable<ITurn> start)
@@ -270,5 +267,7 @@ public sealed class RhinoHarness : Harness
 
     //     throw new NotImplementedException("oops");
     // }
+
+    public override Func<IPermissionRequest, CancellationToken, Task>? AskUser { get; set; }
 
 }

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.IO;
 
 namespace Rhino.AI.Models;
 
@@ -16,7 +17,7 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
 {
 
     public string Name { get; } = name;
-    
+
     public string Vendor { get; } = vendor;
 
     public int MaxOutputTokens { get; set; } = 8192;
@@ -42,26 +43,45 @@ internal abstract class ApiModel(string name, string vendor, Uri host, Protocol 
         return turnsOut;
     }
 
-    public virtual async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation]CancellationToken token)
+    public virtual async IAsyncEnumerable<ITurn> StreamAsync(Harness harness, IEnumerable<ITurn> turns, [EnumeratorCancellation] CancellationToken token)
     {
-        JsonObject body = Converter.ToRequest(new RequestSettings(Name, MaxOutputTokens), harness, turns);
+        RequestSettings settings = new(Name, MaxOutputTokens, IsStreaming: true);
+        JsonObject body = Converter.ToRequest(settings, harness, turns);
 
-        using HttpRequestMessage request = GetRequest(body);
-        using HttpResponseMessage response = await Http.SendAsync(request, token);
+        using HttpRequestMessage request = GetRequest(settings, body);
+        using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
 
-        string json = await response.Content.ReadAsStringAsync(token);
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"{Vendor} rejected the request ({(int)response.StatusCode}): {json}");
+            throw new HttpRequestException($"{Vendor} rejected the request ({(int)response.StatusCode})");
 
-        JsonNode node = JsonNode.Parse(json) ?? throw new HttpRequestException($"{Vendor} returned an empty body.");
+        using Stream stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
 
-        foreach(ITurn turn in Converter.FromResponse(harness, node))
+        using StreamReader reader = new(stream, Encoding.UTF8);
+
+        List<JsonNode> events = [];
+
+        while (await reader.ReadLineAsync(token).ConfigureAwait(false) is string line)
+        {
+            if (line is null) continue;
+            if (line.Length <= 0) continue;
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            
+            string payload = line[5..].TrimStart();
+            if (payload == "[DONE]") break;
+            
+            if (JsonNode.Parse(payload) is not JsonNode cast) continue;
+            events.Add(cast);
+        }
+
+        JsonNode converted = Converter.Merge(events);
+
+        foreach (ITurn turn in Converter.FromResponse(harness, converted))
             yield return turn;
     }
 
-    private HttpRequestMessage GetRequest(JsonObject body)
+    private HttpRequestMessage GetRequest(RequestSettings settings, JsonObject body)
     {
-        HttpRequestMessage request = new(HttpMethod.Post, new Uri(Host, Protocol.Route(Name))) { Content = Payload(body) };
+        HttpRequestMessage request = new(HttpMethod.Post, new Uri(Host, Protocol.Route(settings))) { Content = Payload(body) };
         if (ApiKey is string key)
             Protocol.Authorize(request.Headers, key);
         return request;

@@ -66,9 +66,41 @@ public class Harness
     /// <returns>Each turn of the loop as it arrives</returns>
     public virtual async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
+        List<ITurn> turns = start is List<ITurn> s ? s : new(start);
+        if (IsFirstTurn(turns))
+        {
+            InsertRhinoHarnessPrompt(ref turns);
+        }
+
         await foreach (ITurn turn in Loop.StreamAsync(agent, start, token))
             yield return turn;
     }
+
+    protected static bool InsertRhinoHarnessPrompt(ref List<ITurn> turns)
+    {
+        if (GetPrompt("RhinoHarnessPrompt.md") is string prompt)
+        {
+            turns.Add(new MessageTurn(prompt, RoleType.System));
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static string CliSystemPrompt(IEnumerable<ITurn> start)
+        => string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt).Prepend(GetPrompt("RhinoHarnessPrompt.md")));
+
+    protected static string GetPrompt(string fileName)
+    {
+        string resourceName = $"Rhino.AI.Prompts.{fileName}";
+        using System.IO.Stream stream = typeof(RhinoHarness).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded prompt '{resourceName}' is missing.");
+        using System.IO.StreamReader reader = new(stream);
+        return reader.ReadToEnd();
+    }
+
+    protected static bool IsFirstTurn(IEnumerable<ITurn> start)
+        => !start.Any(t => t is TurnEnd);
 
     /// <summary>
     /// Uses a tool and returns the result.
@@ -115,6 +147,12 @@ public class Harness
     /// <returns><see langword="true"/> on success</returns>
     public bool AddMcp(Mcp mcp) => PrivateMcps.TryAdd(mcp.Name, mcp);
 
+    public void ReplaceMcp(Mcp mcp)
+    {
+        PrivateMcps.Remove(mcp.Name);
+        PrivateMcps.Add(mcp.Name, mcp);
+    }
+
     /// <summary>
     /// Adds an <see cref="ISkill"/> to the <see cref="Harness"/>
     /// </summary>
@@ -137,7 +175,7 @@ public class Harness
 /// </summary>
 public sealed class HarnessConfig
 {
-    
+
     /// <summary>The working directory of the Harness</summary>
     public string CurrentWorkingDirectory { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
@@ -160,28 +198,34 @@ public interface IPermissionRequest
 
     /// <summary>The args of the permission</summary>
     public IReadOnlyList<IToolArg> Args { get; }
-    
+
 }
 
 /// <summary>
 /// A request for permission
 /// </summary>
-internal sealed class PermissionRequest(Agent agent, Mcp mcp, ITool tool, List<IToolArg> args) : EventArgs, IPermissionRequest
+internal sealed class PermissionRequest(Agent agent, string mcpName, string toolName, IReadOnlyList<string> declaredArgs, IReadOnlyList<IToolArg> args) : EventArgs, IPermissionRequest
 {
+
+    public PermissionRequest(Agent agent, Mcp mcp, ITool tool, IReadOnlyList<IToolArg> args)
+        : this(agent, mcp.Name, tool.Name, Array.ConvertAll(tool.Args, arg => arg.Name), args) { }
 
     /// <summary>The agent whose tool call is waiting on the answer</summary>
     public Agent Agent { get; } = agent;
 
     /// <summary>The name of the MCP</summary>
-    public string McpName { get; } = mcp.Name;
+    public string McpName { get; } = mcpName;
 
     /// <summary>The name of the tool</summary>
-    public string ToolName { get; } = tool.Name;
+    public string ToolName { get; } = toolName;
+
+    /// <summary>Every argument the tool declares, supplied in this call or not</summary>
+    public IReadOnlyList<string> DeclaredArgs { get; } = declaredArgs;
 
     /// <summary>Current permission status of the request</summary>
     public bool HasPermission { get; set; } = false;
 
     /// <summary>The args of the permission</summary>
     public IReadOnlyList<IToolArg> Args { get; } = args;
-    
+
 }

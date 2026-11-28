@@ -11,7 +11,7 @@ namespace Rhino.AI;
 public interface ITool
 {
 
-    /// <summary>1-128 characters, case-insensitive, only ASCII characters, No spaces, commas or other special characters besides _</summary>
+    /// <summary>1-128 characters, case-insensitive, only ASCII characters, No spaces, commas or other special characters besides _ and -</summary>
     public string Name { get; }
     
     /// <summary>A description of the tool</summary>
@@ -77,15 +77,22 @@ public abstract record Tool : ITool
     /// <summary>
     /// (MCP spec 2025-11-25, Tools > Tool Names). All of these MUST be
     /// - 1 to 128 characters.
-    /// - Only ASCII letters, digits, _, - (although I'm preventing - for simplicity)
+    /// - Only ASCII letters, digits, _, -
     /// - No spaces, commas or other special characters.
     /// - Case sensitive (although for simplicity, this SDK is case insensitive)
     /// </summary>
     private static void ValidateName(string name)
     {
-        if (name.Length > 128) throw new ArgumentException($"Tool name must be at most 128 characters, got {name.Length}", nameof(name));
-        if (!Regex.IsMatch(name, "^[A-Za-z0-9_]+$")) throw new ArgumentException($"Tool name '{name}' may only contain ASCII letters, digits and _", nameof(name));
+        if (name.Length > MaxNameLength) throw new ArgumentException($"Tool name must be at most {MaxNameLength} characters, got {name.Length}", nameof(name));
+        if (!Regex.IsMatch(name, NamePattern)) throw new ArgumentException($"Tool name '{name}' may only contain ASCII letters, digits, _ and -", nameof(name));
     }
+
+    private const int MaxNameLength = 128;
+
+    private const string NamePattern = "^[A-Za-z0-9_-]+$";
+
+    internal static bool IsCanonicalName(string name)
+        => name.Length is > 0 and <= MaxNameLength && Regex.IsMatch(name, NamePattern) && !name.Contains("__");
 
     internal static string CorrectName(string name)
     {

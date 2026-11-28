@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
 
@@ -14,8 +16,10 @@ public sealed class PermissionSet
     /// </summary>
     public Permissability DefaultPermission { get; set; } = Permissability.Unset;
 
-    private HashSet<Permission> Permissions { get; } = new();
+    [JsonInclude]
+    private HashSet<Permission> Permissions { get; set; } = new();
 
+    [JsonIgnore]
     public IReadOnlyCollection<Permission> All => Permissions;
 
     /// <summary>
@@ -38,6 +42,17 @@ public sealed class PermissionSet
     public Permissability HasPermission(string mcpName, string toolName, IList<IToolArg> args)
     {
         Permissability result = DefaultPermission;
+        foreach (Permission permission in Naming(mcpName, toolName))
+        {
+            // TODO : What if there are multiple entries?
+            result = ResolvePermissions(permission, args);
+        }
+
+        return result;
+    }
+
+    private IEnumerable<Permission> Naming(string mcpName, string toolName)
+    {
         foreach (Permission permission in Permissions)
         {
             if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
@@ -46,18 +61,17 @@ public sealed class PermissionSet
             if (!string.Equals(permission.ToolName, toolName, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(permission.ToolName, "*")) continue;
 
-            // TODO : What if there are multiple entries?
-            result = ResolvePermissions(permission, args);
+            yield return permission;
         }
-
-        return result;
     }
 
-    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, Mcp mcp, ITool tool, IList<IToolArg> args)
+    internal static Permissability ResolvePermissionChain(IAgentDefinition? definition, Mcp mcp, ITool tool, IList<IToolArg> args)
         => ResolvePermissionChain(definition, mcp.Name, tool.Name, args);
 
-    internal static Permissability ResolvePermissionChain(IAgentDefinition definition, string mcpName, string toolName, IList<IToolArg> args)
+    internal static Permissability ResolvePermissionChain(IAgentDefinition? definition, string mcpName, string toolName, IList<IToolArg> args)
     {
+        if (definition is null) return Permissability.Deny;
+
         Permissability globalPermissions = AIInstances.Preferences.Permissions.HasPermission(mcpName, toolName, args);
         if (globalPermissions == Permissability.Deny) return Permissability.Deny;
 
@@ -97,6 +111,64 @@ public sealed class PermissionSet
             if (permission.Permissability != Permissability.Deny) continue;
             yield return permission;
         }
+    }
+
+    internal IReadOnlyList<string> ToolsDeniedForAnyArguments(string mcpName)
+    {
+        List<string> denied = [];
+        foreach (Permission permission in ProhibitedTools())
+        {
+            if (!string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(permission.McpName, "*")) continue;
+
+            if (!AcceptsAnyArguments(permission)) continue;
+
+            denied.Add(permission.ToolName);
+        }
+
+        return denied;
+    }
+
+    // Only a tool whose every rule is an unconditional Always qualifies, so no argument can change the chain's answer.
+    internal static IReadOnlyList<string> ToolsAllowedForAnyArguments(IAgentDefinition? definition, string mcpName)
+    {
+        if (definition is null) return [];
+
+        PermissionSet global = AIInstances.Preferences.Permissions;
+        HashSet<string> allowed = new(StringComparer.OrdinalIgnoreCase);
+        foreach (Permission candidate in global.Permissions.Concat(definition.Permissions.Permissions))
+        {
+            if (candidate.Permissability != Permissability.Always || candidate.ToolName == "*") continue;
+            if (!string.Equals(candidate.McpName, mcpName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!global.IsAlwaysForAnyArguments(mcpName, candidate.ToolName) || !definition.Permissions.IsAlwaysForAnyArguments(mcpName, candidate.ToolName)) continue;
+            if (ResolvePermissionChain(definition, mcpName, candidate.ToolName, []) != Permissability.Always) continue;
+
+            allowed.Add(candidate.ToolName);
+        }
+
+        return [.. allowed];
+    }
+
+    private bool IsAlwaysForAnyArguments(string mcpName, string toolName)
+    {
+        foreach (Permission permission in Naming(mcpName, toolName))
+        {
+            if (permission.Permissability != Permissability.Always || !AcceptsAnyArguments(permission))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool AcceptsAnyArguments(Permission permission)
+    {
+        foreach (ToolArgPermission arg in permission.ArgumentPermissions.Values)
+        {
+            if (arg.Value.Trim() != ArgRule.Anything)
+                return false;
+        }
+
+        return true;
     }
 
     private Permissability ResolvePermissions(Permission permission, IList<IToolArg> args)
@@ -161,6 +233,7 @@ public sealed class PermissionSet
         ToolUrl url => rule.MatchesUrl(url.Value),
         ToolString text => rule.MatchesText(text.Value),
         ToolSecret secret => rule.MatchesText(secret.Value),
+        ToolJson json => rule.MatchesText(json.Value.GetRawText()),
 
         _ => false
     };
@@ -181,6 +254,7 @@ public readonly record struct ToolArgPermission
     public string ArgName { get; }
     public string Value { get; }
 
+    [JsonConstructor]
     public ToolArgPermission(string argName, string value)
     {
         ArgName = argName;
@@ -216,6 +290,12 @@ public sealed record Permission
     public IReadOnlyDictionary<string, ToolArgPermission> ArgumentPermissions { get; }
 
     internal Permission(string mcpName, string toolName, Permissability permissability, Dictionary<string, ToolArgPermission> argumentPermissions)
+        : this(mcpName, toolName, permissability, (IReadOnlyDictionary<string, ToolArgPermission>)argumentPermissions)
+    {
+    }
+
+    [JsonConstructor]
+    private Permission(string mcpName, string toolName, Permissability permissability, IReadOnlyDictionary<string, ToolArgPermission> argumentPermissions)
     {
         McpName = mcpName;
         ToolName = toolName;

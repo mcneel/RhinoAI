@@ -13,6 +13,7 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(LoginCommand), "agent.login")]
 [JsonDerivedType(typeof(AnswerQuestionCommand), "question.answer")]
 [JsonDerivedType(typeof(DismissQuestionCommand), "question.dismiss")]
+[JsonDerivedType(typeof(AnswerPermissionCommand), "permission.answer")]
 [JsonDerivedType(typeof(ToolChipCommand), "tool.chip")]
 [JsonDerivedType(typeof(PickAttachmentsCommand), "attachments.pick")]
 [JsonDerivedType(typeof(SetZoomCommand), "zoom.set")]
@@ -20,6 +21,8 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(OpenUrlCommand), "url.open")]
 [JsonDerivedType(typeof(ClipboardCommand), "clipboard.write")]
 [JsonDerivedType(typeof(OpenMenuCommand), "menu.open")]
+[JsonDerivedType(typeof(ListMcpsCommand), "mcps.list")]
+[JsonDerivedType(typeof(ToggleMcpCommand), "mcp.toggle")]
 internal abstract partial record PanelCommand { }
 
 internal sealed record ReadyCommand : PanelCommand;
@@ -32,12 +35,18 @@ internal sealed record SelectAgentCommand(string Name) : PanelCommand;
 internal sealed record LoginCommand : PanelCommand;
 internal sealed record AnswerQuestionCommand(IReadOnlyList<QuestionAnswer> Items) : PanelCommand;
 internal sealed record DismissQuestionCommand(IReadOnlyList<string> Ids) : PanelCommand;
+internal sealed record AnswerPermissionCommand(string Id, PermissionAnswer Answer) : PanelCommand;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+internal enum PermissionAnswer { Deny, Allow, Always }
 internal sealed record ToolChipCommand(string CallId, string ChipId) : PanelCommand;
 internal sealed record PickAttachmentsCommand : PanelCommand;
 internal sealed record SetZoomCommand(double Level) : PanelCommand;
 internal sealed record OpenSettingsCommand : PanelCommand;
 internal sealed record OpenUrlCommand(string Url) : PanelCommand;
 internal sealed record ClipboardCommand(string Text) : PanelCommand;
+internal sealed record ListMcpsCommand : PanelCommand;
+internal sealed record ToggleMcpCommand(string Name, bool Enabled) : PanelCommand;
 
 internal sealed record OpenMenuCommand(
     double X,

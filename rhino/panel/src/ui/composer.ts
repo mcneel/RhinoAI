@@ -8,6 +8,7 @@ import type { StringKey } from '../i18n/strings.js';
 import type { Attachment, ContextItem } from '../protocol/events.js';
 import type { PanelContext } from './context.js';
 import { icon, type IconName } from './icons.js';
+import { mcpMenu } from './mcpMenu.js';
 
 interface Command {
   key: string;
@@ -67,7 +68,7 @@ export function composer(ctx: PanelContext): Child {
 
   const commandMatches = computed<readonly Command[]>(() => {
     const query = slashQuery();
-    if (query === null) return [];
+    if (query === null || ui.commandMenuDismissed()) return [];
     return COMMANDS.filter((command) => command.key.startsWith(query));
   });
 
@@ -96,7 +97,8 @@ export function composer(ctx: PanelContext): Child {
     highlighted.set(0);
   });
 
-  const syncMention = (): void => {
+  const syncMenus = (): void => {
+    ui.commandMenuDismissed.set(false);
     const caret = input.selectionStart ?? 0;
     const before = ui.draft().slice(0, caret);
     const match = /(?:^|\s)@([\w -]*)$/.exec(before);
@@ -264,6 +266,10 @@ export function composer(ctx: PanelContext): Child {
     },
     menu,
     when(
+      () => ui.overlay() === 'mcps',
+      () => mcpMenu(ctx),
+    ),
+    when(
       () => ui.pickedContext().length > 0,
       () =>
         el(
@@ -310,12 +316,12 @@ export function composer(ctx: PanelContext): Child {
         value: () => ui.draft(),
         onInput: (event: Event) => {
           ui.draft.set((event.target as HTMLTextAreaElement).value);
-          syncMention();
+          syncMenus();
           grow();
         },
         onKeyDown,
         onPaste,
-        onClick: syncMention,
+        onClick: syncMenus,
         // Never focus() on mount: the panel mounts at startup and on reload, and it would take the keyboard off the command line.
         ref: (node: HTMLTextAreaElement) => {
           input = node;
@@ -325,6 +331,22 @@ export function composer(ctx: PanelContext): Child {
       el(
         'div',
         { class: 'composer-actions' },
+        el(
+          'button',
+          {
+            class: () => `icon-btn${ui.overlay() === 'mcps' ? ' on' : ''}`,
+            type: 'button',
+            title: () => t('composer.mcps'),
+            'aria-label': () => t('composer.mcps'),
+            'aria-expanded': () => String(ui.overlay() === 'mcps'),
+            onClick: () => {
+              // Asked fresh every open: the first prompt attaches more, and a lazy MCP only knows its tools once started.
+              if (ui.overlay() !== 'mcps') ctx.send({ type: 'mcps.list' });
+              ui.openOverlay('mcps');
+            },
+          },
+          icon('plus', 15),
+        ),
         el(
           'button',
           { class: 'icon-btn', type: 'button', title: () => t('composer.attachFile'), onClick: () => ctx.send({ type: 'attachments.pick' }) },

@@ -1,0 +1,9 @@
+{
+  "loggedIn": true,
+  "authMethod": "third_party",
+  "apiProvider": "bedrock",
+  "analyticsDisabled": true,
+  "projectsDirectory": "/home/user/.claude/projects",
+  "configDirectory": "/home/user/.claude",
+  "loginExpiresAt": null
+}

@@ -10,6 +10,7 @@ import { hostMenu } from './hostMenu.js';
 import type { PanelContext } from './context.js';
 import { header } from './header.js';
 import { historyDrawer } from './history.js';
+import { permissionOverlay } from './permission.js';
 import { questionOverlay } from './question.js';
 import { icon } from './icons.js';
 import { transcript } from './transcript.js';
@@ -84,18 +85,37 @@ function reviewBar(ctx: PanelContext): Child {
       { class: 'btn', type: 'button', onClick: () => ctx.send({ type: 'conversation.exitReview' }) },
       () => t('review.backToLive'),
     ),
+    when(
+      () => session()?.resumable === true,
+      () =>
+        el(
+          'button',
+          {
+            class: 'btn primary',
+            type: 'button',
+            title: () => t('review.resumeTitle'),
+            onClick: () => {
+              const id = session()?.sessionId;
+              if (id) ctx.send({ type: 'conversation.resume', sessionId: id });
+            },
+          },
+          () => t('review.resume'),
+        ),
+    ),
+  );
+}
+
+function endedBar(ctx: PanelContext): Child {
+  return el(
+    'div',
+    { class: 'review-bar ended-bar' },
+    icon('alert', 14),
+    el('span', { text: () => t('ended.text') }),
+    el('span', { class: 'spacer' }),
     el(
       'button',
-      {
-        class: 'btn primary',
-        type: 'button',
-        title: () => t('review.resumeTitle'),
-        onClick: () => {
-          const id = session()?.sessionId;
-          if (id) ctx.send({ type: 'conversation.resume', sessionId: id });
-        },
-      },
-      () => t('review.resume'),
+      { class: 'btn primary', type: 'button', onClick: () => ctx.send({ type: 'conversation.new' }) },
+      () => t('ended.newConversation'),
     ),
   );
 }
@@ -153,9 +173,13 @@ export function app(ctx: PanelContext): Child {
   hostMenu(ctx);
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('wheel', onWheel, { passive: false });
+  // Clicks outside the webview never reach the page; viewports and the command line take focus, so blur is the signal.
+  const onFocusLeavesPanel = (): void => ui.dismissMenus();
+  window.addEventListener('blur', onFocusLeavesPanel);
   onCleanup(() => {
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('wheel', onWheel);
+    window.removeEventListener('blur', onFocusLeavesPanel);
   });
 
   return el(
@@ -170,11 +194,17 @@ export function app(ctx: PanelContext): Child {
     // output is landing and next to the Stop button, not up by the agent picker.
     statusStrip(ctx),
     when(
-      () => store.readOnly(),
-      () => reviewBar(ctx),
-      () => composer(ctx),
+      () => store.session()?.mode === 'ended',
+      () => endedBar(ctx),
+      () =>
+        when(
+          () => store.readOnly(),
+          () => reviewBar(ctx),
+          () => composer(ctx),
+        ),
     ),
     questionOverlay(ctx),
+    permissionOverlay(ctx),
     when(
       () => ui.overlay() === 'agents',
       () => [el('div', { class: 'scrim', onClick: () => ui.closeOverlay() }), agentMenu(ctx)],

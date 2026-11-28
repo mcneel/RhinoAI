@@ -12,23 +12,23 @@ public sealed record TurnEnd : Turn
     public StopReason Reason { get; init; }
 
     [JsonConstructor]
-    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration, int? tokenCount)
-        : this(reason, data, (DateTime?)timeStamp, duration, tokenCount)
+    private TurnEnd(StopReason reason, string data, DateTime timeStamp, TimeSpan? duration)
+        : this(reason, data, (DateTime?)timeStamp, duration)
     {
     }
 
-    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null, int? tokenCount = null)
+    // No token count: usage travels on UsageTurn, the moment each request returns.
+    internal TurnEnd(StopReason reason = StopReason.EndTurn, string? data = null, DateTime? timestamp = null, TimeSpan? duration = null)
         : base("end")
     {
         Role = RoleType.Assistant;
         Reason = reason;
-        Success = Reason is not (StopReason.Refusal or StopReason.Error or StopReason.Cancelled);
+        Success = Reason is not (StopReason.MaxTokens or StopReason.RanOutOfTokens or StopReason.Refusal or StopReason.Error or StopReason.Cancelled or StopReason.InvalidSession or StopReason.UnAuthenticated or StopReason.UsageLimit);
         Data = data ?? string.Empty;
 
         Role = RoleType.Assistant;
         Duration = duration;
         TimeStamp = timestamp ?? DateTime.UtcNow;
-        TokenCount = tokenCount;
     }
 
     // TODO : Improve
@@ -39,4 +39,4 @@ public sealed record TurnEnd : Turn
 /// <summary>
 /// The reason for the turns end
 /// </summary>
-public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled }
+public enum StopReason { EndTurn, ToolUse, MaxTokens, Refusal, Error, Other, Cancelled, InvalidSession, UnAuthenticated, UsageLimit, RanOutOfTokens }

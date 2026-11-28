@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Rhino.UI;
+
 namespace Rhino.AI;
 
 // The single funnel every surface (command, command-line interceptor, panel) routes through,
@@ -134,9 +136,15 @@ internal static class AgentDispatch
     // ahead of fresh prompts.
     private static bool TryDispatch(RhinoDoc doc, UserMessage message, bool asAnswer, bool announceBusy)
     {
-        if (!AgentHost.TryFor(doc, out IAgentRunner agent))
+        if (!AgentHost.TryFor(doc, out AgentRunner agent))
         {
             RhinoApp.WriteLine("No agent available. Open AI Settings to configure one.");
+            return false;
+        }
+
+        if (agent.Conversation.IsSessionLost)
+        {
+            RhinoApp.WriteLine(string.Format(LOC.STR("[{0}] this conversation can't be continued. Start a new conversation to keep working."), agent.Name));
             return false;
         }
 
@@ -146,7 +154,7 @@ internal static class AgentDispatch
             return false;
         }
 
-        string url = $"http://localhost:{port}/agent";
+        Uri url = new($"http://localhost:{port}/agent");
         string cwd = !string.IsNullOrEmpty(doc.Path)
             ? Path.GetDirectoryName(doc.Path) ?? Path.GetTempPath()
             : Path.GetTempPath();
@@ -199,7 +207,7 @@ internal static class AgentDispatch
     // other turn's record is open. Open before the prompt fires (the first tool call must land inside
     // the record); close in the finally so it is ALWAYS ended, whether the turn completes, is
     // cancelled, or faults, and release the gate in the same finally so Open..Close is atomic.
-    private static async Task RunTurnAsync(IAgentRunner agent, RhinoDoc doc, UserMessage message, string url, string cwd, SemaphoreSlim gate)
+    private static async Task RunTurnAsync(AgentRunner agent, RhinoDoc doc, UserMessage message, Uri url, string cwd, SemaphoreSlim gate)
     {
         TurnUndoCheckpoint? checkpoint = null;
         try

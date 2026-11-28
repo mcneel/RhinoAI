@@ -5,25 +5,27 @@
       "kind": "cli",
       "name": "Claude",
       "company": "Anthropic",
+      "enabled": true,
       "searchPaths": {
         "win": [
-          "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe",
-          "%APPDATA%/Claude/claude-code/**/claude.exe",
-          "%USERPROFILE%/.local/bin/claude.exe",
-          "%APPDATA%/npm/claude.cmd",
-          "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe",
-          "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe"
+          { "path" : "%LOCALAPPDATA%/Packages/*laude*/LocalCache/Roaming/Claude/claude-code/**/claude.exe", "enabled" : true },
+          { "path" : "%APPDATA%/Claude/claude-code/**/claude.exe", "enabled" : true },
+          { "path" : "%USERPROFILE%/.local/bin/claude.exe", "enabled" : true },
+          { "path" : "%LOCALAPPDATA%/Claude-Data/claude_*/claude-code/**/**/claude.exe", "enabled" : true },
+          { "path" : "%LOCALAPPDATA%/Microsoft/WinGet/Packages/Anthropic.ClaudeCode_*/claude.exe", "enabled" : true }
         ],
         "mac": [
-          "%USERPROFILE%/.local/bin/claude",
-          "%USERPROFILE%/.local/share/claude/versions/*",
-          "%USERPROFILE%/Library/Application Support/Claude/claude-code/**/claude.app/Contents/MacOS/claude",
-          "/opt/homebrew/bin/claude",
-          "/usr/local/bin/claude"
+          { "path" : "%USERPROFILE%/.local/bin/claude", "enabled" : true },
+          { "path" : "%USERPROFILE%/.local/share/claude/versions/*", "enabled" : true },
+          { "path" : "%USERPROFILE%/Library/Application Support/Claude/claude-code/**/claude.app/Contents/MacOS/claude", "enabled" : true },
+          { "path" : "/opt/homebrew/bin/claude", "enabled" : true },
+          { "path" : "/usr/local/bin/claude", "enabled" : true }
         ]
       },
       "efforts": [ "default", "low", "medium", "high", "xhigh", "max" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "Opus (latest)", "id": "opus" },
         { "display": "Sonnet (latest)", "id": "sonnet" },
         { "display": "Haiku (latest)", "id": "haiku" },
@@ -55,21 +57,24 @@
       "kind": "cli",
       "name": "Codex",
       "company": "OpenAI",
-      "searchPaths": {
+      "enabled": true,
+      "searchpaths": {
         "win": [
-          "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe",
-          "%APPDATA%/npm/codex.cmd"
+          { "path" : "%LOCALAPPDATA%/OpenAI/Codex/bin/**/codex.exe", "enabled" : true },
+          { "path" : "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe", "enabled" : true }
         ],
         "mac": [
-          "/Applications/ChatGPT.app/Contents/Resources/codex",
-          "/Applications/ChatGPT.app/Contents/Resources/**/codex",
-          "%USERPROFILE%/.nvm/versions/node/**/bin/codex",
-          "/opt/homebrew/bin/codex",
-          "/usr/local/bin/codex"
+          { "path" : "/Applications/ChatGPT.app/Contents/Resources/codex", "enabled" : true },
+          { "path" : "/Applications/ChatGPT.app/Contents/Resources/**/codex", "enabled" : true },
+          { "path" : "%USERPROFILE%/.nvm/versions/node/**/bin/codex", "enabled" : true },
+          { "path" : "/opt/homebrew/bin/codex", "enabled" : true },
+          { "path" : "/usr/local/bin/codex", "enabled" : true }
         ]
       },
       "efforts": [ "default", "minimal", "low", "medium", "high", "xhigh", "max", "ultra" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
         { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
         { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
@@ -82,6 +87,7 @@
       "kind": "api",
       "name": "Claude API",
       "company": "Anthropic",
+      "enabled": false,
       "host": "https://api.anthropic.com",
       "protocol": "messages",
       "EnvVar" : "ANTHROPIC_API_KEY",
@@ -110,16 +116,17 @@
       "kind": "api",
       "name": "OpenAI API",
       "company": "OpenAI",
+      "enabled": false,
       "host": "https://api.openai.com",
       "protocol": "responses",
       "EnvVar" : "OPENAI_API_KEY",
       "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh", "max" ],
       "models": [
-        { "display": "GPT 6 Astra", "id": "gpt-6-astra" },
-        { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol" },
-        { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra" },
-        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna" },
-        { "display": "GPT 5.5", "id": "gpt-5.5" }
+        { "display": "GPT 6 Astra", "id": "gpt-6-astra", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Sol", "id": "gpt-5.6-sol", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Terra", "id": "gpt-5.6-terra", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.6 Luna", "id": "gpt-5.6-luna", "maxOutputTokens": 25000 },
+        { "display": "GPT 5.5", "id": "gpt-5.5", "maxOutputTokens": 25000 }
       ]
     },
     {
@@ -127,6 +134,7 @@
       "kind": "api",
       "name": "Gemini API",
       "company": "Google",
+      "enabled": false,
       "host": "https://generativelanguage.googleapis.com",
       "protocol": "generateContent",
       "EnvVar" : "GEMINI_API_KEY",
@@ -142,6 +150,7 @@
       "kind": "api",
       "name": "DeepSeek API",
       "company": "DeepSeek",
+      "enabled": false,
       "host": "https://api.deepseek.com",
       "protocol": "chatCompletions",
       "EnvVar" : "DEEPSEEK_API_KEY",
@@ -155,10 +164,14 @@
       "kind": "api",
       "name": "OpenRouter API",
       "company": "OpenRouter",
+      "enabled": false,
       "host": "https://openrouter.ai/api",
       "protocol": "chatCompletions",
       "EnvVar" : "OPENROUTER_API_KEY",
+      "efforts": [ "default", "none", "minimal", "low", "medium", "high", "xhigh", "max" ],
+      "defaultModel": "default",
       "models": [
+        { "display": "Default", "id": "default" },
         { "display": "Auto", "id": "openrouter/auto" }
       ]
     },
@@ -167,6 +180,7 @@
       "kind": "local",
       "name": "LM Studio",
       "company": "LM Studio",
+      "enabled": false,
       "host": "http://localhost:1234",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
@@ -180,6 +194,7 @@
       "kind": "local",
       "name": "Ollama",
       "company": "Ollama",
+      "enabled": false,
       "host": "http://localhost:11434",
       "protocol": "chatCompletions",
       "modelsRoute": "/v1/models",
@@ -191,6 +206,7 @@
       "kind": "local",
       "name": "Apple Intelligence",
       "company": "Apple",
+      "enabled": false,
       "platforms": [ "mac" ],
       "host": "http://127.0.0.1:1976",
       "protocol": "chatCompletions",

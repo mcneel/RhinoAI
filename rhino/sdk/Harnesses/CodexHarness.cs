@@ -15,7 +15,7 @@ using Rhino.AI.Models;
 
 namespace Rhino.AI;
 
-internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
+internal sealed class CodexHarnessLegacy(PlugIns.PlugInToken token) : Harness(token)
 {
 
     [Obsolete("This will only be called by MCPs registered in this codebase, not by external MCPs and the harness has no permission requests at present" +
@@ -26,8 +26,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     public override async IAsyncEnumerable<ITurn> StreamLoopAsync(Agent agent, IEnumerable<ITurn> start, [EnumeratorCancellation] CancellationToken token)
     {
-        if (agent.Model is not CodexDesktopModel codexModel) yield break;
-        if (!await EnsureLoggedIn(token, codexModel))
+        if (agent.Model is not CodexDesktopModel) yield break;
+        if (!await EnsureLoggedIn(token, agent))
         {
             yield return new MessageTurn("Not Logged In", RoleType.System, DateTime.UtcNow, TimeSpan.Zero, 0);
             yield break;
@@ -40,10 +40,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         using ImagetoFile images = ImagetoFile.Write(latest.Content.OfType<ImageContent>());
         using AIProcess process = StartCodex(agent, start, images.Paths, token);
 
-        using CancellationTokenRegistration _ = token.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch (Exception) { }
-        });
+        using CancellationTokenRegistration _ = token.Register(process.Kill);
 
         Task writing = WriteLoopAsync(process, latest.Data);
 
@@ -84,12 +81,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
             yield return processTurn;
         }
 
-        if (process.ExitCode != 0)
-        {
-            yield return new TurnEnd(StopReason.Error, $"{process.ExitCode}", DateTime.UtcNow, TimeSpan.Zero, 0);
-            ended = true;
-        }
-
+        // No exit code as the reason: the stderr lines and error events already yielded say why, and "1" does not.
         if (!ended)
             yield return new TurnEnd(StopReason.Error);
     }
@@ -107,16 +99,17 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         return turns;
     }
 
-    private Process GetCodexProcess(IModel model, CancellationToken token)
+    private Process GetCodexProcess(Agent agent, CancellationToken token)
     {
-        CodexDesktopModel codexModel = (CodexDesktopModel)model;
-        string exePath = codexModel.ExePath;
+        CodexDesktopModel codexModel = (CodexDesktopModel)agent.Model!;
+        string exePath = codexModel.ExePath ?? throw new FileNotFoundException("Codex CLI not found.");
 
         Process process = new()
         {
             EnableRaisingEvents = true,
             StartInfo = new()
             {
+                UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -135,12 +128,18 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.StandardOutputEncoding = utf8;
         process.StartInfo.StandardErrorEncoding = utf8;
 
+        if (!agent.Config.UseLocalSettings)
+        {
+            Directory.CreateDirectory(CodexDesktopModel.IsolatedCodexHome);
+            process.StartInfo.Environment["CODEX_HOME"] = CodexDesktopModel.IsolatedCodexHome;
+        }
+
         return process;
     }
 
     private AIProcess StartCodex(Agent agent, IEnumerable<ITurn> start, IReadOnlyList<string> imagePaths, CancellationToken token)
     {
-        Process process = GetCodexProcess(agent.Model!, token);
+        Process process = GetCodexProcess(agent, token);
 
         process.StartInfo.AddArgument("exec");
 
@@ -154,9 +153,12 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("--skip-git-repo-check");
 
         // Model
-        //   --model <model>                       Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
-        process.StartInfo.AddArgument("--model");
-        process.StartInfo.AddArgument(agent.Model!.Name);
+        //   --model <model>  Model for the current session. Provide an alias for the latest model (e.g. 'fable', 'opus', or 'sonnet') or a model's full name (e.g. 'claude-fable-5').
+        if (!ModelDefinition.IsDefault(agent.Model?.Name) && !string.IsNullOrEmpty(agent.Model?.Name))
+        {
+            process.StartInfo.AddArgument("--model");
+            process.StartInfo.AddArgument(agent.Model.Name);
+        }
 
         // Effort
         if (!string.IsNullOrEmpty(agent.Config.ModelEffort))
@@ -172,12 +174,8 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("-c");
         process.StartInfo.AddArgument("model_reasoning_effort=\"high\"");
 
-        string systemPrompt = string.Join("\n\n", start.OfType<SystemTurn>().Select(s => s.Prompt));
-        if (systemPrompt.Length > 0)
-        {
-            process.StartInfo.AddArgument("-c");
-            process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(systemPrompt)}");
-        }
+        process.StartInfo.AddArgument("-c");
+        process.StartInfo.AddArgument($"developer_instructions={JsonSerializer.Serialize(CliSystemPrompt(start))}");
 
         // Output as JSON
         process.StartInfo.AddArgument("--json");
@@ -195,7 +193,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             // code_mode_host stays enabled: this model routes every tool call, MCP included, through code mode.
             string[] codexTools = ["shell_tool", "unified_exec", "multi_agent", "goals",
-                                            "image_generation", "view_image", "sleep_tool", "apps", "tool_suggest",
+                                            "view_image", "sleep_tool", "apps", "tool_suggest",
                                             "remote_plugin", "browser_use", "computer_use"];
 
             foreach (string builtInTool in codexTools)
@@ -218,10 +216,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         process.StartInfo.AddArgument("-");
 
         AIProcess turnProcess = new(process);
-
-        if (!process.Start()) { }
-        process.BeginErrorReadLine();
-
+        turnProcess.Start();
         return turnProcess;
     }
 
@@ -320,12 +315,12 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
 
     private bool LoggedIn { get; set; } = false;
-    private async Task<bool> EnsureLoggedIn(CancellationToken token, CodexDesktopModel codexModel)
+    private async Task<bool> EnsureLoggedIn(CancellationToken token, Agent agent)
     {
         if (LoggedIn) return true;
         try
         {
-            using Process codex = GetCodexProcess(codexModel, token);
+            using Process codex = GetCodexProcess(agent, token);
             codex.StartInfo.AddArgument("login");
             codex.StartInfo.AddArgument("status");
 
@@ -344,7 +339,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
                 return LoggedIn;
             }
 
-            LoggedIn = await LogIn(token, codexModel);
+            LoggedIn = await LogIn(token, agent);
             return LoggedIn;
         }
         catch
@@ -353,9 +348,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         }
     }
 
-    private async Task<bool> LogIn(CancellationToken token, CodexDesktopModel codexModel)
+    private async Task<bool> LogIn(CancellationToken token, Agent agent)
     {
-        using Process codex = GetCodexProcess(codexModel, token);
+        using Process codex = GetCodexProcess(agent, token);
         codex.StartInfo.AddArgument("login");
 
         using CancellationTokenRegistration _ = token.Register(() =>
@@ -389,8 +384,9 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     private static List<ITurn> ParseTurnFailed(JsonNode thing)
         => [new TurnEnd(StopReason.Error, ErrorMessage(thing["error"]) ?? "Codex turn failed.")];
 
+    // Not a TurnEnd: turn.failed carries the same message and ends the turn, so ending here too reports it twice.
     private static List<ITurn> ParseError(JsonNode thing)
-        => [new TurnEnd(StopReason.Error, ErrorMessage(thing) ?? "Codex reported an error.")];
+        => [new MessageTurn(ErrorMessage(thing) ?? "Codex reported an error.", RoleType.System)];
 
     private static string? ErrorMessage(JsonNode? node) => node switch
     {
@@ -421,45 +417,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
         if (item?["type"]?.GetValue<string>() != "mcp_tool_call") return [];
         if (!TryGetToolCallName(item, out string id, out string name)) return [];
 
-        List<IToolArg> args = GetArgs(item["arguments"]);
-
-        return [new ToolTurn(id, name, args)];
-    }
-
-    private List<IToolArg> GetArgs(JsonNode? node)
-    {
-        if (node is not JsonObject jArgs) return [];
-        List<IToolArg> args = [];
-
-        foreach (KeyValuePair<string, JsonNode?> jArg in jArgs)
-        {
-            if (jArg.Value is null) continue;
-
-            IToolArg? toolArg = ParseArg(jArg!);
-            if (toolArg is null) continue;
-
-            args.Add(toolArg);
-        }
-
-        return args;
-    }
-
-    private IToolArg? ParseArg(KeyValuePair<string, JsonNode> jArg)
-    {
-        JsonValueKind kind = jArg.Value.GetValueKind();
-        string propName = jArg.Key;
-
-        return kind switch
-        {
-            JsonValueKind.String => new ToolString(propName, jArg.Value.GetValue<string>()),
-            JsonValueKind.Number => new ToolNumber(propName, jArg.Value.GetValue<double>()),
-            JsonValueKind.True => new ToolBoolean(propName, true),
-            JsonValueKind.False => new ToolBoolean(propName, false),
-
-            // Null, Undefined, Object, Array (for now)
-
-            _ => null
-        };
+        return [new ToolTurn(id, name, ToolArgs.FromJson(this, name, item["arguments"]))];
     }
 
     private static List<ITurn> ParseItemCompleted(JsonNode thing)
@@ -476,6 +434,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
             "mcp_tool_call" => GetToolResultTurn(item),
             "reasoning" => ParseReasoning(item),
+            "error" => ParseError(item),
 
             _ => []
         };
@@ -553,34 +512,46 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
 
     private static List<ITurn> ParseTurnCompleted(JsonNode thing)
     {
-        int? tokenCount = thing?["usage"]?["input_tokens"]?.GetValue<int>();
-        // new ToolResultTurn()
-        return [new TurnEnd(StopReason.EndTurn, tokenCount: tokenCount)];
+        TurnEnd end = new(StopReason.EndTurn);
+        if (thing["usage"] is not JsonNode usage) return [end];
+
+        // Unlike Claude, cached_input_tokens is already inside input_tokens.
+        return [new UsageTurn(usage["input_tokens"]?.GetValue<int>() ?? 0, usage["output_tokens"]?.GetValue<int>() ?? 0), end];
     }
 
     // TODO : Pin the MCP protocol version via env var once Codex has one that works (CODEX_MCP_PROTOCOL_VERSION had no effect, still sends 2025-06-18)
-    private IEnumerable<string> GetMcpArgs(Agent agent)
+    // default_tools_approval_mode='approve': codex exec pins the approval policy to "never", which refuses every non-read-only call before it reaches the server.
+    internal IEnumerable<string> GetMcpArgs(Agent agent)
     {
-        string disabledTools = TomlArray(AIInstances.Preferences.Permissions.ProhibitedTools().Select(permission => permission.ToolName));
         string timeouts = $"startup_timeout_sec={(long)McpTimeouts.Startup.TotalSeconds}, tool_timeout_sec={(long)McpTimeouts.ToolCall.TotalSeconds}";
 
         foreach (Mcp mcp in Mcps.Values)
         {
             if (!mcp.Enabled) continue;
-            
+
+            string[] prohibited = ProhibitedTools(mcp.Name);
+            bool wholeServerProhibited = prohibited.Contains("*");
+            if (wholeServerProhibited) continue;
+
             string? transport = mcp switch
             {
-                StdioMcp stdioMcp => $"command='{stdioMcp.ProcessPath.LocalPath}'",
-                HttpMcp httpMcp => $"url='{httpMcp.Url.AbsoluteUri}'",
+                StdioMcp stdioMcp => $"command={TomlString(stdioMcp.Command)}, args={TomlArray(stdioMcp.Args)}, env={TomlTable(stdioMcp.Env)}",
+                HttpMcp httpMcp => $"url={TomlString(httpMcp.Url.AbsoluteUri)}, http_headers={TomlTable(httpMcp.Headers)}",
                 MemoryMcp memMcp => HandleMemoryMcp(agent, memMcp),
                 _ => null,
             };
             if (transport is null) continue;
 
             yield return "-c";
-            yield return $"mcp_servers.{mcp.Name}={{{transport}, {timeouts}, disabled_tools={disabledTools}}}";
+            yield return $"mcp_servers.{mcp.Name}={{{transport}, {timeouts}, disabled_tools={TomlArray(prohibited)}, default_tools_approval_mode='approve'}}";
         }
     }
+
+    private static string[] ProhibitedTools(string mcpName)
+        => AIInstances.Preferences.Permissions.ProhibitedTools()
+            .Where(permission => permission.McpName == "*" || string.Equals(permission.McpName, mcpName, StringComparison.OrdinalIgnoreCase))
+            .Select(permission => permission.ToolName)
+            .ToArray();
 
     private List<Mcps.MemoryMcpManager.McpLease> Leases { get; } = [];
 
@@ -588,7 +559,7 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     {
         Mcps.MemoryMcpManager.McpLease lease = AI.Mcps.MemoryMcpManager.RegisterMemoryMcp(agent, this, mcp);
         Leases.Add(lease);
-        return $"url='{lease.Uri.AbsoluteUri}'";
+        return $"url={TomlString(lease.Uri.AbsoluteUri)}";
     }
 
     private void DisposeLeases()
@@ -601,6 +572,25 @@ internal sealed class CodexHarness(PlugIns.PlugInToken token) : Harness(token)
     }
 
     private static string TomlArray(IEnumerable<string> values)
-        => $"[{string.Join(", ", values.Select(value => $"'{value}'"))}]";
+        => $"[{string.Join(", ", values.Select(TomlString))}]";
+
+    private static string TomlTable(IReadOnlyDictionary<string, string> pairs)
+        => $"{{{string.Join(", ", pairs.Select(pair => $"{TomlString(pair.Key)}={TomlString(pair.Value)}"))}}}";
+
+    private static string TomlString(string value)
+    {
+        StringBuilder toml = new(value.Length + 2);
+        toml.Append('"');
+        foreach (char c in value)
+        {
+            if (c is '"' or '\\')
+                toml.Append('\\').Append(c);
+            else if (char.IsControl(c))
+                toml.Append("\\u").Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
+            else
+                toml.Append(c);
+        }
+        return toml.Append('"').ToString();
+    }
 
 }

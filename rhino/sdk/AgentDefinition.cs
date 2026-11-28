@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using Rhino.AI.Models;
+using Rhino.AI.Paths;
 using System.Text.Json.Serialization;
 
 namespace Rhino.AI;
@@ -16,6 +17,8 @@ namespace Rhino.AI;
 /// <summary>
 /// A Definition of an Agent, all the information required to correctly construct it.
 /// </summary>
+[JsonDerivedType(typeof(CliAgentDefinition), "cli")]
+[JsonDerivedType(typeof(HttpAgentDefinition), "http")]
 public interface IAgentDefinition
 {
 
@@ -34,7 +37,6 @@ public interface IAgentDefinition
 
     public string DefaultModelId { get; set; }
 
-    // Looks like a dev could currently change this?
     public string? CurrentModelId { get; internal set; }
 
     internal IModel? CurrentModel { get; }
@@ -79,9 +81,13 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
     // TODO : Document WHY this exists, I've forgotten
     public Platform Platforms { get; init; } = Platform.All;
 
-    public PermissionSet Permissions { get; } = new();
+    [JsonInclude]
+    public PermissionSet Permissions { get; private set; } = new();
 
+    [JsonInclude]
+    [JsonPropertyName("Models")]
     protected HashSet<ModelDefinition> PrivateAvailableModels { get; init; } = [];
+    [JsonIgnore]
     public IReadOnlyCollection<ModelDefinition> AvailableModels => PrivateAvailableModels;
 
     public bool Add(ModelDefinition definition) => PrivateAvailableModels.Add(definition);
@@ -94,9 +100,11 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
         return true;
     }
 
+    [JsonIgnore]
     public abstract bool Available { get; }
 
     protected List<WeakReference<Agent>> PrivateRegisteredAgents { get; } = [];
+    [JsonIgnore]
     public IEnumerable<Agent> RegisteredAgents
     {
         get
@@ -115,7 +123,15 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
         PrivateRegisteredAgents.Add(new(agent));
     }
 
-    public IModel? CurrentModel => GetModel(CurrentModelId ?? DefaultModelId ?? "");
+    [JsonIgnore]
+    protected IModel? CachedModel { get; set; }
+
+    [JsonIgnore]
+    public IModel? CurrentModel => CachedModel switch
+    {
+        { } cached when string.Equals(cached.Name, CurrentModelId ?? DefaultModelId ?? "", StringComparison.OrdinalIgnoreCase) => cached,
+        _ => CachedModel = GetModel(CurrentModelId ?? DefaultModelId ?? ""),
+    };
 
     public abstract IModel? GetModel(string modelName);
 
@@ -125,33 +141,47 @@ internal abstract class AgentDefinition(string vendor, string displayName) : IAg
 
 }
 
+internal sealed record SearchPath(string Path, bool Enabled);
+
 internal sealed class CliAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
-    public List<string> WinSearchPaths { get; init; } = [];
-    public List<string> MacSearchPaths { get; init; } = [];
+    public List<SearchPath> WinSearchPaths { get; init; } = [];
+    public List<SearchPath> MacSearchPaths { get; init; } = [];
 
-    public override bool Available
+    private List<string>? CachedPaths { get; set; }
+
+    public IReadOnlyList<string> ValidPaths()
     {
-        get
+        if (CachedPaths is null)
         {
-            IEnumerable<string> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
-            foreach (string path in paths)
+            List<string> tempPaths = [];
+
+            List<SearchPath> paths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
+            foreach (SearchPath path in paths)
             {
-                // TODO : Glob
-                if (System.IO.File.Exists(path)) return true;
+                if (!path.Enabled) continue;
+                foreach (string match in new Glob(path.Path, IncludeDirs: false).TruePaths)
+                {
+                    tempPaths.Add(match);
+                }
             }
 
-            return false;
+            CachedPaths = tempPaths;
         }
+
+        return CachedPaths;
     }
+
+    [JsonIgnore]
+    public override bool Available => ValidPaths().Any();
 
     public override IModel? GetModel(string modelName)
     {
         ModelDefinition? def = PrivateAvailableModels.FirstOrDefault(pd => string.Equals(pd.ModelId, modelName, StringComparison.OrdinalIgnoreCase));
         if (def is null) return null;
 
-        IEnumerable<string> searchPaths = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WinSearchPaths : MacSearchPaths;
+        IEnumerable<string> searchPaths = ValidPaths();
 
         IModel? model = Vendor.ToLowerInvariant() switch
         {
@@ -204,6 +234,7 @@ internal sealed class CliAgentDefinition(string vendor, string displayName) : Ag
 internal sealed class HttpAgentDefinition(string vendor, string displayName) : AgentDefinition(vendor, displayName)
 {
 
+    [JsonIgnore]
     public override bool Available => ModelsRoute is not null || !string.IsNullOrEmpty(ApiKey);
 
     public string? Host { get; init; }
@@ -217,8 +248,8 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
     public string? ApiKeyEnvVar { get; init; }
 
     private string? PrivateApiKey { get; set; }
-    
-    [JsonPropertyName("apiKey")]
+
+    [JsonIgnore]
     public string? ApiKey
     {
         get => PrivateApiKey ??=
@@ -236,6 +267,9 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             {
                 Secrets.Stasher.TrySetSecret(ApiKeyEnvVar, value);
             }
+
+            PrivateApiKey = null;
+            CachedModel = null;
         }
     }
 
@@ -271,17 +305,21 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
             // "Ollama" => Protocols(null),
             "apple" => Protocols(LocalModel.Default, null, LocalModel.Completions, null),
 
-            _ => Protocols(null, UnknownModel.Anthropic, UnknownModel.Completions, UnknownModel.Completions),
+            _ => Protocols(null, UnknownModel.Anthropic, UnknownModel.Completions, UnknownModel.Responses),
         };
 
         if (modelFactory is null) return null;
 
         IModel model = modelFactory.Invoke(def.ModelId);
 
-        // Ensure the API Key is injected
         if (model is ApiModel apiModel)
         {
-            apiModel.ApiKey = ApiKey;
+            // Ensure the API Key is injected
+            if (ApiKey is not null)
+                apiModel.ApiKey = ApiKey;
+
+            if (def.MaxOutputTokens is int maxOutputTokens)
+                apiModel.MaxOutputTokens = maxOutputTokens;
         }
 
         return model;
@@ -346,4 +384,23 @@ internal sealed class HttpAgentDefinition(string vendor, string displayName) : A
 [Flags]
 internal enum Platform { None = 0, Windows = 1, OSX = 2, All = Windows | OSX }
 
-public sealed record ModelDefinition(string Vendor, string DisplayName, string ModelId);
+public sealed record ModelDefinition(string Vendor, string DisplayName, string ModelId)
+{
+
+    // Never sent: the CLI or API falls back to whatever model it is configured to use.
+    public const string DefaultId = "default";
+
+    private int? PrivateMaxOutputTokens { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxOutputTokens
+    {
+        get => PrivateMaxOutputTokens;
+        init => PrivateMaxOutputTokens = value is null or > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaxOutputTokens), value, "The output token limit must be above zero.");
+    }
+
+    public static bool IsDefault(string? modelId) => string.Equals(modelId, DefaultId, StringComparison.OrdinalIgnoreCase);
+
+}

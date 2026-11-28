@@ -16,6 +16,7 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(ContextEvent), "context")]
 [JsonDerivedType(typeof(HistoryEvent), "history")]
 [JsonDerivedType(typeof(ConversationEvent), "conversation")]
+[JsonDerivedType(typeof(ConversationModeEvent), "conversation.mode")]
 [JsonDerivedType(typeof(TurnBeginEvent), "turn.begin")]
 [JsonDerivedType(typeof(TurnTextEvent), "turn.text")]
 [JsonDerivedType(typeof(TurnToolEvent), "turn.tool")]
@@ -25,9 +26,12 @@ namespace Rhino.AI.UI;
 [JsonDerivedType(typeof(TurnEndEvent), "turn.end")]
 [JsonDerivedType(typeof(QuestionEvent), "question")]
 [JsonDerivedType(typeof(QuestionClearEvent), "question.clear")]
+[JsonDerivedType(typeof(PermissionEvent), "permission")]
+[JsonDerivedType(typeof(PermissionClearEvent), "permission.clear")]
 [JsonDerivedType(typeof(AttachmentsAddEvent), "attachments.add")]
 [JsonDerivedType(typeof(NoticeEvent), "notice")]
 [JsonDerivedType(typeof(StatusEvent), "status")]
+[JsonDerivedType(typeof(McpsEvent), "mcps")]
 [JsonDerivedType(typeof(ZoomEvent), "zoom")]
 [JsonDerivedType(typeof(ReloadEvent), "reload")]
 internal abstract record PanelEvent;
@@ -38,6 +42,7 @@ internal sealed record AgentsEvent(IReadOnlyList<PanelAgent> Agents, string? Act
 internal sealed record ContextEvent(IReadOnlyList<PanelContextItem> Items) : PanelEvent;
 internal sealed record HistoryEvent(IReadOnlyList<PanelHistoryEntry> Entries) : PanelEvent;
 internal sealed record ConversationEvent(PanelConversation Snapshot) : PanelEvent;
+internal sealed record ConversationModeEvent(string Mode, bool Resumable) : PanelEvent;
 internal sealed record TurnBeginEvent(PanelTurn Turn) : PanelEvent;
 internal sealed record TurnTextEvent(string TurnId, string BlockId, string Delta) : PanelEvent;
 internal sealed record TurnToolEvent(string TurnId, PanelToolCall Call) : PanelEvent;
@@ -47,9 +52,15 @@ internal sealed record TurnUsageEvent(string TurnId, PanelUsage Usage) : PanelEv
 internal sealed record TurnEndEvent(string TurnId, string Status, string? Error) : PanelEvent;
 internal sealed record QuestionEvent(PanelQuestion Question) : PanelEvent;
 internal sealed record QuestionClearEvent(string Id) : PanelEvent;
+internal sealed record PermissionEvent(PanelPermission Permission) : PanelEvent;
+internal sealed record PermissionClearEvent(string Id) : PanelEvent;
 internal sealed record AttachmentsAddEvent(IReadOnlyList<PanelAttachment> Attachments) : PanelEvent;
 internal sealed record NoticeEvent(string Level, string Text) : PanelEvent;
 internal sealed record StatusEvent(string? Text) : PanelEvent;
+internal sealed record McpsEvent(IReadOnlyList<PanelMcp> Mcps) : PanelEvent;
+
+// Kind is stdio, http or memory. Tools is 0 until a lazily started MCP has been initialized.
+internal sealed record PanelMcp(string Name, string Kind, int Tools, bool Enabled, bool CanToggle);
 
 // The host owns the menu, the panel owns the zoom ladder, so this carries an intent rather than a
 // level and the ladder is never duplicated on this side. "set" is the exception: the stored level.
@@ -79,7 +90,7 @@ internal sealed record PanelAgent(
     string? Detail,
     bool Builtin = true);
 
-internal sealed record PanelUsage(int InputTokens, int OutputTokens, decimal? CostUsd);
+internal sealed record PanelUsage(int InputTokens, int OutputTokens);
 
 // Src is a route on the panel's own listener, never a file path: the page has no filesystem to read one with.
 internal sealed record PanelImage(string Id, string Name, string Src, long Bytes);
@@ -129,7 +140,7 @@ internal sealed record PanelTurn(
     string? Error);
 
 // A row in the history drawer. Resumable is false when the conversation's agent is no longer
-// installed or enabled, so the panel offers review only rather than a Resume that would fault.
+// installed or enabled, or has lost the session, so the panel offers review only.
 internal sealed record PanelHistoryEntry(
     string SessionId,
     string Title,
@@ -140,13 +151,17 @@ internal sealed record PanelHistoryEntry(
     PanelUsage Usage,
     bool Resumable);
 
+// Mode is live, review (a saved conversation) or ended (the live conversation's agent session is gone).
 internal sealed record PanelConversation(
     string SessionId,
     string Agent,
     string DocTitle,
     string StartedAt,
     IReadOnlyList<PanelTurn> Turns,
-    bool ReadOnly);
+    string Mode,
+    bool Resumable);
+
+internal sealed record PanelPermission(string Id, string Tool, string Mcp, JsonNode? Args);
 
 internal sealed record PanelQuestion(
     string Id,

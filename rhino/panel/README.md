@@ -105,11 +105,11 @@ The C# side is not written. What it would need:
 
 1. A panel hosting a WebView (`Eto.Forms.WebView`, or the platform control directly) that loads `dist/panel.html` from an embedded resource.
 2. A `PanelBridge` that serialises `HostEvent` to the view (`window.rhinoAI.receive(...)`) and deserialises `PanelCommand` from it. `bridge.ts` already accepts both WebView2's message channel and WKWebView's `messageHandlers.rhinoAI`.
-3. An adapter that turns `Conversation` mutations into incremental events instead of a bare `Changed`. `StreamJsonAgent` already knows which block it is appending to and which tool call it is completing, so this is a narrowing of what it reports, not new bookkeeping.
+3. An adapter that turns `Conversation` mutations into incremental events instead of a bare `Changed`. `TurnRecorder` already knows which block it is appending to and which tool call it is completing, so this is a narrowing of what it reports, not new bookkeeping.
 4. `ToolSummary.Describe` moves behind `ToolCall.title`, and gains a `ToolPreview` for the tools worth showing properly.
 5. A context provider for `@` mentions (selection, layers, views, document, Grasshopper) and `context.reveal` to select and zoom.
 
-Everything below the bridge stays as it is: `AgentHost`, `AgentDispatch`, `AgentRegistry`, `ConversationStore`, `AskUserPicker`, `TurnUndoCheckpoint`.
+Everything below the bridge stays as it is: `AgentHost`, `AgentDispatch`, `ConversationStore`, `AskUserPicker`, `TurnUndoCheckpoint`.
 
 ## Engine floor
 

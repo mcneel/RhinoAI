@@ -4,6 +4,7 @@ using Rhino.AI.Statistics;
 
 namespace sdk.tests;
 
+[NonParallelizable]
 public class StatisticsTests
 {
 
@@ -38,11 +39,12 @@ public class StatisticsTests
         int count = 100;
 
         PlugInStatistics.Collect(agent, token, [new MessageTurn("", tokenCount: count)]);
+        int total = PlugInStatistics.Usage(token)?.TotalTokenUsage ?? 0;
 
-        string? json = PlugInStatistics.GetJson();
-        Assert.That(json, Is.Not.Null);
+        string json = AIInstances.SerializeToJson();
+        Assert.That(AIInstances.LoadFromJson(json, out Exception? ex), Is.True, ex?.ToString());
 
-        Assert.That(PlugInStatistics.LoadFromJson(json));
+        Assert.That(PlugInStatistics.Usage(token)?.TotalTokenUsage, Is.EqualTo(total));
     }
 
 }

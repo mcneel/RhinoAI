@@ -46,7 +46,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../acp/Acp.csproj" />
     <ProjectReference Include="../sdk/sdk.csproj" />
     <Compile Include="../router/RouterPaths.ai.cs" Link="RouterPaths.ai.cs" />
     <Compile Include="../../../../../version.cs" Condition="'$(IsInRhino)' == 'true'">
@@ -69,8 +68,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="../../art/*.svg;../../art/*.ico" />
-    <EmbeddedResource Include="Agents/Definitions.json" />
-    <EmbeddedResource Include="Agents/codex-config.toml" LogicalName="Rhino.AI.codex-config.toml" />
     <EmbeddedResource Include="../panel/dist/panel.host.html" LogicalName="Rhino.AI.panel.html" />
   </ItemGroup>
 

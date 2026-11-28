@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/Agents/Conversation.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/Agents/PendingPermission.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/ConversationDto.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/Agents/TokenUsage.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ToolSummary.cs" LinkBase="PanelSources" />
@@ -51,10 +52,13 @@
     <Compile Include="../../rhino/plugin/UI/ImageMentions.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/GeneratedImages.ai.cs" LinkBase="PanelSources" />
     <Compile Include="../../rhino/plugin/UI/ConversationFeed.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelTheme.ai.cs" LinkBase="PanelSources" />
+    <Compile Include="../../rhino/plugin/UI/PanelStrings.ai.cs" LinkBase="PanelSources" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="../../rhino/plugin/McpConfigEdit.ai.cs" LinkBase="PluginSources" />
+    <Compile Include="../../rhino/plugin/McpYamlEdit.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/RouterStaging.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/router/RouterPaths.ai.cs" LinkBase="PluginSources" />
     <Compile Include="../../rhino/plugin/Tools/QuestionSpec.cs" LinkBase="PluginSources" />

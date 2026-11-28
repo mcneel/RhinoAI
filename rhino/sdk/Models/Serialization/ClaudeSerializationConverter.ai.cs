@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -49,6 +50,7 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
             ["max_tokens"] = settings.MaxOutputTokens,
             ["thinking"] = new JsonObject { ["type"] = "adaptive", ["display"] = "summarized" },
             ["messages"] = messages,
+            ["stream"] = settings.IsStreaming,
         };
 
         if (system.Length > 0)
@@ -73,10 +75,96 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
                 turns.Add(turn);
         }
 
-        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"]), tokenCount: Tokens(message["usage"])));
+        if (Usage(message["usage"]) is UsageTurn usage)
+            turns.Add(usage);
+
+        turns.Add(new TurnEnd(Stop((string?)message["stop_reason"])));
 
         return turns;
     }
+
+    public JsonNode Merge(IEnumerable<JsonNode> events)
+    {
+        JsonObject? message = null;
+        SortedDictionary<int, JsonObject> blocks = [];
+        Dictionary<(int Block, string Field), StringBuilder> pieces = [];
+        bool stopped = false;
+
+        foreach (JsonNode streamed in events)
+        {
+            switch ((string?)streamed["type"])
+            {
+                case "message_start":
+                    message = streamed["message"]?.DeepClone() as JsonObject;
+                    break;
+
+                case "content_block_start" when streamed["content_block"] is JsonObject block:
+                    blocks[(int?)streamed["index"] ?? blocks.Count] = (JsonObject)block.DeepClone();
+                    break;
+
+                case "content_block_delta" when streamed["delta"] is JsonObject delta && DeltaField((string?)delta["type"]) is string field:
+                {
+                    (int Block, string Field) key = ((int?)streamed["index"] ?? 0, field);
+                    if (!pieces.TryGetValue(key, out StringBuilder? piece))
+                        pieces[key] = piece = new StringBuilder();
+
+                    piece.Append((string?)delta[field]);
+                    break;
+                }
+
+                case "message_delta" when message is not null:
+                {
+                    message["stop_reason"] = (string?)streamed["delta"]?["stop_reason"];
+                    if (streamed["usage"] is not JsonObject usage || message["usage"] is not JsonObject total)
+                        break;
+
+                    foreach (KeyValuePair<string, JsonNode?> count in usage)
+                    {
+                        if (count.Value is not null)
+                            total[count.Key] = count.Value.DeepClone();
+                    }
+
+                    break;
+                }
+
+                case "message_stop":
+                    stopped = true;
+                    break;
+
+                case "error":
+                    throw new HttpRequestException($"{Vendor} failed mid-reply: {(string?)streamed["error"]?["message"] ?? streamed.ToJsonString()}");
+            }
+        }
+
+        if (message is null || !stopped)
+            throw new HttpRequestException($"{Vendor} ended the stream before the reply finished.");
+
+        foreach (KeyValuePair<(int Block, string Field), StringBuilder> piece in pieces)
+        {
+            if (!blocks.TryGetValue(piece.Key.Block, out JsonObject? block))
+                continue;
+
+            string text = piece.Value.ToString();
+            if (piece.Key.Field != "partial_json")
+                block[piece.Key.Field] = (string?)block[piece.Key.Field] + text;
+            else if (ToolArgs.Parse(Vendor, (string?)block["name"] ?? string.Empty, text) is JsonNode input)
+                block["input"] = input;
+        }
+
+        JsonArray content = [.. blocks.Values];
+        message["content"] = content;
+        return message;
+    }
+
+    private static string? DeltaField(string? type) => type switch
+    {
+        "text_delta" => "text",
+        "thinking_delta" => "thinking",
+        "signature_delta" => "signature",
+        "input_json_delta" => "partial_json",
+
+        _ => null,
+    };
 
     private JsonObject? ToBlock(ITurn turn) => turn switch
     {
@@ -168,10 +256,11 @@ internal sealed class ClaudeSerializationConverter(string vendor = "Anthropic") 
     };
 
     // Claude reports no total, and input_tokens excludes whatever was read from or written to the prompt cache.
-    private static int? Tokens(JsonNode? usage) => usage is null ? null
-        : ((int?)usage["input_tokens"] ?? 0)
-        + ((int?)usage["cache_creation_input_tokens"] ?? 0)
-        + ((int?)usage["cache_read_input_tokens"] ?? 0)
-        + ((int?)usage["output_tokens"] ?? 0);
+    private static UsageTurn? Usage(JsonNode? usage) => usage is null ? null
+        : new UsageTurn(
+            ((int?)usage["input_tokens"] ?? 0)
+            + ((int?)usage["cache_creation_input_tokens"] ?? 0)
+            + ((int?)usage["cache_read_input_tokens"] ?? 0),
+            (int?)usage["output_tokens"] ?? 0);
 
 }

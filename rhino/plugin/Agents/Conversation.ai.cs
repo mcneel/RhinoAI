@@ -46,12 +46,17 @@ internal sealed class Turn
     public DateTimeOffset? CompletedAt { get; private set; }
     public bool Completed { get { lock (Sync) return CompletedAt.HasValue; } }
 
-    // Token/cost accounting from the turn's terminal event; TokenUsage.Empty until the agent
-    // reports it (and stays Empty for agents that never do).
+    // Summed over every request the turn made; Empty for agents that never report usage.
     public TokenUsage Usage { get { lock (Sync) return UsageValue; } }
     private TokenUsage UsageValue { get; set; } = TokenUsage.Empty;
 
-    internal void SetUsage(TokenUsage usage) { lock (Sync) UsageValue = usage; }
+    internal void AddUsage(TokenUsage usage) { lock (Sync) UsageValue += usage; }
+
+    public string? Error { get { lock (Sync) return ErrorValue; } }
+    private string? ErrorValue { get; set; }
+
+    // A turn fails once: an agent that reports the same failure through two channels must not show it twice.
+    internal void Fail(string reason) { lock (Sync) ErrorValue ??= reason; }
 
     public IReadOnlyList<TurnEvent> Events { get { lock (Sync) return EventList.ToArray(); } }
 
@@ -97,10 +102,12 @@ internal sealed class Conversation
     // and a later call adds to the set rather than replacing it.
     private List<PendingQuestion> PendingQuestionList { get; } = new();
 
-    public Conversation(Guid agentSessionId, string agentName, string docTitle)
+    private List<PendingPermission> PendingPermissionList { get; } = new();
+
+    public Conversation(Guid agentSessionId, string agentKey, string docTitle)
     {
         AgentSessionId = agentSessionId;
-        AgentName = agentName;
+        AgentKey = agentKey;
         DocTitle = docTitle;
         StartedAt = DateTimeOffset.UtcNow;
     }
@@ -110,12 +117,13 @@ internal sealed class Conversation
     // kept (not reset to now) so the recents ordering and header stay truthful, and the restored turns
     // are marked complete. A malformed SessionId degrades to a fresh GUID so a corrupt store can never
     // throw here.
-    public static Conversation Restore(ConversationDto dto)
+    public static Conversation Restore(ConversationDto dto, string agentKey)
     {
         Guid sessionId = Guid.TryParse(dto.SessionId, out Guid parsed) ? parsed : Guid.NewGuid();
-        Conversation convo = new(sessionId, dto.AgentName, dto.DocTitle)
+        Conversation convo = new(sessionId, agentKey, dto.DocTitle)
         {
             StartedAt = dto.StartedAt,
+            SessionLost = dto.SessionLost,
         };
 
         foreach (TurnEventDto ev in dto.Lifecycle)
@@ -128,7 +136,9 @@ internal sealed class Conversation
                 // Transcripts saved before Done existed carry it as false, so fall back to the old inference.
                 turn.Add(new TurnEvent(ev.Kind, ev.Text, ev.At, ev.Args, ev.Result, ev.Id, ev.Failed,
                     ev.Done || !string.IsNullOrWhiteSpace(ev.Result)));
-            turn.SetUsage(turnDto.Usage);
+            turn.AddUsage(turnDto.Usage);
+            if (turnDto.Error is { Length: > 0 } error)
+                turn.Fail(error);
             // Stamping now would date every restored turn to the restore, which is what bounds the search for images the agent wrote during it.
             turn.Complete(turnDto.CompletedAt ?? turnDto.StartedAt);
             convo.TurnList.Add(turn);
@@ -138,10 +148,13 @@ internal sealed class Conversation
 
     // This is the CLI's own session id, not a plugin-internal handle: it is passed as --session-id
     // on the first spawn and as --resume afterwards, and persisted as ConversationDto.SessionId.
-    // Mutable because a rejected resume forces the agent to open a fresh session, and the saved id
-    // has to follow or the next resume names a session the CLI has never heard of.
+    // Mutable because a new conversation only learns the agent's id during its first turn.
     public Guid AgentSessionId { get; private set; }
-    public string AgentName { get; }
+
+    // Never cleared: carrying on would silently start a fresh session under a transcript the agent no longer has.
+    public bool IsSessionLost { get { lock (Sync) return SessionLost; } }
+    private bool SessionLost { get; set; }
+    public string AgentKey { get; }
     public string DocTitle { get; }
     public DateTimeOffset StartedAt { get; private init; }
 
@@ -181,20 +194,23 @@ internal sealed class Conversation
         Changed?.Invoke();
     }
 
-    // Record the current turn's token/cost accounting (from its terminal event). A no-op once the
-    // terminal event already cleared Current (a late, mis-ordered usage drop is dropped, not stored
-    // on the wrong turn). Empty usage is ignored so a turn the agent never accounted for stays Empty.
+    public void FailTurn(string reason)
+    {
+        lock (Sync)
+            Current?.Fail(reason);
+        Changed?.Invoke();
+    }
+
+    // Agents report once per request, so this adds. Usage arriving after CompleteTurn is dropped rather than landing on the next turn.
     public void RecordUsage(TokenUsage usage)
     {
         if (usage.IsEmpty)
             return;
         lock (Sync)
-            Current?.SetUsage(usage);
+            Current?.AddUsage(usage);
         Changed?.Invoke();
     }
 
-    // Sum of every turn's usage: the session total shown in the header. Costs add only when reported
-    // (see TokenUsage.operator+), so a tokens-only session yields a null session cost.
     public TokenUsage SessionUsage
     {
         get
@@ -207,11 +223,20 @@ internal sealed class Conversation
         }
     }
 
-    // Called when the agent had to open a session under a different id than the one it was given.
     internal void AdoptSessionId(Guid sessionId)
     {
         lock (Sync)
             AgentSessionId = sessionId;
+    }
+
+    public void MarkSessionLost(string reason)
+    {
+        lock (Sync)
+        {
+            SessionLost = true;
+            Current?.Fail(reason);
+        }
+        Changed?.Invoke();
     }
 
     public void NoteSessionStarted()
@@ -222,7 +247,7 @@ internal sealed class Conversation
     }
 
     // A free-form lifecycle line, rendered like a session marker. Used to surface a fail-soft note
-    // (e.g. a stale --resume target the CLI rejected, so the session restarted fresh).
+    // (e.g. an agent that cannot resume prior context).
     public void NoteSystem(string text)
     {
         lock (Sync)
@@ -257,6 +282,22 @@ internal sealed class Conversation
                 for (int i = PendingQuestionList.Count - 1; i >= 0; i--)
                     if (ReferenceEquals(PendingQuestionList[i], question))
                         PendingQuestionList.RemoveAt(i);
+        Changed?.Invoke();
+    }
+
+    public IReadOnlyList<PendingPermission> PendingPermissions { get { lock (Sync) return PendingPermissionList.ToArray(); } }
+
+    public void AddPendingPermission(PendingPermission permission)
+    {
+        lock (Sync)
+            PendingPermissionList.Add(permission);
+        Changed?.Invoke();
+    }
+
+    public void RemovePendingPermission(PendingPermission permission)
+    {
+        lock (Sync)
+            PendingPermissionList.Remove(permission);
         Changed?.Invoke();
     }
 

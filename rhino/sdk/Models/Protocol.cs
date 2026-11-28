@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 namespace Rhino.AI.Models;
 
 /// <summary>One wire format: how turns are serialized, where they are posted relative to a host, and how the key is sent.</summary>
-internal sealed record Protocol(Func<string, ITurnConverter> Converter, Func<string, string> Route, Action<HttpRequestHeaders, string> Authorize)
+internal sealed record Protocol(Func<string, ITurnConverter> Converter, Func<RequestSettings, string> Route, Action<HttpRequestHeaders, string> Authorize)
 {
 
     public static Protocol ChatCompletions(string path) => new(vendor => new ChatCompletionsSerializationConverter(vendor), _ => path, Bearer);
@@ -13,7 +13,7 @@ internal sealed record Protocol(Func<string, ITurnConverter> Converter, Func<str
 
     public static Protocol Responses(string path) => new(vendor => new ChatGptSerializationConverter(vendor), _ => path, Bearer);
 
-    public static Protocol GenerateContent(string path) => new(vendor => new GeminiSerializationConverter(vendor), model => $"{path}/{model}:generateContent", GoogleKey);
+    public static Protocol GenerateContent(string path) => new(vendor => new GeminiSerializationConverter(vendor), settings => settings.IsStreaming ? $"{path}/{settings.Model}:streamGenerateContent?alt=sse" : $"{path}/{settings.Model}:generateContent", GoogleKey);
 
     private static void Bearer(HttpRequestHeaders headers, string key) => headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
 

@@ -26,17 +26,25 @@ public sealed class Agent
     /// </summary>
     public IReadOnlyList<ITurn> Turns => PrivateTurns;
 
+    private IModel? TurnModel { get; set; }
+
     /// <summary>
     /// The Model in use by the agent
     /// </summary>
-    internal IModel? Model => Definition.CurrentModel;
+    internal IModel? Model => TurnModel ?? Definition?.CurrentModel;
 
     /// <summary>
     /// The current <see cref="Harness"/>
     /// </summary>
     public Harness Harness { get; }
 
-    public IAgentDefinition Definition { get; }
+    private Guid DefinitionId { get; }
+
+    /// <summary>
+    /// The User created Definition of this Agent.
+    /// </summary>
+    /// <remarks>Do not cache this definition</remarks>
+    public IAgentDefinition? Definition => AIInstances.Agents.FromId(DefinitionId);
 
     /// <summary>
     /// Configuration
@@ -47,7 +55,7 @@ public sealed class Agent
     {
         Token = token;
         Harness = harness;
-        Definition = definition;
+        DefinitionId = definition.Id;
 
         definition.RegisterAgent(this);
     }
@@ -59,8 +67,10 @@ public sealed class Agent
     /// Forks an agent at a point in a conversation.
     /// </summary>
     /// <returns>A forked copy of an Agent with all of the state copied safely.</returns>
-    internal Agent Fork()
+    internal Agent? Fork()
     {
+        if (Definition is null) return null;
+
         Agent agent = new(Definition, Token, Harness);
         agent.PrivateTurns.AddRange(PrivateTurns.Select(t => t.Copy()));
         AgentConfig.Push(this.Config, agent.Config);
@@ -113,18 +123,42 @@ public sealed class Agent
     public StreamedAgentResult StreamAsync(IEnumerable<IMessageContent> contents, CancellationToken token)
         => new(StreamTurnsAsync(contents, token));
 
+    /// <summary>
+    /// Check if the Agent is ready or not.
+    /// If the user removed the agent, disabled the agent, or uninstalled it during runtime, it won't be ready.
+    /// </summary>
+    /// <param name="reason">The reason for the failure</param>
+    /// <returns>true if available</returns>
+    public bool AgentIsReady(out string reason)
+    {
+        IAgentDefinition? def = Definition;
+
+        reason = "User removed the source of this agent";
+        if (def is null) return false;
+
+        reason = "User removed the source of this agent";
+        if (!AIInstances.Agents.Exists(def)) return false;
+
+        reason = "Definition is not disabled";
+        if (!def.Enabled) return false;
+
+        reason = "Agent is not available";
+        if (!def.Available) return false;
+
+        reason = "";
+        return true;
+    }
+
     private async IAsyncEnumerable<ITurn> StreamTurnsAsync(IEnumerable<IMessageContent> contents, [EnumeratorCancellation] CancellationToken token)
     {
         if (!TurnGate.Wait(0, CancellationToken.None))
             throw new InvalidOperationException($"{nameof(StreamAsync)} cannot be run until the previous call has finished on the same agent.");
-        
-        // NOTE : A Developer cannot check this _before_ running and this is kind of a slap in the face!
 
-        if (!AIInstances.Agents.Exists(Definition))
-            throw new InvalidOperationException("User removed the source of this agent");
-
-        if (!Definition.Available)
-            throw new InvalidOperationException("Agent is not available");
+        if (!AgentIsReady(out string reason))
+        {
+            TurnGate.Release();
+            throw new InvalidOperationException(reason);
+        }
 
         try
         {
@@ -133,10 +167,13 @@ public sealed class Agent
 
             List<ITurn> newTurns = [];
 
+            IAgentDefinition definition = Definition!;
+            TurnModel = definition.CurrentModel;
+
             if (PrivateTurns.Count == 0)
             {
-                if (!string.IsNullOrEmpty(Definition.DefaultPrompt))
-                    newTurns.Add(new SystemTurn(Definition.DefaultPrompt));
+                if (!string.IsNullOrEmpty(definition.DefaultPrompt))
+                    newTurns.Add(new SystemTurn(definition.DefaultPrompt));
 
                 if (SkillsPrompt(Harness.Skills) is string skillsPrompt)
                     newTurns.Add(new SystemTurn(skillsPrompt));
@@ -153,11 +190,17 @@ public sealed class Agent
             {
                 Statistics.PlugInStatistics.Collect(this, Token, [turn]);
                 PrivateTurns.Add(turn);
+
+                // The session is gone for good, so keeping its id would fail every later call the same way.
+                if (turn is TurnEnd { Reason: StopReason.InvalidSession })
+                    Config.SessionId = Guid.Empty;
+
                 yield return turn;
             }
         }
         finally
         {
+            TurnModel = null;
             TurnGate.Release();
         }
     }
@@ -241,6 +284,7 @@ public sealed class Agent
     /// <param name="vendor">The vendor of the model</param>
     /// <param name="type">The type of Agent</param>
     /// <returns>An Agent if one is available, otherwise null</returns>
+    /// <remarks>If a user deletes the Definition for this agent it will no longer function</remarks>
     public static Agent? GetAgentFromParameters(PlugIns.PlugInToken token, string vendor, AgentType type)
         => AIInstances.Agents.FromParameters(vendor, type)?.GetAgent(token);
 
@@ -312,6 +356,13 @@ public sealed class Agent
         return new(definition, token, new Harness(token));
     }
 
+    // Should the conversation get copied over?
+    internal Agent? WithHarness(Harness harness)
+    {
+        if (Definition is null) return null;
+        return new(Definition, Token, harness);
+    }
+
     /// <summary>
     /// Returns the users prefered agent, harness, and overall config
     /// </summary>
@@ -322,7 +373,7 @@ public sealed class Agent
         => definition.GetAgent(token);
 
     /// <summary>
-    /// Returns the users prefered agent, harness, and overall config
+    /// Returns the users prefered agent, harness, and overall config.
     /// </summary>
     /// <param name="token">The permissions token</param>
     /// <returns>An Agent</returns>

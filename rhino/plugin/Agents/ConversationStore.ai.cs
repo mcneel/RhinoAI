@@ -3,7 +3,7 @@ using Rhino.PlugIns;
 
 namespace Rhino.AI;
 
-// Persists conversation transcripts under the AISettings Conversations child node, one JSON
+// Persists conversation transcripts under the LegacyAISettings Conversations child node, one JSON
 // string per session keyed by its session id. Rewritten on every CompleteTurn so a crash never
 // loses more than the in-flight turn. PersistentSettings has no transactional bulk write, so a
 // flat key-per-conversation layout keeps each Save a single SetString.
@@ -12,7 +12,7 @@ internal static class ConversationStore
     // Cap to bound the user's chosen PersistentSettings backing store (PLAN risk: bloat).
     private const int MaxConversations = 50;
 
-    private static PersistentSettings Node => AISettings.Conversations;
+    private static PersistentSettings Node => LegacyAISettings.Conversations;
 
     // Serializes the read-modify-write on the shared Conversations node. Save runs off-thread
     // from multiple agents (CliAgent, AgentRunner), one per doc; without this, one Save's SetString
@@ -40,9 +40,7 @@ internal static class ConversationStore
 
     // Drop one transcript.
     //
-    // Used when a rejected resume forces a fresh session id: the entry under the dead id is the same
-    // conversation, and left in place it sits in the history as a duplicate row whose Resume can only
-    // fail. Marshalled and gated exactly like Save, because the caller is the agent's reader thread.
+    // Marshalled and gated exactly like Save, because a caller may be the agent's reader thread.
     //
     // Only an existing key is deleted: DeleteItem's behaviour on an absent one is undocumented, and
     // at fifty entries the scan costs nothing.
@@ -135,16 +133,17 @@ internal static class ConversationStore
             List<TurnEventDto> events = [];
             foreach (TurnEvent ev in turn.Events)
                 events.Add(ToDto(ev));
-            turns.Add(new TurnDto(turn.Prompt, turn.StartedAt, turn.CompletedAt, events, turn.Usage, turn.Attachments));
+            turns.Add(new TurnDto(turn.Prompt, turn.StartedAt, turn.CompletedAt, events, turn.Usage, turn.Attachments, turn.Error));
         }
 
         return new ConversationDto(
             conversation.AgentSessionId.ToString(),
-            conversation.AgentName,
+            conversation.AgentKey,
             conversation.DocTitle,
             conversation.StartedAt,
             lifecycle,
-            turns);
+            turns,
+            conversation.IsSessionLost);
     }
 
     private static TurnEventDto ToDto(TurnEvent ev) =>

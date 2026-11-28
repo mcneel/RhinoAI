@@ -9,6 +9,7 @@ import type {
   ConversationSnapshot,
   HistoryEntry,
   HostEvent,
+  McpInfo,
   PanelCommand,
   ToolCall,
   ToolPatch,
@@ -69,18 +70,16 @@ class Script {
 
 // ---------------------------------------------------------------- fixtures
 
+let mcps: McpInfo[] = [
+  { name: 'DefaultTools', kind: 'memory', tools: 6, enabled: true, canToggle: true },
+  { name: 'Rhino', kind: 'stdio', tools: 42, enabled: true, canToggle: true },
+  { name: 'rhino', kind: 'http', tools: 0, enabled: true, canToggle: false },
+  { name: 'Grasshopper', kind: 'memory', tools: 11, enabled: false, canToggle: true },
+];
+
 const AGENTS: readonly AgentInfo[] = [
   { name: 'claude', label: 'Claude Code', model: 'claude-opus-5', modelLabel: 'Opus 5', availability: 'ready', builtin: true },
   { name: 'codex', label: 'Codex', model: 'gpt-5-codex', modelLabel: 'GPT-5 Codex', availability: 'ready', builtin: true },
-  {
-    name: 'gemini',
-    label: 'Gemini CLI',
-    model: 'gemini-3-pro',
-    modelLabel: 'Gemini 3 Pro',
-    availability: 'signin',
-    detail: 'run `gemini auth` to sign in',
-    builtin: true,
-  },
   {
     name: 'local-llama',
     label: 'Local (llama.cpp)',
@@ -109,7 +108,7 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'tower-study.3dm',
     startedAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     turns: 7,
-    usage: { inputTokens: 41_200, outputTokens: 8_940, costUsd: 0.62 },
+    usage: { inputTokens: 41_200, outputTokens: 8_940 },
     resumable: true,
   },
   {
@@ -119,7 +118,7 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'tower-study.3dm',
     startedAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
     turns: 3,
-    usage: { inputTokens: 9_100, outputTokens: 2_300, costUsd: 0.11 },
+    usage: { inputTokens: 9_100, outputTokens: 2_300 },
     resumable: true,
   },
   {
@@ -129,15 +128,14 @@ const HISTORY: readonly HistoryEntry[] = [
     docTitle: 'bracket.3dm',
     startedAt: new Date(Date.now() - 4 * 86_400_000).toISOString(),
     turns: 11,
-    usage: { inputTokens: 88_400, outputTokens: 14_200, costUsd: 1.34 },
+    usage: { inputTokens: 88_400, outputTokens: 14_200 },
     resumable: false,
   },
 ];
 
-const usage = (input: number, output: number, cost: number): TokenUsage => ({
+const usage = (input: number, output: number): TokenUsage => ({
   inputTokens: input,
   outputTokens: output,
-  costUsd: cost,
 });
 
 function seeded(): ConversationSnapshot {
@@ -147,7 +145,8 @@ function seeded(): ConversationSnapshot {
     agent: 'claude',
     docTitle: 'tower-study.3dm',
     startedAt: new Date(start).toISOString(),
-    readOnly: false,
+    mode: 'live',
+    resumable: true,
     turns: [
       {
         id: 'turn-seed-1',
@@ -156,7 +155,7 @@ function seeded(): ConversationSnapshot {
         context: [CONTEXT[3] as ContextItem],
         startedAt: new Date(start).toISOString(),
         status: 'ok',
-        usage: usage(12_480, 1_120, 0.09),
+        usage: usage(12_480, 1_120),
         undoable: false,
         plan: [],
         blocks: [
@@ -206,7 +205,7 @@ function seeded(): ConversationSnapshot {
         context: [],
         startedAt: new Date(start + 120_000).toISOString(),
         status: 'ok',
-        usage: usage(14_900, 2_040, 0.14),
+        usage: usage(14_900, 2_040),
         undoable: true,
         plan: [
           { id: 'p1', text: 'Measure planarity deviation per panel', state: 'done' },
@@ -307,7 +306,8 @@ function reviewSnapshot(entry: HistoryEntry): ConversationSnapshot {
     agent: 'claude',
     docTitle: entry.docTitle,
     startedAt: entry.startedAt,
-    readOnly: true,
+    mode: 'review',
+    resumable: entry.resumable,
     turns: [
       {
         id: `${entry.sessionId}-t1`,
@@ -455,7 +455,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(14_120, 2_180, 0.13) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(14_120, 2_180) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -543,7 +543,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(11_300, 1_640, 0.1) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(11_300, 1_640) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -618,7 +618,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(9_800, 1_920, 0.09) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(9_800, 1_920) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -699,7 +699,7 @@ const SCENARIOS: readonly Scenario[] = [
       const answers = await script.awaitAnswer();
       for (const id of questionIds) host.emit({ type: 'question.clear', id });
       if (answers.length === 0) {
-        host.emit({ type: 'turn.usage', turnId, usage: usage(11_200, 1_460, 0.1) });
+        host.emit({ type: 'turn.usage', turnId, usage: usage(11_200, 1_460) });
         host.emit({ type: 'turn.end', turnId, status: 'ok' });
         return;
       }
@@ -722,7 +722,7 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(15_800, 2_240, 0.16) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(15_800, 2_240) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -772,7 +772,38 @@ const SCENARIOS: readonly Scenario[] = [
         ),
       );
 
-      host.emit({ type: 'turn.usage', turnId, usage: usage(7_400, 980, 0.06) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(7_400, 980) });
+      host.emit({ type: 'turn.end', turnId, status: 'ok' });
+    },
+  },
+  {
+    match: /delete|erase|permission|allow/i,
+    async run(host, turnId, script) {
+      await host.text(turnId, script, lines('I will clear the construction layer. That tool needs your go-ahead first.', ''));
+
+      const args = { layer: 'Construction', objects: 214, purge: true };
+      const id = nextId('perm');
+      host.emit({ type: 'permission', permission: { id, tool: 'delete_objects', mcp: 'Rhino', args } });
+      let decision: string | undefined;
+      try {
+        [decision] = await script.awaitAnswer();
+      } finally {
+        host.emit({ type: 'permission.clear', id });
+      }
+
+      if (decision === 'allow' || decision === 'always') {
+        host.status('Deleting…');
+        await host.tool(turnId, script, 'delete_objects', 'deleted 214 objects on Construction', args, 480, {
+          mutated: true,
+          result: { deleted: 214, layer: 'Construction' },
+        });
+        host.status(null);
+        await host.text(turnId, script, lines('Done: 214 objects removed and the layer purged.'));
+      } else {
+        await host.text(turnId, script, lines('Understood, I left the construction layer alone.'));
+      }
+
+      host.emit({ type: 'turn.usage', turnId, usage: usage(3_100, 420) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -797,11 +828,12 @@ const SCENARIOS: readonly Scenario[] = [
           '- something with **layers** or **organize**: a table result and a summary',
           '- something with **selected** or **problems**: a failing tool card and an inline question',
           '- something with **capture** or **view**: an image result rendered in place',
+          '- something with **delete** or **permission**: a tool call that waits for Allow or Deny',
           '',
           'Or press `/` for commands and `@` to attach document context.',
         ),
       );
-      host.emit({ type: 'turn.usage', turnId, usage: usage(4_200, 640, 0.03) });
+      host.emit({ type: 'turn.usage', turnId, usage: usage(4_200, 640) });
       host.emit({ type: 'turn.end', turnId, status: 'ok' });
     },
   },
@@ -858,7 +890,8 @@ export class MockHost implements Bridge {
             agent: AGENTS[0]?.name ?? 'claude',
             docTitle: 'tower-study.3dm',
             startedAt: new Date().toISOString(),
-            readOnly: false,
+            mode: 'live',
+            resumable: true,
             turns: [],
           },
         });
@@ -895,6 +928,10 @@ export class MockHost implements Bridge {
         this.script?.answer([]);
         return;
 
+      case 'permission.answer':
+        this.script?.answer([command.answer]);
+        return;
+
       case 'turn.undo':
         this.notice('info', 'Reverted every document change that turn made (one Rhino undo record).');
         return;
@@ -921,6 +958,15 @@ export class MockHost implements Bridge {
 
       case 'settings.open':
         this.notice('info', 'AI settings would open as a Rhino options page.');
+        return;
+
+      case 'mcps.list':
+        this.emit({ type: 'mcps', mcps: [...mcps] });
+        return;
+
+      case 'mcp.toggle':
+        mcps = mcps.map((mcp) => (mcp.name === command.name && mcp.canToggle ? { ...mcp, enabled: command.enabled } : mcp));
+        this.emit({ type: 'mcps', mcps: [...mcps] });
         return;
 
       case 'agent.login':

@@ -2,15 +2,10 @@ using System.IO;
 
 namespace Rhino.AI;
 
-// Adds the bundled MCP server to the configs of MCP-aware tools the user has (Claude Code,
-// Cursor, Codex, ...) so those external agents can drive Rhino without hand-copying the snippet.
-// Detection and install are per-client and user-initiated from the Connect dialog's Install tab.
-// We never create configs for tools the user doesn't run (that would litter the home dir), and
-// injection is idempotent (a no-op once a `rhino` entry is present) and never overwrites one.
-// The actual config surgery lives in the Rhino-free McpConfigEdit; this handles disk IO and detection.
+// An app counts as present when AppPath exists; Install may create the config file there but never creates a folder.
 internal static class McpClientConfigInstaller
 {
-    internal sealed record McpClient(string DisplayName, string RelativePath, McpConfigFormat Format);
+    internal sealed record McpClient(string DisplayName, string ConfigPath, string AppPath, McpConfigFormat Format);
 
     internal enum McpInstallState { Missing, Detected, Installed }
 
@@ -20,12 +15,13 @@ internal static class McpClientConfigInstaller
 
     internal static IReadOnlyList<McpClient> Clients { get; } =
     [
-        new("Claude Code", ".claude.json", McpConfigFormat.StandardJson),
-        new("Cursor", ".cursor/mcp.json", McpConfigFormat.StandardJson),
-        new("Gemini CLI", ".gemini/settings.json", McpConfigFormat.StandardJson),
-        new("Windsurf", ".codeium/windsurf/mcp_config.json", McpConfigFormat.StandardJson),
-        new("OpenCode", ".config/opencode/opencode.json", McpConfigFormat.OpenCodeJson),
-        new("Codex", ".codex/config.toml", McpConfigFormat.CodexToml),
+        new("Claude Code", Home(".claude.json"), Home(".claude.json"), McpConfigFormat.StandardJson),
+        InFolder("Codex", Home(".codex"), "config.toml", McpConfigFormat.CodexToml),
+        InFolder("Antigravity", Home(".gemini", "config"), "mcp_config.json", McpConfigFormat.StandardJson),
+        InFolder("Hermes", HermesFolder(), "config.yaml", McpConfigFormat.HermesYaml),
+        InFolder("VS Code", Home(".copilot"), "mcp-config.json", McpConfigFormat.CopilotJson),
+        InFolder("LM Studio", Home(".lmstudio"), "mcp.json", McpConfigFormat.StandardJson),
+        InFolder("Pi", Home(".pi", "agent"), "mcp.json", McpConfigFormat.StandardJson),
     ];
 
     // Cheap enough to call per grid row on every visit to the Install tab: a File.Exists plus one
@@ -33,13 +29,14 @@ internal static class McpClientConfigInstaller
     // (which reports its own error) rather than silently vanishing from the grid.
     public static McpInstallState GetState(McpClient client)
     {
-        string path = ResolvePath(client.RelativePath);
-        if (!File.Exists(path))
+        if (!IsPresent(client))
             return McpInstallState.Missing;
+        if (!File.Exists(client.ConfigPath))
+            return McpInstallState.Detected;
 
         try
         {
-            return HasRhinoEntry(client, File.ReadAllText(path))
+            return HasRhinoEntry(client, File.ReadAllText(client.ConfigPath))
                 ? McpInstallState.Installed
                 : McpInstallState.Detected;
         }
@@ -51,13 +48,13 @@ internal static class McpClientConfigInstaller
 
     public static McpInstallResult Install(McpClient client, IReadOnlyDictionary<string, string> env)
     {
-        string path = ResolvePath(client.RelativePath);
-        if (!File.Exists(path))
+        string path = client.ConfigPath;
+        if (!IsPresent(client))
             return McpInstallResult.Missing;
 
         try
         {
-            string original = File.ReadAllText(path);
+            string original = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
             if (HasRhinoEntry(client, original))
                 return McpInstallResult.AlreadyInstalled;
 
@@ -67,7 +64,6 @@ internal static class McpClientConfigInstaller
                 return McpInstallResult.Unsupported;
 
             WriteAtomic(path, updated);
-            Log($"wired the RhinoAI MCP server into {client.DisplayName} ({path})");
             return McpInstallResult.Installed;
         }
         catch (Exception ex)
@@ -79,9 +75,11 @@ internal static class McpClientConfigInstaller
 
     public static McpUninstallResult Uninstall(McpClient client)
     {
-        string path = ResolvePath(client.RelativePath);
-        if (!File.Exists(path))
+        string path = client.ConfigPath;
+        if (!IsPresent(client))
             return McpUninstallResult.Missing;
+        if (!File.Exists(path))
+            return McpUninstallResult.NotInstalled;
 
         try
         {
@@ -94,7 +92,6 @@ internal static class McpClientConfigInstaller
                 return McpUninstallResult.Unsupported;
 
             WriteAtomic(path, updated);
-            Log($"Removed the RhinoAI MCP server from {client.DisplayName} ({path})");
             return McpUninstallResult.Uninstalled;
         }
         catch (Exception ex)
@@ -127,11 +124,17 @@ internal static class McpClientConfigInstaller
         System.IO.File.Move(sourceFileName, destFileName);
     }
 
-    private static string ResolvePath(string relative)
-    {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.GetFullPath(Path.Combine(home, relative));
-    }
+    private static bool IsPresent(McpClient client) => File.Exists(client.AppPath) || Directory.Exists(client.AppPath);
+
+    private static McpClient InFolder(string displayName, string folder, string fileName, McpConfigFormat format)
+        => new(displayName, Path.Combine(folder, fileName), folder, format);
+
+    private static string HermesFolder() => OperatingSystem.IsWindows()
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "hermes")
+        : Home(".hermes");
+
+    private static string Home(params string[] parts)
+        => Path.Combine([Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), .. parts]);
 
     private static void Log(string message)
     {

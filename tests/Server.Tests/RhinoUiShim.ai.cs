@@ -9,4 +9,6 @@ internal static class LOC
 internal static class Localization
 {
     public static string LocalizeString(string english, int contextId) => english;
+
+    public static int CurrentLanguageId => 1033;
 }

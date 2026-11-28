@@ -1,16 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using Rhino.AI.PlugIns;
+
 namespace Rhino.AI;
 
 internal static class AgentHost
 {
-    // Keyed by (document serial, agent name) so each doc can drive one agent per kind
-    // (Claude, Codex, ...) at once without them colliding on a single slot.
-    private static Dictionary<(uint Doc, string Name), IAgentRunner> Agents { get; } = new();
+    private static Dictionary<(uint Doc, Guid Id), AgentRunner> Runners { get; } = new();
 
-    // The active agent name per document. Absent => fall back to the configured default.
-    private static Dictionary<uint, string> ActiveNames { get; } = new();
+    private static Dictionary<uint, Guid> ActiveIds { get; } = new();
 
     static AgentHost()
     {
@@ -22,126 +21,90 @@ internal static class AgentHost
         DisposeDoc(e.DocumentSerialNumber);
     }
 
-    public static void SetActive(RhinoDoc doc, string name) =>
-        ActiveNames[doc.RuntimeSerialNumber] = name;
+    public static IReadOnlyCollection<IAgentDefinition> Definitions => AIInstances.Agents.Definitions;
 
-    // The active agent for the doc, resolved via the registry and pooled per (doc, name).
-    // Returns false (rather than null) when discovery finds nothing usable, so callers can
-    // surface a friendly message instead of faulting.
-    public static bool TryFor(RhinoDoc? doc, out IAgentRunner agent)
+    public static bool IsUsable(IAgentDefinition definition) =>
+        definition.Enabled && definition.Available && RhinoApp.IsInternetAccessAllowed;
+
+    public static bool AnyUsable => Definitions.Any(IsUsable);
+
+    // Transcripts saved before the SDK carry the agent's display name rather than its definition id.
+    public static IAgentDefinition? Find(string key) =>
+        Guid.TryParse(key, out Guid id)
+            ? Definitions.FirstOrDefault(d => d.Id == id)
+            : Definitions.FirstOrDefault(d => string.Equals(d.DisplayName, key, StringComparison.OrdinalIgnoreCase));
+
+    public static void SetActive(RhinoDoc doc, Guid id) =>
+        ActiveIds[doc.RuntimeSerialNumber] = id;
+
+    private static Agent? WithOwnHarness(Agent agent)
     {
-        if (doc is null)
-        {
-            agent = default!;
+        if (agent.Model is not Rhino.AI.Models.DesktopModel)
+            return agent.WithHarness(new RhinoHarness(PlugInRegistry.Register()!) { AskUser = PermissionPrompt.AskAsync });
+
+        agent.Harness.AskUser = PermissionPrompt.AskAsync;
+        return agent;
+    }
+
+    private static HashSet<uint> PanelDocs { get; } = new();
+
+    public static void AttachPanel(uint doc) => PanelDocs.Add(doc);
+
+    public static void DetachPanel(uint doc) => PanelDocs.Remove(doc);
+
+    public static Conversation? PanelConversationFor(Agent agent)
+    {
+        foreach (KeyValuePair<(uint Doc, Guid Id), AgentRunner> entry in Runners)
+            if (entry.Value.Runs(agent) && PanelDocs.Contains(entry.Key.Doc))
+                return entry.Value.Conversation;
+        return null;
+    }
+
+    public static bool TryFor(RhinoDoc? doc, out AgentRunner runner)
+    {
+        runner = default!;
+        if (doc is null || ResolveActive(doc) is not { } definition)
             return false;
-        }
-        if (!TryResolveActiveDefinition(doc, out AgentDefinition def))
+
+        (uint, Guid) key = (doc.RuntimeSerialNumber, definition.Id);
+        if (Runners.TryGetValue(key, out AgentRunner? existing))
         {
-            agent = default!;
-            return false;
+            runner = existing;
+            return true;
         }
-        agent = For(doc, () => def.GetRunner(DocTitle(doc)));
+
+        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent || WithOwnHarness(agent) is not { } harnessed)
+            return false;
+
+        runner = AgentRunner.Start(definition, harnessed, DocTitle(doc));
+        Runners[key] = runner;
         return true;
     }
 
-    // Saved file name, else a stable placeholder so a transcript is still identifiable.
-    private static string DocTitle(RhinoDoc doc) =>
-        string.IsNullOrEmpty(doc.Name) ? "Untitled" : doc.Name;
-
-    private static bool TryResolveActiveDefinition(RhinoDoc doc, out AgentDefinition def)
+    public static bool TryResume(RhinoDoc doc, ConversationDto dto, out AgentRunner runner)
     {
-        if (ActiveNames.TryGetValue(doc.RuntimeSerialNumber, out string? active) &&
-            AgentRegistry.Instance.TryGet(active, out def))
-            return def.Enabled;
-
-        string defaultAgentName = AISettings.DefaultAgentName;
-
-        return AgentRegistry.Instance.TryGet(defaultAgentName, out def) && def.Enabled;
-    }
-
-    public static IAgentRunner For(RhinoDoc doc, Func<IAgentRunner> factory)
-    {
-        IAgentRunner probe = factory();
-        (uint, string) key = (doc.RuntimeSerialNumber, probe.Name);
-        if (Agents.TryGetValue(key, out IAgentRunner? existing))
-        {
-            SafeDispose(probe);
-            return existing;
-        }
-        Agents[key] = probe;
-        return probe;
-    }
-
-    // Adopt a runner restored from a past conversation as the doc's active agent for its kind,
-    // replacing (and disposing) any runner already pooled for (doc, agent name) so the panel and
-    // dispatch both pick up the resumed session. Pins the active name so dispatch resolves to it.
-    // Returns false when the saved conversation's agent is no longer registered.
-    public static bool TryResume(RhinoDoc doc, ConversationDto dto, out IAgentRunner agent)
-    {
-        if (!AgentRegistry.Instance.TryGet(dto.AgentName, out AgentDefinition def))
-        {
-            agent = default!;
+        runner = default!;
+        if (Find(dto.AgentName) is not { } definition || !IsUsable(definition))
             return false;
-        }
 
-        if (!def.Enabled)
-        {
-            agent = default!;
+        if (definition.GetAgent(PlugInRegistry.Register()!) is not { } agent || WithOwnHarness(agent) is not { } harnessed)
             return false;
-        }
 
-        (uint, string) key = (doc.RuntimeSerialNumber, def.Name);
-        if (Agents.Remove(key, out IAgentRunner? prior))
+        (uint, Guid) key = (doc.RuntimeSerialNumber, definition.Id);
+        if (Runners.Remove(key, out AgentRunner? prior))
             SafeDispose(prior);
 
-        IAgentRunner resumed = CreateResumed(def, dto);
-        Agents[key] = resumed;
-        SetActive(doc, def.Name);
-        agent = resumed;
-        return def.Enabled;
+        runner = AgentRunner.Resume(definition, harnessed, dto);
+        Runners[key] = runner;
+        SetActive(doc, definition.Id);
+        return true;
     }
 
-    // Resume a persisted conversation: restore its transcript and seed the stream-json CLI to launch
-    // with --resume <saved id> so the agent continues with its prior context. The runner drives the
-    // restored Conversation, so the prior turns stay visible. Gemini (native ACP) has no --resume seam
-    // here, so it falls back to a fresh native session while still showing the restored transcript.
-    public static IAgentRunner CreateResumed(AgentDefinition def, ConversationDto dto)
+    public static bool TryFindActive(RhinoDoc doc, out AgentRunner runner)
     {
-        Conversation restored = Conversation.Restore(dto);
-        Guid resumeId = restored.AgentSessionId;
-        switch (def.Name.ToLowerInvariant())
-        {
-            case "claude":
-                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new ClaudeStreamJsonParser(def), resumeId));
-            case "codex":
-                return new AgentRunner(def, restored, (client, convo, cwd) => new StreamJsonAgent(def, client, convo, cwd, new CodexStreamJsonParser(def, CodexHome.Prepare()), resumeId));
-            case "gemini":
-                
-                // No native --resume seam: the prior turns are shown for the user's reference, but the
-                // fresh native session starts with no memory of them. Warn so the user doesn't assume
-                // continuity the agent doesn't have.
-                restored.NoteSystem("Gemini cannot resume prior context; the turns above are shown for reference only.");
-                
-                return new AgentRunner(def, restored, (client, _, cwd) => GeminiConnection.Connect(def, client, cwd));
-            
-            default:
-                throw new NotImplementedException($"Unknown agent adapter {def.Name}");
-        }
-    }
-
-    // The active pooled agent for the doc, so a control verb (cancel/stop) acts on the running
-    // turn rather than an arbitrary idle agent the doc happened to drive earlier. Resolves the
-    // active definition's name and looks up only that pooled entry; false when none is pooled.
-    public static bool TryFindActive(RhinoDoc doc, out IAgentRunner agent)
-    {
-        if (TryResolveActiveDefinition(doc, out AgentDefinition def) &&
-            Agents.TryGetValue((doc.RuntimeSerialNumber, def.Name), out IAgentRunner? existing))
-        {
-            agent = existing;
-            return true;
-        }
-        agent = default!;
-        return false;
+        runner = default!;
+        return ResolveActive(doc) is { } definition
+            && Runners.TryGetValue((doc.RuntimeSerialNumber, definition.Id), out runner!);
     }
 
     public static void Stop(RhinoDoc doc)
@@ -149,35 +112,53 @@ internal static class AgentHost
         DisposeDoc(doc.RuntimeSerialNumber);
     }
 
-    public static void Drop(RhinoDoc doc, string name)
-    {
-        if (Agents.Remove((doc.RuntimeSerialNumber, name), out IAgentRunner? agent))
-            SafeDispose(agent);
-    }
-
     public static void Shutdown()
     {
-        foreach (IAgentRunner agent in Agents.Values.ToArray())
-            SafeDispose(agent);
-        Agents.Clear();
-        ActiveNames.Clear();
+        foreach (AgentRunner runner in Runners.Values.ToArray())
+            SafeDispose(runner);
+        Runners.Clear();
+        ActiveIds.Clear();
     }
+
+    public static IAgentDefinition? ActiveDefinition(RhinoDoc? doc) =>
+        doc is null ? FallbackDefinition() : ResolveActive(doc);
+
+    private static IAgentDefinition? ResolveActive(RhinoDoc doc)
+    {
+        if (ActiveIds.TryGetValue(doc.RuntimeSerialNumber, out Guid active))
+        {
+            if (AIInstances.Agents.FromId(active) is { } pinned && IsUsable(pinned))
+                return pinned;
+
+            ActiveIds.Remove(doc.RuntimeSerialNumber);
+        }
+
+        return FallbackDefinition();
+    }
+
+    private static IAgentDefinition? FallbackDefinition() =>
+        AIInstances.Agents.PreferredDefinition is { } preferred && IsUsable(preferred)
+            ? preferred
+            : Definitions.FirstOrDefault(IsUsable);
+
+    private static string DocTitle(RhinoDoc doc) =>
+        string.IsNullOrEmpty(doc.Name) ? "Untitled" : doc.Name;
 
     private static void DisposeDoc(uint serial)
     {
-        foreach ((uint Doc, string Name) key in Agents.Keys.Where(k => k.Doc == serial).ToArray())
+        foreach ((uint Doc, Guid Id) key in Runners.Keys.Where(k => k.Doc == serial).ToArray())
         {
-            if (Agents.Remove(key, out IAgentRunner? agent))
-                SafeDispose(agent);
+            if (Runners.Remove(key, out AgentRunner? runner))
+                SafeDispose(runner);
         }
-        ActiveNames.Remove(serial);
+        ActiveIds.Remove(serial);
     }
 
-    private static void SafeDispose(IAgentRunner agent)
+    private static void SafeDispose(AgentRunner runner)
     {
         try
         {
-            agent.Dispose();
+            runner.Dispose();
         }
         catch (Exception ex)
         {

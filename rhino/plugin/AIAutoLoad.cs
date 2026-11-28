@@ -13,15 +13,7 @@ internal static class AIAutoLoad
     public static bool ShouldAutoLoad()
     {
         if (WasStartedViaAgent) return true;
-        if (!AISettings.AutoLoadMCP) return false;
-        foreach(AgentDefinition definition in AgentRegistry.Instance.AllDefinitions)
-        {
-            if (!definition.Available) continue;
-            if (!AISettings.IsEnabled(definition)) continue;
-            return true;
-        }
-        
-        return false;
+        return AIInstances.Preferences.AutoLoadMCP && AgentHost.AnyUsable;
     }
 
 }

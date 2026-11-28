@@ -1,6 +1,6 @@
 using System.IO;
 using System.Reflection;
-
+using Rhino.AI.PlugIns;
 using Rhino.PlugIns;
 using Rhino.Runtime;
 using Rhino.UI;
@@ -24,6 +24,15 @@ public class RhinoAIPlugin : PlugIn
         {
             Panels.RegisterPanel(this, typeof(UI.AIPanel), Localization.LocalizeString("AI", 1), LoadPanelIcon(), PanelType.PerDoc);
             UI.HostPrompt.Register();
+        }
+
+        LoadPreferences();
+
+        // The AI settings list only registered plug-ins, so register now rather than on first agent use.
+        if (PlugInRegistry.Register() is null)
+        {
+            // The plugin failed to register itself!
+            return LoadReturnCode.ErrorShowDialog;
         }
 
         // CommandInterceptors = new CommandInterceptorHost();
@@ -86,6 +95,40 @@ public class RhinoAIPlugin : PlugIn
         // CommandInterceptors?.Dispose();
         AgentHost.Shutdown();
         ScriptProjects.ScriptProjectStartup.DeleteRegistryCache();
+
+        SavePreferences();
+    }
+
+    private const string SettingsKey = "AI";
+    private const string PreferencesKey = "Preferences";
+    private const string UnreadablePreferencesKey = "Unreadable";
+
+    private static void LoadPreferences()
+    {
+        LegacySettingsMigration.Run();
+
+        if (!PersistentSettings.RhinoAppSettings.TryGetChild(SettingsKey, out PersistentSettings settings)) return;
+        if (!settings.TryGetString(PreferencesKey, out string json)) return;
+
+        if (!AIInstances.LoadFromJson(json, out Exception? ex))
+        {
+            settings.SetString(UnreadablePreferencesKey, json);
+            settings.HideSettingFromUserInterface(UnreadablePreferencesKey);
+            RhinoApp.WriteLine(string.Format("Could not load User Preferences {0} The unreadable copy is kept in {1}/{2}.", ex?.Message, SettingsKey, UnreadablePreferencesKey));
+        }
+    }
+
+    internal static void SavePreferences()
+    {
+        if (AIInstances.SerializeToJson() is not string json)
+            return;
+
+        PersistentSettings settings = PersistentSettings.RhinoAppSettings.AddChild(SettingsKey);
+        settings.SetString(PreferencesKey, json);
+        settings.HideSettingFromUserInterface(PreferencesKey);
+
+        SavePluginSettings(RhinoApp.CurrentRhinoId);
+        LegacyAISettings.Delete();
     }
 
     public override PlugInLoadTime LoadTime => PlugInLoadTime.AtStartup;

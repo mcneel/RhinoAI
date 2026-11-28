@@ -281,6 +281,63 @@ try {
   check('picking context adds a chip and clears the token', chip.chips === 1 && !chip.draft.includes('@'), JSON.stringify(chip));
   await shot('04-context');
 
+  // ------------------------------------------------- focus leaving the panel
+  const blurPanel = async () => {
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await wait(150);
+  };
+  const open = () => page.evaluate(() => ({
+    composerMenu: document.querySelectorAll('.mention-menu:not(.mcp-menu)').length,
+    agents: document.querySelectorAll('.popover').length,
+    mcps: document.querySelectorAll('.mcp-menu').length,
+    history: document.querySelectorAll('.drawer').length,
+    draft: document.querySelector('.composer textarea').value,
+  }));
+
+  await type('/');
+  await wait(250);
+  await blurPanel();
+  const slashBlurred = await open();
+  check('the command menu closes when focus leaves the panel, keeping the draft',
+    slashBlurred.composerMenu === 0 && slashBlurred.draft === '/', JSON.stringify(slashBlurred));
+  await page.click('.composer textarea');
+  await wait(150);
+  check('clicking back into the composer reopens the command menu', (await open()).composerMenu === 1);
+  await page.keyboard.press('Escape');
+  await wait(150);
+
+  await type('@');
+  await wait(250);
+  const mentionOpen = (await open()).composerMenu;
+  await blurPanel();
+  check('the context menu closes when focus leaves the panel',
+    mentionOpen === 1 && (await open()).composerMenu === 0, `open ${mentionOpen}`);
+  await page.$eval('.composer textarea', (input) => {
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await page.click('.agent-chip');
+  await wait(250);
+  const agentsOpen = (await open()).agents;
+  await blurPanel();
+  check('the agent menu closes when focus leaves the panel',
+    agentsOpen === 1 && (await open()).agents === 0, `open ${agentsOpen}`);
+
+  await page.click('.composer-actions .icon-btn');
+  await wait(250);
+  const mcpsOpen = (await open()).mcps;
+  await blurPanel();
+  check('the MCP menu closes when focus leaves the panel',
+    mcpsOpen === 1 && (await open()).mcps === 0, `open ${mcpsOpen}`);
+
+  await page.evaluate(() => [...document.querySelectorAll('.header .icon-btn')][0].click());
+  await wait(300);
+  await blurPanel();
+  check('history stays open when focus leaves the panel', (await open()).history === 1);
+  await page.keyboard.press('Escape');
+  await wait(150);
+
   // ------------------------------------------------------------------- layout
   for (const [label, preset] of [['narrow', 'Narrow'], ['docked', 'Docked'], ['wide', 'Wide'], ['full', 'Full']]) {
     await page.evaluate((p) => {
@@ -624,13 +681,13 @@ try {
     (await page.evaluate(() => document.querySelectorAll('.ctx-menu').length)) === 0);
 
   // ------------------------------------------------- the C# contract, replayed
-  // host-events.json is written by PanelContractTests in the plug-in's test suite, using the real
+  // host-events.json is written by PanelContractTests in tests/Server.Tests, using the real
   // serialiser. Replaying it here is the only place the two languages are checked against each
   // other, so a protocol change on either side fails before it reaches Rhino.
   const contractPath = resolve(root, 'tests/host-events.json');
   const hostPage = resolve(root, 'dist/panel.host.html');
   if (!existsSync(contractPath) || !existsSync(hostPage)) {
-    check('the C# contract sample is available', false, 'run `dotnet test tests/StreamJson.Tests` and `npm run build`');
+    check('the C# contract sample is available', false, 'run `dotnet test tests/Server.Tests` and `npm run build`');
   } else {
     const events = JSON.parse(readFileSync(contractPath, 'utf8'));
     const host = await browser.newPage();
@@ -692,7 +749,7 @@ try {
     }));
 
     check('C#-serialised events render a turn', rendered.turns === 1 && rendered.prompt?.includes('Facade'), JSON.stringify(rendered));
-    check('the agent list arrives', rendered.agent === 'Claude Code' && rendered.model === 'Opus 5', JSON.stringify(rendered));
+    check('the agent list arrives', rendered.agent === 'Claude' && rendered.model === 'Opus (latest)', JSON.stringify(rendered));
     check('streamed markdown and code render', rendered.bold >= 1 && rendered.code === 1, JSON.stringify(rendered));
     check('a tool call and its folded-in result render as one settled card',
       rendered.tools === 4 && rendered.toolOk === 1, JSON.stringify(rendered));
@@ -702,7 +759,7 @@ try {
     check('a result the agent flagged as an error renders as a failed card',
       rendered.toolFailed === 1 && rendered.titles.includes('python failed'), JSON.stringify(rendered));
     check('a C#-serialised image lands as a block pointing at the host route',
-      rendered.images === 1 && rendered.imageSrc === '/image/a3f1c09e42b7', JSON.stringify(rendered));
+      rendered.images === 1 && rendered.imageSrc === '/image/a3f1c09e42b7d5e8f6019c3b', JSON.stringify(rendered));
     check('an image the host cannot serve drops the picture and keeps its caption',
       rendered.imageFrames === 0 && rendered.imageName.length > 0, JSON.stringify(rendered));
     check('a uuid filename is labelled rather than shown',
@@ -939,6 +996,17 @@ try {
     check('a sent prompt clears the composer of its attachments',
       (await host.evaluate(() => document.querySelectorAll('.composer .attach').length)) === 0);
 
+    await host.evaluate(() => window.rhinoAI.receive({ type: 'conversation.mode', mode: 'ended', resumable: false }));
+    await wait(200);
+    const lost = await host.evaluate(() => ({
+      bar: document.querySelectorAll('.ended-bar').length,
+      composer: document.querySelectorAll('.composer').length,
+    }));
+    check('a lost session swaps the composer for the ended bar', lost.bar === 1 && lost.composer === 0, JSON.stringify(lost));
+    await host.evaluate(() => document.querySelector('.ended-bar .btn.primary').click());
+    check('the ended bar starts a new conversation',
+      await host.evaluate(() => window.__sent.some((m) => m.type === 'conversation.new')));
+
     // ------------------------------------------------- resume, the way Rhino replays it
     // ConversationFeed.Replay posts an empty snapshot and then the turns one event at a time, each
     // its own ExecuteScriptAsync, and every agent message renders its markdown a frame later. So
@@ -946,7 +1014,7 @@ try {
     // stops halfway up. Fed here the same way, with the panel left scrolled up beforehand.
     const line = 'The facade layer holds 148 surfaces, most of them planar panels on the south elevation. ';
     const replay = (session, count) => {
-      const out = [{ type: 'conversation', snapshot: { sessionId: session, agent: 'claude', docTitle: 'tower-study.3dm', startedAt: '2026-01-01T09:00:00.0000000+00:00', turns: [], readOnly: false } }];
+      const out = [{ type: 'conversation', snapshot: { sessionId: session, agent: 'claude', docTitle: 'tower-study.3dm', startedAt: '2026-01-01T09:00:00.0000000+00:00', turns: [], mode: 'live', resumable: true } }];
       for (let i = 0; i < count; i++) {
         const id = `${session}-turn-${i}`;
         out.push({ type: 'turn.begin', turn: { id, prompt: `Question ${i}`, attachments: [], context: [], startedAt: '2026-01-01T09:00:00.0000000+00:00', status: 'running', blocks: [], plan: [], undoable: true } });

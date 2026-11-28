@@ -23,7 +23,8 @@ internal static class ToolArgs
                 ToolUrl url => JsonValue.Create(url.Value),
                 ToolString text => JsonValue.Create(text.Value),
                 ToolSecret secret => JsonValue.Create(secret.Value),
-                
+                ToolJson json => JsonNode.Parse(json.Value.GetRawText()),
+
                 _ => throw new NotSupportedException($"{arg.GetType().Name} has no JSON form."),
             };
         }
@@ -50,17 +51,21 @@ internal static class ToolArgs
     }
 
     public static IReadOnlyList<IToolArg> FromJson(Harness harness, string toolName, JsonNode? args)
+        => FromJson(FindTool(harness, toolName), args);
+
+    public static IReadOnlyList<IToolArg> FromJson(ITool? tool, JsonNode? args)
+        => FromJson(tool?.Args ?? [], args);
+
+    // JSON cannot tell a path or a URL from any other string, so the tool's own declaration picks the carrier.
+    public static IReadOnlyList<IToolArg> FromJson(IReadOnlyList<ToolParameter> declared, JsonNode? args)
     {
         if (args is not JsonObject arguments)
             return [];
 
-        // JSON cannot tell a path or a URL from any other string, so the tool's own declaration picks the carrier.
-        ITool? tool = FindTool(harness, toolName);
-
         List<IToolArg> pairs = new(arguments.Count);
         foreach (KeyValuePair<string, JsonNode?> argument in arguments)
         {
-            if (FromProperty(tool, argument.Key, argument.Value) is IToolArg arg)
+            if (FromProperty(declared, argument.Key, argument.Value) is IToolArg arg)
                 pairs.Add(arg);
         }
 
@@ -68,11 +73,19 @@ internal static class ToolArgs
     }
 
     public static IToolArg? FromProperty(ITool? tool, string name, JsonNode? value)
+        => FromProperty(tool?.Args ?? [], name, value);
+
+    private static IToolArg? FromProperty(IReadOnlyList<ToolParameter> declared, string name, JsonNode? value)
     {
-        if (value is null || value.GetValueKind() == JsonValueKind.Null)
+        if (value is null)
             return null;
 
-        return ToArg(name, DeclaredType(tool, name) ?? InferredType(value), value);
+        return value.GetValueKind() switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.Array or JsonValueKind.Object => new ToolJson(name, JsonSerializer.SerializeToElement(value)),
+            _ => ToArg(name, DeclaredType(declared, name) ?? InferredType(value), value),
+        };
     }
 
     private static IToolArg ToArg(string name, ToolArgType type, JsonNode value)
@@ -98,9 +111,9 @@ internal static class ToolArgs
         return mcp.Tools.GetValueOrDefault(toolName);
     }
 
-    private static ToolArgType? DeclaredType(ITool? tool, string name)
+    private static ToolArgType? DeclaredType(IReadOnlyList<ToolParameter> declared, string name)
     {
-        foreach (ToolParameter arg in tool?.Args ?? [])
+        foreach (ToolParameter arg in declared)
         {
             if (string.Equals(arg.Name, name, StringComparison.OrdinalIgnoreCase) && arg.Type != ToolArgType.Unknown)
                 return arg.Type;

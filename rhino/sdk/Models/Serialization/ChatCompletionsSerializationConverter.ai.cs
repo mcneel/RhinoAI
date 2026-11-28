@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -69,12 +70,18 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
         if (system.Length > 0)
             messages.Insert(0, new JsonObject { ["role"] = "system", ["content"] = system.ToString() });
 
-        JsonObject body = new()
+        JsonObject body = new();
+        if (!ModelDefinition.IsDefault(settings.Model))
+            body["model"] = settings.Model;
+
+        body["max_tokens"] = settings.MaxOutputTokens;
+        body["messages"] = messages;
+
+        if (settings.IsStreaming)
         {
-            ["model"] = settings.Model,
-            ["max_tokens"] = settings.MaxOutputTokens,
-            ["messages"] = messages,
-        };
+            body["stream"] = true;
+            body["stream_options"] = new JsonObject { ["include_usage"] = true };
+        }
 
         JsonArray declarations = Declarations(harness);
         if (declarations.Count > 0)
@@ -108,9 +115,90 @@ internal sealed class ChatCompletionsSerializationConverter(string vendor) : ITu
                 turns.Add(ToolCall(harness, call));
         }
 
-        turns.Add(new TurnEnd(Stop((string?)choice["finish_reason"]), tokenCount: (int?)payload["usage"]?["total_tokens"]));
+        if (payload["usage"] is JsonObject usage)
+            turns.Add(new UsageTurn((int?)usage["prompt_tokens"] ?? 0, (int?)usage["completion_tokens"] ?? 0));
+
+        turns.Add(new TurnEnd(Stop((string?)choice["finish_reason"])));
 
         return turns;
+    }
+
+    public JsonNode Merge(IEnumerable<JsonNode> events)
+    {
+        StringBuilder reasoning = new();
+        StringBuilder content = new();
+        SortedDictionary<int, StreamedCall> calls = [];
+        string? finish = null;
+        JsonNode? usage = null;
+
+        foreach (JsonNode chunk in events)
+        {
+            if (chunk["error"] is JsonNode error)
+                throw new HttpRequestException($"{Vendor} failed mid-reply: {error.ToJsonString()}");
+
+            if (chunk["usage"] is JsonObject reported)
+                usage = reported;
+
+            if (chunk["choices"] is not JsonArray { Count: > 0 } choices || choices[0] is not JsonObject choice)
+                continue;
+
+            finish = (string?)choice["finish_reason"] ?? finish;
+
+            if (choice["delta"] is not JsonObject delta)
+                continue;
+
+            reasoning.Append((string?)delta["reasoning_content"]);
+            content.Append((string?)delta["content"]);
+
+            foreach (JsonNode? node in delta["tool_calls"] as JsonArray ?? [])
+            {
+                if (node is not JsonObject fragment)
+                    continue;
+
+                int index = (int?)fragment["index"] ?? calls.Count;
+                if (!calls.TryGetValue(index, out StreamedCall? call))
+                    calls[index] = call = new StreamedCall();
+
+                call.Id ??= (string?)fragment["id"];
+                call.Name ??= (string?)fragment["function"]?["name"];
+                call.Arguments.Append((string?)fragment["function"]?["arguments"]);
+            }
+        }
+
+        if (finish is null)
+            throw new HttpRequestException($"{Vendor} ended the stream before the reply finished.");
+
+        JsonArray toolCalls = [];
+        foreach (StreamedCall call in calls.Values)
+        {
+            toolCalls.Add(new JsonObject
+            {
+                ["id"] = call.Id,
+                ["type"] = "function",
+                ["function"] = new JsonObject { ["name"] = call.Name, ["arguments"] = call.Arguments.ToString() },
+            });
+        }
+
+        JsonObject message = new()
+        {
+            ["role"] = "assistant",
+            ["reasoning_content"] = reasoning.ToString(),
+            ["content"] = content.ToString(),
+            ["tool_calls"] = toolCalls,
+        };
+
+        return new JsonObject
+        {
+            ["choices"] = new JsonArray(new JsonObject { ["message"] = message, ["finish_reason"] = finish }),
+            ["usage"] = usage?.DeepClone(),
+        };
+    }
+
+    private sealed class StreamedCall
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public StringBuilder Arguments { get; } = new();
     }
 
     private static void Append(StringBuilder builder, string value)

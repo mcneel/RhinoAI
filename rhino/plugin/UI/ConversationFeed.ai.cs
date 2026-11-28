@@ -7,7 +7,7 @@ namespace Rhino.AI.UI;
 //
 // Conversation only announces "something changed", so this holds the high-water mark of what it has
 // already reported and emits the difference. It is deliberately the only place that knows that, so
-// when StreamJsonAgent grows real per-block notifications this class is what gets deleted, not
+// when the agent runner grows real per-block notifications this class is what gets deleted, not
 // rewritten in three places.
 //
 // Pump is not thread-safe and must run on the UI thread; the panel marshals Changed before calling.
@@ -25,6 +25,10 @@ internal sealed class ConversationFeed
     private List<TurnCursor> Cursors { get; } = new();
     private int LifecycleSent { get; set; }
 
+    private bool IsReview { get; set; }
+    private string AnnouncedMode { get; set; } = "live";
+    private string Mode => IsReview ? "review" : Source.IsSessionLost ? "ended" : "live";
+
     // Questions have no identity of their own, so the feed mints one per question and keeps the
     // instance so an answer reaches the object the conversation still holds. Ordered, and plural:
     // one ask_user call can pose several, and a later call appends to the set.
@@ -32,6 +36,11 @@ internal sealed class ConversationFeed
     private int QuestionSeq { get; set; }
 
     private record struct PosedQuestion(PendingQuestion Question, string Id);
+
+    private List<PosedPermission> Asked { get; } = new();
+    private int PermissionSeq { get; set; }
+
+    private record struct PosedPermission(PendingPermission Permission, string Id);
 
     private record struct ToolOutcome(string Result, bool Done);
 
@@ -43,18 +52,18 @@ internal sealed class ConversationFeed
         public string? OpenTextBlock;
         public int TextBlocks;
         public Dictionary<string, ToolOutcome> ToolOutcomes = new();
-        public bool UsageSent;
+        public TokenUsage SentUsage = TokenUsage.Empty;
         public bool Ended;
         public StringBuilder Text = new();
         public int TextScanned;
         public HashSet<string> ImagesSent = new(StringComparer.OrdinalIgnoreCase);
     }
 
-    public ConversationFeed(Conversation source, Action<PanelEvent> emit, string? generatedImagesRoot = null)
+    public ConversationFeed(Conversation source, Action<PanelEvent> emit, Func<Guid, IReadOnlyList<string>> generatedImageFolders)
     {
         Source = source;
         Emit = emit;
-        Produced = new GeneratedImages(generatedImagesRoot);
+        Produced = new GeneratedImages(generatedImageFolders);
     }
 
     // Replay the whole conversation as if it were arriving live. Cheaper than a snapshot type, and
@@ -65,14 +74,18 @@ internal sealed class ConversationFeed
         Cursors.Clear();
         LifecycleSent = 0;
         Posed.Clear();
+        Asked.Clear();
+        IsReview = readOnly;
+        AnnouncedMode = Mode;
 
         Emit(new ConversationEvent(new PanelConversation(
             Source.AgentSessionId.ToString(),
-            Source.AgentName,
+            Source.AgentKey,
             Source.DocTitle,
             Source.StartedAt.ToString("O"),
             Array.Empty<PanelTurn>(),
-            readOnly)));
+            AnnouncedMode,
+            Resumable: !Source.IsSessionLost)));
 
         Pump();
     }
@@ -115,6 +128,14 @@ internal sealed class ConversationFeed
         }
 
         PumpQuestion();
+        PumpPermission();
+
+        string mode = Mode;
+        if (mode != AnnouncedMode)
+        {
+            AnnouncedMode = mode;
+            Emit(new ConversationModeEvent(mode, Resumable: !Source.IsSessionLost));
+        }
     }
 
     private static IReadOnlyList<PanelAttachment> Describe(string turnId, IReadOnlyList<AttachmentInfo> attachments)
@@ -177,15 +198,14 @@ internal sealed class ConversationFeed
 
         EmitProducedImages(cursor, turn);
 
-        if (!cursor.UsageSent && !turn.Usage.IsEmpty)
+        TokenUsage usage = turn.Usage;
+        if (usage != cursor.SentUsage)
         {
-            cursor.UsageSent = true;
-            TokenUsage usage = turn.Usage;
-            Emit(new TurnUsageEvent(cursor.Id, new PanelUsage(usage.InputTokens, usage.OutputTokens, usage.CostUsd)));
+            cursor.SentUsage = usage;
+            Emit(new TurnUsageEvent(cursor.Id, new PanelUsage(usage.InputTokens, usage.OutputTokens)));
         }
 
-        // Conversation records completion but not why, so a cancelled turn reports as finished. The
-        // panel can render "stopped" the moment Turn learns to carry an outcome.
+        // Turn carries a failure but not a cancellation, so a cancelled turn still reports as finished.
         if (!cursor.Ended && turn.Completed)
         {
             cursor.Ended = true;
@@ -193,7 +213,8 @@ internal sealed class ConversationFeed
             for (int i = 0; i < events.Count; i++)
                 if (events[i].Kind == TurnEventKind.ToolUse && !events[i].Done)
                     Emit(new TurnToolPatchEvent(cursor.Id, CallId(cursor, i, events[i]), UnknownPatch));
-            Emit(new TurnEndEvent(cursor.Id, "ok", null));
+            string? error = turn.Error;
+            Emit(new TurnEndEvent(cursor.Id, error is null ? "ok" : "error", error));
         }
     }
 
@@ -218,7 +239,7 @@ internal sealed class ConversationFeed
 
     private void EmitProducedImages(TurnCursor cursor, Turn turn)
     {
-        foreach (string path in Produced.Between(turn.StartedAt, turn.CompletedAt ?? DateTimeOffset.UtcNow))
+        foreach (string path in Produced.Between(Source.AgentSessionId, turn.StartedAt, turn.CompletedAt ?? DateTimeOffset.UtcNow))
             EmitImage(cursor, path);
     }
 
@@ -259,6 +280,47 @@ internal sealed class ConversationFeed
                 question.Mode == AskUserMode.Multi ? "multi" : "single",
                 AllowOther: true)));
         }
+    }
+
+    private void PumpPermission()
+    {
+        IReadOnlyList<PendingPermission> pending = Source.PendingPermissions;
+
+        for (int i = Asked.Count - 1; i >= 0; i--)
+        {
+            if (pending.Contains(Asked[i].Permission))
+                continue;
+            Emit(new PermissionClearEvent(Asked[i].Id));
+            Asked.RemoveAt(i);
+        }
+
+        foreach (PendingPermission permission in pending)
+        {
+            if (Asked.Any(asked => ReferenceEquals(asked.Permission, permission)))
+                continue;
+
+            string id = $"permission-{++PermissionSeq}";
+            Asked.Add(new PosedPermission(permission, id));
+            Emit(new PermissionEvent(new PanelPermission(
+                id,
+                ToolSummary.RemoveUnderscoreUnderscoreNaming(permission.ToolName),
+                permission.McpName,
+                Payload(permission.ArgsJson))));
+        }
+    }
+
+    public bool TryResolvePermission(string id, out PendingPermission permission)
+    {
+        foreach (PosedPermission asked in Asked)
+        {
+            if (asked.Id != id)
+                continue;
+            permission = asked.Permission;
+            return true;
+        }
+
+        permission = default!;
+        return false;
     }
 
     // Resolve the question instances a panel answer refers to, so a stale card cannot answer a

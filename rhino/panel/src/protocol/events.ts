@@ -12,11 +12,9 @@ import type { IconName } from '../ui/icons.js';
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
-  /** null means the agent reports tokens but not money. Not zero. */
-  costUsd: number | null;
 }
 
-export const NO_USAGE: TokenUsage = { inputTokens: 0, outputTokens: 0, costUsd: null };
+export const NO_USAGE: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
 export type AgentAvailability = 'ready' | 'disabled' | 'missing' | 'signin';
 
@@ -29,6 +27,18 @@ export interface AgentInfo {
   /** Why it is not ready, in words the user can act on. */
   detail?: string;
   builtin: boolean;
+}
+
+export type McpKind = 'stdio' | 'http' | 'memory';
+
+/** An MCP on the active agent's harness. `tools` is 0 until a lazily started MCP has been initialized. */
+export interface McpInfo {
+  name: string;
+  kind: McpKind;
+  tools: number;
+  enabled: boolean;
+  /** False for an MCP the host lists but has not created yet, so there is nothing to switch. */
+  canToggle: boolean;
 }
 
 export type AttachmentKind = 'image' | 'text';
@@ -120,6 +130,17 @@ export interface PendingQuestion {
   allowOther: boolean;
 }
 
+/** A tool call the agent is blocked on until the user allows or denies it. */
+export interface PendingPermission {
+  id: string;
+  tool: string;
+  mcp: string;
+  args?: unknown;
+}
+
+/** `always` allows this call and every later call to the same tool for the rest of the session. */
+export type PermissionAnswer = 'deny' | 'allow' | 'always';
+
 export interface HistoryEntry {
   sessionId: string;
   title: string;
@@ -154,14 +175,17 @@ export interface TurnSnapshot {
   error?: string;
 }
 
+/** `ended` is the live conversation after its agent lost the session, so only a new conversation can carry on. */
+export type ConversationMode = 'live' | 'review' | 'ended';
+
 export interface ConversationSnapshot {
   sessionId: string;
   agent: string;
   docTitle: string;
   startedAt: string;
   turns: TurnSnapshot[];
-  /** A reviewed past conversation: the composer is replaced by Resume. */
-  readOnly: boolean;
+  mode: ConversationMode;
+  resumable: boolean;
 }
 
 export interface HostInfo {
@@ -187,6 +211,7 @@ export type HostEvent =
   | { type: 'context'; items: ContextItem[] }
   | { type: 'history'; entries: HistoryEntry[] }
   | { type: 'conversation'; snapshot: ConversationSnapshot }
+  | { type: 'conversation.mode'; mode: ConversationMode; resumable: boolean }
   | { type: 'turn.begin'; turn: TurnSnapshot }
   | { type: 'turn.text'; turnId: string; blockId: string; delta: string }
   | { type: 'turn.tool'; turnId: string; call: ToolCall }
@@ -197,9 +222,12 @@ export type HostEvent =
   | { type: 'turn.end'; turnId: string; status: TurnStatus; error?: string }
   | { type: 'question'; question: PendingQuestion }
   | { type: 'question.clear'; id: string }
+  | { type: 'permission'; permission: PendingPermission }
+  | { type: 'permission.clear'; id: string }
   | { type: 'attachments.add'; attachments: Attachment[] }
   | { type: 'notice'; level: NoticeLevel; text: string }
   | { type: 'status'; text: string | null }
+  | { type: 'mcps'; mcps: McpInfo[] }
   // The host owns the right-click menu, but the panel owns the zoom ladder, so the menu sends back
   // an intent rather than a level. `set` is the other direction: the level the host had stored.
   | { type: 'zoom'; action: 'in' | 'out' | 'reset' }
@@ -232,6 +260,7 @@ export type PanelCommand =
   | { type: 'agent.login' }
   | { type: 'question.answer'; items: QuestionAnswer[] }
   | { type: 'question.dismiss'; ids: string[] }
+  | { type: 'permission.answer'; id: string; answer: PermissionAnswer }
   | { type: 'tool.chip'; callId: string; chipId: string }
   | { type: 'turn.undo'; turnId: string }
   | { type: 'turn.retry'; turnId: string }
@@ -244,6 +273,8 @@ export type PanelCommand =
   // The panel cannot store its own level (opaque origin, so localStorage throws), so the host keeps it.
   | { type: 'zoom.set'; level: number }
   | { type: 'settings.open' }
+  | { type: 'mcps.list' }
+  | { type: 'mcp.toggle'; name: string; enabled: boolean }
   | { type: 'url.open'; url: string }
   | { type: 'clipboard.write'; text: string }
   | {

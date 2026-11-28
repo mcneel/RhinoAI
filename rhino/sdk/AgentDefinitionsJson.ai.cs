@@ -53,8 +53,8 @@ internal static class AgentDefinitionsJson
             {
                 Id = dto.Id ?? Guid.NewGuid(),
                 Platforms = platforms,
-                WinSearchPaths = dto.SearchPaths?.Win ?? [],
-                MacSearchPaths = dto.SearchPaths?.Mac ?? [],
+                WinSearchPaths = ToSearchPaths(dto.SearchPaths?.Win),
+                MacSearchPaths = ToSearchPaths(dto.SearchPaths?.Mac),
             },
             "api" or "local" => ToHttp(dto, dto.Company, dto.Name, platforms),
             _ => null,
@@ -62,19 +62,33 @@ internal static class AgentDefinitionsJson
 
         if (definition is null) return null;
 
+        definition.Enabled = dto.Enabled;
         definition.DefaultPrompt = dto.DefaultPrompt ?? "";
         definition.SvgIcon = dto.SvgIcon ?? "";
         string? firstModelId = null;
         foreach (ModelDto model in dto.Models ?? [])
         {
             if (string.IsNullOrWhiteSpace(model.Id)) continue;
-            definition.Add(new ModelDefinition(dto.Company, model.Display ?? model.Id, model.Id));
+            if (model.MaxOutputTokens is <= 0) continue;
+            definition.Add(new ModelDefinition(dto.Company, model.Display ?? model.Id, model.Id) { MaxOutputTokens = model.MaxOutputTokens });
             firstModelId ??= model.Id;
         }
 
         definition.DefaultModelId = dto.DefaultModel ?? firstModelId ?? "";
 
         return definition;
+    }
+
+    private static List<SearchPath> ToSearchPaths(List<SearchPathDto>? paths)
+    {
+        List<SearchPath> result = new(paths?.Count ?? 0);
+        foreach (SearchPathDto path in paths ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(path.Path)) continue;
+            result.Add(new SearchPath(path.Path, path.Enabled ?? true));
+        }
+
+        return result;
     }
 
     private static HttpAgentDefinition? ToHttp(DefinitionDto dto, string vendor, string name, Platform platforms)
@@ -132,6 +146,7 @@ internal static class AgentDefinitionsJson
         string? Kind,
         string? Name,
         string? Company,
+        bool Enabled,
         string? DefaultPrompt,
         string? DefaultModel,
         string? SvgIcon,
@@ -143,8 +158,10 @@ internal static class AgentDefinitionsJson
         string? ModelsRoute,
         List<ModelDto>? Models);
 
-    private sealed record SearchPathsDto(List<string>? Win, List<string>? Mac);
+    private sealed record SearchPathsDto(List<SearchPathDto>? Win, List<SearchPathDto>? Mac);
 
-    private sealed record ModelDto(string? Display, string? Id);
+    private sealed record SearchPathDto(string? Path, bool? Enabled);
+
+    private sealed record ModelDto(string? Display, string? Id, int? MaxOutputTokens);
 
 }

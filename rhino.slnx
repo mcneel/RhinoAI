@@ -5,12 +5,6 @@
   <Folder Name="/rhino/">
     <Project Path="rhino/sdk/sdk.csproj" />
   </Folder>
-  <Folder Name="/rhino/acp/">
-    <Project Path="rhino/acp/Acp.csproj" />
-  </Folder>
-  <Folder Name="/rhino/acp/codegen/">
-    <Project Path="rhino/acp/codegen/Acp.Codegen.csproj" />
-  </Folder>
   <Folder Name="/router/">
     <Project Path="rhino/router/Router.csproj" />
     <Folder Name="/router/codegen/">
@@ -22,5 +16,6 @@
     <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
     <Project Path="tests/sdk.tests/sdk.tests.csproj" />
     <Project Path="tests/Server.Tests/Server.Tests.csproj" />
+    <Project Path="tests/StdioTestServer/StdioTestServer.csproj" />
   </Folder>
 </Solution>

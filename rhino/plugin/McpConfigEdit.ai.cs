@@ -8,61 +8,62 @@ namespace Rhino.AI;
 internal enum McpConfigFormat
 {
     StandardJson,
-    OpenCodeJson,
+    CopilotJson,
     CodexToml,
+    HermesYaml,
 }
 
 // Pure, Rhino-free text/JSON surgery for a single MCP server entry, split out of McpClientConfigInstaller so it can be unit-tested.
 internal static class McpConfigEdit
 {
+    private const string JsonContainer = "mcpServers";
+    private const string YamlContainer = "mcp_servers";
+
     public static bool HasEntry(McpConfigFormat format, string content, string serverName) => format switch
     {
-        McpConfigFormat.StandardJson => JsonHasEntry(content, "mcpServers", serverName),
-        McpConfigFormat.OpenCodeJson => JsonHasEntry(content, "mcp", serverName),
+        McpConfigFormat.StandardJson or McpConfigFormat.CopilotJson => JsonHasEntry(content, serverName),
         McpConfigFormat.CodexToml => Regex.IsMatch(content, TomlEntryPattern(serverName), RegexOptions.Multiline),
-        _ => false,
+        McpConfigFormat.HermesYaml => McpYamlEdit.HasEntry(content, YamlContainer, serverName),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
     };
 
     public static string? Add(McpConfigFormat format, string original, string serverName, string command, IReadOnlyDictionary<string, string> env) => format switch
     {
-        McpConfigFormat.StandardJson => AddToJson(original, "mcpServers", serverName, () => StandardEntry(command, env)),
-        McpConfigFormat.OpenCodeJson => AddToJson(original, "mcp", serverName, () => OpenCodeEntry(command, env)),
+        McpConfigFormat.StandardJson => AddToJson(original, serverName, StandardEntry(command, env)),
+        McpConfigFormat.CopilotJson => AddToJson(original, serverName, CopilotEntry(command, env)),
         McpConfigFormat.CodexToml => AddToToml(original, serverName, command, env),
-        _ => null,
+        McpConfigFormat.HermesYaml => McpYamlEdit.Add(original, YamlContainer, serverName, command, env),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
     };
 
     public static string? Remove(McpConfigFormat format, string original, string serverName) => format switch
     {
-        McpConfigFormat.StandardJson => RemoveFromJson(original, "mcpServers", serverName),
-        McpConfigFormat.OpenCodeJson => RemoveFromJson(original, "mcp", serverName),
+        McpConfigFormat.StandardJson or McpConfigFormat.CopilotJson => RemoveFromJson(original, serverName),
         McpConfigFormat.CodexToml => RemoveFromToml(original, serverName),
-        _ => null,
+        McpConfigFormat.HermesYaml => McpYamlEdit.Remove(original, YamlContainer, serverName),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
     };
 
-    private static bool JsonHasEntry(string content, string containerKey, string serverName)
-    {
-        JsonNode? root = JsonNode.Parse(content, documentOptions: LenientJson);
-        return root is JsonObject obj
-            && obj[containerKey] is JsonObject servers
+    private static bool JsonHasEntry(string content, string serverName)
+        => ParseJson(content) is JsonObject obj
+            && obj[JsonContainer] is JsonObject servers
             && servers.ContainsKey(serverName);
-    }
 
-    private static string? AddToJson(string original, string containerKey, string serverName, Func<JsonNode> entry)
+    private static string? AddToJson(string original, string serverName, JsonNode entry)
     {
-        JsonNode? root = JsonNode.Parse(original, documentOptions: LenientJson);
-        if (root is not JsonObject obj)
+        if (ParseJson(original) is not JsonObject obj)
             return null;
 
-        switch (obj[containerKey])
+        switch (obj[JsonContainer])
         {
             // Mutate the existing map in place: reassigning an already-parented JsonNode throws.
             case JsonObject servers when servers.ContainsKey(serverName):
                 return null;
             case JsonObject servers:
-                servers[serverName] = entry();
+                servers[serverName] = entry;
                 break;
             case null:
-                obj[containerKey] = new JsonObject { [serverName] = entry() };
+                obj[JsonContainer] = new JsonObject { [serverName] = entry };
                 break;
             default:
                 return null; // present but not a server map; don't risk clobbering it.
@@ -71,10 +72,9 @@ internal static class McpConfigEdit
         return obj.ToJsonString(IndentedJson);
     }
 
-    private static string? RemoveFromJson(string original, string containerKey, string serverName)
+    private static string? RemoveFromJson(string original, string serverName)
     {
-        JsonNode? root = JsonNode.Parse(original, documentOptions: LenientJson);
-        if (root is not JsonObject obj || obj[containerKey] is not JsonObject servers)
+        if (ParseJson(original) is not JsonObject obj || obj[JsonContainer] is not JsonObject servers)
             return null;
 
         servers.Remove(serverName);
@@ -135,18 +135,22 @@ internal static class McpConfigEdit
         return entry;
     }
 
-    private static JsonNode OpenCodeEntry(string command, IReadOnlyDictionary<string, string> env)
+    private static JsonNode CopilotEntry(string command, IReadOnlyDictionary<string, string> env)
     {
         JsonObject entry = new()
         {
-            ["type"] = "local",
-            ["command"] = new JsonArray(command),
-            ["enabled"] = true,
+            ["type"] = "stdio",
+            ["command"] = command,
+            ["args"] = new JsonArray(),
         };
         if (EnvObject(env) is { } block)
-            entry["environment"] = block;
+            entry["env"] = block;
+        entry["tools"] = new JsonArray("*");
         return entry;
     }
+
+    private static JsonNode? ParseJson(string content)
+        => string.IsNullOrWhiteSpace(content) ? new JsonObject() : JsonNode.Parse(content, documentOptions: LenientJson);
 
     private static JsonObject? EnvObject(IReadOnlyDictionary<string, string> env)
     {

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -8,21 +9,23 @@ namespace Rhino.AI.Models;
 internal sealed class CodexDesktopModel(string name, IEnumerable<string> searchPaths) : DesktopModel(name, "OpenAI", searchPaths)
 {
 
-    public override bool Available => File.Exists(ExePath);
+    public override bool Available => ExePath is not null;
 
-    internal string ExePath
-    {
-        get
-        {
-            foreach (string path in SearchPaths)
-            {
-                // TODO : Globs!
-                if (File.Exists(path)) return path;
-            }
+    internal string? ExePath => SearchPaths.FirstOrDefault();
 
-            // TODO : Add better win default
-            return Path.Combine("/Applications", "ChatGPT.app", "Contents", "Resources", "codex");
-        }
-    }
+    // app-server has no --ignore-user-config, so a separate CODEX_HOME is the only clean way to keep ~/.codex out of Rhino sessions.
+    internal static string IsolatedCodexHome { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RhinoAI", "Codex");
+
+    internal static string UserCodexHome =>
+        Environment.GetEnvironmentVariable("CODEX_HOME") is { Length: > 0 } configured
+            ? configured
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+
+    internal static IReadOnlyList<string> GeneratedImageFolders(Guid threadId) =>
+    [
+        Path.Combine(UserCodexHome, "generated_images", threadId.ToString()),
+        Path.Combine(IsolatedCodexHome, "generated_images", threadId.ToString()),
+    ];
 
 }

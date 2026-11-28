@@ -47,10 +47,10 @@ public class RegistryTests
         PlugInToken? token = PlugInRegistry.Register();
         Assert.That(token, Is.Not.Null);
 
-        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = true });
+        PlugInRegistry.ApplySavedPermissions([new PlugInPermissionEntry(token.Id, token.Name, true)]);
         Assert.That(PlugInRegistry.IsAllowed(token), Is.True);
 
-        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = false });
+        PlugInRegistry.ApplySavedPermissions([new PlugInPermissionEntry(token.Id, token.Name, false)]);
         Assert.That(PlugInRegistry.IsAllowed(token), Is.False);
     }
 
@@ -60,8 +60,8 @@ public class RegistryTests
         PlugInToken? token = PlugInRegistry.Register();
         Assert.That(token, Is.Not.Null);
 
-        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [token.Id] = true });
-        PlugInRegistry.ApplySavedPermissions(new Dictionary<Guid, bool> { [Guid.NewGuid()] = false });
+        PlugInRegistry.ApplySavedPermissions([new PlugInPermissionEntry(token.Id, token.Name, true)]);
+        PlugInRegistry.ApplySavedPermissions([new PlugInPermissionEntry(Guid.NewGuid(), "Other", false)]);
         Assert.That(PlugInRegistry.IsAllowed(token), Is.True);
     }
 

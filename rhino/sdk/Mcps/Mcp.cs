@@ -19,7 +19,12 @@ public abstract class Mcp : IDisposable
     /// <summary>The name of the MCP.</summary>
     public string Name { get; }
 
-    public bool Enabled { get; set; } = true;
+    private bool PrivateEnabled { get; set; } = true;
+    public bool Enabled
+    {
+        get => PlugIns.PlugInRegistry.IsEnabled(this, PrivateEnabled);
+        set => PrivateEnabled = value;
+    }
 
     /// <summary>DO NOT USE</summary>
     private Mcp() : this("") { }

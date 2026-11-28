@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Net.Http;
 using System.Collections.Generic;
 
 namespace Rhino.AI.Models;
@@ -40,6 +41,7 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
             // The transcript lives here, not on OpenAI's servers, so reasoning has to come back encrypted to be replayable.
             ["store"] = false,
             ["include"] = new JsonArray("reasoning.encrypted_content"),
+            ["stream"] = settings.IsStreaming,
         };
 
         if (instructions.Length > 0)
@@ -69,9 +71,30 @@ internal sealed class ChatGptSerializationConverter(string vendor = "OpenAI") : 
         }
 
         StopReason reason = Stop((string?)payload["status"], (string?)payload["incomplete_details"]?["reason"], calling);
-        turns.Add(new TurnEnd(reason, tokenCount: (int?)payload["usage"]?["total_tokens"]));
+        if (payload["usage"] is JsonObject usage)
+            turns.Add(new UsageTurn((int?)usage["input_tokens"] ?? 0, (int?)usage["output_tokens"] ?? 0));
+
+        turns.Add(new TurnEnd(reason));
 
         return turns;
+    }
+
+    // The closing event carries the whole response, so the deltas before it only matter for display.
+    public JsonNode Merge(IEnumerable<JsonNode> events)
+    {
+        foreach (JsonNode streamed in events)
+        {
+            switch ((string?)streamed["type"])
+            {
+                case "response.completed" or "response.incomplete" or "response.failed" when streamed["response"] is JsonObject response:
+                    return response.DeepClone();
+
+                case "error":
+                    throw new HttpRequestException($"{Vendor} failed mid-reply: {(string?)streamed["message"] ?? streamed.ToJsonString()}");
+            }
+        }
+
+        throw new HttpRequestException($"{Vendor} ended the stream before the reply finished.");
     }
 
     private JsonObject? ToItem(ITurn turn) => turn switch
